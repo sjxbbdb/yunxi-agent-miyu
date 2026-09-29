@@ -1,361 +1,150 @@
-<p align="center">
-  <img src="pics/miyu-logo.png" alt="Miyu" width="180">
-</p>
+# YunXi Agent · Miyu Fork
 
-# Miyu
+这是我从 [SHORiN-KiWATA/miyu-agent](https://github.com/SHORiN-KiWATA/miyu-agent) Fork 出来的项目。
 
-一个活在终端里的二次元少女。开箱即用的开源 AI 助手，支持接入通讯平台。
+首先要感谢 Shorin 大佬。Miyu 已经把 Linux 原生 Agent 最难的基础打通了：Fish 终端接管、daemon 常驻、TUI、知识库、记忆、工具调用和多种终端入口。这个项目不会重复造一个脱离 Linux 的聊天程序，而是在 Miyu 的基础上继续往前走。
 
->暂时
+> 当前状态：Miyu 基线继承与 YunXi 化改造进行中。
 
-## 谁是 Miyu？
+## 我想把它做成什么
 
-Miyu 是从我曾经很喜欢的动画中的角色身上汲取灵感制作的虚构角色。
+我正在逐步把这个项目改造成一个运行在 Linux 上的通用型陪伴 Agent：
 
-## 有什么功能？
+- 自动接管终端交互；
+- 把自然语言翻译成终端可以执行的任务；
+- 让人不必先记住命令，再去操作系统；
+- 让 Agent 能理解当前目录、进程、软件包、服务和系统状态；
+- 在持续使用中逐渐理解用户的习惯、项目和工作方式；
+- 最终从“终端里的聊天助手”蜕变成“系统级 Agent”。
 
-`miyu` 由大模型驱动，默认接入了 [opencodezen](https://github.com/anomalyco/opencode) 的免费模型，你也可以配置自己的大模型 API，或者使用 Claudecode、Codex 之类的软件作为供应商后端。
+理想中的交互不是：
 
-`miyu` 拥有两个模式
-
-- Normal 普通模式
-  
-  拥有全部功能和工具，可以完成角色扮演、游戏娱乐、系统排障、天气查询、汇率换算、二手市场行情查询等日用场景。上述功能都可以在初始化引导或设置中自选开关。
-
-- Dev 开发模式
-
-  和普通模式隔离，移除所有和开发无关的功能和工具，通过极简设计最大限度发挥模型自身的能力。普通模式也允许开启开发模式子代理，以外包的形式完成开发工作。
-
-## 多种对话界面
-
-### 终端集成
-
-`miyu` 可以与 `fish`、`zsh`、`bash` 集成，终端打字直接无缝对话！
-
-![](./pics/fish集成.png)
-
-### 终端图形界面（TUI）
-
-有 TUI 对话模式：
-
-![](./pics/maintui.png)
-
-自带了配置 TUI 方便修改配置：
-
-```
-miyu config
+```text
+人：先查命令，再拼参数，再执行
 ```
 
-![](./pics/configtui.png)
+而是：
 
-### 网页界面（WebUI）
+```text
+人：帮我看看这个服务为什么没有启动
+云熙：理解意图 → 检查系统 → 解释原因 → 执行必要操作 → 回报结果
+```
 
-![](./pics/webui.png)
+终端仍然是 Linux 的底层界面，但人和终端之间增加了一层自然语言交互层。这个项目要做的，就是把这一层做成长期陪伴、可持续运行、真正理解系统的 YunXi。
 
+## 为什么选择 Fork Miyu
 
-### 接入通讯平台
+我选择直接 Fork Miyu，而不是把 Miyu 的源码零散搬进旧项目，是因为 Miyu 的设计方向和目标高度一致：它不是把 Agent 放在一个孤立的窗口里，而是让 Agent 活在终端、理解终端，并参与真实的 Linux 工作流。
 
-还可以接入 QQ，远程操作电脑；亦或是加入群聊，陪网友吹水，帮助你管理群聊：
+这个项目会保留 Miyu 已经验证过的 Linux 原生能力，同时逐步进行 YunXi 化改造。改造不会一次性盲目重写，而是以真实机器测试结果为依据，逐步确定交互、记忆、执行和系统级能力的边界。
 
-![](./pics/qq私聊.png)
+## 当前继承的基础
 
+当前代码以 Miyu 的实现为基础，已经包含或正在继承这些能力：
 
-## 如何安装？
+- Fish、Zsh、Bash 终端集成；
+- daemon 常驻与后台任务；
+- 终端 REPL 和 TUI；
+- 配置 TUI；
+- 普通模式与开发模式；
+- Linux 文件、进程、服务和软件包相关工具；
+- 知识库与知识检索；
+- 短期日记、长期日记和知识点记忆；
+- 网络搜索、天气、汇率、Man 手册和 Linux 生态查询；
+- WebUI 与通讯平台接入等扩展入口。
 
-- Arch Linux
+这些能力目前仍然带有 Miyu 的命名和实现痕迹。它们属于继承中的基线，不代表 YunXi 化改造已经完成。
 
-  ```
-  yay -S miyu
-  ```
-  安装完成后运行`miyu`命令进行初始引导。
+## YunXi 化改造方向
 
-  语音唤醒和本地语音识别是可选组件，单独打成 `miyu-voice` 包（不装不影响其他功能）：
+我会在实机测试和真实使用中，逐步重建以下部分：
 
-  ```
-  yay -S miyu-voice
-  ```
+### 1. 身份与人格
 
-  装好后运行 `miyu config`，在「全局设置」里开启「语音功能」，daemon 会自动拉起 `miyu-voice` 进程。
+把 Miyu 的角色身份逐步替换为 YunXi 的人格、灵魂、陪伴方式和语言风格，让它不只是一个会调用工具的终端程序，而是一个有连续性的陪伴型 Agent。
 
-- Debian / Ubuntu / Linux Mint
+### 2. 记忆与理解
 
-  从 [Releases](https://github.com/SHORiN-KiWATA/miyu-agent/releases/latest) 下载 `.deb`（`miyu_<版本>_amd64.deb`，
-  语音包是 `miyu-voice_<版本>_amd64.deb`），双击打开安装，或者终端使用`apt`安装：
+保留 Miyu 对短期日记、长期经历和知识点的分层思路，同时继续完善 YunXi 的用户记忆、关系记忆和向量召回。
 
-  ```
-  sudo apt install ./miyu_<版本>_amd64.deb
-  # 想要语音就和主包一起装，两个包的版本必须相同
-  sudo apt install ./miyu_<版本>_amd64.deb ./miyu-voice_<版本>_amd64.deb
-  ```
+记忆和知识库会保持分离：
 
-  >发行包支持 **Ubuntu 24.04 LTS 及更新**、**Debian 13** 与 **Linux Mint 22**（22.x 的基座就是 Ubuntu 24.04）。更老的发行版装不上：包里的 `libc6` 下限跟着构建基座走（当前 glibc 2.39）。
+- 记忆库记录用户、项目、经历和关系；
+- 知识库记录 Linux 命令、系统知识和可扩展的私有知识；
+- 两者使用不同的数据边界和召回路径，避免把知识误当成用户记忆。
 
-- Fedora
+### 3. 终端接管
 
-  同样从 Releases 下载 `.rpm`：
+Fish 是主要实验场。目标不是增加一个“自然语言命令”子命令，而是让终端本身成为 YunXi 的持续交互入口：用户可以像和人说话一样描述目标，YunXi 负责理解上下文、选择动作并返回清晰结果。
 
-  ```
-  sudo dnf install ./miyu-<版本>.fc<N>.x86_64.rpm
-  ```
+### 4. 系统级演进
 
-- macOS（Apple Silicon，macOS 15 及以上）
+后续会逐步探索：
 
-  ```
-  brew install shorin-kiwata/miyu/miyu
-  ```
-  请写全名安装：Homebrew 6 起第三方 tap 要显式信任，全名只信任这一个 formula。chafa、ripgrep、onnxruntime 会一起装好。Release 页上的 macOS 包没有签名，浏览器直接下载会被 Gatekeeper 拦，只支持用 Homebrew 安装。
+- 系统服务和进程协作；
+- 文件与项目上下文感知；
+- 软件包和系统维护；
+- 长期后台任务；
+- 多终端状态共享；
+- 用户级知识沉淀；
+- 面向 Linux 桌面和开发环境的主动协助。
 
-  macOS 版不带语音包，想用嘴代替打字就用系统自带的听写（连按两下 Fn）。
+是否需要确认、提醒或限制某类操作，不提前凭空设定。先通过 WSL、Arch Linux 实机和长时间常驻测试观察真实行为，再决定 YunXi Linux 版自己的边界。
 
-  终端界面的图标用的是 Nerd Font（v3）的字形：装好一款 **Nerd Font Mono** 字体后，还要在终端（Terminal.app / iTerm2 的描述文件）里把字体**选成它**，只装不选图标会显示成方框。不想装字体就设 `MIYU_TUI_ASCII=1` 改用通用符号。
+## 当前项目阶段
 
-- 从源码构建
+项目现在处于迁移早期，当前重点不是发布一个已经完成的 YunXi，而是建立可靠的 Linux 原生基线：
 
-  ```
-  git clone https://github.com/SHORiN-KiWATA/miyu-agent.git
-  cd Miyu
-  cargo build --release                    # 只出 miyu
-  cargo build --release --features voice   # 再出 miyu-voice(可选,链接 sherpa-onnx)
-  ```
+1. 保证 Miyu Fork 可以独立编译、运行和接管 Fish；
+2. 保持上游更新可追踪、可同步；
+3. 逐步替换人格、记忆和陪伴层；
+4. 在真实 Linux 环境中验证系统级交互；
+5. 根据实机结果决定最终的执行边界和产品形态。
 
-  源码构建时把 `target/release/miyu`（以及可选的 `miyu-voice`）放到同一个 `PATH` 目录里即可，daemon 在主程序同目录寻找 `miyu-voice`。
+因此，当前版本中仍可能看到 `miyu` 的命令名、路径和资源名称。这是迁移过程中的正常状态，后续会随着 YunXi 化改造逐步统一。
 
-## 如何使用？
+## 安装与运行
 
-> 与 `miyu` 运行最适配的是 `kitty`终端
-
-- TUI
-
-  裸 `miyu` 进入普通模式的 REPL； `miyu dev` 进入开发预设的 REPL。
-
-- WebUI
-
-  ```
-  miyu web
-  ```
-  第一次进入会提示登录内置账号后创建管理员账户，内置账户的用户名和密码都是 miyu，创建管理员账户后内置账户自动删除。
-
-- shell hook 终端集成
-
-  最好的集成效果要求使用 `fish`，`zsh` 和`bash` 只能做到单行对话，`fish` 可以完整无缝集成。
-  
-  ```
-  miyu fish-init
-  ```
-  初始化后可以直接在终端打字对话。
-
-- 语音唤醒(可选,需装 `miyu-voice`)
-
-  设置里开启「语音功能」后 daemon 会拉起独立的 `miyu-voice` 进程常开麦克风。对着麦克风说唤醒词：`未有未有`即可进行语音对话，唤醒词可以在`语音功能`设置菜单中修改。使用`miyu listen`命令可以手动开启或关闭监听。可选回复播报(MiniMax / 小米 MiMo 语音合成)。
-
-## 重要配置调整
-
-运行 `miyu config` 命令打开配置 TUI。
-
-- 供应商和模型
-
-  `miyu` 默认使用 opencode 的公共 API，推荐配置自己的 API。
-
-- 人格和功能
-
-  `miyu`的默认提示词是无法修改的。你可以在`人格和功能`中新建属于自己的 AI 人格，自选需要开关的功能，还可以配置 `用户身份` 让对话更加沉浸。 
-
-## 搬到另一台机器
-
-`miyu export` 把当前安装打成一个 `.tar.gz`（权限 0600），`miyu import` 在新机器上还原：
+目前以源码构建为准：
 
 ```bash
-miyu export                      # 配置、会话历史、记忆、知识库原文、用户资源
-miyu export --index --platforms  # 额外带上向量索引与平台聊天历史
-miyu export --no-secrets         # 清空 API key 与令牌，导入后自行补填
-miyu export --dry-run            # 只看清单与体积，不写文件
-
-miyu daemon stop                 # daemon 占着数据库，导入前必须停
-miyu import miyu-export-*.tar.gz
+git clone https://github.com/sjxbbdb/yunxi-agent-miyu.git
+cd yunxi-agent-miyu
+cargo build --release
 ```
 
-默认**不含**知识库向量索引（很大，且 `miyu kb embed` 可重建）、缓存、日志和其他一次性的本机状态。密钥默认带上并在导出时警告——归档是明文的，别随手发出去。
+构建完成后，当前主程序仍使用 Miyu 的过渡命令名：
 
-## 内置插件
+```bash
+./target/release/miyu
+```
 
-<details><summary>[展开/收起] 具体介绍</summary>
-<br>
+进入配置界面：
 
->此处的演示图片是旧版的 REPL 和工具输出日志，新版已经大不同了
+```bash
+./target/release/miyu config
+```
 
-- 表情包
-  
-  表情包毫无疑问是聊天时最重要的部分，在对话时，Miyu 会根据情景自主发送符合情境的表情包。除了自主发送，设置里还可以设置概率、置信度和冷却时间。
+初始化 Fish 终端集成：
 
-  ![](./pics/nvidiafuckyou.png)
+```bash
+./target/release/miyu fish-init
+```
 
-  Miyu 自带了一些表情，存放在`/usr/share/miyu`，对应的用户空间目录位于`~/.miyu/data`。表情库是跟随人格的，如果你在设置里新建了自己的人格，那么就无法使用 Miyu 的默认表情。你可以准备一些图片，把路径给 Ai，让其保存到表情库。届时会自动调用识图模型对图片进行分析并保存。Miyu 默认使用 opencode 公共模型服务中的多模态模型进行识图，所以即使不配置自己的多模态模型也可以看图片。
+完成初始化后，重新打开 Fish，即可在终端中使用自然语言进行交互。
 
-- 玄学算命
+> 独立的 Arch 包、发行版安装脚本和最终的 `yunxi` 命令名会在基线稳定后重新整理。当前不要把上游 `miyu` 软件包当成 YunXi 发行版。
 
-  >心理学。
-  
-  算命就像看天气预报一般稀松平常。Miyu 自带了周易六十四卦、吉凶占、塔罗牌抽取等玄学功能。
+## 上游关系与致谢
 
-  ![](./pics/玄学.png)
+本项目明确 Fork 自：
 
-  ![](./pics/吉凶占.png)
+[SHORiN-KiWATA/miyu-agent](https://github.com/SHORiN-KiWATA/miyu-agent)
 
-- 投骰子
+感谢 Shorin 大佬提供 Miyu 的架构、源码和 Linux 原生 Agent 实践。Fish 接管、daemon、TUI、知识库、记忆和终端工作流等方向，都是本项目能够继续改造的基础。
 
-  >赌！
+本项目会保留上游的许可证和必要署名，并通过 `upstream` 远程持续跟踪 Miyu 的变化。
 
-  闲来无事可以和 AI 比比大小。
+## 许可证
 
-  ![](./pics/骰子.png)
-
-- 闹钟
-
-  >要我说，这比GNOME时钟的闹钟好用多了
-  
-  Miyu 自带了闹钟，日常泡泡面、番茄钟学习、计时任务什么的都很实用。内置了闹钟音频，你还可以通过路径传入你想要在到点后播放的“闹钟”。
-
-  ![](./pics/set_alarm.png)
-
-- 知识库
-
-  Miyu 自带了 [ShorinWiki](https://github.com/SHORiN-KiWATA/Shorin-ArchLinux-Guide) 中的内容和一些日用 Linux 会遇到的问题作为默认知识库。
-
-  当然，你也可以通过 `miyu kb` 命令，或者通过跟 AI 的自然语言交互管理属于你自己的知识库。
-
-  ![](./pics/kb.png)
-
-- ProtonDB 查询
-
-  可以查询 ProtonDB 上的游戏信息和相应的评论，为 Linux 玩游戏提供参考建议。
-
-- Linux 游戏兼容性调查
-
-  >这个游戏 Linux 能玩吗？
-
-  这是桌面端使用 Linux 的日经问题，Miyu 会去 [ProtonDB](https://www.protondb.com/)、[Are We Anti-Cheat Yet?](https://areweanticheatyet.com/)、[Can I Play On Linux](https://caniplayonlinux.com/)等 Linux游戏兼容性资讯网站获取主要信息，辅以社区玩家的声音，综合判断一款游戏的兼容性并提出建议和注意事项。
-
-  ![](./pics/gaming.png)
-
-- 网络搜索
-
-  即使不配置网络搜索 API，Miyu 也仍然拥有基础的网络搜索和网页读取能力：未配置任何搜索服务时会优先使用 Exa 的免 key 公共额度（每日限量，报错或超额后自动冷却并回退到内置爬虫搜索）。可以在插件配置中设置 Tavily、Firecrawl 、AnySearch、Exa、SearXNG 等网络搜索 API 以获得更佳的搜索效果。
-
-  ![](./pics/web-search-config.png)
-
-- 搜图
-
-  Miyu 还能帮你找图片喔！搜图会根据网络环境并行使用多个来源，并通过视觉模型筛选相关且安全的结果。图片会默认保存至`~/.miyu/data/pictures/web-images`。
-
-  >NSFW 禁止！
-
-  ![](./pics/搜图.png)
-
-- 生图
-
-  支持 OpenAI 的画图服务喔。图片会默认保存至`~/.miyu/data/pictures/generated-images`。
-
-  >这个功能默认用不了，要自己在插件设置里开启并配置 API
-
-  ![](./pics/生图.png)
-
-- 天气查询
-
-  查询天气是每天的必做活动，当然少不了。
-
-  ![](./pics/weather.png)
-
-- 汇率查询
-
-  国际社会，查个汇率也很合理吧？
-
-  ![](./pics/汇率.png)
-
-- Man 手册查询
-
-  >Man！
-
-  专门的手册查询工具，虽然网络搜索也能做到，但这值得做成单独的插件。
-  
-  ![](./pics/man.png)
-
-- Arch Linux相关
-
-  Arch Linux 是桌面 Linux 的热门之选，Miyu 有一系列插件可以帮助提高 Arch Linux 的日用体验。
-
-  - AUR 状态查询
-
-    >AUR 还在被 DDos 吗！
-
-    AUR 的状态是日用 Arch 时的重要信息之一，不访问网站就能查询的话，在 AUR 安装出现异常时查起来会方便很多。
-
-    ![](./pics/aur-status.png)
-
-  - AUR 包查询
-
-    可以查询 AUR 上的包的具体信息
-
-  - Arch Wiki 查询
-
-    作为 “Linux 圣经”，查询 Arch Wiki 不仅能提高日用 Arch 的体验，对其他发行版也大有裨益。
-
-    ![](./pics/archwiki.png)
-
-  - PKGBUILD 审查（Arch Linux 插件的一部分）
-
-    AUR 投毒的事件搞得人心惶惶，但现在，Miyu 可以帮忙审查 PKGBUILD 啦！审查通过且你确认后才会安装。
-
-    ![](./pics/pkgbuild审核.png)
-
-- 文件操作
-
-  >自不必说。
-
-  Miyu 支持读写文件、搜索内容、查找文件、删除文件等。
-
-- 计算器和哈希编解码
-
-  为了计算结果的准确性，Miyu 自带了科学计算器和哈希编解码的能力。
-
-  ![](./pics/hash.png)
-
-- 记忆系统
-
-  Miyu 的记忆分为短期日记、长期日记和知识点。每个成功完成的对话轮次会立即写入短期日记；同一人格累计 14 条未整理日记后，由独立后台线程并行提炼长期知识点和有回溯价值的长期经历，不会阻塞正常回复。成功整理的短期日记默认保留 14 天，每次有效联想会刷新保留时间；召回达到 3 次时会立即进入长期化整理。尚未成功整理的原文超期后会退出自动联想但不会丢失，后台仍可继续整理；整理成功后再物理清理。已经长期化的日记不再刷新短期原文的清理时间。
-
-  联想会同时检索三类记忆，并使用 `jieba-rs` 中文分词进行低成本匹配。Embedding 后续可以作为可选辅助接入，但不是记忆系统运行的前提。长期知识点和长期日记会随时间衰减为“已遗忘”，不物理删除；显式搜索仍可找回。
-
-  `/reset` 只清理当前会话，不删除人格记忆；终端或 WebUI 的 `/reset all` 会清空当前人格的短期日记、长期日记、知识点、修订记录和待整理状态。主体记忆在一个事务中清理，淘汰上下文随后独立清理。即使后台模型当时正在整理，旧结果也会因数据库身份或记忆代数变化而被拒绝，不能在清理后重新写回；重置前已经启动的其他会话也不能再写入旧日记。
-
-  ![](./pics/记忆.png)
-
-- Fcitx5 wiki 查询
-
-  阅读 Fcitx5 wiki，为输入法问题提供参考。
-
-</details>
-
-## 致谢
-
-#### 功能参考
-
-- [Opencode](https://github.com/anomalyco/opencode) 
-- [Claude Code](https://github.com/anthropics/claude-code)
-- [Pi](https://github.com/earendil-works/pi)
-- [Deepseek-Reasonix](https://github.com/esengine/deepseek-reasonix)
-- [Deeepseek-Harness](https://github.com/deepseek-ai/deepseek-harness)
-- [Astrbot](https://github.com/AstrBotDevs/AstrBot) 
-- [NapCatQQ](https://github.com/NapNeko/NapCatQQ) 
-
-#### 插件设计参考
-
-- [Yue-bin/astrbot_plugin_maskoff](https://github.com/Yue-bin/astrbot_plugin_maskoff)
-- [nuomicici/astrbot_plugin_GroupMemberQuery](nuomicici/astrbot_plugin_GroupMemberQuery)
-- [advent259141/Astrbot_plugin_Heartflow](advent259141/Astrbot_plugin_Heartflow)
-- [Railgun19457/astrbot_plugin_image_generation](Railgun19457/astrbot_plugin_image_generation)
-- [xiewoc/astrbot_plugin_weather_wttr_in](xiewoc/astrbot_plugin_weather_wttr_in)
-- [muyouzhi6/astrbot_plugin_recall_cancel](muyouzhi6/astrbot_plugin_recall_cancel)
-
-## 许可
-
-Miyu 使用 MIT License 发布，见 `LICENSE`。
+本项目遵循上游 Miyu 的 MIT License，详见 [`LICENSE`](./LICENSE)。
