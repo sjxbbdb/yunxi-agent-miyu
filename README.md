@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/readme/yunxi-linux-hero-v3.png" alt="YunXi Linux：在人与终端之间建立自然语言交互层" width="100%">
+</p>
+
 # YunXi Agent · Miyu Fork
 
 这是我从 [SHORiN-KiWATA/miyu-agent](https://github.com/SHORiN-KiWATA/miyu-agent) Fork 出来的项目。
@@ -31,6 +35,8 @@
 ```
 
 终端仍然是 Linux 的底层界面，但人和终端之间增加了一层自然语言交互层。这个项目要做的，就是把这一层做成长期陪伴、可持续运行、真正理解系统的 YunXi。
+
+首页图表达的正是这个设计初衷：左侧是人的意图，中间是自然语言到终端动作的转换，右侧是 YunXi 与 Linux 系统之间的持续连接。它和 Windows 版的陪伴式界面不同，这个版本首先属于终端、属于系统，也属于每天真实发生的 Linux 工作流。
 
 ## 为什么选择 Fork Miyu
 
