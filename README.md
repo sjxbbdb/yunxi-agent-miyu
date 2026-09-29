@@ -103,6 +103,9 @@ Fish 是主要实验场。目标不是增加一个“自然语言命令”子命
 
 因此，当前版本中仍可能看到 `miyu` 的命令名、路径和资源名称。这是迁移过程中的正常状态，后续会随着 YunXi 化改造逐步统一。
 
+此前的 Windows / Web / 语音方向实现保存在历史仓库
+[YunXi-Native](https://github.com/sjxbbdb/YunXi-Native)。它现在作为设计决策、已有实现和测试经验的参照，不再是本项目的主开发线。
+
 ## 安装与运行
 
 目前以源码构建为准：
@@ -144,6 +147,8 @@ cargo build --release
 感谢 Shorin 大佬提供 Miyu 的架构、源码和 Linux 原生 Agent 实践。Fish 接管、daemon、TUI、知识库、记忆和终端工作流等方向，都是本项目能够继续改造的基础。
 
 本项目会保留上游的许可证和必要署名，并通过 `upstream` 远程持续跟踪 Miyu 的变化。
+
+历史参照仓库：[sjxbbdb/YunXi-Native](https://github.com/sjxbbdb/YunXi-Native)
 
 ## 许可证
 
