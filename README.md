@@ -1,14 +1,22 @@
+<h1 align="center">YunXi Agent</h1>
+
+<p align="center"><strong>Linux 原生陪伴型 Agent · Miyu Fork</strong></p>
+
+<p align="center">
+  <a href="https://github.com/SHORiN-KiWATA/miyu-agent">Fork 自 Miyu</a>
+  ·
+  <a href="https://github.com/sjxbbdb/YunXi-Agent">Windows 版历史参照</a>
+</p>
+
 <p align="center">
   <img src="docs/assets/readme/yunxi-linux-hero-v3.png" alt="YunXi Linux：在人与终端之间建立自然语言交互层" width="100%">
 </p>
 
-# YunXi Agent · Miyu Fork
-
-这是我从 [SHORiN-KiWATA/miyu-agent](https://github.com/SHORiN-KiWATA/miyu-agent) Fork 出来的项目。
-
-首先要感谢 Shorin 大佬。Miyu 已经把 Linux 原生 Agent 最难的基础打通了：Fish 终端接管、daemon 常驻、TUI、知识库、记忆、工具调用和多种终端入口。这个项目不会重复造一个脱离 Linux 的聊天程序，而是在 Miyu 的基础上继续往前走。
+<p align="center">让人通过自然语言与终端交互，并让 Agent 逐步理解整个 Linux 系统。</p>
 
 > 当前状态：Miyu 基线继承与 YunXi 化改造进行中。
+
+这是我从 [SHORiN-KiWATA/miyu-agent](https://github.com/SHORiN-KiWATA/miyu-agent) Fork 出来的项目。首先要感谢 Shorin 大佬，Miyu 已经把 Linux 原生 Agent 最难的基础打通了：Fish 终端接管、daemon 常驻、TUI、知识库、记忆、工具调用和多种终端入口。这个项目会在这些基础上继续往前走。
 
 ## 我想把它做成什么
 
