@@ -13,6 +13,8 @@
 
 ## 验证状态
 
+命令级入口—环境—结果矩阵见 [`2026-09-30-g0-test-matrix.md`](2026-09-30-g0-test-matrix.md)；本文件保留阶段摘要和残余风险。
+
 - `cargo fmt --all -- --check`：通过。
 - `cargo metadata --no-deps --format-version 1`：通过。
 - `python test_scripts/arch_dep_check.py`：退出码 0。

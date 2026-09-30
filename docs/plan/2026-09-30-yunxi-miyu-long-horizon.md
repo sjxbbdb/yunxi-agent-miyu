@@ -39,7 +39,7 @@
 - **G0-02 重复运行时检查**：搜索 daemon、shell router、prompt assembler、scheduler、memory store 的第二实现；每项给出“复用/保留/删除/暂不处理”的结论，不做猜测性重构。
 - **G0-03 数据边界清单**：列出 profile、conversation/state、short/long memory、KB、semantic index、credentials、cache 的目录、SQLite 表/索引、embedding 入口、迁移入口、transfer registry 分类和删除/恢复路径。
 - **G0-04 提示与缓存契约**：记录 system prompt 组装顺序、append-only/fossilization、动态事实尾、工具字节稳定性、回放测试和敏感信息边界；确认新模块只能挂在现有 seam。
-- **G0-05 测试矩阵**：把每个入口映射到定向单测、集成测试、testkit/黑盒脚本、WSL 实测和未来 Arch/macOS 证据；记录命令、环境、耗时、通过/失败和失败原因。
+- **G0-05 测试矩阵**：把每个入口映射到定向单测、集成测试、testkit/黑盒脚本、WSL 实测和未来 Arch/macOS 证据；记录命令、环境、耗时、通过/失败和失败原因，交付 [`docs/plan/2026-09-30-g0-test-matrix.md`](2026-09-30-g0-test-matrix.md)。
 - **G0-06 基线修复记录**：只修复由产品改名暴露的旧路径兼容回归；补充正向、负向和自定义 root/config 组合测试，证明不会扩大路径匹配范围。
 - **G0-07 计划清理**：移除公开文档中的个人绝对路径、虚构入口和未经验证的完成表述；更新 `docs/plan/2026-09-30-g0-release-note.md`，提交 G0 证据索引。
 - **G0-08 扩展与权限入口**：把 Skills/MCP 的资源布局、persona/机器快照、注册顺序、断连回退和 request-shape 测试单独列出；把 host ports、principal、turn restriction、command/net guard 和 tool registry 列为权限真相源；不新增 YunXi approval 状态机。
