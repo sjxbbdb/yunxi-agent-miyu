@@ -873,28 +873,30 @@ fn tool_preparing_announces_every_slow_argument_tool() {
     let phase_for = |name: &str| phase_for_batch(name, false);
 
     // apply_artifact_patch used to fall through the label match and render
-    // nothing even though the backend announced it.
+    // nothing even though the backend announced it. The terminal spinner
+    // surface uses the tool glyph in place of the pipe-style `~` prefix, so
+    // assert the stable localized label rather than a surface-specific prefix.
     for name in ["apply_patch", "apply_artifact_patch", "write_file"] {
         let phase = phase_for(name);
         assert!(
-            phase.contains(t("~ Preparing edit", "~ 准备编辑")),
-            "{name}"
+            phase.contains(t("Preparing edit", "准备编辑")),
+            "{name}: {phase:?}"
         );
         // Dim tool palette, not the green the model's thinking uses: a
         // tool is starting up here.
         assert!(phase.contains("\x1b[2m"), "{name}");
         assert!(!phase.contains("\x1b[38;5;10m"), "{name}");
     }
-    assert!(phase_for("run_command").contains(t("~ Preparing command", "~ 准备执行")));
-    assert!(phase_for("trash_path").contains(t("~ Preparing delete", "~ 准备删除")));
-    assert!(phase_for("todowrite").contains(t("~ Preparing list", "~ 准备清单")));
+    assert!(phase_for("run_command").contains(t("Preparing command", "准备执行")));
+    assert!(phase_for("trash_path").contains(t("Preparing delete", "准备删除")));
+    assert!(phase_for("todowrite").contains(t("Preparing list", "准备清单")));
     assert!(phase_for("read_file").is_empty());
 
     // 同一条消息里的第 2+ 个调用:每个工具单看都不够慢,但参数接连流完
     // 的静默窗口和一次大 patch 一样长,所以退到通用提示而不是空白。
-    assert!(phase_for_batch("read_file", true).contains(t("~ Preparing tools", "~ 准备工具")));
+    assert!(phase_for_batch("read_file", true).contains(t("Preparing tools", "准备工具")));
     // 工具自己的提示更具体,批量时也不该被通用的顶掉。
-    assert!(phase_for_batch("run_command", true).contains(t("~ Preparing command", "~ 准备执行")));
+    assert!(phase_for_batch("run_command", true).contains(t("Preparing command", "准备执行")));
 }
 
 /// Regression: the hint above is announced mid-turn, when a reasoning

@@ -19,7 +19,7 @@
 
 1. 不建立第二个 shell router、daemon、prompt 拼装链、调度器或记忆数据库；优先复用 Miyu 入口。
 2. 记忆库和知识库完全分离：目录、schema、embedding、检索入口、权限、迁移、删除和审计都独立。
-3. user profile 不向量化；短期记忆只承接当前上下文和语气；长期记忆必须经过 candidate → commit/reject/expire，不能逐句默认写入。
+3. user profile 不向量化；短期记忆只承接当前上下文和语气；长期记忆必须经过 candidate → commit/reject/expire，不能逐句默认写入。`raw_content`、`display_content`、`context_messages` 三分不可破坏，记忆/日志只读原始用户文本，工程附加信息走 sidecar。
 4. profile、credentials、API key、秘密和敏感个人字段不得进入长期向量索引。
 5. Laya 只能是可关闭的建议器，不能成为工具执行、权限、记忆写入/删除的最终权威；缺失、超时、低置信度和非法输出统一回退确定性规则。
 6. prompt/cache 的 append-only、fossilization、顺序、工具字节稳定性和回放一致性不能破坏。
@@ -42,29 +42,28 @@
 - **G0-05 测试矩阵**：把每个入口映射到定向单测、集成测试、testkit/黑盒脚本、WSL 实测和未来 Arch/macOS 证据；记录命令、环境、耗时、通过/失败和失败原因。
 - **G0-06 基线修复记录**：只修复由产品改名暴露的旧路径兼容回归；补充正向、负向和自定义 root/config 组合测试，证明不会扩大路径匹配范围。
 - **G0-07 计划清理**：移除公开文档中的个人绝对路径、虚构入口和未经验证的完成表述；更新 `docs/plan/2026-09-30-g0-release-note.md`，提交 G0 证据索引。
+- **G0-08 扩展与权限入口**：把 Skills/MCP 的资源布局、persona/机器快照、注册顺序、断连回退和 request-shape 测试单独列出；把 host ports、principal、turn restriction、command/net guard 和 tool registry 列为权限真相源；不新增 YunXi approval 状态机。
+- **G0-09 现有终端闭环基线**：记录 fish 普通语法、自然语言接管、daemon/IPC/TUI 和工具执行的最小黑盒路径，后续 G7 只补 YunXi 缺口，不把核心闭环推迟到最后。
 
 - 盘点真实入口：fish capture、daemon、IPC、TUI、session/state、prompt、`persona_hint`、memory、KB、tool/host ports、MCP/Skills、embedding、cache、migration、测试脚本。
 - 将每个入口映射到实际文件、trait、状态机和测试；画出依赖方向，标出可复用点和重复实现。
 - 记录基线命令、耗时、失败原因和资源限制；形成可重复的测试清单。
 - 输出本文件的“实现地图”与阶段追踪表，更新 `docs/plan/2026-09-30-g0-release-note.md`（下一版本说明的待合并记录）。
 
-**退出条件**：没有未解释的第二运行时/重复入口；G1–G9 均有代码落点和测试入口；`git diff --check` 通过；基线结果可复现。
+**退出条件**：没有未解释的第二运行时/重复入口；G1–G9 均有代码落点和测试入口；现有自然语言终端闭环已登记为可复现实验；`git diff --check` 通过；基线结果可复现。Arch/macOS 若尚无实机，只能标为未验证，不得冒充通过，也不自动阻塞 Linux 阶段开发；G9 发布门再决定是否阻塞。
 
-#### G0 初始基线证据（2026-09-30）
+#### G0 初始基线证据（2026-09-30，后续复跑结果）
 
 - `git diff --check`：通过。
 - `cargo fmt --all -- --check`：通过。
 - `cargo metadata --no-deps --format-version 1`：通过；当前工作区成员为 `yunxi-base`、`yunxi-core`、`yunxi-engine`、`yunxi-hosts` 和根包 `yunxi`。
 - `python test_scripts/arch_dep_check.py`：退出码 0；终端编码导致中文摘要显示异常，但脚本判定通过。
 - WSL Ubuntu-24.04：`CARGO_BUILD_JOBS=1 cargo check --workspace --all-targets --locked` 通过，约 1 分 07 秒。
-- WSL Ubuntu-24.04：`CARGO_BUILD_JOBS=1 cargo test -p yunxi-base --lib resource_path_remapping_includes_the_legacy_xdg_config_root --locked -- --test-threads=1` 通过（1 passed，399 filtered）。
+- WSL Ubuntu-24.04：`CARGO_BUILD_JOBS=1 cargo test -p yunxi-base --lib resource_path_remapping_includes_the_legacy_xdg_config_root --locked -- --test-threads=1` 通过；新增的自定义 root 负向路径测试也通过。
 - Windows 原生 `cargo check --workspace --all-targets --locked`：失败，原因是基线包含 `std::os::unix`、Unix socket、Unix 权限和 `AsRawFd` 等 Linux 专属实现；这确认本项目的构建验收必须以 WSL/Arch Linux 为主，不能为 Windows 编译通过而削弱 Linux 路径。
-- 首次受 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0` 保护的 `cargo test -p yunxi-base --lib --locked -- --test-threads=1`：修复旧绝对配置路径兼容缺陷后通过，394 passed、6 ignored。
-- WSL Ubuntu-24.04 `cargo test --workspace --no-fail-fast --locked -- --test-threads=1`：构建通过；根包 508 项中 1 项失败，`yunxi-engine` 625 项中 3 项失败，`yunxi-hosts` 915 项中 4 项失败，其余单元测试和 doctest 通过。失败已归档，不能当作全工作区通过：
-  - TUI cell fallback 的改名后测试夹具仍使用旧的共享前缀假设；
-  - WSL `/mnt` 跨盘文件权限呈现为 0777，导致权限位保持测试无法代表 Linux 原生文件系统；
-  - bundled script 清单与当前目录实际内容不一致（额外的 `douyin-dl`）；
-  - `apply_patch` 权限位、registry shape fixture 与 renderer event/golden/tool-summary 仍有基线漂移，需在 G0 修复或明确标注为环境/历史基线问题。
+- 受 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0` 保护的工作区分批测试最终为：根包 `yunxi` 504/0/4 ignored，`yunxi-base` 395/0/6 ignored，`yunxi-core` 642/0/8 ignored，`yunxi-engine` 628/0/13 ignored，`yunxi-hosts` 919/0/10 ignored；doctest 全部通过。
+- 初次失败已逐项处理：TUI changed-prefix fixture 与回放编辑断言更新为当前 YunXi 输出；权限位测试改用 WSL 原生临时目录；bundled script 清单与 `douyin-dl` 描述同步；registry fixture 重生成；renderer event 与 tool-summary 断言改为检查本地化语义而非不稳定装饰符号。
+- 这些修复只校准测试夹具、环境选择和既有输出契约，没有新增业务能力；`legacy_config_dir` 另补了自定义 root 名称不应选择旧 namespace 的负向回归测试。
 
 #### G0 基线修复记录
 
@@ -72,7 +71,7 @@
 
 #### G0 尚未完成的验证
 
-- 全工作区测试已返回，但不是全绿；上述 8 个失败必须在 G0 退出记录中逐项标注为“修复”或“已证明为环境/历史基线”，不能静默忽略。
+- 全工作区测试已全绿，但 G0 的架构审计尚未完成。还需补齐每个入口的调用关系、所有者、不变量和测试映射；特别是 daemon/IPC lease/frame/协议/回放、session/compact/evicted context、transfer 隐私分类、KB write-through、MCP/Skills、host capability/guard、persona/profile 迁移、scheduler/background job、goal 持久化与 Codex active goal 的区分，以及 `docs/interfaces/subsystems.md` 的挂接契约。
 - macOS M-series 只能在对应环境或 CI 上验证，当前本机没有该运行环境；需在 G0 状态中保留为未验证项。
 - Arch Linux 实机尚未验证；WSL Ubuntu 已确认 `/usr/bin/fish`、Rust/Cargo 和 systemd user scope 可用。
 
@@ -98,12 +97,13 @@
 | state/migration | `crates/yunxi-core/src/state/`、`crates/yunxi-core/src/state/migrations/`（`mod.rs`、`named.rs`、`columns.rs`、`baseline.rs`、`tests.rs`） | 当前**版本化 schema** latest version 为 40；`named.rs` 是独立的命名迁移链，不与 `user_version` 混用。G2/G3 只能追加迁移，Turn 固定列序和 `map_turn_row` 必须同步。 |
 | knowledge | `crates/yunxi-engine/src/tools/knowledge_base/{mod,store,search,dashboard}.rs`、`kb/`、`crates/yunxi-hosts/src/web/dashboards/kb.rs`、`src/cli/data_cmds.rs`/`embed_cmds.rs` | 已有独立元库/语义库、文件边界、关键词/embedding 搜索和 reindex；G4 以现有 KB 为底座，不得与 memory 合表。 |
 | KB 更新/迁移 | `crates/yunxi-engine/src/default_kb.rs`、`tools/apply_patch/{mod,tests}.rs`、`crates/yunxi-engine/src/transfer/{export,import,fixups,manifest,mod,registry}.rs` | source→snapshot→meta DB→semantic index→reindex、write-through、版本、导入/导出/恢复和秘密分类是 G4/G9 权威；Web dashboard 只作历史/展示入口，不是 Linux 主链。 |
-| MCP/Skills/工具面 | `crates/yunxi-core/src/skills/`、`crates/yunxi-engine/src/tools/`、`testkit/oobe/mcp_probe.py` | 启用快照、资源布局、MCP 断连回退、tool-face 字节稳定和懒工具边界必须复用现有 seam。 |
-| tools/host/权限 | `crates/yunxi-engine/src/tools/`、`crates/yunxi-base/src/host_ports/`、`crates/yunxi-hosts/src/platforms/` | 工具调用、host capability、command/net guard 和执行结果是权限权威；决策层只能给建议。 |
+| MCP/Skills/工具面 | `crates/yunxi-core/src/skills/{mod.rs,manifest.rs,draft/}`、`crates/yunxi-engine/src/tools/{compose_core.rs,compose_providers.rs,load_tools.rs,skills.rs,mcp/{connection,pool,protocol,scope,runtime}.rs}`、`src/personas/*/skills/**/SKILL.md`、`testkit/{oobe/mcp_probe.py,mcp-persistent/}` | 复用 persona manifest × machine config 快照、PluginKind::Provider 注册顺序、SkillsSource 指令尾、MCP 常驻断连回退；验收资源布局、开关组合、request-shape 五脸和持久 MCP。 |
+| tools/host/权限 | `crates/yunxi-engine/src/tools/{command_guard.rs,net_guard.rs,registry/,default_tools/command*}`、`crates/yunxi-base/src/host_ports/{host_grants.rs,host_query.rs,turn_restrictions.rs,ports.rs,live_turn.rs}`、`crates/yunxi-hosts/src/platforms/{access_control.rs,commands.rs,tool_context.rs,turn_context.rs,turn_ownership.rs,turn_run.rs}` | 真实 principal、host capability、turn restriction、command/net guard 和执行结果是权限权威；prompt 标签与决策层都不能鉴权或提权。 |
+| 扩展生命周期 | `crates/yunxi-core/src/skills/`、`crates/yunxi-engine/src/tools/compose_providers.rs`、`crates/yunxi-engine/src/tools/mcp/` | Skills/MCP 是跨层 seam，不得作为外挂功能单独绕过 persona 快照、工具注册或权限模型。 |
 | persona/profile | `crates/yunxi-core/src/persona_hint.rs`、`src/config_tui/`、`crates/yunxi-core/src/state/`、`crates/yunxi-engine/src/transfer/registry.rs` | G1/G2 必须覆盖确认/推断来源、persona rename/delete scope migration 和 profile 不进向量库。 |
 | 调度/后台 job | `crates/yunxi-hosts/src/platforms/scheduling.rs`、`crates/yunxi-hosts/src/platforms/plugins/scheduled_messages/`、`crates/yunxi-hosts/src/runtime/events.rs`、`crates/yunxi-engine/src/tools/jobs/`、`crates/yunxi-engine/src/agent/turn_loop/` | G6 只能复用现有事件、job 生命周期、取消和前台让位规则；不得新建第二调度器。 |
 | goal 持久化 | `crates/yunxi-engine/src/tools/goal/`、`src/tools/descriptions/goal.json`、`crates/yunxi-core/src/state/conversation_db/goals.rs`、`crates/yunxi-hosts/src/web/goal_driver.rs` | 产品内 `goal` 的 rounds/armed/awaiting/restart 运行时持久化与 Codex active goal 是两件事；G0 需单独记录，不能混为计划文本。 |
-| subsystem seam | `docs/interfaces/subsystems.md`、`crates/yunxi-engine/src/tools/compose_providers.rs` | memory 的 ToolRegistration/SystemPrompt/BeforeModel/AfterTurn、skills/persona_hint 的互不 use 和插件快照顺序是接入协议；新模块先挂在这些 seam 上。 |
+| subsystem seam | `docs/interfaces/subsystems.md`、`crates/yunxi-engine/src/tools/compose_providers.rs` | memory 的 ToolRegistration/SystemPrompt/BeforeModel/AfterTurn、skills/persona_hint 的互不 use、插件快照顺序和 raw/display/context 三分是接入协议；新模块先挂在这些 seam 上。 |
 
 本表是 G0 的审计产物，不代表所有领域都已经完成设计；下一次只补齐入口的调用关系、状态流和测试文件，不提前实现业务模块。
 
@@ -151,15 +151,15 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 **代码落点**：复用 `crates/yunxi-core/src/memory/mod.rs`、`crates/yunxi-base/src/memory_types.rs`、现有 SQLite/embedding 端口。
 
 - 明确 `turn/transient`、`short-term working set`、`long-term candidate`、`long-term committed` 四态。
-- 设计 candidate 的来源、置信度、原因、保留期、撤销、commit/reject/expire；“记住/忘记”必须可预测。
+- 设计 candidate 的来源、置信度、原因、保留期、撤销、commit/reject/expire；“记住/忘记”必须可预测。明确软遗忘与真正删除：删除必须清除正文、embedding、关联/缓存/摘要引用，并定义 transfer/backups 的处理；候选拒绝/过期永不进入索引。
 - 规则先筛稳定偏好、项目约束、重复确认、未来价值和敏感度；只有 committed 才进入长期向量索引。
 - 检索返回 provenance、scope、timestamp，并按预算注入 prompt；删除后不可召回，重复写幂等。
 
-**验收**：闲聊不增长长期索引；敏感字段拒绝；崩溃/重启/半写恢复；召回质量与延迟有基线。
+**验收**：闲聊不增长长期索引；敏感字段拒绝；崩溃/重启/半写恢复；召回质量与延迟有基线；已删除 id 不能被 keyword、semantic、association、compact、restore 或 backup import 再召回。
 
 ### G4：独立知识库与 RAG
 
-- Linux 命令/系统知识使用独立 KB schema、目录、embedding、检索服务；未来私有知识通过 namespace/source 加入，不与 memory 共表共索引。
+- Linux 命令/系统知识使用独立 KB schema、目录、embedding、检索服务；未来私有知识通过明确授权的 namespace/source 加入，不与 memory 共表共索引。两库可以共享纯无状态 embedding 实现，但 schema、collection、召回 API、权限、迁移和生命周期必须独立；聊天内容不能静默写成私有知识。
 - 对文档切片、去重、版本、失效、重建、引用/provenance 建立边界；检索只是事实候选，不能绕过执行层。
 - 与 Skills/MCP/tool 说明衔接，缺 KB 时退化为现有 help/tool 结果。
 
@@ -168,7 +168,7 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 ### G5：DecisionPort 与 Laya 可选决策层
 
 - 定义低层 `DecisionPort`、请求/结果/原因类型；不把 Laya/ONNX 类型泄漏进核心领域。
-- 先 deterministic provider，再 shadow Laya provider；feature/config 默认关闭；`choice/score/noul` 需 schema 校验，score 不等于事实。
+- 先做 G5-00 可行性门：核实可用 artifact/checkpoint、推理接口、许可证、ONNX/runtime、Linux 与 macOS ARM/CPU 部署、延迟/RAM，以及中文/Linux 术语数据；先建立 deterministic baseline，再决定是否使用具体输出字段。之后才是 shadow Laya provider；feature/config 默认关闭，任何字段都需 schema 校验，score 不等于事实。
 - 用于 context salience、memory admission、recall/rerank、terminal intent、主动陪伴候选排序；不能直接执行 shell 或写删数据。
 - 建立脱敏的中文/Linux 评测集、延迟预算、拒绝率、混淆矩阵和回放；失败统一 fallback。
 
@@ -177,7 +177,7 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 ### G6：陪伴行为与自动总结
 
 - 复用现有事件/会话收尾/调度机制，不建第二调度器。
-- 空闲触发总结候选，分别产出短期情景摘要、长期记忆候选、知识候选、profile 候选、关系/陪伴事件；每类进入自己的保存流程，不能一份总结跨库写入。
+- 复用 conversation closing/idle trigger 的现有 owner。分别产出短期情景摘要、长期记忆候选、知识候选、profile 提案、关系/陪伴事件；每类拥有独立 destination、consent、expiry、dedupe、取消/重启协议，不能一份总结跨库写入。profile 推断不得静默落地，私有 KB 不由聊天内容静默收录。
 - 情书/陪伴信箱、关系阶段、情绪语气作为可插拔 capability；失败不能影响终端主链路。
 
 **验收**：不重复、不抢前台、不丢对话；重启幂等；候选可查看/拒绝/删除。
@@ -185,7 +185,7 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 ### G7：Linux 原生自然语言终端控制
 
 - 深入复用 Miyu fish 接管、daemon、IPC、TUI、command/file/process/package/MCP 路径，不再造 shell parser/router。
-- 链路固定为：理解 → 必要时澄清 → 计划 → 预览/确认 → 执行 → 解释 → 可回放；危险/覆盖/批量/网络/安装操作沿用现有权限。
+- 链路固定为：理解 → 语义不足时澄清 → 复用 Miyu 当前 permission/confirmation contract → 执行 → 解释 → 可回放；只有既有规则要求确认时才确认，不新增 YunXi 通用审批状态机。危险/覆盖/批量/网络/安装操作沿用现有权限。
 - 失败时可原样回退 fish；支持交互式/非交互式、TTY resize、SIGINT、退出、IPC 断连、长 Unicode 输出。
 
 **验收**：模拟和真实 WSL Ubuntu 通过；条件允许时 Arch Linux 通过；daemon 重启、命令失败和回滚提示可验证。
@@ -218,7 +218,7 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 
 | 阶段 | 状态 | 下一步 |
 | --- | --- | --- |
-| G0 基线审计 | 进行中（入口地图完成；workspace 有 8 个失败待分类） | 复现失败、修复迁移回归或记录环境/历史基线，完成隐私与差异检查 |
+| G0 基线审计 | 进行中（基线测试已全绿；入口调用关系与隐私审计待收口） | 完成逐项入口/调用/测试映射、公开文件隐私扫描和 Arch/macOS 缺口记录 |
 | G1 CompanionContext | 未开始 | G0 通过后做最小垂直切片 |
 | G2 Profile/关系 | 未开始 | G1 通过后追加迁移 |
 | G3 分层记忆 | 未开始 | G2 通过后做 admission |

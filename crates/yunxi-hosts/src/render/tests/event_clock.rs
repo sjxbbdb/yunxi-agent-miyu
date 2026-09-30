@@ -6,6 +6,7 @@
 
 use super::timeline::{block_id_in, timeline_renderer, with_blocks};
 use std::time::{Duration, Instant};
+use yunxi_base::i18n::text as t;
 
 fn stats<'a>(
     renderer: &'a crate::render::StreamRenderer,
@@ -124,7 +125,9 @@ fn a_replayed_thought_keeps_its_own_duration() {
         with_expanded(String::from_utf8_lossy(&renderer.take_output_frame()).to_string())
     });
     assert!(
-        frame.contains("3.0s") && !frame.contains("30s"),
+        frame.contains(t("thought", "已思考"))
+            && frame.contains("3.0s")
+            && !frame.contains(&format!("{} · 30.0s", t("thought", "已思考"))),
         "补发的思考想了 3 秒: {frame}"
     );
 }

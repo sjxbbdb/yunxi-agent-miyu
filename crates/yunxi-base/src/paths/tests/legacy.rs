@@ -4,6 +4,34 @@ use super::shared::*;
 use crate::paths::*;
 
 #[test]
+fn custom_root_name_does_not_select_a_legacy_namespace() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join(".yunxi");
+    let custom_config = temp.path().join("custom/config");
+    let layout = YunXiPaths {
+        root_dir: root.clone(),
+        config_dir: custom_config.clone(),
+        config_file: custom_config.join("config.jsonc"),
+        skills_dir: root.join("skills"),
+        data_dir: root.join("data"),
+        cache_dir: root.join("cache"),
+        state_dir: root.join("state"),
+        pictures_dir: root.join("pictures"),
+        fish_hook_file: root.join("fish/yunxi.fish"),
+        bash_hook_file: custom_config.join("shell/bash-hook.sh"),
+        zsh_hook_file: custom_config.join("shell/zsh-hook.zsh"),
+        scripts_dir: root.join("scripts"),
+        system_scripts_dir: PathBuf::new(),
+    };
+    // Test fixtures often use a `.yunxi`-named root under a temporary
+    // directory, while their config directory is deliberately elsewhere.
+    // Namespace inference must follow the real default XDG config path, not
+    // the fixture root's basename.
+
+    assert_eq!(layout.legacy_config_dir(), None);
+}
+
+#[test]
 fn migration_moves_and_merges_without_overwriting() {
     let temp = tempfile::tempdir().unwrap();
     let source = temp.path().join("legacy");

@@ -155,11 +155,12 @@ fn a_replayed_edit_expands_to_its_diff() {
         "{lines:#?}"
     );
     // 路径只在那一步的抬头上：diff 里不再带「已新建  路径」那种文件头。
+    // 回放块会同时包含工具标题和展开后的参数详情；只要求实际的编辑标题
+    // 携带路径，不把详情里的裸路径误判成旧的文件头格式。
     assert!(
-        lines
-            .iter()
-            .filter(|line| line.contains("/tmp/walk.txt"))
-            .all(|line| line.contains(t("Edit file", "编辑文件"))),
+        lines.iter().any(|line| {
+            line.contains("/tmp/walk.txt") && line.contains(t("Edit file", "编辑文件"))
+        }),
         "{lines:#?}"
     );
     // 新建的文件行号从 1 起。

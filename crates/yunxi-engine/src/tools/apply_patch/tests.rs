@@ -284,7 +284,11 @@ fn update_patch(path: &std::path::Path, hunks: &str) -> String {
 #[test]
 fn edit_keeps_the_files_permission_bits() {
     use std::os::unix::fs::PermissionsExt;
-    let temp = tempfile::tempdir_in(std::env::current_dir().unwrap()).unwrap();
+    // Permissions are only meaningful on a native Unix filesystem. WSL's
+    // `/mnt/*` DrvFs mount reports a synthetic 0777 mode regardless of chmod,
+    // so keep this fixture on the Linux temp filesystem even when the checkout
+    // itself lives on a Windows-mounted drive.
+    let temp = tempfile::tempdir().unwrap();
     let script = temp.path().join("run.sh");
     std::fs::write(&script, "#!/bin/sh\necho old\n").unwrap();
     std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();

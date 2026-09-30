@@ -18,6 +18,7 @@ use yunxi_hosts::render::{ReasoningDisplayMode, StreamRenderer, ToolCallDisplayM
 /// 测试里 stdout 不是终端，出厂按「stdout 是不是终端」选的是管道那一面；
 /// shellhook 真跑起来时目的地是终端，得显式选才走到静态时间线这条路。
 fn static_renderer() -> StreamRenderer {
+    set_test_viewport();
     let mut renderer = StreamRenderer::new(
         ReasoningDisplayMode::Summary,
         ToolCallDisplayMode::Summary,
@@ -65,6 +66,19 @@ impl Screen {
     fn text(&self) -> String {
         self.lines().join("\n")
     }
+}
+
+impl Drop for Screen {
+    fn drop(&mut self) {
+        yunxi_base::terminal::set_content_viewport(None);
+    }
+}
+
+fn set_test_viewport() {
+    // Keep static-surface tests independent of the terminal attached to the
+    // test runner. Production fullscreen code records this same viewport
+    // before rendering begins.
+    yunxi_base::terminal::set_content_viewport(Some((100, 24)));
 }
 
 fn strip_ansi(text: &str) -> String {
@@ -373,6 +387,7 @@ fn a_thought_is_one_line_and_there_is_no_worked_for_handle() {
 }
 
 fn full_static_renderer() -> StreamRenderer {
+    set_test_viewport();
     let mut renderer = StreamRenderer::new(
         ReasoningDisplayMode::Full,
         ToolCallDisplayMode::Summary,

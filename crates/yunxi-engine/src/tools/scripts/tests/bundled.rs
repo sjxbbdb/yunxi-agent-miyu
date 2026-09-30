@@ -193,8 +193,8 @@ fn bundled_scripts_carry_a_chinese_display_name() {
 fn bundled_descriptions_follow_the_header_style_rules() {
     let scan = scan_scripts(&[bundled_dir().as_path()]).unwrap();
     let ids: Vec<&str> = scan.entries.iter().map(|entry| entry.id.as_str()).collect();
-    // 09-23 起机票/酒店/直播三件搬进技能树(`skills/<技能名>/scripts/`),
-    // 不再出现在这层目录扫描里。
+    // 09-23 起机票/酒店/直播三件搬进技能树(`skills/<技能名>/scripts/`)；
+    // 抖音下载器仍是兼容性脚本，当前继续留在这层目录，必须纳入契约。
     assert_eq!(
         ids,
         vec![
@@ -203,6 +203,7 @@ fn bundled_descriptions_follow_the_header_style_rules() {
             "codec",
             "crack_search",
             "divine",
+            "douyin_dl",
             "game_compat",
             "get_weather",
             "goofish_search",

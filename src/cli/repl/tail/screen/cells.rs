@@ -439,11 +439,14 @@ mod tests {
         ];
         let new = vec![
             span("  ", None),
-            span("MIKU", Some(Color::Blue)),
+            span("YUNXO", Some(Color::Blue)),
             span(" x", None),
         ];
         assert_eq!(aligned_patch(&old, &new, 0), None);
-        assert!(!patch_row(&old, &new, 0).contains("MI"), "只重写变了的那格");
+        assert!(
+            !patch_row(&old, &new, 0).contains("YUNX"),
+            "只重写变了的那格"
+        );
         assert_patch_lands(&old, &new);
         // 短了一截：尾巴由逐格那条路补空格。
         let old = vec![span("abc", None)];

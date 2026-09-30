@@ -16,13 +16,20 @@
 - `cargo metadata --no-deps --format-version 1`：通过。
 - `python test_scripts/arch_dep_check.py`：退出码 0。
 - WSL Ubuntu-24.04 `cargo check --workspace --all-targets --locked`：通过。
-- WSL Ubuntu-24.04 `cargo test -p yunxi-base --lib --locked -- --test-threads=1`：394 passed、0 failed、6 ignored。
-- WSL Ubuntu-24.04 全工作区 `cargo test --workspace --no-fail-fast --locked -- --test-threads=1`：未全绿，结果已返回；根包 508 tests 中 1 个失败，`yunxi-engine` 625 tests 中 3 个失败，`yunxi-hosts` 915 tests 中 4 个失败，其他 crate 与 doctest 通过。失败集中在产品改名后的 TUI changed-prefix fixture、WSL `/mnt` 下的权限位语义、bundled script 清单漂移、tool registry shape fixture 以及 renderer event/golden/tool-summary 基线漂移。
-- 其中权限位失败已确认是 WSL DrvFs 测试目录的环境语义，不能据此修改生产逻辑；其余失败必须在 G0 内逐项分类为应修复的基线漂移或明确的环境缺口，不能用“命令启动”替代验收。
+- WSL Ubuntu-24.04 `cargo test -p yunxi-base --lib --locked -- --test-threads=1`：395 passed、0 failed、6 ignored。
+- WSL Ubuntu-24.04 `cargo test -p yunxi-core --lib --locked -- --test-threads=1`：642 passed、0 failed、8 ignored。
+- WSL Ubuntu-24.04 `cargo test -p yunxi-engine --lib --locked -- --test-threads=1`：628 passed、0 failed、13 ignored。
+- WSL Ubuntu-24.04 `cargo test -p yunxi-hosts --lib --locked -- --test-threads=1`：919 passed、0 failed、10 ignored。
+- WSL Ubuntu-24.04 `cargo test -p yunxi --lib --locked -- --test-threads=1`：504 passed、0 failed、4 ignored。
+- WSL Ubuntu-24.04 全工作区 `cargo test --workspace --no-fail-fast --locked -- --test-threads=1`：四个下层 crate 与根包的最终复跑结果均为 0 失败；此前汇总中根包的 1 个失败已由回放编辑断言的错误过滤条件复现并修正。Doctest 全部通过。
+- WSL Ubuntu-24.04 `cargo check --workspace --all-targets --locked`：通过；`cargo fmt --all -- --check`、`cargo metadata --no-deps --format-version 1`、`git diff --check`、`python test_scripts/arch_dep_check.py`：均通过。
+- 权限位测试改用 WSL 原生 Linux 文件系统临时目录，不再把 `/mnt` DrvFs 的 0777 映射误当作生产语义；bundled script、registry fixture、TUI changed-prefix、renderer event、tool-summary 和回放编辑测试均已按当前 YunXi 产品输出修正或补强。
 
 ## 未完成项
 
-- G0 还需要逐项处理上述 workspace 失败、补齐路径兼容的负向测试、执行完整 diff/privacy 检查并核对计划中的真实文件入口。
+- G0 仍需完成入口审计的逐项调用关系和隐私扫描收口；当前测试全绿不等于架构审计完成。
+- 需要补齐 daemon/IPC 的 lease、frame、协议协商、事件回放和问题问答链；session/conversation/compact/evicted context；transfer 的导出/导入/迁移/隐私分类；default KB write-through；MCP/Skills 快照与断连回退；host capability/command/net guard；persona/profile 的重命名、删除和作用域迁移；调度/background job；产品 `goal` 持久化与 Codex active goal 的区分；以及 `docs/interfaces/subsystems.md` 的 ToolRegistration/SystemPrompt/BeforeModel/AfterTurn 挂接契约。
+- 需要对入口表中的调用方向、所有者、不变量和对应测试文件做逐项核对，不能只列文件名。
 - Arch Linux 实机和 macOS M-series 仍未在本机验证；必须保留为明确的环境缺口。
 - G1 及之后的 CompanionContext、结构化 profile、记忆 admission、独立 KB/RAG、Laya、自动总结、终端自然语言层和 TUI 原生化均未开始。
 
