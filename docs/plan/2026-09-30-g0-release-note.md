@@ -20,6 +20,7 @@
 - WSL Ubuntu-24.04 `cargo test -p yunxi-base --lib --locked -- --test-threads=1`：395 passed、0 failed、6 ignored。
 - WSL Ubuntu-24.04 `cargo test -p yunxi-core --lib --locked -- --test-threads=1`：642 passed、0 failed、8 ignored。
 - WSL Ubuntu-24.04 `cargo test -p yunxi-engine --lib --locked -- --test-threads=1`：628 passed、0 failed、13 ignored。
+- WSL Ubuntu-24.04 最新复跑（归档资源上限、tier 矩阵和 registry 子路径边界之后）：`cargo test -p yunxi-engine --lib --locked -- --test-threads=1` 为 643 passed、0 failed、13 ignored；未设置 `YUNXI_LANG=zh` 时仅复现既有 locale 选择导致的中文显示名断言失败，设置后通过。
 - WSL Ubuntu-24.04 `cargo test -p yunxi-hosts --lib --locked -- --test-threads=1`：919 passed、0 failed、10 ignored。
 - WSL Ubuntu-24.04 `cargo test -p yunxi --lib --locked -- --test-threads=1`：504 passed、0 failed、4 ignored。
 - WSL Ubuntu-24.04 全工作区 `cargo test --workspace --no-fail-fast --locked -- --test-threads=1`：四个下层 crate 与根包的最终复跑结果均为 0 失败；此前汇总中根包的 1 个失败已由回放编辑断言的错误过滤条件复现并修正。Doctest 全部通过。
