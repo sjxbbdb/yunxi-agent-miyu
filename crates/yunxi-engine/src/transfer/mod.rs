@@ -561,6 +561,64 @@ pub(crate) mod tests {
         assert!(footprint.is_none());
     }
 
+    #[test]
+    fn imported_home_conversation_is_fixed_before_install() {
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = test_paths(source.path());
+        std::fs::create_dir_all(&source_paths.config_dir).unwrap();
+        std::fs::write(&source_paths.config_file, "{}").unwrap();
+        std::fs::write(source.path().join(".home-layout-v1"), "tester").unwrap();
+        let home = source.path().join("home/tester");
+        std::fs::create_dir_all(&home).unwrap();
+        let db_path = home.join("conversation.db");
+        {
+            let conn = rusqlite::Connection::open(&db_path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE sessions (session_id TEXT PRIMARY KEY, workspace TEXT);
+                 CREATE TABLE turns (turn_id TEXT PRIMARY KEY, workspace TEXT,
+                                     tool_footprint TEXT, owner_pid INTEGER);
+                 CREATE TABLE queued_prompts (prompt_id TEXT PRIMARY KEY, owner_pid INTEGER);
+                 INSERT INTO sessions VALUES ('s1', '/missing/on/old-machine');
+                 INSERT INTO turns VALUES ('t1', '/missing/on/old-machine', 'old-footprint', 42);
+                 INSERT INTO queued_prompts VALUES ('q1', 42);",
+            )
+            .unwrap();
+        }
+
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("home-layout.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let restored = test_paths(target.path());
+        let outcome = super::import::import(
+            &restored,
+            &archive,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(outcome.cleared_workspaces, 1);
+        let conn =
+            rusqlite::Connection::open(target.path().join("home/tester/conversation.db")).unwrap();
+        let workspace: Option<String> = conn
+            .query_row("SELECT workspace FROM sessions", [], |row| row.get(0))
+            .unwrap();
+        assert!(workspace.is_none());
+        let footprint: Option<String> = conn
+            .query_row("SELECT tool_footprint FROM turns", [], |row| row.get(0))
+            .unwrap();
+        assert!(footprint.is_none());
+        let owner: i64 = conn
+            .query_row("SELECT owner_pid FROM turns", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(owner, 0);
+    }
+
     #[cfg(unix)]
     #[test]
     fn marker_failure_rolls_back_every_installed_file() {

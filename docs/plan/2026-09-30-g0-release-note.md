@@ -31,7 +31,7 @@
 - WSL Ubuntu-24.04 pyte venv 的 TUI PTY 黑盒 `testkit/tui/config_forms.py` 在隔离 home 下复跑为 16/16；fixture 显式提供 `custom_models`，并在选择 `stub-model` 前定位到 `Stub` 供应商，覆盖主菜单、全局设置、编辑模型、新增模型和保存退出路径。该证据仍只代表表单闭环，不能用它替代整个终端闭环。
 - 隐私扫描复跑：仓库中的个人绝对路径与上游本机路径已替换为 `<user>`、`/home/tester`、仓库相对路径或运行时环境变量；公开 `docs/`、发布说明与生产注释未发现真实个人路径。`bilibili_live` 的 `APP_KEY`/`APP_SEC` 已核验与公开的 `Rsplwe/bili-live-hime` `src/lib/app-sign.ts` 一致，属于第三方客户端公开签名常量，不是用户凭据，已列入 allowlist。完整迁移/删除路径审计仍未关闭。
 - G0-09 工具执行黑盒：`testkit/repl-smoke/run.py` 现已自带 `STUB_TOOL=1` 和 `printf G0_09_TOOL_OK`，对中英文占位符统一判定，并从真实 `turns.tool_flow` 校验 `run_command` 输出。隔离运行报告 `placeholder_on_paste=true`、`reply_seen=true`、`footer_speed=78 tok/s`、`placeholder_on_recall=true`、`raw_text_on_recall=false`、`repl_alive=true`、`tool_flow_marker=true`、`passed=true`；该探针自身闭环通过，但仍不能替代 fish/daemon/REPL 组合终端闭环。
-- transfer 定向测试：`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 24/24 通过（其中 23 个来自 transfer 模块、1 个是 ledger 名称匹配）；新增未知 manifest、size/hash、entry 集合、Windows 路径、非 regular tar、Never unit、symlink 导出、new home conversation、staged fixup 和 marker rollback 测试。registry 当前 59 个 unit（Core 42、Heavy 1、Platform 2、Never 14）的静态分类已核对。该结果仍不覆盖逐项 stale 删除、归档大小上限和完整 tier matrix。
+- transfer 定向测试：`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 25/25 通过（其中 24 个来自 transfer 模块、1 个是 ledger 名称匹配）；新增未知 manifest、size/hash、entry 集合、Windows 路径、非 regular tar、Never unit、symlink 导出、new home conversation、staged fixup 和 marker rollback 测试。registry 当前 59 个 unit（Core 42、Heavy 1、Platform 2、Never 14）的静态分类已核对。该结果仍不覆盖逐项 stale 删除、归档大小上限和完整 tier matrix。
 - 权限位测试改用 WSL 原生 Linux 文件系统临时目录，不再把 `/mnt` DrvFs 的 0777 映射误当作生产语义；bundled script、registry fixture、TUI changed-prefix、renderer event、tool-summary 和回放编辑测试均已按当前 YunXi 产品输出修正或补强。
 
 
