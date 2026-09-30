@@ -497,12 +497,16 @@ impl YunXiPaths {
 
     pub fn legacy_config_dir(&self) -> Option<PathBuf> {
         let base = BaseDirs::new()?;
-        let home_name = self.root_dir.file_name()?.to_str()?;
-        // `file_name()` includes the leading dot (`.yunxi`/`.miyu`).  Do not
-        // add a second one while reconstructing the default home layout.
-        let default_root = base.home_dir().join(home_name);
-        let namespace = home_name.strip_prefix('.').unwrap_or(home_name);
-        (self.config_dir == default_root.join("config")).then(|| base.config_dir().join(namespace))
+        // The caller can carry a test or migration `root_dir` while pointing
+        // `config_dir` at the real default XDG layout.  Infer the legacy
+        // namespace from the well-known roots instead of from
+        // `self.root_dir.file_name()`, otherwise an otherwise valid legacy
+        // absolute path silently falls through to `config_relative_path`.
+        ["yunxi", "miyu"].into_iter().find_map(|namespace| {
+            let default_root = base.home_dir().join(format!(".{namespace}"));
+            (self.config_dir == default_root.join("config"))
+                .then(|| base.config_dir().join(namespace))
+        })
     }
 
     pub fn migrated_resource_path(&self, path: &Path) -> Option<PathBuf> {
