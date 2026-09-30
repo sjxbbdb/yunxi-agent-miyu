@@ -67,11 +67,11 @@
 
 #### G0 基线修复记录
 
-产品层改名提交 `7698b643` 将 `legacy_config_dir` 泛化为从 `root_dir.file_name()` 推导命名空间；当测试/迁移构造的 `root_dir` 与真实默认 `config_dir` 不同名时，旧绝对身份路径无法识别，静默回退到旧路径。修复为在真实默认根 `~/.yunxi`/`~/.miyu` 中匹配 `config_dir` 后返回对应 XDG namespace，并保留迁移兼容。该修复不增加新能力，只恢复已有兼容契约；对应 `yunxi-base` 400 项测试已全绿。
+产品层改名提交 `7698b643` 将 `legacy_config_dir` 泛化为从 `root_dir.file_name()` 推导命名空间；当测试/迁移构造的 `root_dir` 与真实默认 `config_dir` 不同名时，旧绝对身份路径无法识别，静默回退到旧路径。修复为在真实默认根 `~/.yunxi`/`~/.miyu` 中匹配 `config_dir` 后返回对应 XDG namespace，并保留迁移兼容。该修复不增加新能力，只恢复已有兼容契约；对应 `yunxi-base` 回归测试已通过。
 
 #### G0 尚未完成的验证
 
-- 全工作区测试已全绿；入口、调用方向、所有者、不变量和测试映射的逐项取证见 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)。fish 分流静态判定 17/17、真实 fish PTY 接管和 daemon reload 2/2 已复现，但仍需完成其余隔离黑盒闭环、transfer 单元隐私索引和最终公开文件扫描；特别是 IPC lease/frame/协议/回放、session/compact/evicted context、KB write-through、MCP/Skills、host capability/guard、scheduler/background job、goal 持久化与 Codex active goal 的区分已完成定位，但尚未宣称全部运行时门禁通过。
+- 工作区编译与主要分批测试已复现；入口、调用方向、所有者、不变量和测试映射见 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)，命令级证据见 [`2026-09-30-g0-test-matrix.md`](2026-09-30-g0-test-matrix.md)。fish 分流静态判定 17/17、真实 fish PTY、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI 16/16 和 transfer 35/35 已复现；仍需系统化故障注入、逐项删除/恢复矩阵、完整权限组合证据和最终公开文件扫描。IPC lease/frame/协议/回放、session/compact/evicted context、KB write-through、MCP/Skills、host capability/guard、scheduler/background job、goal 持久化与 Codex active goal 的区分已完成定位，但尚未宣称全部运行时门禁通过。
 - macOS M-series 只能在对应环境或 CI 上验证，当前本机没有该运行环境；需在 G0 状态中保留为未验证项。
 - Arch Linux 实机尚未验证；WSL Ubuntu 已确认 `/usr/bin/fish`、Rust/Cargo 和 systemd user scope 可用。
 
