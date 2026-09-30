@@ -123,6 +123,13 @@ pub fn export(paths: &YunXiPaths, output: &Path, options: &ExportOptions) -> Res
             index: options.all || options.index,
             platforms: options.all || options.platforms,
         },
+        included_units: Some(
+            UNITS
+                .iter()
+                .filter(|unit| options.includes(unit))
+                .map(|unit| unit.id.to_string())
+                .collect(),
+        ),
         secrets_included: !options.no_secrets,
         entries,
     };
@@ -315,7 +322,7 @@ fn collect_dir(dir: &Path, rel: &str, out: &mut Vec<(String, PathBuf)>) -> Resul
     Ok(())
 }
 
-fn skip_name(name: &str) -> bool {
+pub(super) fn skip_name(name: &str) -> bool {
     is_backup_name(name) || IGNORED_SUFFIXES.iter().any(|suffix| name.ends_with(suffix))
 }
 

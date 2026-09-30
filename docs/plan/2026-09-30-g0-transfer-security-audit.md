@@ -8,12 +8,12 @@
 
 ## 结论
 
-在本轮加固前，`cargo test -p yunxi-engine transfer` 的 14 个匹配测试只覆盖代表性的 round-trip、secret redaction、schema 拒绝、registry 分类和 fixup；不能证明恶意归档、manifest 完整性、失败回滚或新 home 布局的会话库安全。当前 HEAD 已新增 29 个 transfer 匹配测试，并把下面标记为“已落地”的校验、资源上限、tier 矩阵与回滚证据纳入测试。
+在本轮加固前，`cargo test -p yunxi-engine transfer` 的 14 个匹配测试只覆盖代表性的 round-trip、secret redaction、schema 拒绝、registry 分类和 fixup；不能证明恶意归档、manifest 完整性、失败回滚或新 home 布局的会话库安全。当前 HEAD 已新增 34 个 transfer 匹配测试，并把下面标记为“已落地”的校验、资源上限、coverage、tier 矩阵与回滚证据纳入测试。
 
 在 G0 退出前，优先级顺序应为：
 
 1. P0：拒绝不可信归档造成的路径/链接逃逸，并验证归档内容与 manifest 一一对应（已落地）。
-2. P0：把 import 安装、marker 写入变成可回滚的事务；`--force` 的 stale Core 删除语义仍待单独设计，不能把当前回滚实现误写成删除闭环。
+2. P0：把 import 安装、marker 写入和选定 Core 的 stale 清理变成可回滚的事务；当前实现已落地，仍需平台化目录句柄后端消除父目录竞态。
 3. P0：覆盖 `home/<admin>/conversation.db`，并对所有现存/恢复的会话数据库执行跨机器 fixup（已落地）。
 4. P1：补齐格式版本和 tier 的明确矩阵验证、失败分类及回归测试。
 
@@ -61,7 +61,7 @@
 - 先计算本次归档实际覆盖的 unit/path 集合；
 - 对每个待替换目标先 rename 到同一临时 rollback 目录，避免跨设备 copy 的半状态；
 - 新树安装、marker 和 fixup 成功后再删除 rollback 目录；任一步失败按日志逆序恢复；
-- `--force` 对归档未声明的 stale Core 文件仍是 merge-only；删除该 unit 范围内旧文件需要下一轮以 registry 计划和故障注入单独实现。未选择的 Heavy/Platform 和明确 Never 单元保持不动；
+- 新 exporter 写入 `included_units` coverage 后，`--force` 会按 manifest 精确集合清理已覆盖的 stale Core 文件；legacy/手工 manifest（无 coverage）、未选择的 Heavy/Platform、Never、unknown、sidecar 和输入归档本身均保持不动。清理先移动到 rollback 临时目录，失败时随安装事务恢复；报告返回 `removed_stale`。
 - rollback 也必须拒绝链接目标，并在测试中注入“第 N 个文件安装失败”和“fixup 失败”。
 
 不要把整个 `YUNXI_HOME` 直接 rename 成 archive 解包目录：这样会误伤 `Never` 运行时文件，也无法表达 `--index/--platforms` 的部分归档语义。
@@ -122,4 +122,4 @@
 - `wildcard_home_and_persona_units_round_trip_without_overlap`
 - `import_rejects_archive_size_limit_exceeded`
 
-G0 的 transfer 退出条件：上述 P0 全部通过，P1-A/P1-B 有直接测试证据，且在 `cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 与完整工作区测试中复跑通过。当前归档校验/路径安全/资源上限/回滚/new-home fixup 与 tier 矩阵已有证据；stale Core 删除仍未实现，且 install 的父目录检查与后续文件操作之间仍存在需要更强 openat/目录句柄语义才能彻底消除的本地竞态，因此不能宣称 transfer 安全闭环完成。
+G0 的 transfer 退出条件：上述 P0 全部通过，P1-A/P1-B 有直接测试证据，且在 `cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 与完整工作区测试中复跑通过。当前归档校验/路径安全/资源上限/coverage-aware stale Core 清理/回滚（含清理后 marker 失败恢复）/new-home fixup 与 tier 矩阵已有证据；install 的父目录检查与后续文件操作之间仍存在需要更强 openat/目录句柄语义才能彻底消除的本地竞态，因此不能宣称 transfer 安全闭环完成。

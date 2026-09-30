@@ -1,8 +1,8 @@
 //! `yunxi import`: restore an exported installation onto this machine.
 
-use super::export::yunxi_home;
+use super::export::{skip_name, yunxi_home};
 use super::manifest::{Manifest, MANIFEST_FORMAT_VERSION, MANIFEST_NAME};
-use super::registry::{unit_for, Tier};
+use super::registry::{unit_for, Tier, UNITS};
 use anyhow::{bail, Context, Result};
 use flate2::read::GzDecoder;
 use std::collections::{BTreeMap, BTreeSet};
@@ -80,6 +80,9 @@ pub struct ImportReport {
     /// Session workspaces that pointed at directories this machine does not
     /// have; cleared so a turn does not try to run in them.
     pub cleared_workspaces: usize,
+    /// Core files removed from the live tree by a force import with explicit
+    /// manifest coverage. Legacy/partial manifests report zero.
+    pub removed_stale: usize,
 }
 
 pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Result<ImportReport> {
@@ -89,9 +92,10 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
     // on exactly the same set of regular files.
     let manifest = read_manifest(archive)?;
     check_versions(&manifest)?;
+    let occupied_reason = occupied(paths);
 
     if !options.force {
-        if let Some(reason) = occupied(paths) {
+        if let Some(reason) = occupied_reason.as_ref() {
             bail!(
                 "{}\n{}",
                 reason,
@@ -103,7 +107,13 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
         }
     }
 
-    let backup = if options.force && occupied(paths).is_some() {
+    let stale_core = if options.force {
+        stale_core_files(&root, &manifest, archive)?
+    } else {
+        Vec::new()
+    };
+
+    let backup = if options.force && (occupied_reason.is_some() || !stale_core.is_empty()) {
         Some(backup_current(paths, archive)?)
     } else {
         None
@@ -144,10 +154,16 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
     let rollback = tempfile::tempdir_in(root.parent().unwrap_or(&root))
         .context("creating an import rollback directory")?;
     let mut undo = Vec::new();
-    let restored = match install(&staged, &root, rollback.path(), &mut undo).and_then(|restored| {
-        stamp_layout_markers(&root, rollback.path(), &mut undo)?;
-        Ok(restored)
-    }) {
+    let mut removed_stale = 0;
+    let restored = match prune_stale_core(&stale_core, &root, rollback.path(), &mut undo)
+        .and_then(|removed| {
+            removed_stale = removed;
+            install(&staged, &root, rollback.path(), &mut undo)
+        })
+        .and_then(|restored| {
+            stamp_layout_markers(&root, rollback.path(), &mut undo)?;
+            Ok(restored)
+        }) {
         Ok(restored) => restored,
         Err(error) => {
             let rollback_error = rollback_install(&undo);
@@ -167,6 +183,7 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
         secrets_included: manifest.secrets_included,
         index_included: manifest.scope.index,
         cleared_workspaces,
+        removed_stale,
     })
 }
 
@@ -378,6 +395,35 @@ fn check_versions(manifest: &Manifest) -> Result<()> {
             yunxi_base::config::CURRENT_CONFIG_VERSION
         );
     }
+    if let Some(included_units) = &manifest.included_units {
+        for id in included_units {
+            let Some(unit) = UNITS.iter().find(|unit| unit.id == id) else {
+                // Unknown units are forward-compatible and are restored
+                // verbatim; they must not participate in stale pruning.
+                continue;
+            };
+            if unit.tier == Tier::Never {
+                bail!("manifest coverage includes a non-transferable unit: {id}");
+            }
+            if unit.tier == Tier::Heavy && !manifest.scope.index {
+                bail!("manifest coverage includes Heavy unit {id} without index scope");
+            }
+            if unit.tier == Tier::Platform && !manifest.scope.platforms {
+                bail!("manifest coverage includes Platform unit {id} without platform scope");
+            }
+        }
+        for entry in &manifest.entries {
+            if let Some(unit) = unit_for(&entry.path) {
+                if !included_units.contains(unit.id) {
+                    bail!(
+                        "manifest entry {} is outside declared unit coverage {}",
+                        entry.path,
+                        unit.id
+                    );
+                }
+            }
+        }
+    }
     let newer = manifest.schemas_newer_than(yunxi_core::state::latest_schema_version());
     if !newer.is_empty() {
         let detail = newer
@@ -431,6 +477,95 @@ fn extract(archive: &Path, into: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Lists live regular files owned by Core units but absent from the incoming
+/// manifest. Only `--force` calls this helper; Heavy, Platform, Never, and
+/// unknown paths are deliberately left alone so a partial-scope import cannot
+/// erase data it did not declare.
+fn stale_core_files(root: &Path, manifest: &Manifest, archive: &Path) -> Result<Vec<PathBuf>> {
+    let Some(included_units) = manifest.included_units.as_ref() else {
+        // Legacy and hand-authored manifests do not prove which units were
+        // selected. Treat them as merge-only to avoid deleting live data.
+        return Ok(Vec::new());
+    };
+    let expected = manifest
+        .entries
+        .iter()
+        .map(|entry| entry.path.as_str())
+        .collect::<BTreeSet<_>>();
+    let protected_archive = std::fs::canonicalize(archive).ok();
+    let mut stale = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(directory) = stack.pop() {
+        for child in std::fs::read_dir(&directory)? {
+            let child = child?;
+            let path = child.path();
+            let file_name = child.file_name();
+            let Some(name) = file_name.to_str() else {
+                continue;
+            };
+            if skip_name(name) {
+                continue;
+            }
+            let metadata = std::fs::symlink_metadata(&path)?;
+            if protected_archive.as_deref().is_some_and(|protected| {
+                std::fs::canonicalize(&path).ok().as_deref() == Some(protected)
+            }) {
+                continue;
+            }
+            if metadata.file_type().is_symlink() {
+                // Never follow or delete a symlink while pruning. Export
+                // already rejects these; preserving one is the safe fallback
+                // for an existing home that was edited outside YunXi.
+                continue;
+            }
+            let rel = path
+                .strip_prefix(root)
+                .context("stale path outside the YunXi home")?
+                .to_str()
+                .map(str::to_owned);
+            let Some(rel) = rel else {
+                continue;
+            };
+            let rel = rel.replace(std::path::MAIN_SEPARATOR, "/");
+            let owner = unit_for(&rel);
+            if metadata.is_dir() {
+                if owner.is_some_and(|unit| unit.tier != Tier::Core) {
+                    continue;
+                }
+                stack.push(path);
+                continue;
+            }
+            if !metadata.is_file() {
+                // Unknown sockets/FIFOs/etc. are outside the transfer
+                // registry. Leave them untouched rather than turning a
+                // force import into an unrelated cleanup operation.
+                continue;
+            }
+            if expected.contains(rel.as_str()) {
+                continue;
+            }
+            if owner.is_some_and(|unit| unit.tier == Tier::Core && included_units.contains(unit.id))
+            {
+                stale.push(path);
+            }
+        }
+    }
+    stale.sort();
+    Ok(stale)
+}
+
+fn prune_stale_core(
+    stale: &[PathBuf],
+    root: &Path,
+    rollback: &Path,
+    undo: &mut Vec<UndoEntry>,
+) -> Result<usize> {
+    for destination in stale {
+        move_existing(destination, root, rollback, undo)?;
+    }
+    Ok(stale.len())
 }
 
 /// Re-hashes the extracted tree so replacing the archive between the initial

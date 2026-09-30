@@ -152,6 +152,156 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn force_import_prunes_only_stale_core_files() {
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("yunxi-export.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let target_paths = populated_home(target.path());
+        let stale_core = target_paths.data_dir.join("prompts/obsolete.md");
+        std::fs::write(&stale_core, "remove me").unwrap();
+        let heavy = target_paths.data_dir.join("kb/semantic_index.db");
+        std::fs::create_dir_all(heavy.parent().unwrap()).unwrap();
+        let heavy_conn = rusqlite::Connection::open(&heavy).unwrap();
+        heavy_conn
+            .execute_batch("CREATE TABLE keep_me (value TEXT);")
+            .unwrap();
+        let unknown = target_paths.data_dir.join("future/keep.db");
+        std::fs::create_dir_all(unknown.parent().unwrap()).unwrap();
+        std::fs::write(&unknown, "keep unknown").unwrap();
+
+        let outcome = super::import::import(
+            &target_paths,
+            &archive,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap();
+
+        assert!(!stale_core.exists(), "stale Core file must be pruned");
+        assert_eq!(outcome.removed_stale, 1);
+        let heavy_conn = rusqlite::Connection::open(&heavy).unwrap();
+        assert!(
+            heavy_conn
+                .query_row(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='keep_me'",
+                    [],
+                    |row| row.get::<_, String>(0),
+                )
+                .is_ok(),
+            "Heavy index must be preserved"
+        );
+        assert_eq!(std::fs::read_to_string(&unknown).unwrap(), "keep unknown");
+    }
+
+    #[test]
+    fn force_import_backs_up_a_stale_core_only_home_before_pruning() {
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("yunxi-export.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let target_paths = test_paths(target.path());
+        let stale_core = target_paths.data_dir.join("prompts/obsolete.md");
+        std::fs::create_dir_all(stale_core.parent().unwrap()).unwrap();
+        std::fs::write(&stale_core, "remove me").unwrap();
+
+        let outcome = super::import::import(
+            &target_paths,
+            &archive,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap();
+
+        assert!(outcome.backup.as_ref().is_some_and(|path| path.exists()));
+        assert!(!stale_core.exists());
+        assert_eq!(outcome.removed_stale, 1);
+    }
+
+    #[test]
+    fn legacy_manifest_without_coverage_is_merge_only() {
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("yunxi-export.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+        let raw = std::fs::read(&archive).unwrap();
+        let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(&raw[..]));
+        let mut manifest: super::manifest::Manifest = tar
+            .entries()
+            .unwrap()
+            .filter_map(Result::ok)
+            .find(|entry| entry.path().unwrap().to_string_lossy() == "manifest.json")
+            .map(|mut entry| serde_json::from_reader(&mut entry).unwrap())
+            .unwrap();
+        manifest.included_units = None;
+        let legacy = out.path().join("legacy.tar.gz");
+        rewrite_manifest(&archive, &legacy, &manifest);
+
+        let target = tempfile::tempdir().unwrap();
+        let target_paths = populated_home(target.path());
+        let stale_core = target_paths.data_dir.join("prompts/obsolete.md");
+        std::fs::write(&stale_core, "keep me").unwrap();
+        super::import::import(
+            &target_paths,
+            &legacy,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap();
+        assert!(
+            stale_core.exists(),
+            "legacy archive must not prune Core files"
+        );
+    }
+
+    #[test]
+    fn archive_inside_core_tree_is_not_pruned() {
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let source_archive = out.path().join("source.tar.gz");
+        super::export::export(
+            &source_paths,
+            &source_archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let target_paths = test_paths(target.path());
+        let archive = target_paths.data_dir.join("prompts/incoming.tar.gz");
+        std::fs::create_dir_all(archive.parent().unwrap()).unwrap();
+        std::fs::copy(&source_archive, &archive).unwrap();
+
+        super::import::import(
+            &target_paths,
+            &archive,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap();
+        assert!(archive.exists(), "the input archive must be preserved");
+    }
+
+    #[test]
     fn no_secrets_blanks_credentials_without_dropping_the_config() {
         let source = tempfile::tempdir().unwrap();
         let paths = populated_home(source.path());
@@ -650,6 +800,50 @@ pub(crate) mod tests {
         assert!(
             !restored.config_file.exists(),
             "live files must be rolled back"
+        );
+        assert!(!outside.path().join("config.jsonc").exists());
+        assert!(std::fs::symlink_metadata(target.path().join(".layout-v1")).is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stale_core_prune_rolls_back_when_marker_stamping_fails() {
+        use std::os::unix::fs::symlink;
+
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let restored = test_paths(target.path());
+        let stale = restored.data_dir.join("prompts/obsolete.md");
+        std::fs::create_dir_all(stale.parent().unwrap()).unwrap();
+        std::fs::write(&stale, "keep after rollback").unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        symlink(outside.path(), target.path().join(".layout-v1")).unwrap();
+
+        let error = super::import::import(
+            &restored,
+            &archive,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("symlink"), "got: {error}");
+        assert_eq!(
+            std::fs::read_to_string(&stale).unwrap(),
+            "keep after rollback"
+        );
+        assert!(
+            !restored.config_file.exists(),
+            "installed files must be rolled back"
         );
         assert!(!outside.path().join("config.jsonc").exists());
         assert!(std::fs::symlink_metadata(target.path().join(".layout-v1")).is_ok());

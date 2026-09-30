@@ -21,6 +21,11 @@ pub struct Manifest {
     #[serde(default)]
     pub schema_versions: std::collections::BTreeMap<String, i64>,
     pub scope: Scope,
+    /// Unit ids included by a current exporter. `None` means a legacy or
+    /// hand-authored archive whose coverage is unknown; import must then use
+    /// merge-only semantics and never prune live files.
+    #[serde(default)]
+    pub included_units: Option<std::collections::BTreeSet<String>>,
     /// False when `--no-secrets` stripped credentials; import says so in its
     /// summary rather than leaving the user to wonder why nothing authenticates.
     pub secrets_included: bool,
