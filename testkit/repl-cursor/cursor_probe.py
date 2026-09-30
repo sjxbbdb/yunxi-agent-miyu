@@ -36,7 +36,7 @@ import pyte
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
-REPO = Path("/home/shorin/Documents/github/YunXi")
+REPO = Path(os.environ.get("YUNXI_REPO", Path(__file__).resolve().parents[2]))
 YUNXI = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
 BASE = Path(os.environ.get("OUT") or Path.home() / ".cache" / "yunxi-cursor-probe")
 HOME = BASE / "home"

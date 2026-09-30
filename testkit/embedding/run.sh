@@ -9,13 +9,14 @@ for __herdr_var in $(env | sed -n 's/^\(HERDR_[A-Za-z0-9_]*\)=.*/\1/p'); do unse
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 YUNXI="${1:-$ROOT/target/release/yunxi}"
+REAL_HOME="${YUNXI_REAL_HOME:-${HOME}/.yunxi}"
 H="$HERE/home"
 export YUNXI_HOME="$H" HOME="$H" XDG_RUNTIME_DIR="/tmp/mx-embed-$$"
 unset XDG_CACHE_HOME XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME
 mkdir -p "$H/config" "$H/data" "$XDG_RUNTIME_DIR"
 export YUNXI_EMBEDDING_MODELS_DIR="$ROOT/assets/models"
 # 沙箱 HOME 下没有 ~/.yunxi/lib;没装系统 onnxruntime 时用 ORT_LIB 指一个运行库。
-ORT_LIB="${ORT_LIB:-/home/shorin/.yunxi/lib/libonnxruntime.so}"
+ORT_LIB="${ORT_LIB:-$REAL_HOME/lib/libonnxruntime.so}"
 if [[ ! -f /usr/lib/libonnxruntime.so && -f "$ORT_LIB" ]]; then
   export YUNXI_ONNXRUNTIME_LIB="$ORT_LIB"
 fi
@@ -35,7 +36,7 @@ EOF
 
 # 表情库:复制真实库(只读取,不改动原库)。
 LIB="$H/data/memes/yunxi"
-SRC_MEMES="${MEMES_SRC:-/home/shorin/.yunxi/data/memes/yunxi}"
+SRC_MEMES="${MEMES_SRC:-$REAL_HOME/data/memes/yunxi}"
 if [[ -d "$SRC_MEMES" && ! -d "$LIB" ]]; then
   mkdir -p "$LIB" && cp -r "$SRC_MEMES"/. "$LIB"/
 fi

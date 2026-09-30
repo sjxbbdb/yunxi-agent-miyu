@@ -259,16 +259,16 @@ fn home_layout_marker_redirects_identity_and_persona_paths() {
         data_dir: root.join("data"),
         cache_dir: root.join("cache"),
         state_dir: root.join("state"),
-        pictures_dir: root.join("home/shorin/pictures"),
+        pictures_dir: root.join("home/tester/pictures"),
         fish_hook_file: root.join("fish/yunxi.fish"),
         bash_hook_file: root.join("config/shell/bash-hook.sh"),
         zsh_hook_file: root.join("config/shell/zsh-hook.zsh"),
         scripts_dir: root.join("extensions/scripts"),
         system_scripts_dir: PathBuf::new(),
     };
-    std::fs::write(root.join(".home-layout-v1"), "shorin\n").unwrap();
+    std::fs::write(root.join(".home-layout-v1"), "tester\n").unwrap();
     let mut config = AppConfig::default();
-    let home = root.join("home/shorin");
+    let home = root.join("home/tester");
     assert_eq!(config.user_identity_path(&paths), home.join("profile.md"));
     assert_eq!(config.identities_dir_path(&paths), home.join("identities"));
     assert_eq!(

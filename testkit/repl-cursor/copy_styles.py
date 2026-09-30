@@ -9,7 +9,8 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, "/home/shorin/Documents/github/YunXi/testkit/kitty-image")
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "testkit" / "kitty-image"))
 import ghost_probe as probe  # noqa: E402
 
 OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-copy-styles")).expanduser()

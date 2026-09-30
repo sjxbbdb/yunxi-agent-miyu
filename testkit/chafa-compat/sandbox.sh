@@ -13,10 +13,11 @@ set -euo pipefail
 # 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for __herdr_var in $(env | sed -n 's/^\(HERDR_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$__herdr_var"; done
-ROOT=/home/shorin/.cache/yunxi-chafa-sandbox
+ROOT="${YUNXI_CHAFA_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/yunxi-chafa-sandbox}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BIN="$(cd "$HERE/../.." && pwd)/target/release/yunxi"
-SCRIPTS=/home/shorin/.local/share/yunxi/scripts
+SCRIPTS="${YUNXI_SYSTEM_SCRIPTS_DIR:-$HOME/.local/share/yunxi/scripts}"
+REAL_HOME="${YUNXI_REAL_HOME:-$HOME/.yunxi}"
 PORT=8389
 
 [ -x "$BIN" ] || { echo "二进制还没编译好: $BIN" >&2; exit 1; }
@@ -25,13 +26,13 @@ systemctl --user stop yunxi-chafa-sandbox.service 2>/dev/null || true
 rm -rf "$ROOT"
 mkdir -p "$ROOT/home/config" "$ROOT/runtime" "$ROOT/images"
 
-python3 - "$ROOT/home/config/config.jsonc" <<'PY'
+python3 - "$REAL_HOME/config/config.jsonc" "$ROOT/home/config/config.jsonc" <<'PY'
 import re, sys
-src = open("/home/shorin/.yunxi/config/config.jsonc", encoding="utf-8").read()
+src = open(sys.argv[1], encoding="utf-8").read()
 for key in ("qq", "voice"):
     src, n = re.subn(r'("%s":\s*\{\s*\n\s*"enabled":\s*)true' % key, r'\1false', src, count=1)
     assert n == 1, key
-open(sys.argv[1], "w", encoding="utf-8").write(src)
+open(sys.argv[2], "w", encoding="utf-8").write(src)
 PY
 chmod 600 "$ROOT/home/config/config.jsonc"
 
@@ -104,13 +105,15 @@ PATH="\$shim:\$PATH" "\$@"
 EOF
 chmod +x "$ROOT/with-chafa"
 
-: > /home/shorin/.yunxi/cache/logs/image-trace.log 2>/dev/null || true
+TRACE_LOG="$REAL_HOME/cache/logs/image-trace.log"
+mkdir -p "$(dirname "$TRACE_LOG")"
+: > "$TRACE_LOG" 2>/dev/null || true
 
 echo "沙盒就绪 (端口 $PORT)"
 echo "  二进制   $BIN"
 echo "  测试图   $ROOT/images/{small,wide,tall,big}.png"
 echo "  REPL     $ROOT/yunxi-sb"
 echo "  旧 chafa $ROOT/with-chafa 1.14.5 $ROOT/yunxi-sb"
-echo "  取证日志 ~/.yunxi/cache/logs/image-trace.log"
+echo "  取证日志 $TRACE_LOG"
 echo "  health=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/api/health")"
 echo "  本机 chafa $(chafa --version 2>/dev/null | head -1)"

@@ -185,7 +185,7 @@ def wait_until(check, timeout, poll=0.2):
 
 def db_rows():
     """会话库里最后落了什么。db/wal/shm 三件都在，只读打开。"""
-    db = HOME / "home" / "shorin" / "conversation.db"
+    db = HOME / "home" / "tester" / "conversation.db"
     if not db.exists():
         return []
     connection = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
@@ -199,7 +199,7 @@ def db_rows():
 
 
 def queued_rows():
-    db = HOME / "home" / "shorin" / "conversation.db"
+    db = HOME / "home" / "tester" / "conversation.db"
     if not db.exists():
         return []
     connection = sqlite3.connect(f"file:{db}?mode=ro", uri=True)

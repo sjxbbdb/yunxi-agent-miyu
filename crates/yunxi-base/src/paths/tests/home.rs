@@ -21,7 +21,7 @@ fn seed_legacy_tree(layout: &HomeLayout) {
     fs::create_dir_all(data.join("scripts")).unwrap();
     fs::write(data.join("scripts/tool.sh"), "#!/bin/sh\n").unwrap();
     fs::create_dir_all(data.join("identities/team")).unwrap();
-    fs::write(data.join("identities/user-identity.md"), "I am shorin").unwrap();
+    fs::write(data.join("identities/user-identity.md"), "I am tester").unwrap();
     fs::write(data.join("identities/team/user.md"), "team view").unwrap();
     for name in ["artifacts", "documents", "pictures", "ledger", "shared"] {
         fs::create_dir_all(data.join(name)).unwrap();
@@ -39,16 +39,16 @@ fn seed_legacy_tree(layout: &HomeLayout) {
 #[test]
 fn home_layout_migration_moves_owner_data_and_records_the_admin() {
     let temp = tempfile::tempdir().unwrap();
-    let layout = home_layout(temp.path(), "shorin");
+    let layout = home_layout(temp.path(), "tester");
     seed_legacy_tree(&layout);
 
     assert!(try_migrate_home_layout(&layout, false).unwrap());
 
     let root = &layout.layout.root_dir;
-    let home = root.join("home/shorin");
+    let home = root.join("home/tester");
     assert_eq!(
         read_home_layout_admin(root).unwrap().as_deref(),
-        Some("shorin")
+        Some("tester")
     );
     assert!(root.join("personas/default/memory/memory.db").is_file());
     assert!(root.join("extensions/skills/demo/SKILL.md").is_file());
@@ -58,7 +58,7 @@ fn home_layout_migration_moves_owner_data_and_records_the_admin() {
     assert!(home.join("profile.md").is_file());
     assert_eq!(
         fs::read_to_string(home.join("profile.md")).unwrap(),
-        "I am shorin"
+        "I am tester"
     );
     assert!(home.join("identities/team/user.md").is_file());
     assert!(!home.join("identities/user-identity.md").exists());
@@ -79,7 +79,7 @@ fn home_layout_migration_moves_owner_data_and_records_the_admin() {
 #[test]
 fn home_layout_rollback_restores_the_legacy_tree() {
     let temp = tempfile::tempdir().unwrap();
-    let layout = home_layout(temp.path(), "shorin");
+    let layout = home_layout(temp.path(), "tester");
     seed_legacy_tree(&layout);
     assert!(try_migrate_home_layout(&layout, false).unwrap());
 
@@ -99,7 +99,7 @@ fn home_layout_rollback_restores_the_legacy_tree() {
     assert!(!layout
         .layout
         .root_dir
-        .join("home/shorin/profile.md")
+        .join("home/tester/profile.md")
         .exists());
     assert!(!layout.layout.root_dir.join("personas").exists());
     assert!(!layout.journal().exists());
@@ -129,7 +129,7 @@ fn fresh_install_gets_the_home_layout_without_moving_anything() {
 #[test]
 fn home_layout_conflict_has_no_writes() {
     let temp = tempfile::tempdir().unwrap();
-    let layout = home_layout(temp.path(), "shorin");
+    let layout = home_layout(temp.path(), "tester");
     seed_legacy_tree(&layout);
     // 目标已存在:整个搬家拒绝,一样都不动
     fs::create_dir_all(layout.layout.root_dir.join("personas")).unwrap();
@@ -148,7 +148,7 @@ fn home_layout_conflict_has_no_writes() {
 
 #[test]
 fn admin_home_names_follow_username_rules() {
-    assert!(is_valid_home_name("shorin"));
+    assert!(is_valid_home_name("tester"));
     assert!(is_valid_home_name("a.b-c_9"));
     assert!(!is_valid_home_name("ab"));
     assert!(!is_valid_home_name("..\u{0}"));
@@ -169,7 +169,7 @@ fn yunxi_paths_resolve_owner_data_through_the_marker() {
         data_dir: root.join("data"),
         cache_dir: root.join("cache"),
         state_dir: root.join("state"),
-        pictures_dir: root.join("home/shorin/pictures"),
+        pictures_dir: root.join("home/tester/pictures"),
         fish_hook_file: root.join("fish/yunxi.fish"),
         bash_hook_file: root.join("config/shell/bash-hook.sh"),
         zsh_hook_file: root.join("config/shell/zsh-hook.zsh"),
@@ -187,9 +187,9 @@ fn yunxi_paths_resolve_owner_data_through_the_marker() {
     );
 
     fs::create_dir_all(&root).unwrap();
-    fs::write(root.join(HOME_LAYOUT_MARKER), "shorin\n").unwrap();
-    assert_eq!(paths.home_admin().as_deref(), Some("shorin"));
-    let home = root.join("home/shorin");
+    fs::write(root.join(HOME_LAYOUT_MARKER), "tester\n").unwrap();
+    assert_eq!(paths.home_admin().as_deref(), Some("tester"));
+    let home = root.join("home/tester");
     assert_eq!(paths.admin_home_dir().as_deref(), Some(home.as_path()));
     assert_eq!(paths.personas_dir(), root.join("personas"));
     assert_eq!(paths.conversation_db_dir(), home);

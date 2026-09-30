@@ -72,8 +72,18 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 仍未完成：
 
-1. TUI、工具执行的隔离黑盒实测记录（G0-09）；IPC 定向单测已完成，`testkit/repl-smoke/run.py` 已自带工具调用并从 `turns.tool_flow` 校验输出，报告 `passed=true`；TUI 表单 PTY `testkit/tui/config_forms.py` 已在 WSL Ubuntu-24.04 pyte venv 下复跑为 16/16，fish 分流与 daemon reload 子项已完成；这些子项仍不能替代整个终端闭环。
-2. 每条路径的隐私扫描证据索引与 transfer 单元逐项核对。公开文档路径命中已清零；transfer registry 的 59 个 unit 已完成静态分类，当前定向测试 14/14 通过，但逐项恢复/删除、manifest/hash/version、失败回滚和恶意归档证据仍缺；另有待确认的第三方 `APP_SEC`，需在发布前分类处理。
+1. TUI、工具执行的隔离黑盒实测记录（G0-09）；IPC 定向单测已完成，`testkit/g0-terminal-combo/run.py` 已在同一隔离 home/daemon 下先后验证真实 fish PTY 与 REPL PTY，并从 `turns.tool_flow` 校验两次工具输出；`testkit/repl-smoke/run.py` 也已自带工具调用并从 `turns.tool_flow` 校验输出，报告 `passed=true`；TUI 表单 PTY `testkit/tui/config_forms.py` 已在 WSL Ubuntu-24.04 pyte venv 下复跑为 16/16。组合黑盒子项已通过，但仍需保留故障注入与跨平台验证。
+2. 每条路径的隐私扫描证据索引与 transfer 单元逐项核对。个人路径与凭据形状扫描已完成分类；transfer registry 的 59 个 unit 已完成静态分类，当前定向测试 14/14 通过，但逐项恢复/删除、manifest/hash/version、失败回滚和恶意归档证据仍缺。第三方 `APP_SEC` 已核验为公开客户端签名常量并列入 allowlist。
 3. Arch Linux 实机和 macOS M-series 编译/运行；当前只能标记为未验证。
+
+### 6.1 可复现隐私门禁
+
+门禁脚本为 `testkit/privacy/g0_scan.py`，只扫描 Git 已跟踪的文本文件。运行：
+
+`PYTHONDONTWRITEBYTECODE=1 python3 testkit/privacy/g0_scan.py --self-test`
+
+`PYTHONDONTWRITEBYTECODE=1 python3 testkit/privacy/g0_scan.py`
+
+本轮 WSL Ubuntu-24.04 结果：1852 个文件通过扫描，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开第三方签名常量归类为 1 个 `public_allowlist` 文件，合成测试值归类为 2 个 `fixture_allowlist` 文件。输出只包含类别、计数和路径，不回显匹配内容。该门禁不替代 transfer 的逐项恢复/删除、manifest/hash/version、失败回滚和恶意归档审计。
 
 在上述门禁完成前，不创建 `CompanionContext`、Laya provider、向量 admission 或新的调度器；G1 仍保持未开始。

@@ -593,20 +593,20 @@ mod tests {
     /// mimo-v2.5 传的是 `"[\"/path.png\"]"`，此前被静默丢弃。
     #[test]
     fn reference_images_accepts_the_shapes_models_actually_send() {
-        let one = vec!["/home/shorin/Pictures/3.png".to_string()];
+        let one = vec!["/home/tester/Pictures/3.png".to_string()];
         // 真数组。
         assert_eq!(
-            reference_list(&json!(["/home/shorin/Pictures/3.png"])).unwrap(),
+            reference_list(&json!(["/home/tester/Pictures/3.png"])).unwrap(),
             one
         );
         // 单个字符串。
         assert_eq!(
-            reference_list(&json!("/home/shorin/Pictures/3.png")).unwrap(),
+            reference_list(&json!("/home/tester/Pictures/3.png")).unwrap(),
             one
         );
         // 字符串里装着 JSON 数组——线上实际踩到的那种。
         assert_eq!(
-            reference_list(&json!(r#"["/home/shorin/Pictures/3.png"]"#)).unwrap(),
+            reference_list(&json!(r#"["/home/tester/Pictures/3.png"]"#)).unwrap(),
             one
         );
         assert_eq!(

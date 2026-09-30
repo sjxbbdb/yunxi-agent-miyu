@@ -10,7 +10,7 @@ for __herdr_var in $(env | sed -n 's/^\(HERDR_[A-Za-z0-9_]*\)=.*/\1/p'); do unse
 
 HOME_DIR=${YUNXI_SANDBOX_HOME:-$HOME/.cache/yunxi-sandbox-8388}
 PORT=8388
-BIN=${YUNXI_BIN:-/home/shorin/Documents/github/YunXi/target/debug/yunxi}
+BIN=${YUNXI_BIN:-$(cd "$(dirname "$0")/../.." && pwd)/target/debug/yunxi}
 REAL=$HOME/.yunxi/config/config.jsonc
 
 seed_config() {

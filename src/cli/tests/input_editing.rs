@@ -734,7 +734,7 @@ fn a_short_paste_does_not_collapse_hand_typed_input() {
     let mut lines = (0..18)
         .map(|index| format!("第 {index} 行是我自己敲的"))
         .collect::<Vec<_>>();
-    lines.push("/home/shorin/Downloads/1.png".to_string());
+    lines.push("/home/tester/Downloads/1.png".to_string());
 
     // 生粘贴只带进来 1 行,缓冲区绝大部分是手敲的 → 不折。
     let visible = repl_visible_input_lines("  ", &lines, 12, 1);

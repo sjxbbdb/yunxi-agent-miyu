@@ -18,8 +18,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from pty_probe import respond  # 会应答 DA1/sixel-geometry/cell-px 的假终端
 
-SB = "/home/shorin/.cache/yunxi-chafa-sandbox/yunxi-sb"
-IMG = "/home/shorin/.cache/yunxi-chafa-sandbox/images/tall.png"
+ROOT = os.environ.get("YUNXI_CHAFA_ROOT", os.path.join(os.path.expanduser("~/.cache"), "yunxi-chafa-sandbox"))
+SB = os.path.join(ROOT, "yunxi-sb")
+IMG = os.path.join(ROOT, "images", "tall.png")
 PROMPT = f"显示 {IMG}"
 
 

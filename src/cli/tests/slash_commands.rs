@@ -194,7 +194,7 @@ fn tab_completion_still_expands_unique_prefixes() {
 #[test]
 fn a_path_like_first_message_still_leaves_the_lobby() {
     for message in [
-        "/home/shorin/Downloads/群聊消息线程-实现方案.md 删除这个文件",
+        "/home/tester/Downloads/群聊消息线程-实现方案.md 删除这个文件",
         "/home/x.md 删掉",
         "/usr/bin/env 是什么",
         "/rest",
@@ -257,7 +257,7 @@ fn unique_prefixes_are_not_executed() {
 #[test]
 fn unmatched_slash_input_falls_through_to_chat() {
     for input in [
-        "/home/shorin/notes.md 这个文件讲了什么",
+        "/home/tester/notes.md 这个文件讲了什么",
         "/usr/bin 下面有什么",
         "/nope",
         "/rest", // 打错的命令也发给模型,模型会告诉你

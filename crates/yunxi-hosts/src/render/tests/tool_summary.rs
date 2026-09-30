@@ -103,7 +103,7 @@ fn subagent_summary_keeps_current_internal_tool_without_raw_reasoning() {
     renderer
         .write_tool_progress(
             "subagent",
-            "工具 #2：运行命令 · du -sh /home/shorin/* 运行中",
+            "工具 #2：运行命令 · du -sh /home/tester/* 运行中",
         )
         .unwrap();
     renderer
@@ -112,7 +112,7 @@ fn subagent_summary_keeps_current_internal_tool_without_raw_reasoning() {
 
     let summary = renderer.tool_summary_text();
     assert!(summary.contains("↳ 查询磁盘占用"));
-    assert!(summary.contains("↳ 工具 #2：运行命令 · du -sh /home/shorin/* 运行中"));
+    assert!(summary.contains("↳ 工具 #2：运行命令 · du -sh /home/tester/* 运行中"));
     assert!(!summary.contains("private analysis"));
 }
 
@@ -635,8 +635,8 @@ fn tool_subject_extracts_safe_operation_targets() {
         Some("ToolStats · src")
     );
     assert_eq!(
-        tool_subject("run_command", r#"{"command":"du -sh /home/shorin/*"}"#).as_deref(),
-        Some("du -sh /home/shorin/*")
+        tool_subject("run_command", r#"{"command":"du -sh /home/tester/*"}"#).as_deref(),
+        Some("du -sh /home/tester/*")
     );
     let expected_load_tools_subject = format!(
         "{}{}{}",

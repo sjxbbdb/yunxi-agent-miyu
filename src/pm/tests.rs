@@ -12,7 +12,7 @@ fn test_paths(root: &Path) -> YunXiPaths {
         data_dir: root.join("data"),
         cache_dir: root.join("cache"),
         state_dir: root.join("state"),
-        pictures_dir: root.join("home/shorin/pictures"),
+        pictures_dir: root.join("home/tester/pictures"),
         fish_hook_file: root.join("fish/yunxi.fish"),
         bash_hook_file: root.join("config/shell/bash-hook.sh"),
         zsh_hook_file: root.join("config/shell/zsh-hook.zsh"),

@@ -37,7 +37,7 @@ pub fn webui_artifact_workspace_block(manifest: &str) -> String {
 /// artifact 库根:成员回合落在自己家里(`home/<user>/artifacts`),与 KB 的
 /// `kb_root_for` 同一套口径——`YunXiPaths::artifacts_dir()` 是 admin_owned,永远指
 /// 管理员的家,成员用它就会去读写管理员的 artifacts(09-11 实测:成员读
-/// `artifact:x.svg` 报「outside your workspace」,因为解析到了 home/shorin)。
+/// `artifact:x.svg` 报「outside your workspace」,因为解析到了用户 home)。
 /// 管理员 / 无成员身份时原样走默认。
 pub fn artifacts_root(config: &yunxi_base::config::AppConfig, paths: &YunXiPaths) -> PathBuf {
     match config.member_home_dir() {

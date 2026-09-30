@@ -18,7 +18,7 @@
 
 ## 独立版本:目录搬家(分层架构阶段 6,建议单独发一版)
 - `~/.miyu` 目录树改成仿 Linux 的布局:`personas/`（共享人格,原 `data/personas`）、`extensions/`（已装的 skills/scripts,原 `data/skills`、`data/scripts`）、`home/<用户名>/`（人的东西:`conversation.db`、`profile.md`、`identities/`、`artifacts/`、`documents/`、`pictures/`、`ledger/`、`shares/`,原来散在 `state/` 与 `data/` 下）。`config/`、`state/`、`cache/` 不动。升级后 daemon 第一次启动自动搬,搬之前预检、搬的过程记日志,中断了下次接着搬或原样退回;有别的 daemon 在跑就等它停。
-- 管理员的家目录名取 `MIYU_ADMIN_USER`,没有就用系统用户名（比如 `home/shorin/`）,再没有就 `admin`;创建管理员账号时用户名默认也是它。新装直接就是新布局。
+- 管理员的家目录名取 `YUNXI_ADMIN_USER`,没有就用系统用户名（比如 `home/<user>/`）,再没有就 `admin`;创建管理员账号时用户名默认也是它。新装直接就是新布局。
 - `miyu layout` 看现在是哪种布局和搬家计划;`miyu layout --apply` 立刻搬（daemon 要先停）;`miyu layout --rollback` 搬回老布局并关掉自动搬家,想再搬 `--apply`。
 - WebUI 对话现在也带属主档案（以前只有终端带，网页里她不知道你是谁）。有 `user-identity.md` 的用户升级后网页那条前缀缓存会重建一次。
 - 「希望 AI 如何认知你」:控制台账号页多了一个档案框,写进自己的 `home/<用户名>/profile.md`。成员对话时她按成员的档案认人,管理员按自己的;QQ 等通讯平台不看档案。成员注册成功会直接打开这一页。

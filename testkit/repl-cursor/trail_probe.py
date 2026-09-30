@@ -27,7 +27,7 @@ from PIL import Image
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
-REPO = Path("/home/shorin/Documents/github/YunXi")
+REPO = Path(os.environ.get("YUNXI_REPO", Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(REPO / "testkit" / "kitty-image"))
 import ghost_probe as probe  # noqa: E402
 

@@ -164,14 +164,14 @@ impl Job {
                     "Compiling tokio v1.38.0",
                     "Compiling ratatui v0.29.0",
                     "Compiling crossterm v0.28.1",
-                    "Compiling yunxi v0.5.0 (/home/shorin/Documents/github/YunXi)",
+                    "Compiling yunxi v0.5.0 (/path/to/yunxi)",
                     "warning: unused variable: `rows` --> src/cli/repl/layout.rs:212",
                     "Compiling yunxi (bin) ...",
                 ];
                 let n = (secs / 2 + 1).min(all.len());
                 let mut lines = vec![
                     Line::from(vec![Span::styled("  $ ", DIM), Span::raw("cargo build --release")]),
-                    Line::from(Span::styled("    ↳ ~/Documents/github/YunXi", DIM)),
+                    Line::from(Span::styled("    ↳ ~/projects/yunxi", DIM)),
                 ];
                 for l in &all[n.saturating_sub(6)..n] {
                     lines.push(Line::from(vec![Span::styled("    │ ", DIM), Span::styled(l.to_string(), DIM)]));

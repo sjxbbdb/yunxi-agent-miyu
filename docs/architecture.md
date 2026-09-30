@@ -119,7 +119,7 @@ dev persona 启用集为空：第 3 步只有骨架和一行提示词，第 4 �
 
 ## 五、目录（as-built，仿 Linux）
 
-根目录是系统，`home/<user>/` 是人。**迁移是部分的**：属主个人数据进了 `home/shorin/`，
+根目录是系统，`home/<user>/` 是人。**迁移是部分的**：属主个人数据进了 `home/<user>/`，
 但机器级与共享数据仍留在根 `data/`（计划设想的一次性全量迁移未做完）。
 
 ```
@@ -133,7 +133,7 @@ dev persona 启用集为空：第 3 步只有骨架和一行提示词，第 4 �
 ├── data/                【仍在用】机器/共享数据：kb、memes、documents、pictures、
 │                        prompts、platforms、persona-avatars、default-kb
 └── home/
-    ├── shorin/          管理员也在这里
+    ├── <admin-user>/    管理员也在这里
     │   ├── conversation.db      本人会话库（每个成员一份，StoreRegistry 按身份路由）
     │   ├── ledger/  documents/  pictures/  identities/
     │   └── personas/<name>/     私有人格

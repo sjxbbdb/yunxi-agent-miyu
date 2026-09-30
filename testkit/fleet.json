@@ -9,6 +9,15 @@
   },
   "walkthroughs": [
     {
+      "name": "g0_terminal_combo",
+      "argv": [
+        "python3",
+        "testkit/g0-terminal-combo/run.py"
+      ],
+      "timeout": 180,
+      "lane": "blackbox"
+    },
+    {
       "name": "round26",
       "argv": [
         "python3",

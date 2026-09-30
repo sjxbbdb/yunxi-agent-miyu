@@ -45,7 +45,7 @@ from playwright.sync_api import sync_playwright  # noqa: E402
 COMMAND = "\n".join(
     [
         "set -euo pipefail",
-        "cd /home/shorin/Documents/github/YunXi",
+        "cd /path/to/yunxi",
         "echo '== 第 3 行 =='",
         "ls -la | head -5",
         "echo '== 第 5 行 =='",
