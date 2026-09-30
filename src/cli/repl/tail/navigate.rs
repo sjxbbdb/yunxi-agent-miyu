@@ -114,7 +114,7 @@ impl LiveReplTail {
         {
             return None;
         }
-        let names = miyu_core::slash_commands::repl_command_suggestions(typed);
+        let names = yunxi_core::slash_commands::repl_command_suggestions(typed);
         (!names.is_empty()).then_some(names)
     }
 
@@ -133,7 +133,7 @@ impl LiveReplTail {
     fn take_command(&mut self, name: &'static str, enter: bool) -> Navigated {
         self.command_pick = None;
         let needs_args = enter
-            && miyu_core::slash_commands::repl_command_spec_for_name(name)
+            && yunxi_core::slash_commands::repl_command_spec_for_name(name)
                 .is_some_and(|spec| spec.arg_hint.starts_with('<'));
         self.editor.input = if needs_args {
             format!("{name} ")

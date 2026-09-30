@@ -1,34 +1,34 @@
 [package]
-name = "miyu"
+name = "yunxi"
 version = "0.7.0"
 edition = "2021"
 rust-version = "1.89"
 license = "MIT"
-repository = "https://github.com/SHORiN-KiWATA/miyu-agent"
+repository = "https://github.com/sjxbbdb/yunxi-agent-miyu"
 description = "Command-line AI assistant"
 autobins = false
 build = "build.rs"
 
 [lib]
-name = "miyu"
+name = "yunxi"
 path = "src/lib.rs"
 
 [[bin]]
-name = "miyu"
+name = "yunxi"
 path = "src/main.rs"
 
-# 语音前端进程:麦克风/唤醒词/本地识别/提示音全部住在这里,主程序 `miyu`
+# 语音前端进程:麦克风/唤醒词/本地识别/提示音全部住在这里,主程序 `yunxi`
 # 不链接 sherpa-onnx(静态库 ≈30MB)。只有 `--features voice` 才会构建。
 [[bin]]
-name = "miyu-voice"
+name = "yunxi-voice"
 path = "src/bin/voice.rs"
 required-features = ["voice"]
 
 [dependencies]
-miyu-base = { path = "crates/miyu-base" }
-miyu-core = { path = "crates/miyu-core" }
-miyu-engine = { path = "crates/miyu-engine" }
-miyu-hosts = { path = "crates/miyu-hosts" }
+yunxi-base = { path = "crates/yunxi-base" }
+yunxi-core = { path = "crates/yunxi-core" }
+yunxi-engine = { path = "crates/yunxi-engine" }
+yunxi-hosts = { path = "crates/yunxi-hosts" }
 anyhow = { workspace = true }
 base64 = { workspace = true }
 blake3 = { workspace = true }
@@ -59,15 +59,15 @@ vte = { workspace = true }
 
 [features]
 default = []
-voice = ["miyu-engine/voice"]
+voice = ["yunxi-engine/voice"]
 
 [dev-dependencies]
 # 后台面板的 golden 要把块 id 打掩码（它是全局自增计数，不是表现）。
 fancy-regex = { workspace = true }
-miyu-base = { path = "crates/miyu-base", features = ["testkit"] }
-miyu-core = { path = "crates/miyu-core", features = ["testkit"] }
-miyu-engine = { path = "crates/miyu-engine", features = ["testkit"] }
-miyu-hosts = { path = "crates/miyu-hosts", features = ["testkit"] }
+yunxi-base = { path = "crates/yunxi-base", features = ["testkit"] }
+yunxi-core = { path = "crates/yunxi-core", features = ["testkit"] }
+yunxi-engine = { path = "crates/yunxi-engine", features = ["testkit"] }
+yunxi-hosts = { path = "crates/yunxi-hosts", features = ["testkit"] }
 
 [workspace]
 members = ["crates/*"]
@@ -78,7 +78,7 @@ version = "0.7.0"
 edition = "2021"
 rust-version = "1.89"
 license = "MIT"
-repository = "https://github.com/SHORiN-KiWATA/miyu-agent"
+repository = "https://github.com/sjxbbdb/yunxi-agent-miyu"
 
 [workspace.dependencies]
 anyhow = "1.0"

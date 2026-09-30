@@ -10,7 +10,7 @@ use crate::cli::*;
 
 pub(in crate::cli) fn read_live_repl_input(
     live: &mut LiveReplTail,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     jobs_feed: &JobsFeed,
     // 这个 REPL 的会话：唤醒回合按它认领，输入历史也按它刷新。
     repl_session: Option<&str>,
@@ -409,7 +409,7 @@ pub(in crate::cli) fn hurry_pending_input(tick: &mut tokio::time::Interval) -> R
 }
 
 pub(in crate::cli) fn read_repl_input(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     mode: PersonaLane,
     prefill: Option<String>,
     history: &[ReplHistoryEntry],
@@ -419,7 +419,7 @@ pub(in crate::cli) fn read_repl_input(
     Option<(
         PersonaLane,
         String,
-        Vec<Option<miyu_base::clipboard::PastedImage>>,
+        Vec<Option<yunxi_base::clipboard::PastedImage>>,
     )>,
 > {
     let mut stdout = io::stdout();
@@ -440,7 +440,7 @@ pub(in crate::cli) fn read_repl_input(
     let mut input_row = cursor_row_or(0);
     let mut rendered_rows = 0u16;
     let mut raw_pasted_lines = 0usize;
-    let mut pasted_images: Vec<Option<miyu_base::clipboard::PastedImage>> = Vec::new();
+    let mut pasted_images: Vec<Option<yunxi_base::clipboard::PastedImage>> = Vec::new();
     let mut pasted_texts: Vec<Option<PastedText>> = Vec::new();
     // 1. 局部退出时统一恢复终端协议
     // 2. 避免多处 return 漏 Pop 键盘增强
@@ -835,12 +835,12 @@ pub(in crate::cli) fn read_repl_input(
                     if let Some(selected) =
                         placeholder_text_near_cursor(&input, cursor, &pasted_texts)
                     {
-                        let _ = miyu_base::clipboard::write_clipboard_text(&selected)?;
+                        let _ = yunxi_base::clipboard::write_clipboard_text(&selected)?;
                     }
                 }
                 KeyCode::Char('v') if modifiers.contains(KeyModifiers::CONTROL) => {
-                    match miyu_base::clipboard::read_clipboard() {
-                        Ok(miyu_base::clipboard::ClipboardContent::Image(img)) => {
+                    match yunxi_base::clipboard::read_clipboard() {
+                        Ok(yunxi_base::clipboard::ClipboardContent::Image(img)) => {
                             let index = pasted_images.len() + 1;
                             // 占位符只认序号,文件名纯属显示噪音(模型侧路径
                             // 由 rewrite_image_placeholders_with_paths 另拼)。
@@ -849,7 +849,7 @@ pub(in crate::cli) fn read_repl_input(
                             insert_str_at_cursor(&mut input, &mut cursor, &placeholder);
                             history_clean_index = None;
                             pasted_images
-                                .push(Some(miyu_base::clipboard::PastedImage::Binary(img)));
+                                .push(Some(yunxi_base::clipboard::PastedImage::Binary(img)));
                             raw_pasted_lines = 0;
                             render_repl_input(
                                 &mut stdout,
@@ -861,13 +861,14 @@ pub(in crate::cli) fn read_repl_input(
                                 raw_pasted_lines,
                             )?;
                         }
-                        Ok(miyu_base::clipboard::ClipboardContent::MediaPath(path)) => {
+                        Ok(yunxi_base::clipboard::ClipboardContent::MediaPath(path)) => {
                             let index = pasted_images.len() + 1;
                             let label = media_placeholder_label(&path);
                             let placeholder = format!("[{label} {index}]");
                             insert_str_at_cursor(&mut input, &mut cursor, &placeholder);
                             history_clean_index = None;
-                            pasted_images.push(Some(miyu_base::clipboard::PastedImage::Path(path)));
+                            pasted_images
+                                .push(Some(yunxi_base::clipboard::PastedImage::Path(path)));
                             raw_pasted_lines = 0;
                             render_repl_input(
                                 &mut stdout,
@@ -879,7 +880,7 @@ pub(in crate::cli) fn read_repl_input(
                                 raw_pasted_lines,
                             )?;
                         }
-                        Ok(miyu_base::clipboard::ClipboardContent::TextPath(path)) => {
+                        Ok(yunxi_base::clipboard::ClipboardContent::TextPath(path)) => {
                             insert_str_at_cursor(&mut input, &mut cursor, &path);
                             history_clean_index = None;
                             raw_pasted_lines = 0;
@@ -894,7 +895,7 @@ pub(in crate::cli) fn read_repl_input(
                             )?;
                         }
                         _ => {
-                            if let Ok(Some(text)) = miyu_base::clipboard::read_clipboard_text() {
+                            if let Ok(Some(text)) = yunxi_base::clipboard::read_clipboard_text() {
                                 let raw_lines = insert_pasted_text_at_cursor(
                                     &mut input,
                                     &mut cursor,

@@ -1,3394 +1,3394 @@
 {
   "files": {
-    "crates/miyu-base/src/clipboard.rs": {
+    "crates/yunxi-base/src/clipboard.rs": {
       "tests": 89,
       "total": 546
     },
-    "crates/miyu-base/src/config/builtin_plugins.rs": {
+    "crates/yunxi-base/src/config/builtin_plugins.rs": {
       "tests": 66,
       "total": 487
     },
-    "crates/miyu-base/src/config/context.rs": {
+    "crates/yunxi-base/src/config/context.rs": {
       "tests": 0,
       "total": 108
     },
-    "crates/miyu-base/src/config/contracts.rs": {
+    "crates/yunxi-base/src/config/contracts.rs": {
       "tests": 0,
       "total": 10
     },
-    "crates/miyu-base/src/config/defaults.rs": {
+    "crates/yunxi-base/src/config/defaults.rs": {
       "tests": 0,
       "total": 498
     },
-    "crates/miyu-base/src/config/display.rs": {
+    "crates/yunxi-base/src/config/display.rs": {
       "tests": 0,
       "total": 181
     },
-    "crates/miyu-base/src/config/feature_catalog.rs": {
+    "crates/yunxi-base/src/config/feature_catalog.rs": {
       "tests": 481,
       "total": 996
     },
-    "crates/miyu-base/src/config/io.rs": {
+    "crates/yunxi-base/src/config/io.rs": {
       "tests": 0,
       "total": 559
     },
-    "crates/miyu-base/src/config/memory.rs": {
+    "crates/yunxi-base/src/config/memory.rs": {
       "tests": 0,
       "total": 89
     },
-    "crates/miyu-base/src/config/mod.rs": {
+    "crates/yunxi-base/src/config/mod.rs": {
       "tests": 7,
       "total": 624
     },
-    "crates/miyu-base/src/config/paths.rs": {
+    "crates/yunxi-base/src/config/paths.rs": {
       "tests": 0,
       "total": 114
     },
-    "crates/miyu-base/src/config/persona_lane.rs": {
+    "crates/yunxi-base/src/config/persona_lane.rs": {
       "tests": 0,
       "total": 19
     },
-    "crates/miyu-base/src/config/persona_manifest.rs": {
+    "crates/yunxi-base/src/config/persona_manifest.rs": {
       "tests": 178,
       "total": 456
     },
-    "crates/miyu-base/src/config/persona_paths.rs": {
+    "crates/yunxi-base/src/config/persona_paths.rs": {
       "tests": 0,
       "total": 417
     },
-    "crates/miyu-base/src/config/platform.rs": {
+    "crates/yunxi-base/src/config/platform.rs": {
       "tests": 0,
       "total": 969
     },
-    "crates/miyu-base/src/config/platform_ops.rs": {
+    "crates/yunxi-base/src/config/platform_ops.rs": {
       "tests": 0,
       "total": 340
     },
-    "crates/miyu-base/src/config/platform_plugins/mod.rs": {
+    "crates/yunxi-base/src/config/platform_plugins/mod.rs": {
       "tests": 0,
       "total": 272
     },
-    "crates/miyu-base/src/config/platform_plugins/qq.rs": {
+    "crates/yunxi-base/src/config/platform_plugins/qq.rs": {
       "tests": 0,
       "total": 376
     },
-    "crates/miyu-base/src/config/platform_plugins/real_context.rs": {
+    "crates/yunxi-base/src/config/platform_plugins/real_context.rs": {
       "tests": 0,
       "total": 995
     },
-    "crates/miyu-base/src/config/pool_ref.rs": {
+    "crates/yunxi-base/src/config/pool_ref.rs": {
       "tests": 0,
       "total": 274
     },
-    "crates/miyu-base/src/config/pool_ref/test_support.rs": {
+    "crates/yunxi-base/src/config/pool_ref/test_support.rs": {
       "tests": 0,
       "total": 13
     },
-    "crates/miyu-base/src/config/provider.rs": {
+    "crates/yunxi-base/src/config/provider.rs": {
       "tests": 0,
       "total": 1005
     },
-    "crates/miyu-base/src/config/provider/test_support.rs": {
+    "crates/yunxi-base/src/config/provider/test_support.rs": {
       "tests": 0,
       "total": 11
     },
-    "crates/miyu-base/src/config/provider_ops.rs": {
+    "crates/yunxi-base/src/config/provider_ops.rs": {
       "tests": 0,
       "total": 782
     },
-    "crates/miyu-base/src/config/provider_ops/test_support.rs": {
+    "crates/yunxi-base/src/config/provider_ops/test_support.rs": {
       "tests": 0,
       "total": 33
     },
-    "crates/miyu-base/src/config/scaling_probe.rs": {
+    "crates/yunxi-base/src/config/scaling_probe.rs": {
       "tests": 0,
       "total": 51
     },
-    "crates/miyu-base/src/config/subsystems.rs": {
+    "crates/yunxi-base/src/config/subsystems.rs": {
       "tests": 85,
       "total": 223
     },
-    "crates/miyu-base/src/config/subsystems/test_support.rs": {
+    "crates/yunxi-base/src/config/subsystems/test_support.rs": {
       "tests": 0,
       "total": 30
     },
-    "crates/miyu-base/src/config/tests/defaults.rs": {
+    "crates/yunxi-base/src/config/tests/defaults.rs": {
       "tests": 0,
       "total": 347
     },
-    "crates/miyu-base/src/config/tests/mod.rs": {
+    "crates/yunxi-base/src/config/tests/mod.rs": {
       "tests": 0,
       "total": 12
     },
-    "crates/miyu-base/src/config/tests/paths.rs": {
+    "crates/yunxi-base/src/config/tests/paths.rs": {
       "tests": 0,
       "total": 300
     },
-    "crates/miyu-base/src/config/tests/platform.rs": {
+    "crates/yunxi-base/src/config/tests/platform.rs": {
       "tests": 0,
       "total": 1414
     },
-    "crates/miyu-base/src/config/tests/plugins.rs": {
+    "crates/yunxi-base/src/config/tests/plugins.rs": {
       "tests": 0,
       "total": 470
     },
-    "crates/miyu-base/src/config/tests/provider.rs": {
+    "crates/yunxi-base/src/config/tests/provider.rs": {
       "tests": 0,
       "total": 1347
     },
-    "crates/miyu-base/src/config/tests/shared.rs": {
+    "crates/yunxi-base/src/config/tests/shared.rs": {
       "tests": 0,
       "total": 66
     },
-    "crates/miyu-base/src/config/tool_plugins.rs": {
+    "crates/yunxi-base/src/config/tool_plugins.rs": {
       "tests": 36,
       "total": 759
     },
-    "crates/miyu-base/src/config/voice.rs": {
+    "crates/yunxi-base/src/config/voice.rs": {
       "tests": 0,
       "total": 369
     },
-    "crates/miyu-base/src/default_models.rs": {
+    "crates/yunxi-base/src/default_models.rs": {
       "tests": 0,
       "total": 7
     },
-    "crates/miyu-base/src/durations.rs": {
+    "crates/yunxi-base/src/durations.rs": {
       "tests": 31,
       "total": 110
     },
-    "crates/miyu-base/src/embedding/local.rs": {
+    "crates/yunxi-base/src/embedding/local.rs": {
       "tests": 67,
       "total": 302
     },
-    "crates/miyu-base/src/embedding/manifest.rs": {
+    "crates/yunxi-base/src/embedding/manifest.rs": {
       "tests": 50,
       "total": 222
     },
-    "crates/miyu-base/src/embedding/manifest/test_support.rs": {
+    "crates/yunxi-base/src/embedding/manifest/test_support.rs": {
       "tests": 0,
       "total": 5
     },
-    "crates/miyu-base/src/embedding/mod.rs": {
+    "crates/yunxi-base/src/embedding/mod.rs": {
       "tests": 6,
       "total": 154
     },
-    "crates/miyu-base/src/embedding/remote.rs": {
+    "crates/yunxi-base/src/embedding/remote.rs": {
       "tests": 0,
       "total": 73
     },
-    "crates/miyu-base/src/embedding/tests.rs": {
+    "crates/yunxi-base/src/embedding/tests.rs": {
       "tests": 0,
       "total": 200
     },
-    "crates/miyu-base/src/embedding/vectors.rs": {
+    "crates/yunxi-base/src/embedding/vectors.rs": {
       "tests": 0,
       "total": 77
     },
-    "crates/miyu-base/src/embedding/worker.rs": {
+    "crates/yunxi-base/src/embedding/worker.rs": {
       "tests": 0,
       "total": 595
     },
-    "crates/miyu-base/src/embedding/worker/test_support.rs": {
+    "crates/yunxi-base/src/embedding/worker/test_support.rs": {
       "tests": 0,
       "total": 24
     },
-    "crates/miyu-base/src/host_info.rs": {
+    "crates/yunxi-base/src/host_info.rs": {
       "tests": 98,
       "total": 307
     },
-    "crates/miyu-base/src/host_ports/cross_session.rs": {
+    "crates/yunxi-base/src/host_ports/cross_session.rs": {
       "tests": 0,
       "total": 66
     },
-    "crates/miyu-base/src/host_ports/host_grants.rs": {
+    "crates/yunxi-base/src/host_ports/host_grants.rs": {
       "tests": 25,
       "total": 94
     },
-    "crates/miyu-base/src/host_ports/host_query.rs": {
+    "crates/yunxi-base/src/host_ports/host_query.rs": {
       "tests": 117,
       "total": 287
     },
-    "crates/miyu-base/src/host_ports/live_turn.rs": {
+    "crates/yunxi-base/src/host_ports/live_turn.rs": {
       "tests": 13,
       "total": 54
     },
-    "crates/miyu-base/src/host_ports/mod.rs": {
+    "crates/yunxi-base/src/host_ports/mod.rs": {
       "tests": 0,
       "total": 40
     },
-    "crates/miyu-base/src/host_ports/ports.rs": {
+    "crates/yunxi-base/src/host_ports/ports.rs": {
       "tests": 66,
       "total": 232
     },
-    "crates/miyu-base/src/host_ports/subagent.rs": {
+    "crates/yunxi-base/src/host_ports/subagent.rs": {
       "tests": 0,
       "total": 98
     },
-    "crates/miyu-base/src/host_ports/turn_restrictions.rs": {
+    "crates/yunxi-base/src/host_ports/turn_restrictions.rs": {
       "tests": 115,
       "total": 260
     },
-    "crates/miyu-base/src/http_response.rs": {
+    "crates/yunxi-base/src/http_response.rs": {
       "tests": 0,
       "total": 51
     },
-    "crates/miyu-base/src/i18n.rs": {
+    "crates/yunxi-base/src/i18n.rs": {
       "tests": 103,
       "total": 239
     },
-    "crates/miyu-base/src/json_extract.rs": {
+    "crates/yunxi-base/src/json_extract.rs": {
       "tests": 45,
       "total": 90
     },
-    "crates/miyu-base/src/lib.rs": {
+    "crates/yunxi-base/src/lib.rs": {
       "tests": 0,
       "total": 63
     },
-    "crates/miyu-base/src/logging.rs": {
+    "crates/yunxi-base/src/logging.rs": {
       "tests": 43,
       "total": 163
     },
-    "crates/miyu-base/src/media_mime.rs": {
+    "crates/yunxi-base/src/media_mime.rs": {
       "tests": 0,
       "total": 33
     },
-    "crates/miyu-base/src/memory_types.rs": {
+    "crates/yunxi-base/src/memory_types.rs": {
       "tests": 0,
       "total": 25
     },
-    "crates/miyu-base/src/models_cache/api.rs": {
+    "crates/yunxi-base/src/models_cache/api.rs": {
       "tests": 0,
       "total": 246
     },
-    "crates/miyu-base/src/models_cache/lookup.rs": {
+    "crates/yunxi-base/src/models_cache/lookup.rs": {
       "tests": 0,
       "total": 339
     },
-    "crates/miyu-base/src/models_cache/mod.rs": {
+    "crates/yunxi-base/src/models_cache/mod.rs": {
       "tests": 79,
       "total": 562
     },
-    "crates/miyu-base/src/models_cache/provider_api.rs": {
+    "crates/yunxi-base/src/models_cache/provider_api.rs": {
       "tests": 0,
       "total": 104
     },
-    "crates/miyu-base/src/models_cache/selection.rs": {
+    "crates/yunxi-base/src/models_cache/selection.rs": {
       "tests": 18,
       "total": 390
     },
-    "crates/miyu-base/src/notify.rs": {
+    "crates/yunxi-base/src/notify.rs": {
       "tests": 96,
       "total": 402
     },
-    "crates/miyu-base/src/orphan_guard.rs": {
+    "crates/yunxi-base/src/orphan_guard.rs": {
       "tests": 0,
       "total": 136
     },
-    "crates/miyu-base/src/paths/home_layout.rs": {
+    "crates/yunxi-base/src/paths/home_layout.rs": {
       "tests": 0,
       "total": 297
     },
-    "crates/miyu-base/src/paths/legacy_migration.rs": {
+    "crates/yunxi-base/src/paths/legacy_migration.rs": {
       "tests": 0,
       "total": 815
     },
-    "crates/miyu-base/src/paths/legacy_migration/test_support.rs": {
+    "crates/yunxi-base/src/paths/legacy_migration/test_support.rs": {
       "tests": 0,
       "total": 19
     },
-    "crates/miyu-base/src/paths/mod.rs": {
+    "crates/yunxi-base/src/paths/mod.rs": {
       "tests": 38,
       "total": 782
     },
-    "crates/miyu-base/src/paths/resource_migration.rs": {
+    "crates/yunxi-base/src/paths/resource_migration.rs": {
       "tests": 0,
       "total": 466
     },
-    "crates/miyu-base/src/paths/resource_migration/test_support.rs": {
+    "crates/yunxi-base/src/paths/resource_migration/test_support.rs": {
       "tests": 0,
       "total": 15
     },
-    "crates/miyu-base/src/paths/resources.rs": {
+    "crates/yunxi-base/src/paths/resources.rs": {
       "tests": 134,
       "total": 333
     },
-    "crates/miyu-base/src/paths/search_path.rs": {
+    "crates/yunxi-base/src/paths/search_path.rs": {
       "tests": 92,
       "total": 215
     },
-    "crates/miyu-base/src/paths/tests/home.rs": {
+    "crates/yunxi-base/src/paths/tests/home.rs": {
       "tests": 0,
       "total": 231
     },
-    "crates/miyu-base/src/paths/tests/legacy.rs": {
+    "crates/yunxi-base/src/paths/tests/legacy.rs": {
       "tests": 0,
       "total": 534
     },
-    "crates/miyu-base/src/paths/tests/mod.rs": {
+    "crates/yunxi-base/src/paths/tests/mod.rs": {
       "tests": 0,
       "total": 8
     },
-    "crates/miyu-base/src/paths/tests/resource.rs": {
+    "crates/yunxi-base/src/paths/tests/resource.rs": {
       "tests": 0,
       "total": 292
     },
-    "crates/miyu-base/src/paths/tests/runtime_dir.rs": {
+    "crates/yunxi-base/src/paths/tests/runtime_dir.rs": {
       "tests": 0,
       "total": 45
     },
-    "crates/miyu-base/src/paths/tests/shared.rs": {
+    "crates/yunxi-base/src/paths/tests/shared.rs": {
       "tests": 0,
       "total": 24
     },
-    "crates/miyu-base/src/persona_lane.rs": {
+    "crates/yunxi-base/src/persona_lane.rs": {
       "tests": 0,
       "total": 69
     },
-    "crates/miyu-base/src/platform_types.rs": {
+    "crates/yunxi-base/src/platform_types.rs": {
       "tests": 0,
       "total": 624
     },
-    "crates/miyu-base/src/platform_types/test_support.rs": {
+    "crates/yunxi-base/src/platform_types/test_support.rs": {
       "tests": 0,
       "total": 17
     },
-    "crates/miyu-base/src/process.rs": {
+    "crates/yunxi-base/src/process.rs": {
       "tests": 26,
       "total": 94
     },
-    "crates/miyu-base/src/prompts.rs": {
+    "crates/yunxi-base/src/prompts.rs": {
       "tests": 0,
       "total": 35
     },
-    "crates/miyu-base/src/provider_catalog/cli.rs": {
+    "crates/yunxi-base/src/provider_catalog/cli.rs": {
       "tests": 106,
       "total": 295
     },
-    "crates/miyu-base/src/provider_catalog/http.rs": {
+    "crates/yunxi-base/src/provider_catalog/http.rs": {
       "tests": 0,
       "total": 50
     },
-    "crates/miyu-base/src/provider_catalog/mod.rs": {
+    "crates/yunxi-base/src/provider_catalog/mod.rs": {
       "tests": 0,
       "total": 75
     },
-    "crates/miyu-base/src/provider_url.rs": {
+    "crates/yunxi-base/src/provider_url.rs": {
       "tests": 16,
       "total": 31
     },
-    "crates/miyu-base/src/question.rs": {
+    "crates/yunxi-base/src/question.rs": {
       "tests": 98,
       "total": 427
     },
-    "crates/miyu-base/src/random_id.rs": {
+    "crates/yunxi-base/src/random_id.rs": {
       "tests": 0,
       "total": 24
     },
-    "crates/miyu-base/src/sandbox/backend.rs": {
+    "crates/yunxi-base/src/sandbox/backend.rs": {
       "tests": 13,
       "total": 60
     },
-    "crates/miyu-base/src/sandbox/linux.rs": {
+    "crates/yunxi-base/src/sandbox/linux.rs": {
       "tests": 0,
       "total": 166
     },
-    "crates/miyu-base/src/sandbox/macos.rs": {
+    "crates/yunxi-base/src/sandbox/macos.rs": {
       "tests": 69,
       "total": 221
     },
-    "crates/miyu-base/src/sandbox/mod.rs": {
+    "crates/yunxi-base/src/sandbox/mod.rs": {
       "tests": 10,
       "total": 345
     },
-    "crates/miyu-base/src/sandbox/test_support.rs": {
+    "crates/yunxi-base/src/sandbox/test_support.rs": {
       "tests": 0,
       "total": 24
     },
-    "crates/miyu-base/src/sandbox/tests.rs": {
+    "crates/yunxi-base/src/sandbox/tests.rs": {
       "tests": 0,
       "total": 276
     },
-    "crates/miyu-base/src/sandbox/tests/distribution_sandbox.rs": {
+    "crates/yunxi-base/src/sandbox/tests/distribution_sandbox.rs": {
       "tests": 0,
       "total": 193
     },
-    "crates/miyu-base/src/sandbox/unsupported.rs": {
+    "crates/yunxi-base/src/sandbox/unsupported.rs": {
       "tests": 0,
       "total": 11
     },
-    "crates/miyu-base/src/shell/bash.rs": {
+    "crates/yunxi-base/src/shell/bash.rs": {
       "tests": 75,
       "total": 189
     },
-    "crates/miyu-base/src/shell/fish.rs": {
+    "crates/yunxi-base/src/shell/fish.rs": {
       "tests": 162,
       "total": 518
     },
-    "crates/miyu-base/src/shell/locate.rs": {
+    "crates/yunxi-base/src/shell/locate.rs": {
       "tests": 19,
       "total": 114
     },
-    "crates/miyu-base/src/shell/mod.rs": {
+    "crates/yunxi-base/src/shell/mod.rs": {
       "tests": 316,
       "total": 1045
     },
-    "crates/miyu-base/src/shell/startup.rs": {
+    "crates/yunxi-base/src/shell/startup.rs": {
       "tests": 79,
       "total": 194
     },
-    "crates/miyu-base/src/shell/test_support.rs": {
+    "crates/yunxi-base/src/shell/test_support.rs": {
       "tests": 0,
       "total": 11
     },
-    "crates/miyu-base/src/shell/zsh.rs": {
+    "crates/yunxi-base/src/shell/zsh.rs": {
       "tests": 87,
       "total": 212
     },
-    "crates/miyu-base/src/terminal/chafa.rs": {
+    "crates/yunxi-base/src/terminal/chafa.rs": {
       "tests": 69,
       "total": 329
     },
-    "crates/miyu-base/src/terminal/chrome.rs": {
+    "crates/yunxi-base/src/terminal/chrome.rs": {
       "tests": 169,
       "total": 1191
     },
-    "crates/miyu-base/src/terminal/herdr.rs": {
+    "crates/yunxi-base/src/terminal/herdr.rs": {
       "tests": 41,
       "total": 107
     },
-    "crates/miyu-base/src/terminal/kitty.rs": {
+    "crates/yunxi-base/src/terminal/kitty.rs": {
       "tests": 186,
       "total": 671
     },
-    "crates/miyu-base/src/terminal/mod.rs": {
+    "crates/yunxi-base/src/terminal/mod.rs": {
       "tests": 12,
       "total": 123
     },
-    "crates/miyu-base/src/terminal/palette.rs": {
+    "crates/yunxi-base/src/terminal/palette.rs": {
       "tests": 33,
       "total": 322
     },
-    "crates/miyu-base/src/terminal/starfield.rs": {
+    "crates/yunxi-base/src/terminal/starfield.rs": {
       "tests": 45,
       "total": 323
     },
-    "crates/miyu-base/src/terminal/text.rs": {
+    "crates/yunxi-base/src/terminal/text.rs": {
       "tests": 0,
       "total": 356
     },
-    "crates/miyu-base/src/token_counter.rs": {
+    "crates/yunxi-base/src/token_counter.rs": {
       "tests": 0,
       "total": 347
     },
-    "crates/miyu-base/src/token_estimate.rs": {
+    "crates/yunxi-base/src/token_estimate.rs": {
       "tests": 229,
       "total": 280
     },
-    "crates/miyu-base/src/tool_names.rs": {
+    "crates/yunxi-base/src/tool_names.rs": {
       "tests": 39,
       "total": 118
     },
-    "crates/miyu-base/src/workspace.rs": {
+    "crates/yunxi-base/src/workspace.rs": {
       "tests": 101,
       "total": 406
     },
-    "crates/miyu-core/src/alarm.rs": {
+    "crates/yunxi-core/src/alarm.rs": {
       "tests": 94,
       "total": 365
     },
-    "crates/miyu-core/src/args.rs": {
+    "crates/yunxi-core/src/args.rs": {
       "tests": 0,
       "total": 35
     },
-    "crates/miyu-core/src/ipc/frames.rs": {
+    "crates/yunxi-core/src/ipc/frames.rs": {
       "tests": 210,
       "total": 376
     },
-    "crates/miyu-core/src/ipc/launch.rs": {
+    "crates/yunxi-core/src/ipc/launch.rs": {
       "tests": 0,
       "total": 374
     },
-    "crates/miyu-core/src/ipc/lifecycle.rs": {
+    "crates/yunxi-core/src/ipc/lifecycle.rs": {
       "tests": 0,
       "total": 722
     },
-    "crates/miyu-core/src/ipc/mod.rs": {
+    "crates/yunxi-core/src/ipc/mod.rs": {
       "tests": 605,
       "total": 642
     },
-    "crates/miyu-core/src/ipc/protocol.rs": {
+    "crates/yunxi-core/src/ipc/protocol.rs": {
       "tests": 0,
       "total": 587
     },
-    "crates/miyu-core/src/ledger/books.rs": {
+    "crates/yunxi-core/src/ledger/books.rs": {
       "tests": 0,
       "total": 548
     },
-    "crates/miyu-core/src/ledger/books/test_support.rs": {
+    "crates/yunxi-core/src/ledger/books/test_support.rs": {
       "tests": 0,
       "total": 19
     },
-    "crates/miyu-core/src/ledger/categories.rs": {
+    "crates/yunxi-core/src/ledger/categories.rs": {
       "tests": 0,
       "total": 255
     },
-    "crates/miyu-core/src/ledger/csv.rs": {
+    "crates/yunxi-core/src/ledger/csv.rs": {
       "tests": 0,
       "total": 259
     },
-    "crates/miyu-core/src/ledger/entries.rs": {
+    "crates/yunxi-core/src/ledger/entries.rs": {
       "tests": 0,
       "total": 466
     },
-    "crates/miyu-core/src/ledger/mod.rs": {
+    "crates/yunxi-core/src/ledger/mod.rs": {
       "tests": 4,
       "total": 196
     },
-    "crates/miyu-core/src/ledger/money.rs": {
+    "crates/yunxi-core/src/ledger/money.rs": {
       "tests": 0,
       "total": 203
     },
-    "crates/miyu-core/src/ledger/rates.rs": {
+    "crates/yunxi-core/src/ledger/rates.rs": {
       "tests": 0,
       "total": 248
     },
-    "crates/miyu-core/src/ledger/schema.rs": {
+    "crates/yunxi-core/src/ledger/schema.rs": {
       "tests": 0,
       "total": 243
     },
-    "crates/miyu-core/src/ledger/stats.rs": {
+    "crates/yunxi-core/src/ledger/stats.rs": {
       "tests": 0,
       "total": 439
     },
-    "crates/miyu-core/src/ledger/tests/csv.rs": {
+    "crates/yunxi-core/src/ledger/tests/csv.rs": {
       "tests": 0,
       "total": 266
     },
-    "crates/miyu-core/src/ledger/tests/entries.rs": {
+    "crates/yunxi-core/src/ledger/tests/entries.rs": {
       "tests": 0,
       "total": 462
     },
-    "crates/miyu-core/src/ledger/tests/mod.rs": {
+    "crates/yunxi-core/src/ledger/tests/mod.rs": {
       "tests": 0,
       "total": 282
     },
-    "crates/miyu-core/src/ledger/tests/money.rs": {
+    "crates/yunxi-core/src/ledger/tests/money.rs": {
       "tests": 0,
       "total": 102
     },
-    "crates/miyu-core/src/ledger/tests/stats.rs": {
+    "crates/yunxi-core/src/ledger/tests/stats.rs": {
       "tests": 0,
       "total": 355
     },
-    "crates/miyu-core/src/ledger/types.rs": {
+    "crates/yunxi-core/src/ledger/types.rs": {
       "tests": 0,
       "total": 311
     },
-    "crates/miyu-core/src/lib.rs": {
+    "crates/yunxi-core/src/lib.rs": {
       "tests": 0,
       "total": 15
     },
-    "crates/miyu-core/src/llm/cache_break.rs": {
+    "crates/yunxi-core/src/llm/cache_break.rs": {
       "tests": 156,
       "total": 322
     },
-    "crates/miyu-core/src/llm/cache_log.rs": {
+    "crates/yunxi-core/src/llm/cache_log.rs": {
       "tests": 131,
       "total": 387
     },
-    "crates/miyu-core/src/llm/cache_prefix.rs": {
+    "crates/yunxi-core/src/llm/cache_prefix.rs": {
       "tests": 104,
       "total": 346
     },
-    "crates/miyu-core/src/llm/mod.rs": {
+    "crates/yunxi-core/src/llm/mod.rs": {
       "tests": 108,
       "total": 686
     },
-    "crates/miyu-core/src/llm/openai_compatible/anthropic.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/anthropic.rs": {
       "tests": 0,
       "total": 451
     },
-    "crates/miyu-core/src/llm/openai_compatible/antigravity/mod.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/antigravity/mod.rs": {
       "tests": 17,
       "total": 540
     },
-    "crates/miyu-core/src/llm/openai_compatible/antigravity/pool.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/antigravity/pool.rs": {
       "tests": 189,
       "total": 465
     },
-    "crates/miyu-core/src/llm/openai_compatible/antigravity/setup.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/antigravity/setup.rs": {
       "tests": 67,
       "total": 312
     },
-    "crates/miyu-core/src/llm/openai_compatible/antigravity/stream.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/antigravity/stream.rs": {
       "tests": 71,
       "total": 631
     },
-    "crates/miyu-core/src/llm/openai_compatible/builder.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/builder.rs": {
       "tests": 0,
       "total": 579
     },
-    "crates/miyu-core/src/llm/openai_compatible/chat.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/chat.rs": {
       "tests": 0,
       "total": 825
     },
-    "crates/miyu-core/src/llm/openai_compatible/chat_consume.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/chat_consume.rs": {
       "tests": 0,
       "total": 521
     },
-    "crates/miyu-core/src/llm/openai_compatible/claude_code/mod.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/claude_code/mod.rs": {
       "tests": 0,
       "total": 348
     },
-    "crates/miyu-core/src/llm/openai_compatible/claude_code/stream.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/claude_code/stream.rs": {
       "tests": 0,
       "total": 581
     },
-    "crates/miyu-core/src/llm/openai_compatible/cli_relay/mod.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/cli_relay/mod.rs": {
       "tests": 67,
       "total": 429
     },
-    "crates/miyu-core/src/llm/openai_compatible/cli_relay/payload.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/cli_relay/payload.rs": {
       "tests": 119,
       "total": 428
     },
-    "crates/miyu-core/src/llm/openai_compatible/cli_relay/process.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/cli_relay/process.rs": {
       "tests": 0,
       "total": 401
     },
-    "crates/miyu-core/src/llm/openai_compatible/cli_relay/session.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/cli_relay/session.rs": {
       "tests": 322,
       "total": 724
     },
-    "crates/miyu-core/src/llm/openai_compatible/codebuddy/mod.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/codebuddy/mod.rs": {
       "tests": 0,
       "total": 239
     },
-    "crates/miyu-core/src/llm/openai_compatible/codex/mod.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/codex/mod.rs": {
       "tests": 99,
       "total": 603
     },
-    "crates/miyu-core/src/llm/openai_compatible/codex/stream.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/codex/stream.rs": {
       "tests": 33,
       "total": 525
     },
-    "crates/miyu-core/src/llm/openai_compatible/dsml.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/dsml.rs": {
       "tests": 0,
       "total": 249
     },
-    "crates/miyu-core/src/llm/openai_compatible/endpoints.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/endpoints.rs": {
       "tests": 124,
       "total": 550
     },
-    "crates/miyu-core/src/llm/openai_compatible/endpoints/test_support.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/endpoints/test_support.rs": {
       "tests": 0,
       "total": 16
     },
-    "crates/miyu-core/src/llm/openai_compatible/errors.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/errors.rs": {
       "tests": 41,
       "total": 641
     },
-    "crates/miyu-core/src/llm/openai_compatible/errors/test_support.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/errors/test_support.rs": {
       "tests": 0,
       "total": 8
     },
-    "crates/miyu-core/src/llm/openai_compatible/lower.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/lower.rs": {
       "tests": 0,
       "total": 459
     },
-    "crates/miyu-core/src/llm/openai_compatible/mod.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/mod.rs": {
       "tests": 27,
       "total": 210
     },
-    "crates/miyu-core/src/llm/openai_compatible/protocol.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/protocol.rs": {
       "tests": 0,
       "total": 699
     },
-    "crates/miyu-core/src/llm/openai_compatible/sse/accumulator.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/sse/accumulator.rs": {
       "tests": 0,
       "total": 433
     },
-    "crates/miyu-core/src/llm/openai_compatible/sse/anthropic.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/sse/anthropic.rs": {
       "tests": 0,
       "total": 311
     },
-    "crates/miyu-core/src/llm/openai_compatible/sse/mod.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/sse/mod.rs": {
       "tests": 0,
       "total": 409
     },
-    "crates/miyu-core/src/llm/openai_compatible/sse/responses.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/sse/responses.rs": {
       "tests": 0,
       "total": 387
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/anthropic.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/anthropic.rs": {
       "tests": 0,
       "total": 481
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/antigravity.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/antigravity.rs": {
       "tests": 0,
       "total": 607
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/chat_stream.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/chat_stream.rs": {
       "tests": 0,
       "total": 569
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/claude_code.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/claude_code.rs": {
       "tests": 0,
       "total": 489
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/codebuddy.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/codebuddy.rs": {
       "tests": 0,
       "total": 211
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/codex.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/codex.rs": {
       "tests": 0,
       "total": 279
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/endpoint_retry.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/endpoint_retry.rs": {
       "tests": 0,
       "total": 480
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/error_text.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/error_text.rs": {
       "tests": 0,
       "total": 155
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/extra_body.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/extra_body.rs": {
       "tests": 0,
       "total": 23
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/failover.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/failover.rs": {
       "tests": 0,
       "total": 755
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/failure_classes.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/failure_classes.rs": {
       "tests": 0,
       "total": 216
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/mod.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/mod.rs": {
       "tests": 0,
       "total": 23
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/responses.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/responses.rs": {
       "tests": 0,
       "total": 728
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/shared.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/shared.rs": {
       "tests": 0,
       "total": 253
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/thinking.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/thinking.rs": {
       "tests": 0,
       "total": 545
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/tier_pool.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/tier_pool.rs": {
       "tests": 0,
       "total": 138
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/zen_headers.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/zen_headers.rs": {
       "tests": 0,
       "total": 289
     },
-    "crates/miyu-core/src/llm/openai_compatible/tests/zen_tools.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/tests/zen_tools.rs": {
       "tests": 0,
       "total": 207
     },
-    "crates/miyu-core/src/llm/openai_compatible/variants.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/variants.rs": {
       "tests": 0,
       "total": 302
     },
-    "crates/miyu-core/src/llm/openai_compatible/wire.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/wire.rs": {
       "tests": 0,
       "total": 481
     },
-    "crates/miyu-core/src/llm/openai_compatible/zen_headers.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/zen_headers.rs": {
       "tests": 0,
       "total": 134
     },
-    "crates/miyu-core/src/llm/openai_compatible/zen_tools.rs": {
+    "crates/yunxi-core/src/llm/openai_compatible/zen_tools.rs": {
       "tests": 0,
       "total": 177
     },
-    "crates/miyu-core/src/llm/provider_capabilities.rs": {
+    "crates/yunxi-core/src/llm/provider_capabilities.rs": {
       "tests": 15,
       "total": 88
     },
-    "crates/miyu-core/src/llm/request_log.rs": {
+    "crates/yunxi-core/src/llm/request_log.rs": {
       "tests": 0,
       "total": 97
     },
-    "crates/miyu-core/src/llm/request_shape.rs": {
+    "crates/yunxi-core/src/llm/request_shape.rs": {
       "tests": 67,
       "total": 157
     },
-    "crates/miyu-core/src/memory/association.rs": {
+    "crates/yunxi-core/src/memory/association.rs": {
       "tests": 0,
       "total": 144
     },
-    "crates/miyu-core/src/memory/browse.rs": {
+    "crates/yunxi-core/src/memory/browse.rs": {
       "tests": 0,
       "total": 612
     },
-    "crates/miyu-core/src/memory/dedup.rs": {
+    "crates/yunxi-core/src/memory/dedup.rs": {
       "tests": 39,
       "total": 443
     },
-    "crates/miyu-core/src/memory/evicted.rs": {
+    "crates/yunxi-core/src/memory/evicted.rs": {
       "tests": 0,
       "total": 399
     },
-    "crates/miyu-core/src/memory/mod.rs": {
+    "crates/yunxi-core/src/memory/mod.rs": {
       "tests": 4,
       "total": 488
     },
-    "crates/miyu-core/src/memory/organizer.rs": {
+    "crates/yunxi-core/src/memory/organizer.rs": {
       "tests": 180,
       "total": 554
     },
-    "crates/miyu-core/src/memory/recall.rs": {
+    "crates/yunxi-core/src/memory/recall.rs": {
       "tests": 0,
       "total": 664
     },
-    "crates/miyu-core/src/memory/schema.rs": {
+    "crates/yunxi-core/src/memory/schema.rs": {
       "tests": 0,
       "total": 618
     },
-    "crates/miyu-core/src/memory/search.rs": {
+    "crates/yunxi-core/src/memory/search.rs": {
       "tests": 0,
       "total": 304
     },
-    "crates/miyu-core/src/memory/semantic.rs": {
+    "crates/yunxi-core/src/memory/semantic.rs": {
       "tests": 0,
       "total": 405
     },
-    "crates/miyu-core/src/memory/tests/access.rs": {
+    "crates/yunxi-core/src/memory/tests/access.rs": {
       "tests": 0,
       "total": 420
     },
-    "crates/miyu-core/src/memory/tests/association.rs": {
+    "crates/yunxi-core/src/memory/tests/association.rs": {
       "tests": 0,
       "total": 109
     },
-    "crates/miyu-core/src/memory/tests/browse.rs": {
+    "crates/yunxi-core/src/memory/tests/browse.rs": {
       "tests": 0,
       "total": 295
     },
-    "crates/miyu-core/src/memory/tests/dedup.rs": {
+    "crates/yunxi-core/src/memory/tests/dedup.rs": {
       "tests": 0,
       "total": 251
     },
-    "crates/miyu-core/src/memory/tests/diary.rs": {
+    "crates/yunxi-core/src/memory/tests/diary.rs": {
       "tests": 0,
       "total": 137
     },
-    "crates/miyu-core/src/memory/tests/mod.rs": {
+    "crates/yunxi-core/src/memory/tests/mod.rs": {
       "tests": 0,
       "total": 13
     },
-    "crates/miyu-core/src/memory/tests/ranking.rs": {
+    "crates/yunxi-core/src/memory/tests/ranking.rs": {
       "tests": 0,
       "total": 148
     },
-    "crates/miyu-core/src/memory/tests/reset.rs": {
+    "crates/yunxi-core/src/memory/tests/reset.rs": {
       "tests": 0,
       "total": 231
     },
-    "crates/miyu-core/src/memory/tests/semantic.rs": {
+    "crates/yunxi-core/src/memory/tests/semantic.rs": {
       "tests": 0,
       "total": 223
     },
-    "crates/miyu-core/src/memory/tests/shared.rs": {
+    "crates/yunxi-core/src/memory/tests/shared.rs": {
       "tests": 0,
       "total": 73
     },
-    "crates/miyu-core/src/memory/tests/store.rs": {
+    "crates/yunxi-core/src/memory/tests/store.rs": {
       "tests": 0,
       "total": 317
     },
-    "crates/miyu-core/src/memory/validate.rs": {
+    "crates/yunxi-core/src/memory/validate.rs": {
       "tests": 0,
       "total": 483
     },
-    "crates/miyu-core/src/memory/write.rs": {
+    "crates/yunxi-core/src/memory/write.rs": {
       "tests": 0,
       "total": 600
     },
-    "crates/miyu-core/src/memory/write/test_support.rs": {
+    "crates/yunxi-core/src/memory/write/test_support.rs": {
       "tests": 0,
       "total": 79
     },
-    "crates/miyu-core/src/persona_hint.rs": {
+    "crates/yunxi-core/src/persona_hint.rs": {
       "tests": 176,
       "total": 518
     },
-    "crates/miyu-core/src/skills/draft/install.rs": {
+    "crates/yunxi-core/src/skills/draft/install.rs": {
       "tests": 0,
       "total": 376
     },
-    "crates/miyu-core/src/skills/draft/mod.rs": {
+    "crates/yunxi-core/src/skills/draft/mod.rs": {
       "tests": 0,
       "total": 748
     },
-    "crates/miyu-core/src/skills/manifest.rs": {
+    "crates/yunxi-core/src/skills/manifest.rs": {
       "tests": 24,
       "total": 418
     },
-    "crates/miyu-core/src/skills/mod.rs": {
+    "crates/yunxi-core/src/skills/mod.rs": {
       "tests": 617,
       "total": 963
     },
-    "crates/miyu-core/src/slash_commands.rs": {
+    "crates/yunxi-core/src/slash_commands.rs": {
       "tests": 22,
       "total": 602
     },
-    "crates/miyu-core/src/state/accounts.rs": {
+    "crates/yunxi-core/src/state/accounts.rs": {
       "tests": 49,
       "total": 295
     },
-    "crates/miyu-core/src/state/accounts/test_support.rs": {
+    "crates/yunxi-core/src/state/accounts/test_support.rs": {
       "tests": 0,
       "total": 39
     },
-    "crates/miyu-core/src/state/assets.rs": {
+    "crates/yunxi-core/src/state/assets.rs": {
       "tests": 0,
       "total": 431
     },
-    "crates/miyu-core/src/state/assets/test_support.rs": {
+    "crates/yunxi-core/src/state/assets/test_support.rs": {
       "tests": 0,
       "total": 16
     },
-    "crates/miyu-core/src/state/conversation_db/accounts.rs": {
+    "crates/yunxi-core/src/state/conversation_db/accounts.rs": {
       "tests": 0,
       "total": 285
     },
-    "crates/miyu-core/src/state/conversation_db/accounts/test_support.rs": {
+    "crates/yunxi-core/src/state/conversation_db/accounts/test_support.rs": {
       "tests": 0,
       "total": 11
     },
-    "crates/miyu-core/src/state/conversation_db/attachments.rs": {
+    "crates/yunxi-core/src/state/conversation_db/attachments.rs": {
       "tests": 0,
       "total": 459
     },
-    "crates/miyu-core/src/state/conversation_db/attachments/test_support.rs": {
+    "crates/yunxi-core/src/state/conversation_db/attachments/test_support.rs": {
       "tests": 0,
       "total": 17
     },
-    "crates/miyu-core/src/state/conversation_db/cache_breaks.rs": {
+    "crates/yunxi-core/src/state/conversation_db/cache_breaks.rs": {
       "tests": 0,
       "total": 92
     },
-    "crates/miyu-core/src/state/conversation_db/goals.rs": {
+    "crates/yunxi-core/src/state/conversation_db/goals.rs": {
       "tests": 0,
       "total": 517
     },
-    "crates/miyu-core/src/state/conversation_db/history.rs": {
+    "crates/yunxi-core/src/state/conversation_db/history.rs": {
       "tests": 0,
       "total": 856
     },
-    "crates/miyu-core/src/state/conversation_db/history/test_support.rs": {
+    "crates/yunxi-core/src/state/conversation_db/history/test_support.rs": {
       "tests": 0,
       "total": 24
     },
-    "crates/miyu-core/src/state/conversation_db/inline_media.rs": {
+    "crates/yunxi-core/src/state/conversation_db/inline_media.rs": {
       "tests": 0,
       "total": 60
     },
-    "crates/miyu-core/src/state/conversation_db/mod.rs": {
+    "crates/yunxi-core/src/state/conversation_db/mod.rs": {
       "tests": 0,
       "total": 697
     },
-    "crates/miyu-core/src/state/conversation_db/open.rs": {
+    "crates/yunxi-core/src/state/conversation_db/open.rs": {
       "tests": 4,
       "total": 280
     },
-    "crates/miyu-core/src/state/conversation_db/open/tests.rs": {
+    "crates/yunxi-core/src/state/conversation_db/open/tests.rs": {
       "tests": 336,
       "total": 346
     },
-    "crates/miyu-core/src/state/conversation_db/pages.rs": {
+    "crates/yunxi-core/src/state/conversation_db/pages.rs": {
       "tests": 0,
       "total": 366
     },
-    "crates/miyu-core/src/state/conversation_db/platform.rs": {
+    "crates/yunxi-core/src/state/conversation_db/platform.rs": {
       "tests": 0,
       "total": 721
     },
-    "crates/miyu-core/src/state/conversation_db/platform/test_support.rs": {
+    "crates/yunxi-core/src/state/conversation_db/platform/test_support.rs": {
       "tests": 0,
       "total": 132
     },
-    "crates/miyu-core/src/state/conversation_db/queue/consume.rs": {
+    "crates/yunxi-core/src/state/conversation_db/queue/consume.rs": {
       "tests": 0,
       "total": 495
     },
-    "crates/miyu-core/src/state/conversation_db/queue/consume/test_support.rs": {
+    "crates/yunxi-core/src/state/conversation_db/queue/consume/test_support.rs": {
       "tests": 0,
       "total": 34
     },
-    "crates/miyu-core/src/state/conversation_db/queue/mod.rs": {
+    "crates/yunxi-core/src/state/conversation_db/queue/mod.rs": {
       "tests": 0,
       "total": 153
     },
-    "crates/miyu-core/src/state/conversation_db/queue/redo.rs": {
+    "crates/yunxi-core/src/state/conversation_db/queue/redo.rs": {
       "tests": 0,
       "total": 554
     },
-    "crates/miyu-core/src/state/conversation_db/restart.rs": {
+    "crates/yunxi-core/src/state/conversation_db/restart.rs": {
       "tests": 0,
       "total": 200
     },
-    "crates/miyu-core/src/state/conversation_db/rows.rs": {
+    "crates/yunxi-core/src/state/conversation_db/rows.rs": {
       "tests": 0,
       "total": 726
     },
-    "crates/miyu-core/src/state/conversation_db/session_state.rs": {
+    "crates/yunxi-core/src/state/conversation_db/session_state.rs": {
       "tests": 0,
       "total": 232
     },
-    "crates/miyu-core/src/state/conversation_db/sessions.rs": {
+    "crates/yunxi-core/src/state/conversation_db/sessions.rs": {
       "tests": 0,
       "total": 886
     },
-    "crates/miyu-core/src/state/conversation_db/sessions/test_support.rs": {
+    "crates/yunxi-core/src/state/conversation_db/sessions/test_support.rs": {
       "tests": 0,
       "total": 10
     },
-    "crates/miyu-core/src/state/conversation_db/shared_files.rs": {
+    "crates/yunxi-core/src/state/conversation_db/shared_files.rs": {
       "tests": 0,
       "total": 104
     },
-    "crates/miyu-core/src/state/conversation_db/sponsors.rs": {
+    "crates/yunxi-core/src/state/conversation_db/sponsors.rs": {
       "tests": 0,
       "total": 343
     },
-    "crates/miyu-core/src/state/conversation_db/sweep.rs": {
+    "crates/yunxi-core/src/state/conversation_db/sweep.rs": {
       "tests": 0,
       "total": 47
     },
-    "crates/miyu-core/src/state/conversation_db/test_support.rs": {
+    "crates/yunxi-core/src/state/conversation_db/test_support.rs": {
       "tests": 0,
       "total": 18
     },
-    "crates/miyu-core/src/state/conversation_db/turns.rs": {
+    "crates/yunxi-core/src/state/conversation_db/turns.rs": {
       "tests": 0,
       "total": 423
     },
-    "crates/miyu-core/src/state/conversation_db/turns/journal.rs": {
+    "crates/yunxi-core/src/state/conversation_db/turns/journal.rs": {
       "tests": 0,
       "total": 208
     },
-    "crates/miyu-core/src/state/conversation_db/turns/metrics.rs": {
+    "crates/yunxi-core/src/state/conversation_db/turns/metrics.rs": {
       "tests": 0,
       "total": 177
     },
-    "crates/miyu-core/src/state/conversation_db/turns/running.rs": {
+    "crates/yunxi-core/src/state/conversation_db/turns/running.rs": {
       "tests": 0,
       "total": 205
     },
-    "crates/miyu-core/src/state/conversation_db/turns/test_support.rs": {
+    "crates/yunxi-core/src/state/conversation_db/turns/test_support.rs": {
       "tests": 0,
       "total": 21
     },
-    "crates/miyu-core/src/state/conversation_db/types.rs": {
+    "crates/yunxi-core/src/state/conversation_db/types.rs": {
       "tests": 0,
       "total": 706
     },
-    "crates/miyu-core/src/state/cross_session.rs": {
+    "crates/yunxi-core/src/state/cross_session.rs": {
       "tests": 31,
       "total": 118
     },
-    "crates/miyu-core/src/state/history.rs": {
+    "crates/yunxi-core/src/state/history.rs": {
       "tests": 0,
       "total": 483
     },
-    "crates/miyu-core/src/state/history/test_support.rs": {
+    "crates/yunxi-core/src/state/history/test_support.rs": {
       "tests": 0,
       "total": 11
     },
-    "crates/miyu-core/src/state/job_report.rs": {
+    "crates/yunxi-core/src/state/job_report.rs": {
       "tests": 42,
       "total": 125
     },
-    "crates/miyu-core/src/state/migrations/baseline.rs": {
+    "crates/yunxi-core/src/state/migrations/baseline.rs": {
       "tests": 0,
       "total": 694
     },
-    "crates/miyu-core/src/state/migrations/columns.rs": {
+    "crates/yunxi-core/src/state/migrations/columns.rs": {
       "tests": 0,
       "total": 387
     },
-    "crates/miyu-core/src/state/migrations/mod.rs": {
+    "crates/yunxi-core/src/state/migrations/mod.rs": {
       "tests": 4,
       "total": 344
     },
-    "crates/miyu-core/src/state/migrations/named.rs": {
+    "crates/yunxi-core/src/state/migrations/named.rs": {
       "tests": 49,
       "total": 179
     },
-    "crates/miyu-core/src/state/migrations/tests.rs": {
+    "crates/yunxi-core/src/state/migrations/tests.rs": {
       "tests": 0,
       "total": 517
     },
-    "crates/miyu-core/src/state/mod.rs": {
+    "crates/yunxi-core/src/state/mod.rs": {
       "tests": 4,
       "total": 602
     },
-    "crates/miyu-core/src/state/queue.rs": {
+    "crates/yunxi-core/src/state/queue.rs": {
       "tests": 0,
       "total": 160
     },
-    "crates/miyu-core/src/state/queue/test_support.rs": {
+    "crates/yunxi-core/src/state/queue/test_support.rs": {
       "tests": 0,
       "total": 43
     },
-    "crates/miyu-core/src/state/service_restart.rs": {
+    "crates/yunxi-core/src/state/service_restart.rs": {
       "tests": 117,
       "total": 266
     },
-    "crates/miyu-core/src/state/session_state.rs": {
+    "crates/yunxi-core/src/state/session_state.rs": {
       "tests": 0,
       "total": 202
     },
-    "crates/miyu-core/src/state/sessions.rs": {
+    "crates/yunxi-core/src/state/sessions.rs": {
       "tests": 0,
       "total": 574
     },
-    "crates/miyu-core/src/state/sessions/test_support.rs": {
+    "crates/yunxi-core/src/state/sessions/test_support.rs": {
       "tests": 0,
       "total": 62
     },
-    "crates/miyu-core/src/state/shared_files.rs": {
+    "crates/yunxi-core/src/state/shared_files.rs": {
       "tests": 139,
       "total": 404
     },
-    "crates/miyu-core/src/state/tests/accounts.rs": {
+    "crates/yunxi-core/src/state/tests/accounts.rs": {
       "tests": 0,
       "total": 123
     },
-    "crates/miyu-core/src/state/tests/assets.rs": {
+    "crates/yunxi-core/src/state/tests/assets.rs": {
       "tests": 0,
       "total": 261
     },
-    "crates/miyu-core/src/state/tests/cache_breaks.rs": {
+    "crates/yunxi-core/src/state/tests/cache_breaks.rs": {
       "tests": 0,
       "total": 71
     },
-    "crates/miyu-core/src/state/tests/compact.rs": {
+    "crates/yunxi-core/src/state/tests/compact.rs": {
       "tests": 0,
       "total": 667
     },
-    "crates/miyu-core/src/state/tests/context_anchor.rs": {
+    "crates/yunxi-core/src/state/tests/context_anchor.rs": {
       "tests": 0,
       "total": 191
     },
-    "crates/miyu-core/src/state/tests/goals.rs": {
+    "crates/yunxi-core/src/state/tests/goals.rs": {
       "tests": 0,
       "total": 220
     },
-    "crates/miyu-core/src/state/tests/interrupted_replay.rs": {
+    "crates/yunxi-core/src/state/tests/interrupted_replay.rs": {
       "tests": 0,
       "total": 228
     },
-    "crates/miyu-core/src/state/tests/mod.rs": {
+    "crates/yunxi-core/src/state/tests/mod.rs": {
       "tests": 0,
       "total": 24
     },
-    "crates/miyu-core/src/state/tests/pages.rs": {
+    "crates/yunxi-core/src/state/tests/pages.rs": {
       "tests": 0,
       "total": 250
     },
-    "crates/miyu-core/src/state/tests/platform.rs": {
+    "crates/yunxi-core/src/state/tests/platform.rs": {
       "tests": 0,
       "total": 466
     },
-    "crates/miyu-core/src/state/tests/queue.rs": {
+    "crates/yunxi-core/src/state/tests/queue.rs": {
       "tests": 0,
       "total": 353
     },
-    "crates/miyu-core/src/state/tests/redo.rs": {
+    "crates/yunxi-core/src/state/tests/redo.rs": {
       "tests": 0,
       "total": 306
     },
-    "crates/miyu-core/src/state/tests/replay_text.rs": {
+    "crates/yunxi-core/src/state/tests/replay_text.rs": {
       "tests": 0,
       "total": 176
     },
-    "crates/miyu-core/src/state/tests/restart.rs": {
+    "crates/yunxi-core/src/state/tests/restart.rs": {
       "tests": 0,
       "total": 195
     },
-    "crates/miyu-core/src/state/tests/session_state.rs": {
+    "crates/yunxi-core/src/state/tests/session_state.rs": {
       "tests": 0,
       "total": 181
     },
-    "crates/miyu-core/src/state/tests/sessions.rs": {
+    "crates/yunxi-core/src/state/tests/sessions.rs": {
       "tests": 0,
       "total": 623
     },
-    "crates/miyu-core/src/state/tests/shared.rs": {
+    "crates/yunxi-core/src/state/tests/shared.rs": {
       "tests": 0,
       "total": 92
     },
-    "crates/miyu-core/src/state/tests/sponsors.rs": {
+    "crates/yunxi-core/src/state/tests/sponsors.rs": {
       "tests": 0,
       "total": 141
     },
-    "crates/miyu-core/src/state/tests/turns.rs": {
+    "crates/yunxi-core/src/state/tests/turns.rs": {
       "tests": 0,
       "total": 1258
     },
-    "crates/miyu-core/src/state/turns.rs": {
+    "crates/yunxi-core/src/state/turns.rs": {
       "tests": 0,
       "total": 402
     },
-    "crates/miyu-core/src/state/turns/test_support.rs": {
+    "crates/yunxi-core/src/state/turns/test_support.rs": {
       "tests": 0,
       "total": 10
     },
-    "crates/miyu-core/src/state/usage.rs": {
+    "crates/yunxi-core/src/state/usage.rs": {
       "tests": 13,
       "total": 160
     },
-    "crates/miyu-core/src/state/usage/db.rs": {
+    "crates/yunxi-core/src/state/usage/db.rs": {
       "tests": 0,
       "total": 329
     },
-    "crates/miyu-core/src/state/usage/legacy.rs": {
+    "crates/yunxi-core/src/state/usage/legacy.rs": {
       "tests": 0,
       "total": 120
     },
-    "crates/miyu-core/src/state/usage/probes.rs": {
+    "crates/yunxi-core/src/state/usage/probes.rs": {
       "tests": 0,
       "total": 197
     },
-    "crates/miyu-core/src/state/usage/stats.rs": {
+    "crates/yunxi-core/src/state/usage/stats.rs": {
       "tests": 0,
       "total": 366
     },
-    "crates/miyu-core/src/state/usage/test_support.rs": {
+    "crates/yunxi-core/src/state/usage/test_support.rs": {
       "tests": 0,
       "total": 31
     },
-    "crates/miyu-core/src/state/usage/tests.rs": {
+    "crates/yunxi-core/src/state/usage/tests.rs": {
       "tests": 0,
       "total": 332
     },
-    "crates/miyu-core/src/state/usage_ops.rs": {
+    "crates/yunxi-core/src/state/usage_ops.rs": {
       "tests": 0,
       "total": 157
     },
-    "crates/miyu-engine/src/agent/compact.rs": {
+    "crates/yunxi-engine/src/agent/compact.rs": {
       "tests": 108,
       "total": 1161
     },
-    "crates/miyu-engine/src/agent/compact_analysis.rs": {
+    "crates/yunxi-engine/src/agent/compact_analysis.rs": {
       "tests": 0,
       "total": 177
     },
-    "crates/miyu-engine/src/agent/compact_extras.rs": {
+    "crates/yunxi-engine/src/agent/compact_extras.rs": {
       "tests": 0,
       "total": 529
     },
-    "crates/miyu-engine/src/agent/compact_structure.rs": {
+    "crates/yunxi-engine/src/agent/compact_structure.rs": {
       "tests": 0,
       "total": 54
     },
-    "crates/miyu-engine/src/agent/compact_transcript.rs": {
+    "crates/yunxi-engine/src/agent/compact_transcript.rs": {
       "tests": 0,
       "total": 236
     },
-    "crates/miyu-engine/src/agent/context.rs": {
+    "crates/yunxi-engine/src/agent/context.rs": {
       "tests": 128,
       "total": 779
     },
-    "crates/miyu-engine/src/agent/context_meter.rs": {
+    "crates/yunxi-engine/src/agent/context_meter.rs": {
       "tests": 0,
       "total": 102
     },
-    "crates/miyu-engine/src/agent/control.rs": {
+    "crates/yunxi-engine/src/agent/control.rs": {
       "tests": 0,
       "total": 433
     },
-    "crates/miyu-engine/src/agent/conversation.rs": {
+    "crates/yunxi-engine/src/agent/conversation.rs": {
       "tests": 0,
       "total": 12
     },
-    "crates/miyu-engine/src/agent/describe.rs": {
+    "crates/yunxi-engine/src/agent/describe.rs": {
       "tests": 0,
       "total": 87
     },
-    "crates/miyu-engine/src/agent/history.rs": {
+    "crates/yunxi-engine/src/agent/history.rs": {
       "tests": 0,
       "total": 482
     },
-    "crates/miyu-engine/src/agent/images.rs": {
+    "crates/yunxi-engine/src/agent/images.rs": {
       "tests": 0,
       "total": 408
     },
-    "crates/miyu-engine/src/agent/input.rs": {
+    "crates/yunxi-engine/src/agent/input.rs": {
       "tests": 0,
       "total": 463
     },
-    "crates/miyu-engine/src/agent/instruction_source.rs": {
+    "crates/yunxi-engine/src/agent/instruction_source.rs": {
       "tests": 0,
       "total": 219
     },
-    "crates/miyu-engine/src/agent/interrupted_replay.rs": {
+    "crates/yunxi-engine/src/agent/interrupted_replay.rs": {
       "tests": 0,
       "total": 376
     },
-    "crates/miyu-engine/src/agent/journal.rs": {
+    "crates/yunxi-engine/src/agent/journal.rs": {
       "tests": 0,
       "total": 420
     },
-    "crates/miyu-engine/src/agent/mod.rs": {
+    "crates/yunxi-engine/src/agent/mod.rs": {
       "tests": 4,
       "total": 662
     },
-    "crates/miyu-engine/src/agent/overflow.rs": {
+    "crates/yunxi-engine/src/agent/overflow.rs": {
       "tests": 0,
       "total": 109
     },
-    "crates/miyu-engine/src/agent/platform_port.rs": {
+    "crates/yunxi-engine/src/agent/platform_port.rs": {
       "tests": 0,
       "total": 25
     },
-    "crates/miyu-engine/src/agent/prompt.rs": {
+    "crates/yunxi-engine/src/agent/prompt.rs": {
       "tests": 0,
       "total": 235
     },
-    "crates/miyu-engine/src/agent/pruning.rs": {
+    "crates/yunxi-engine/src/agent/pruning.rs": {
       "tests": 0,
       "total": 352
     },
-    "crates/miyu-engine/src/agent/reasoning.rs": {
+    "crates/yunxi-engine/src/agent/reasoning.rs": {
       "tests": 0,
       "total": 310
     },
-    "crates/miyu-engine/src/agent/reasoning/test_support.rs": {
+    "crates/yunxi-engine/src/agent/reasoning/test_support.rs": {
       "tests": 0,
       "total": 41
     },
-    "crates/miyu-engine/src/agent/reports.rs": {
+    "crates/yunxi-engine/src/agent/reports.rs": {
       "tests": 0,
       "total": 281
     },
-    "crates/miyu-engine/src/agent/setup.rs": {
+    "crates/yunxi-engine/src/agent/setup.rs": {
       "tests": 0,
       "total": 725
     },
-    "crates/miyu-engine/src/agent/setup/test_support.rs": {
+    "crates/yunxi-engine/src/agent/setup/test_support.rs": {
       "tests": 0,
       "total": 19
     },
-    "crates/miyu-engine/src/agent/tests/artifacts.rs": {
+    "crates/yunxi-engine/src/agent/tests/artifacts.rs": {
       "tests": 0,
       "total": 175
     },
-    "crates/miyu-engine/src/agent/tests/compact_analysis.rs": {
+    "crates/yunxi-engine/src/agent/tests/compact_analysis.rs": {
       "tests": 0,
       "total": 159
     },
-    "crates/miyu-engine/src/agent/tests/compact_extras.rs": {
+    "crates/yunxi-engine/src/agent/tests/compact_extras.rs": {
       "tests": 0,
       "total": 499
     },
-    "crates/miyu-engine/src/agent/tests/compact_structure.rs": {
+    "crates/yunxi-engine/src/agent/tests/compact_structure.rs": {
       "tests": 0,
       "total": 221
     },
-    "crates/miyu-engine/src/agent/tests/compact_transcript.rs": {
+    "crates/yunxi-engine/src/agent/tests/compact_transcript.rs": {
       "tests": 0,
       "total": 242
     },
-    "crates/miyu-engine/src/agent/tests/context.rs": {
+    "crates/yunxi-engine/src/agent/tests/context.rs": {
       "tests": 0,
       "total": 1460
     },
-    "crates/miyu-engine/src/agent/tests/context_meter.rs": {
+    "crates/yunxi-engine/src/agent/tests/context_meter.rs": {
       "tests": 0,
       "total": 95
     },
-    "crates/miyu-engine/src/agent/tests/input.rs": {
+    "crates/yunxi-engine/src/agent/tests/input.rs": {
       "tests": 0,
       "total": 75
     },
-    "crates/miyu-engine/src/agent/tests/instruction_source.rs": {
+    "crates/yunxi-engine/src/agent/tests/instruction_source.rs": {
       "tests": 0,
       "total": 106
     },
-    "crates/miyu-engine/src/agent/tests/mod.rs": {
+    "crates/yunxi-engine/src/agent/tests/mod.rs": {
       "tests": 0,
       "total": 31
     },
-    "crates/miyu-engine/src/agent/tests/overflow_recovery.rs": {
+    "crates/yunxi-engine/src/agent/tests/overflow_recovery.rs": {
       "tests": 0,
       "total": 132
     },
-    "crates/miyu-engine/src/agent/tests/prompt.rs": {
+    "crates/yunxi-engine/src/agent/tests/prompt.rs": {
       "tests": 0,
       "total": 733
     },
-    "crates/miyu-engine/src/agent/tests/queue_journal.rs": {
+    "crates/yunxi-engine/src/agent/tests/queue_journal.rs": {
       "tests": 0,
       "total": 918
     },
-    "crates/miyu-engine/src/agent/tests/queued_compact.rs": {
+    "crates/yunxi-engine/src/agent/tests/queued_compact.rs": {
       "tests": 0,
       "total": 218
     },
-    "crates/miyu-engine/src/agent/tests/reasoning.rs": {
+    "crates/yunxi-engine/src/agent/tests/reasoning.rs": {
       "tests": 0,
       "total": 288
     },
-    "crates/miyu-engine/src/agent/tests/remote_tools.rs": {
+    "crates/yunxi-engine/src/agent/tests/remote_tools.rs": {
       "tests": 0,
       "total": 71
     },
-    "crates/miyu-engine/src/agent/tests/replay_prefix.rs": {
+    "crates/yunxi-engine/src/agent/tests/replay_prefix.rs": {
       "tests": 0,
       "total": 644
     },
-    "crates/miyu-engine/src/agent/tests/request_shape.rs": {
+    "crates/yunxi-engine/src/agent/tests/request_shape.rs": {
       "tests": 0,
       "total": 174
     },
-    "crates/miyu-engine/src/agent/tests/restart.rs": {
+    "crates/yunxi-engine/src/agent/tests/restart.rs": {
       "tests": 0,
       "total": 98
     },
-    "crates/miyu-engine/src/agent/tests/session_usage.rs": {
+    "crates/yunxi-engine/src/agent/tests/session_usage.rs": {
       "tests": 0,
       "total": 145
     },
-    "crates/miyu-engine/src/agent/tests/shared.rs": {
+    "crates/yunxi-engine/src/agent/tests/shared.rs": {
       "tests": 0,
       "total": 194
     },
-    "crates/miyu-engine/src/agent/tests/stream.rs": {
+    "crates/yunxi-engine/src/agent/tests/stream.rs": {
       "tests": 0,
       "total": 876
     },
-    "crates/miyu-engine/src/agent/tests/subsystems.rs": {
+    "crates/yunxi-engine/src/agent/tests/subsystems.rs": {
       "tests": 0,
       "total": 76
     },
-    "crates/miyu-engine/src/agent/tests/tool_batches.rs": {
+    "crates/yunxi-engine/src/agent/tests/tool_batches.rs": {
       "tests": 0,
       "total": 207
     },
-    "crates/miyu-engine/src/agent/tests/tool_face_cache.rs": {
+    "crates/yunxi-engine/src/agent/tests/tool_face_cache.rs": {
       "tests": 0,
       "total": 230
     },
-    "crates/miyu-engine/src/agent/tests/turn_finish.rs": {
+    "crates/yunxi-engine/src/agent/tests/turn_finish.rs": {
       "tests": 0,
       "total": 88
     },
-    "crates/miyu-engine/src/agent/tests/vision.rs": {
+    "crates/yunxi-engine/src/agent/tests/vision.rs": {
       "tests": 0,
       "total": 739
     },
-    "crates/miyu-engine/src/agent/tool_report.rs": {
+    "crates/yunxi-engine/src/agent/tool_report.rs": {
       "tests": 0,
       "total": 677
     },
-    "crates/miyu-engine/src/agent/turn_loop/catalog_refresh.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/catalog_refresh.rs": {
       "tests": 0,
       "total": 99
     },
-    "crates/miyu-engine/src/agent/turn_loop/finish.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/finish.rs": {
       "tests": 0,
       "total": 275
     },
-    "crates/miyu-engine/src/agent/turn_loop/mod.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/mod.rs": {
       "tests": 0,
       "total": 391
     },
-    "crates/miyu-engine/src/agent/turn_loop/model_round.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/model_round.rs": {
       "tests": 0,
       "total": 113
     },
-    "crates/miyu-engine/src/agent/turn_loop/overflow_recovery.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/overflow_recovery.rs": {
       "tests": 0,
       "total": 115
     },
-    "crates/miyu-engine/src/agent/turn_loop/parallel.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/parallel.rs": {
       "tests": 0,
       "total": 289
     },
-    "crates/miyu-engine/src/agent/turn_loop/queue.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/queue.rs": {
       "tests": 0,
       "total": 199
     },
-    "crates/miyu-engine/src/agent/turn_loop/queued_compact.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/queued_compact.rs": {
       "tests": 0,
       "total": 119
     },
-    "crates/miyu-engine/src/agent/turn_loop/redo.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/redo.rs": {
       "tests": 0,
       "total": 198
     },
-    "crates/miyu-engine/src/agent/turn_loop/repeat_gate.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/repeat_gate.rs": {
       "tests": 83,
       "total": 154
     },
-    "crates/miyu-engine/src/agent/turn_loop/round_request.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/round_request.rs": {
       "tests": 0,
       "total": 47
     },
-    "crates/miyu-engine/src/agent/turn_loop/round_state.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/round_state.rs": {
       "tests": 0,
       "total": 60
     },
-    "crates/miyu-engine/src/agent/turn_loop/stream.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/stream.rs": {
       "tests": 0,
       "total": 265
     },
-    "crates/miyu-engine/src/agent/turn_loop/subagent_feed.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/subagent_feed.rs": {
       "tests": 0,
       "total": 79
     },
-    "crates/miyu-engine/src/agent/turn_loop/tool_call.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/tool_call.rs": {
       "tests": 0,
       "total": 409
     },
-    "crates/miyu-engine/src/agent/turn_loop/tool_exec.rs": {
+    "crates/yunxi-engine/src/agent/turn_loop/tool_exec.rs": {
       "tests": 0,
       "total": 269
     },
-    "crates/miyu-engine/src/agent/turn_state.rs": {
+    "crates/yunxi-engine/src/agent/turn_state.rs": {
       "tests": 0,
       "total": 137
     },
-    "crates/miyu-engine/src/default_kb.rs": {
+    "crates/yunxi-engine/src/default_kb.rs": {
       "tests": 83,
       "total": 667
     },
-    "crates/miyu-engine/src/lib.rs": {
+    "crates/yunxi-engine/src/lib.rs": {
       "tests": 0,
       "total": 11
     },
-    "crates/miyu-engine/src/tools/alarm.rs": {
+    "crates/yunxi-engine/src/tools/alarm.rs": {
       "tests": 0,
       "total": 190
     },
-    "crates/miyu-engine/src/tools/apply_patch/hunks.rs": {
+    "crates/yunxi-engine/src/tools/apply_patch/hunks.rs": {
       "tests": 0,
       "total": 377
     },
-    "crates/miyu-engine/src/tools/apply_patch/mod.rs": {
+    "crates/yunxi-engine/src/tools/apply_patch/mod.rs": {
       "tests": 4,
       "total": 471
     },
-    "crates/miyu-engine/src/tools/apply_patch/parse.rs": {
+    "crates/yunxi-engine/src/tools/apply_patch/parse.rs": {
       "tests": 0,
       "total": 211
     },
-    "crates/miyu-engine/src/tools/apply_patch/test_support.rs": {
+    "crates/yunxi-engine/src/tools/apply_patch/test_support.rs": {
       "tests": 4,
       "total": 25
     },
-    "crates/miyu-engine/src/tools/apply_patch/tests.rs": {
+    "crates/yunxi-engine/src/tools/apply_patch/tests.rs": {
       "tests": 0,
       "total": 418
     },
-    "crates/miyu-engine/src/tools/archlinux/aur_review.rs": {
+    "crates/yunxi-engine/src/tools/archlinux/aur_review.rs": {
       "tests": 68,
       "total": 579
     },
-    "crates/miyu-engine/src/tools/archlinux/mod.rs": {
+    "crates/yunxi-engine/src/tools/archlinux/mod.rs": {
       "tests": 58,
       "total": 869
     },
-    "crates/miyu-engine/src/tools/artifact.rs": {
+    "crates/yunxi-engine/src/tools/artifact.rs": {
       "tests": 160,
       "total": 357
     },
-    "crates/miyu-engine/src/tools/artifact/test_support.rs": {
+    "crates/yunxi-engine/src/tools/artifact/test_support.rs": {
       "tests": 0,
       "total": 103
     },
-    "crates/miyu-engine/src/tools/ask_question.rs": {
+    "crates/yunxi-engine/src/tools/ask_question.rs": {
       "tests": 0,
       "total": 13
     },
-    "crates/miyu-engine/src/tools/builtin_plugins.rs": {
+    "crates/yunxi-engine/src/tools/builtin_plugins.rs": {
       "tests": 19,
       "total": 174
     },
-    "crates/miyu-engine/src/tools/command_guard.rs": {
+    "crates/yunxi-engine/src/tools/command_guard.rs": {
       "tests": 146,
       "total": 349
     },
-    "crates/miyu-engine/src/tools/compose.rs": {
+    "crates/yunxi-engine/src/tools/compose.rs": {
       "tests": 0,
       "total": 65
     },
-    "crates/miyu-engine/src/tools/compose_core.rs": {
+    "crates/yunxi-engine/src/tools/compose_core.rs": {
       "tests": 0,
       "total": 55
     },
-    "crates/miyu-engine/src/tools/compose_providers.rs": {
+    "crates/yunxi-engine/src/tools/compose_providers.rs": {
       "tests": 0,
       "total": 30
     },
-    "crates/miyu-engine/src/tools/compose_tests.rs": {
+    "crates/yunxi-engine/src/tools/compose_tests.rs": {
       "tests": 0,
       "total": 49
     },
-    "crates/miyu-engine/src/tools/cross_hints.rs": {
+    "crates/yunxi-engine/src/tools/cross_hints.rs": {
       "tests": 76,
       "total": 144
     },
-    "crates/miyu-engine/src/tools/cross_session.rs": {
+    "crates/yunxi-engine/src/tools/cross_session.rs": {
       "tests": 98,
       "total": 225
     },
-    "crates/miyu-engine/src/tools/default_tools/command.rs": {
+    "crates/yunxi-engine/src/tools/default_tools/command.rs": {
       "tests": 0,
       "total": 402
     },
-    "crates/miyu-engine/src/tools/default_tools/command/test_support.rs": {
+    "crates/yunxi-engine/src/tools/default_tools/command/test_support.rs": {
       "tests": 0,
       "total": 14
     },
-    "crates/miyu-engine/src/tools/default_tools/files.rs": {
+    "crates/yunxi-engine/src/tools/default_tools/files.rs": {
       "tests": 0,
       "total": 310
     },
-    "crates/miyu-engine/src/tools/default_tools/mod.rs": {
+    "crates/yunxi-engine/src/tools/default_tools/mod.rs": {
       "tests": 393,
       "total": 750
     },
-    "crates/miyu-engine/src/tools/exchange_rate.rs": {
+    "crates/yunxi-engine/src/tools/exchange_rate.rs": {
       "tests": 0,
       "total": 54
     },
-    "crates/miyu-engine/src/tools/goal/command.rs": {
+    "crates/yunxi-engine/src/tools/goal/command.rs": {
       "tests": 0,
       "total": 181
     },
-    "crates/miyu-engine/src/tools/goal/mod.rs": {
+    "crates/yunxi-engine/src/tools/goal/mod.rs": {
       "tests": 0,
       "total": 268
     },
-    "crates/miyu-engine/src/tools/goal/prompt.rs": {
+    "crates/yunxi-engine/src/tools/goal/prompt.rs": {
       "tests": 0,
       "total": 105
     },
-    "crates/miyu-engine/src/tools/goal/runtime.rs": {
+    "crates/yunxi-engine/src/tools/goal/runtime.rs": {
       "tests": 0,
       "total": 130
     },
-    "crates/miyu-engine/src/tools/html_conversion.rs": {
+    "crates/yunxi-engine/src/tools/html_conversion.rs": {
       "tests": 103,
       "total": 380
     },
-    "crates/miyu-engine/src/tools/image_generation.rs": {
+    "crates/yunxi-engine/src/tools/image_generation.rs": {
       "tests": 156,
       "total": 688
     },
-    "crates/miyu-engine/src/tools/jobs/ledger.rs": {
+    "crates/yunxi-engine/src/tools/jobs/ledger.rs": {
       "tests": 0,
       "total": 157
     },
-    "crates/miyu-engine/src/tools/jobs/mod.rs": {
+    "crates/yunxi-engine/src/tools/jobs/mod.rs": {
       "tests": 30,
       "total": 875
     },
-    "crates/miyu-engine/src/tools/jobs/output.rs": {
+    "crates/yunxi-engine/src/tools/jobs/output.rs": {
       "tests": 135,
       "total": 418
     },
-    "crates/miyu-engine/src/tools/jobs/tests/lifecycle.rs": {
+    "crates/yunxi-engine/src/tools/jobs/tests/lifecycle.rs": {
       "tests": 0,
       "total": 200
     },
-    "crates/miyu-engine/src/tools/jobs/tests/mod.rs": {
+    "crates/yunxi-engine/src/tools/jobs/tests/mod.rs": {
       "tests": 0,
       "total": 6
     },
-    "crates/miyu-engine/src/tools/jobs/tests/output.rs": {
+    "crates/yunxi-engine/src/tools/jobs/tests/output.rs": {
       "tests": 0,
       "total": 141
     },
-    "crates/miyu-engine/src/tools/jobs/tests/shared.rs": {
+    "crates/yunxi-engine/src/tools/jobs/tests/shared.rs": {
       "tests": 0,
       "total": 55
     },
-    "crates/miyu-engine/src/tools/knowledge_base/dashboard.rs": {
+    "crates/yunxi-engine/src/tools/knowledge_base/dashboard.rs": {
       "tests": 254,
       "total": 581
     },
-    "crates/miyu-engine/src/tools/knowledge_base/dashboard/test_support.rs": {
+    "crates/yunxi-engine/src/tools/knowledge_base/dashboard/test_support.rs": {
       "tests": 0,
       "total": 10
     },
-    "crates/miyu-engine/src/tools/knowledge_base/files.rs": {
+    "crates/yunxi-engine/src/tools/knowledge_base/files.rs": {
       "tests": 0,
       "total": 392
     },
-    "crates/miyu-engine/src/tools/knowledge_base/index.rs": {
+    "crates/yunxi-engine/src/tools/knowledge_base/index.rs": {
       "tests": 60,
       "total": 719
     },
-    "crates/miyu-engine/src/tools/knowledge_base/mod.rs": {
+    "crates/yunxi-engine/src/tools/knowledge_base/mod.rs": {
       "tests": 290,
       "total": 508
     },
-    "crates/miyu-engine/src/tools/knowledge_base/search.rs": {
+    "crates/yunxi-engine/src/tools/knowledge_base/search.rs": {
       "tests": 0,
       "total": 289
     },
-    "crates/miyu-engine/src/tools/knowledge_base/store.rs": {
+    "crates/yunxi-engine/src/tools/knowledge_base/store.rs": {
       "tests": 0,
       "total": 207
     },
-    "crates/miyu-engine/src/tools/knowledge_base/store/test_support.rs": {
+    "crates/yunxi-engine/src/tools/knowledge_base/store/test_support.rs": {
       "tests": 0,
       "total": 11
     },
-    "crates/miyu-engine/src/tools/ledger/add.rs": {
+    "crates/yunxi-engine/src/tools/ledger/add.rs": {
       "tests": 0,
       "total": 240
     },
-    "crates/miyu-engine/src/tools/ledger/manage.rs": {
+    "crates/yunxi-engine/src/tools/ledger/manage.rs": {
       "tests": 0,
       "total": 198
     },
-    "crates/miyu-engine/src/tools/ledger/mod.rs": {
+    "crates/yunxi-engine/src/tools/ledger/mod.rs": {
       "tests": 4,
       "total": 226
     },
-    "crates/miyu-engine/src/tools/ledger/query.rs": {
+    "crates/yunxi-engine/src/tools/ledger/query.rs": {
       "tests": 0,
       "total": 211
     },
-    "crates/miyu-engine/src/tools/ledger/tests.rs": {
+    "crates/yunxi-engine/src/tools/ledger/tests.rs": {
       "tests": 0,
       "total": 448
     },
-    "crates/miyu-engine/src/tools/line_diff.rs": {
+    "crates/yunxi-engine/src/tools/line_diff.rs": {
       "tests": 93,
       "total": 240
     },
-    "crates/miyu-engine/src/tools/load_tools.rs": {
+    "crates/yunxi-engine/src/tools/load_tools.rs": {
       "tests": 215,
       "total": 386
     },
-    "crates/miyu-engine/src/tools/mcp/connection.rs": {
+    "crates/yunxi-engine/src/tools/mcp/connection.rs": {
       "tests": 0,
       "total": 427
     },
-    "crates/miyu-engine/src/tools/mcp/instructions.rs": {
+    "crates/yunxi-engine/src/tools/mcp/instructions.rs": {
       "tests": 0,
       "total": 70
     },
-    "crates/miyu-engine/src/tools/mcp/listing.rs": {
+    "crates/yunxi-engine/src/tools/mcp/listing.rs": {
       "tests": 0,
       "total": 239
     },
-    "crates/miyu-engine/src/tools/mcp/mod.rs": {
+    "crates/yunxi-engine/src/tools/mcp/mod.rs": {
       "tests": 10,
       "total": 108
     },
-    "crates/miyu-engine/src/tools/mcp/pool.rs": {
+    "crates/yunxi-engine/src/tools/mcp/pool.rs": {
       "tests": 6,
       "total": 394
     },
-    "crates/miyu-engine/src/tools/mcp/pool/test_support.rs": {
+    "crates/yunxi-engine/src/tools/mcp/pool/test_support.rs": {
       "tests": 0,
       "total": 20
     },
-    "crates/miyu-engine/src/tools/mcp/protocol.rs": {
+    "crates/yunxi-engine/src/tools/mcp/protocol.rs": {
       "tests": 0,
       "total": 201
     },
-    "crates/miyu-engine/src/tools/mcp/result_tests.rs": {
+    "crates/yunxi-engine/src/tools/mcp/result_tests.rs": {
       "tests": 0,
       "total": 98
     },
-    "crates/miyu-engine/src/tools/mcp/runtime.rs": {
+    "crates/yunxi-engine/src/tools/mcp/runtime.rs": {
       "tests": 0,
       "total": 54
     },
-    "crates/miyu-engine/src/tools/mcp/scope.rs": {
+    "crates/yunxi-engine/src/tools/mcp/scope.rs": {
       "tests": 0,
       "total": 83
     },
-    "crates/miyu-engine/src/tools/mcp/tests.rs": {
+    "crates/yunxi-engine/src/tools/mcp/tests.rs": {
       "tests": 0,
       "total": 534
     },
-    "crates/miyu-engine/src/tools/memes/crud.rs": {
+    "crates/yunxi-engine/src/tools/memes/crud.rs": {
       "tests": 0,
       "total": 478
     },
-    "crates/miyu-engine/src/tools/memes/dashboard.rs": {
+    "crates/yunxi-engine/src/tools/memes/dashboard.rs": {
       "tests": 126,
       "total": 457
     },
-    "crates/miyu-engine/src/tools/memes/library.rs": {
+    "crates/yunxi-engine/src/tools/memes/library.rs": {
       "tests": 0,
       "total": 466
     },
-    "crates/miyu-engine/src/tools/memes/mod.rs": {
+    "crates/yunxi-engine/src/tools/memes/mod.rs": {
       "tests": 620,
       "total": 895
     },
-    "crates/miyu-engine/src/tools/memes/semantic.rs": {
+    "crates/yunxi-engine/src/tools/memes/semantic.rs": {
       "tests": 0,
       "total": 226
     },
-    "crates/miyu-engine/src/tools/memes/validate.rs": {
+    "crates/yunxi-engine/src/tools/memes/validate.rs": {
       "tests": 0,
       "total": 434
     },
-    "crates/miyu-engine/src/tools/memory.rs": {
+    "crates/yunxi-engine/src/tools/memory.rs": {
       "tests": 95,
       "total": 456
     },
-    "crates/miyu-engine/src/tools/mod.rs": {
+    "crates/yunxi-engine/src/tools/mod.rs": {
       "tests": 40,
       "total": 502
     },
-    "crates/miyu-engine/src/tools/net_guard.rs": {
+    "crates/yunxi-engine/src/tools/net_guard.rs": {
       "tests": 0,
       "total": 97
     },
-    "crates/miyu-engine/src/tools/patch_preview.rs": {
+    "crates/yunxi-engine/src/tools/patch_preview.rs": {
       "tests": 55,
       "total": 274
     },
-    "crates/miyu-engine/src/tools/platform_outreach.rs": {
+    "crates/yunxi-engine/src/tools/platform_outreach.rs": {
       "tests": 355,
       "total": 826
     },
-    "crates/miyu-engine/src/tools/readable_names.rs": {
+    "crates/yunxi-engine/src/tools/readable_names.rs": {
       "tests": 25,
       "total": 263
     },
-    "crates/miyu-engine/src/tools/registry/lazy.rs": {
+    "crates/yunxi-engine/src/tools/registry/lazy.rs": {
       "tests": 41,
       "total": 212
     },
-    "crates/miyu-engine/src/tools/registry/lazy/test_support.rs": {
+    "crates/yunxi-engine/src/tools/registry/lazy/test_support.rs": {
       "tests": 0,
       "total": 12
     },
-    "crates/miyu-engine/src/tools/registry/mod.rs": {
+    "crates/yunxi-engine/src/tools/registry/mod.rs": {
       "tests": 491,
       "total": 1090
     },
-    "crates/miyu-engine/src/tools/registry/spec.rs": {
+    "crates/yunxi-engine/src/tools/registry/spec.rs": {
       "tests": 26,
       "total": 446
     },
-    "crates/miyu-engine/src/tools/registry/spec/test_support.rs": {
+    "crates/yunxi-engine/src/tools/registry/spec/test_support.rs": {
       "tests": 0,
       "total": 11
     },
-    "crates/miyu-engine/src/tools/registry/test_support.rs": {
+    "crates/yunxi-engine/src/tools/registry/test_support.rs": {
       "tests": 0,
       "total": 26
     },
-    "crates/miyu-engine/src/tools/relay_tests.rs": {
+    "crates/yunxi-engine/src/tools/relay_tests.rs": {
       "tests": 0,
       "total": 162
     },
-    "crates/miyu-engine/src/tools/repeat_reminder.rs": {
+    "crates/yunxi-engine/src/tools/repeat_reminder.rs": {
       "tests": 77,
       "total": 191
     },
-    "crates/miyu-engine/src/tools/scripts/dashboard.rs": {
+    "crates/yunxi-engine/src/tools/scripts/dashboard.rs": {
       "tests": 0,
       "total": 340
     },
-    "crates/miyu-engine/src/tools/scripts/header.rs": {
+    "crates/yunxi-engine/src/tools/scripts/header.rs": {
       "tests": 0,
       "total": 365
     },
-    "crates/miyu-engine/src/tools/scripts/header/test_support.rs": {
+    "crates/yunxi-engine/src/tools/scripts/header/test_support.rs": {
       "tests": 0,
       "total": 12
     },
-    "crates/miyu-engine/src/tools/scripts/index.rs": {
+    "crates/yunxi-engine/src/tools/scripts/index.rs": {
       "tests": 0,
       "total": 972
     },
-    "crates/miyu-engine/src/tools/scripts/index/test_support.rs": {
+    "crates/yunxi-engine/src/tools/scripts/index/test_support.rs": {
       "tests": 0,
       "total": 16
     },
-    "crates/miyu-engine/src/tools/scripts/manage.rs": {
+    "crates/yunxi-engine/src/tools/scripts/manage.rs": {
       "tests": 0,
       "total": 557
     },
-    "crates/miyu-engine/src/tools/scripts/mod.rs": {
+    "crates/yunxi-engine/src/tools/scripts/mod.rs": {
       "tests": 4,
       "total": 334
     },
-    "crates/miyu-engine/src/tools/scripts/refresh.rs": {
+    "crates/yunxi-engine/src/tools/scripts/refresh.rs": {
       "tests": 196,
       "total": 316
     },
-    "crates/miyu-engine/src/tools/scripts/tests/bundled.rs": {
+    "crates/yunxi-engine/src/tools/scripts/tests/bundled.rs": {
       "tests": 0,
       "total": 274
     },
-    "crates/miyu-engine/src/tools/scripts/tests/dashboard.rs": {
+    "crates/yunxi-engine/src/tools/scripts/tests/dashboard.rs": {
       "tests": 0,
       "total": 232
     },
-    "crates/miyu-engine/src/tools/scripts/tests/header.rs": {
+    "crates/yunxi-engine/src/tools/scripts/tests/header.rs": {
       "tests": 0,
       "total": 253
     },
-    "crates/miyu-engine/src/tools/scripts/tests/host_access.rs": {
+    "crates/yunxi-engine/src/tools/scripts/tests/host_access.rs": {
       "tests": 0,
       "total": 52
     },
-    "crates/miyu-engine/src/tools/scripts/tests/index.rs": {
+    "crates/yunxi-engine/src/tools/scripts/tests/index.rs": {
       "tests": 0,
       "total": 767
     },
-    "crates/miyu-engine/src/tools/scripts/tests/manage.rs": {
+    "crates/yunxi-engine/src/tools/scripts/tests/manage.rs": {
       "tests": 0,
       "total": 610
     },
-    "crates/miyu-engine/src/tools/scripts/tests/mod.rs": {
+    "crates/yunxi-engine/src/tools/scripts/tests/mod.rs": {
       "tests": 0,
       "total": 32
     },
-    "crates/miyu-engine/src/tools/scripts/tests/run.rs": {
+    "crates/yunxi-engine/src/tools/scripts/tests/run.rs": {
       "tests": 0,
       "total": 236
     },
-    "crates/miyu-engine/src/tools/session_scope.rs": {
+    "crates/yunxi-engine/src/tools/session_scope.rs": {
       "tests": 0,
       "total": 69
     },
-    "crates/miyu-engine/src/tools/session_store.rs": {
+    "crates/yunxi-engine/src/tools/session_store.rs": {
       "tests": 0,
       "total": 17
     },
-    "crates/miyu-engine/src/tools/shape_tests.rs": {
+    "crates/yunxi-engine/src/tools/shape_tests.rs": {
       "tests": 0,
       "total": 69
     },
-    "crates/miyu-engine/src/tools/share_file.rs": {
+    "crates/yunxi-engine/src/tools/share_file.rs": {
       "tests": 0,
       "total": 145
     },
-    "crates/miyu-engine/src/tools/skills.rs": {
+    "crates/yunxi-engine/src/tools/skills.rs": {
       "tests": 146,
       "total": 492
     },
-    "crates/miyu-engine/src/tools/subagent/audit.rs": {
+    "crates/yunxi-engine/src/tools/subagent/audit.rs": {
       "tests": 0,
       "total": 194
     },
-    "crates/miyu-engine/src/tools/subagent/background.rs": {
+    "crates/yunxi-engine/src/tools/subagent/background.rs": {
       "tests": 0,
       "total": 135
     },
-    "crates/miyu-engine/src/tools/subagent/log.rs": {
+    "crates/yunxi-engine/src/tools/subagent/log.rs": {
       "tests": 4,
       "total": 371
     },
-    "crates/miyu-engine/src/tools/subagent/mod.rs": {
+    "crates/yunxi-engine/src/tools/subagent/mod.rs": {
       "tests": 4,
       "total": 934
     },
-    "crates/miyu-engine/src/tools/subagent/protocol.rs": {
+    "crates/yunxi-engine/src/tools/subagent/protocol.rs": {
       "tests": 0,
       "total": 169
     },
-    "crates/miyu-engine/src/tools/subagent/status.rs": {
+    "crates/yunxi-engine/src/tools/subagent/status.rs": {
       "tests": 0,
       "total": 196
     },
-    "crates/miyu-engine/src/tools/subagent/tests.rs": {
+    "crates/yunxi-engine/src/tools/subagent/tests.rs": {
       "tests": 0,
       "total": 509
     },
-    "crates/miyu-engine/src/tools/subagent_runner.rs": {
+    "crates/yunxi-engine/src/tools/subagent_runner.rs": {
       "tests": 112,
       "total": 966
     },
-    "crates/miyu-engine/src/tools/test_support.rs": {
+    "crates/yunxi-engine/src/tools/test_support.rs": {
       "tests": 0,
       "total": 16
     },
-    "crates/miyu-engine/src/tools/tests.rs": {
+    "crates/yunxi-engine/src/tools/tests.rs": {
       "tests": 0,
       "total": 650
     },
-    "crates/miyu-engine/src/tools/tier_schema_probe.rs": {
+    "crates/yunxi-engine/src/tools/tier_schema_probe.rs": {
       "tests": 0,
       "total": 221
     },
-    "crates/miyu-engine/src/tools/todowrite.rs": {
+    "crates/yunxi-engine/src/tools/todowrite.rs": {
       "tests": 121,
       "total": 505
     },
-    "crates/miyu-engine/src/tools/tool_descriptions.rs": {
+    "crates/yunxi-engine/src/tools/tool_descriptions.rs": {
       "tests": 0,
       "total": 117
     },
-    "crates/miyu-engine/src/tools/tool_descriptions/test_support.rs": {
+    "crates/yunxi-engine/src/tools/tool_descriptions/test_support.rs": {
       "tests": 0,
       "total": 23
     },
-    "crates/miyu-engine/src/tools/tool_display.rs": {
+    "crates/yunxi-engine/src/tools/tool_display.rs": {
       "tests": 0,
       "total": 454
     },
-    "crates/miyu-engine/src/tools/usage_query.rs": {
+    "crates/yunxi-engine/src/tools/usage_query.rs": {
       "tests": 149,
       "total": 420
     },
-    "crates/miyu-engine/src/tools/vision/inline.rs": {
+    "crates/yunxi-engine/src/tools/vision/inline.rs": {
       "tests": 94,
       "total": 178
     },
-    "crates/miyu-engine/src/tools/vision/mod.rs": {
+    "crates/yunxi-engine/src/tools/vision/mod.rs": {
       "tests": 4,
       "total": 839
     },
-    "crates/miyu-engine/src/tools/vision/print.rs": {
+    "crates/yunxi-engine/src/tools/vision/print.rs": {
       "tests": 89,
       "total": 553
     },
-    "crates/miyu-engine/src/tools/vision/print/test_support.rs": {
+    "crates/yunxi-engine/src/tools/vision/print/test_support.rs": {
       "tests": 0,
       "total": 12
     },
-    "crates/miyu-engine/src/tools/vision/reference.rs": {
+    "crates/yunxi-engine/src/tools/vision/reference.rs": {
       "tests": 65,
       "total": 409
     },
-    "crates/miyu-engine/src/tools/vision/register.rs": {
+    "crates/yunxi-engine/src/tools/vision/register.rs": {
       "tests": 0,
       "total": 139
     },
-    "crates/miyu-engine/src/tools/vision/tests.rs": {
+    "crates/yunxi-engine/src/tools/vision/tests.rs": {
       "tests": 547,
       "total": 553
     },
-    "crates/miyu-engine/src/tools/voice_chat.rs": {
+    "crates/yunxi-engine/src/tools/voice_chat.rs": {
       "tests": 0,
       "total": 27
     },
-    "crates/miyu-engine/src/tools/voice_speak.rs": {
+    "crates/yunxi-engine/src/tools/voice_speak.rs": {
       "tests": 0,
       "total": 45
     },
-    "crates/miyu-engine/src/tools/web/api_search.rs": {
+    "crates/yunxi-engine/src/tools/web/api_search.rs": {
       "tests": 0,
       "total": 626
     },
-    "crates/miyu-engine/src/tools/web/html_search.rs": {
+    "crates/yunxi-engine/src/tools/web/html_search.rs": {
       "tests": 61,
       "total": 846
     },
-    "crates/miyu-engine/src/tools/web/mod.rs": {
+    "crates/yunxi-engine/src/tools/web/mod.rs": {
       "tests": 138,
       "total": 535
     },
-    "crates/miyu-engine/src/tools/web/scheduler.rs": {
+    "crates/yunxi-engine/src/tools/web/scheduler.rs": {
       "tests": 0,
       "total": 290
     },
-    "crates/miyu-engine/src/tools/web_images/download.rs": {
+    "crates/yunxi-engine/src/tools/web_images/download.rs": {
       "tests": 0,
       "total": 712
     },
-    "crates/miyu-engine/src/tools/web_images/mod.rs": {
+    "crates/yunxi-engine/src/tools/web_images/mod.rs": {
       "tests": 454,
       "total": 737
     },
-    "crates/miyu-engine/src/tools/web_images/providers.rs": {
+    "crates/yunxi-engine/src/tools/web_images/providers.rs": {
       "tests": 0,
       "total": 672
     },
-    "crates/miyu-engine/src/tools/web_images/ranking.rs": {
+    "crates/yunxi-engine/src/tools/web_images/ranking.rs": {
       "tests": 0,
       "total": 254
     },
-    "crates/miyu-engine/src/transfer/export.rs": {
+    "crates/yunxi-engine/src/transfer/export.rs": {
       "tests": 0,
       "total": 396
     },
-    "crates/miyu-engine/src/transfer/fixups.rs": {
+    "crates/yunxi-engine/src/transfer/fixups.rs": {
       "tests": 94,
       "total": 165
     },
-    "crates/miyu-engine/src/transfer/import.rs": {
+    "crates/yunxi-engine/src/transfer/import.rs": {
       "tests": 0,
       "total": 236
     },
-    "crates/miyu-engine/src/transfer/manifest.rs": {
+    "crates/yunxi-engine/src/transfer/manifest.rs": {
       "tests": 0,
       "total": 58
     },
-    "crates/miyu-engine/src/transfer/mod.rs": {
+    "crates/yunxi-engine/src/transfer/mod.rs": {
       "tests": 419,
       "total": 428
     },
-    "crates/miyu-engine/src/transfer/registry.rs": {
+    "crates/yunxi-engine/src/transfer/registry.rs": {
       "tests": 0,
       "total": 595
     },
-    "crates/miyu-engine/src/voice/cues.rs": {
+    "crates/yunxi-engine/src/voice/cues.rs": {
       "tests": 0,
       "total": 110
     },
-    "crates/miyu-engine/src/voice/e2e_tests.rs": {
+    "crates/yunxi-engine/src/voice/e2e_tests.rs": {
       "tests": 0,
       "total": 425
     },
-    "crates/miyu-engine/src/voice/keywords.rs": {
+    "crates/yunxi-engine/src/voice/keywords.rs": {
       "tests": 111,
       "total": 665
     },
-    "crates/miyu-engine/src/voice/mic.rs": {
+    "crates/yunxi-engine/src/voice/mic.rs": {
       "tests": 36,
       "total": 452
     },
-    "crates/miyu-engine/src/voice/mod.rs": {
+    "crates/yunxi-engine/src/voice/mod.rs": {
       "tests": 40,
       "total": 251
     },
-    "crates/miyu-engine/src/voice/models.rs": {
+    "crates/yunxi-engine/src/voice/models.rs": {
       "tests": 0,
       "total": 141
     },
-    "crates/miyu-engine/src/voice/pipeline.rs": {
+    "crates/yunxi-engine/src/voice/pipeline.rs": {
       "tests": 59,
       "total": 726
     },
-    "crates/miyu-engine/src/voice/speaker.rs": {
+    "crates/yunxi-engine/src/voice/speaker.rs": {
       "tests": 0,
       "total": 109
     },
-    "crates/miyu-engine/src/voice/stt.rs": {
+    "crates/yunxi-engine/src/voice/stt.rs": {
       "tests": 14,
       "total": 178
     },
-    "crates/miyu-engine/src/voice/worker.rs": {
+    "crates/yunxi-engine/src/voice/worker.rs": {
       "tests": 124,
       "total": 697
     },
-    "crates/miyu-hosts/src/daemon.rs": {
+    "crates/yunxi-hosts/src/daemon.rs": {
       "tests": 0,
       "total": 47
     },
-    "crates/miyu-hosts/src/lib.rs": {
+    "crates/yunxi-hosts/src/lib.rs": {
       "tests": 0,
       "total": 10
     },
-    "crates/miyu-hosts/src/platforms/access_control.rs": {
+    "crates/yunxi-hosts/src/platforms/access_control.rs": {
       "tests": 0,
       "total": 118
     },
-    "crates/miyu-hosts/src/platforms/activity.rs": {
+    "crates/yunxi-hosts/src/platforms/activity.rs": {
       "tests": 0,
       "total": 307
     },
-    "crates/miyu-hosts/src/platforms/assets.rs": {
+    "crates/yunxi-hosts/src/platforms/assets.rs": {
       "tests": 11,
       "total": 180
     },
-    "crates/miyu-hosts/src/platforms/avatar.rs": {
+    "crates/yunxi-hosts/src/platforms/avatar.rs": {
       "tests": 50,
       "total": 146
     },
-    "crates/miyu-hosts/src/platforms/commands.rs": {
+    "crates/yunxi-hosts/src/platforms/commands.rs": {
       "tests": 185,
       "total": 399
     },
-    "crates/miyu-hosts/src/platforms/file_reader.rs": {
+    "crates/yunxi-hosts/src/platforms/file_reader.rs": {
       "tests": 64,
       "total": 336
     },
-    "crates/miyu-hosts/src/platforms/inflight.rs": {
+    "crates/yunxi-hosts/src/platforms/inflight.rs": {
       "tests": 17,
       "total": 87
     },
-    "crates/miyu-hosts/src/platforms/live_turns.rs": {
+    "crates/yunxi-hosts/src/platforms/live_turns.rs": {
       "tests": 0,
       "total": 80
     },
-    "crates/miyu-hosts/src/platforms/logging.rs": {
+    "crates/yunxi-hosts/src/platforms/logging.rs": {
       "tests": 0,
       "total": 297
     },
-    "crates/miyu-hosts/src/platforms/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/mod.rs": {
       "tests": 7,
       "total": 251
     },
-    "crates/miyu-hosts/src/platforms/onebot/adapter.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/adapter.rs": {
       "tests": 0,
       "total": 676
     },
-    "crates/miyu-hosts/src/platforms/onebot/admission.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/admission.rs": {
       "tests": 0,
       "total": 332
     },
-    "crates/miyu-hosts/src/platforms/onebot/builtin_commands.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/builtin_commands.rs": {
       "tests": 0,
       "total": 473
     },
-    "crates/miyu-hosts/src/platforms/onebot/caches.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/caches.rs": {
       "tests": 0,
       "total": 297
     },
-    "crates/miyu-hosts/src/platforms/onebot/connection.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/connection.rs": {
       "tests": 0,
       "total": 763
     },
-    "crates/miyu-hosts/src/platforms/onebot/dispatch.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/dispatch.rs": {
       "tests": 7,
       "total": 852
     },
-    "crates/miyu-hosts/src/platforms/onebot/dispatch/test_support.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/dispatch/test_support.rs": {
       "tests": 0,
       "total": 23
     },
-    "crates/miyu-hosts/src/platforms/onebot/files.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/files.rs": {
       "tests": 0,
       "total": 361
     },
-    "crates/miyu-hosts/src/platforms/onebot/forward.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/forward.rs": {
       "tests": 0,
       "total": 284
     },
-    "crates/miyu-hosts/src/platforms/onebot/group_join.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/group_join.rs": {
       "tests": 0,
       "total": 582
     },
-    "crates/miyu-hosts/src/platforms/onebot/identity.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/identity.rs": {
       "tests": 7,
       "total": 452
     },
-    "crates/miyu-hosts/src/platforms/onebot/identity/test_support.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/identity/test_support.rs": {
       "tests": 0,
       "total": 14
     },
-    "crates/miyu-hosts/src/platforms/onebot/images.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/images.rs": {
       "tests": 0,
       "total": 242
     },
-    "crates/miyu-hosts/src/platforms/onebot/inbound.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/inbound.rs": {
       "tests": 0,
       "total": 995
     },
-    "crates/miyu-hosts/src/platforms/onebot/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/mod.rs": {
       "tests": 4,
       "total": 135
     },
-    "crates/miyu-hosts/src/platforms/onebot/notices.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/notices.rs": {
       "tests": 0,
       "total": 362
     },
-    "crates/miyu-hosts/src/platforms/onebot/outbound.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/outbound.rs": {
       "tests": 13,
       "total": 425
     },
-    "crates/miyu-hosts/src/platforms/onebot/proactive.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/proactive.rs": {
       "tests": 29,
       "total": 279
     },
-    "crates/miyu-hosts/src/platforms/onebot/send.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/send.rs": {
       "tests": 0,
       "total": 526
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/admission.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/admission.rs": {
       "tests": 0,
       "total": 789
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/connection.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/connection.rs": {
       "tests": 0,
       "total": 317
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/delivery.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/delivery.rs": {
       "tests": 0,
       "total": 1086
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/files.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/files.rs": {
       "tests": 0,
       "total": 153
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/forward.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/forward.rs": {
       "tests": 0,
       "total": 258
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/identity.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/identity.rs": {
       "tests": 0,
       "total": 444
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/mod.rs": {
       "tests": 0,
       "total": 18
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/notices.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/notices.rs": {
       "tests": 0,
       "total": 292
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/parsing.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/parsing.rs": {
       "tests": 0,
       "total": 348
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/receipt_recall.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/receipt_recall.rs": {
       "tests": 0,
       "total": 98
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/requests.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/requests.rs": {
       "tests": 0,
       "total": 403
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/shared.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/shared.rs": {
       "tests": 0,
       "total": 148
     },
-    "crates/miyu-hosts/src/platforms/onebot/tests/turn.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/tests/turn.rs": {
       "tests": 0,
       "total": 769
     },
-    "crates/miyu-hosts/src/platforms/onebot/turn.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/turn.rs": {
       "tests": 0,
       "total": 705
     },
-    "crates/miyu-hosts/src/platforms/onebot/voice_inbound.rs": {
+    "crates/yunxi-hosts/src/platforms/onebot/voice_inbound.rs": {
       "tests": 0,
       "total": 137
     },
-    "crates/miyu-hosts/src/platforms/plugins/access_manager.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/access_manager.rs": {
       "tests": 298,
       "total": 771
     },
-    "crates/miyu-hosts/src/platforms/plugins/group_management/args.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/group_management/args.rs": {
       "tests": 0,
       "total": 284
     },
-    "crates/miyu-hosts/src/platforms/plugins/group_management/dashboard.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/group_management/dashboard.rs": {
       "tests": 0,
       "total": 51
     },
-    "crates/miyu-hosts/src/platforms/plugins/group_management/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/group_management/mod.rs": {
       "tests": 315,
       "total": 1071
     },
-    "crates/miyu-hosts/src/platforms/plugins/group_management/records.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/group_management/records.rs": {
       "tests": 32,
       "total": 618
     },
-    "crates/miyu-hosts/src/platforms/plugins/meme_collector.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/meme_collector.rs": {
       "tests": 20,
       "total": 507
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/dashboard.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/dashboard.rs": {
       "tests": 0,
       "total": 445
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/mod.rs": {
       "tests": 157,
       "total": 662
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/mod.rs": {
       "tests": 7,
       "total": 359
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/query.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/query.rs": {
       "tests": 0,
       "total": 525
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/schema.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/schema.rs": {
       "tests": 0,
       "total": 333
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/test_support.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/test_support.rs": {
       "tests": 0,
       "total": 10
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/tests/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/tests/mod.rs": {
       "tests": 0,
       "total": 7
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/tests/query.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/tests/query.rs": {
       "tests": 0,
       "total": 331
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/tests/sanitize.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/tests/sanitize.rs": {
       "tests": 0,
       "total": 371
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/tests/shared.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/tests/shared.rs": {
       "tests": 0,
       "total": 36
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/tests/write.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/tests/write.rs": {
       "tests": 0,
       "total": 376
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/types.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/types.rs": {
       "tests": 4,
       "total": 369
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/types/test_support.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/types/test_support.rs": {
       "tests": 0,
       "total": 17
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/store/write.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/store/write.rs": {
       "tests": 0,
       "total": 565
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/tools/args.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/tools/args.rs": {
       "tests": 0,
       "total": 354
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/tools/delete.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/tools/delete.rs": {
       "tests": 0,
       "total": 149
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_history/tools/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_history/tools/mod.rs": {
       "tests": 298,
       "total": 961
     },
-    "crates/miyu-hosts/src/platforms/plugins/message_recall.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/message_recall.rs": {
       "tests": 181,
       "total": 936
     },
-    "crates/miyu-hosts/src/platforms/plugins/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/mod.rs": {
       "tests": 100,
       "total": 898
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/active_judgement_skip.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/active_judgement_skip.rs": {
       "tests": 330,
       "total": 676
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/affection/dashboard.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/affection/dashboard.rs": {
       "tests": 0,
       "total": 256
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/affection/logging.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/affection/logging.rs": {
       "tests": 0,
       "total": 287
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/affection/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/affection/mod.rs": {
       "tests": 129,
       "total": 996
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/affection/parse.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/affection/parse.rs": {
       "tests": 0,
       "total": 183
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/affection/scoring.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/affection/scoring.rs": {
       "tests": 0,
       "total": 153
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/decision_log.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/decision_log.rs": {
       "tests": 0,
       "total": 453
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/emotion/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/emotion/mod.rs": {
       "tests": 191,
       "total": 902
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/history.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/history.rs": {
       "tests": 0,
       "total": 391
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/inject.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/inject.rs": {
       "tests": 0,
       "total": 989
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/judge.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/judge.rs": {
       "tests": 264,
       "total": 940
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/mod.rs": {
       "tests": 6,
       "total": 553
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/pending.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/pending.rs": {
       "tests": 0,
       "total": 298
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/restraint.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/restraint.rs": {
       "tests": 0,
       "total": 80
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/runtime.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/runtime.rs": {
       "tests": 0,
       "total": 299
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/targeting.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/targeting.rs": {
       "tests": 0,
       "total": 745
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/history.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/history.rs": {
       "tests": 0,
       "total": 534
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/mod.rs": {
       "tests": 0,
       "total": 12
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/reaction.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/reaction.rs": {
       "tests": 0,
       "total": 120
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/restraint.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/restraint.rs": {
       "tests": 0,
       "total": 94
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/runtime.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/runtime.rs": {
       "tests": 0,
       "total": 179
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/shared.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/shared.rs": {
       "tests": 0,
       "total": 191
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/subsystem_gate.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/subsystem_gate.rs": {
       "tests": 0,
       "total": 122
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/supersession.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/supersession.rs": {
       "tests": 0,
       "total": 189
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/targeting.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/targeting.rs": {
       "tests": 0,
       "total": 181
     },
-    "crates/miyu-hosts/src/platforms/plugins/real_context/tests/trigger.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/trigger.rs": {
       "tests": 0,
       "total": 842
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/columns.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/columns.rs": {
       "tests": 0,
       "total": 379
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/fonts.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/fonts.rs": {
       "tests": 24,
       "total": 115
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/html.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/html.rs": {
       "tests": 0,
       "total": 185
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/layout.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/layout.rs": {
       "tests": 0,
       "total": 761
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/links.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/links.rs": {
       "tests": 0,
       "total": 62
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/markdown.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/markdown.rs": {
       "tests": 0,
       "total": 645
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/mod.rs": {
       "tests": 10,
       "total": 416
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/paint.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/paint.rs": {
       "tests": 17,
       "total": 783
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/table_width.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/table_width.rs": {
       "tests": 72,
       "total": 220
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/test_support.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/test_support.rs": {
       "tests": 0,
       "total": 19
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/tests/columns.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/tests/columns.rs": {
       "tests": 0,
       "total": 125
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/tests/content.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/tests/content.rs": {
       "tests": 0,
       "total": 698
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/tests/html.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/tests/html.rs": {
       "tests": 0,
       "total": 67
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/tests/layout.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/tests/layout.rs": {
       "tests": 0,
       "total": 239
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/tests/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/tests/mod.rs": {
       "tests": 0,
       "total": 8
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/tests/shared.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/tests/shared.rs": {
       "tests": 0,
       "total": 36
     },
-    "crates/miyu-hosts/src/platforms/plugins/renderer/worker.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/renderer/worker.rs": {
       "tests": 0,
       "total": 433
     },
-    "crates/miyu-hosts/src/platforms/plugins/reply_processor/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/reply_processor/mod.rs": {
       "tests": 4,
       "total": 502
     },
-    "crates/miyu-hosts/src/platforms/plugins/reply_processor/settings.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/reply_processor/settings.rs": {
       "tests": 0,
       "total": 330
     },
-    "crates/miyu-hosts/src/platforms/plugins/reply_processor/tests/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/reply_processor/tests/mod.rs": {
       "tests": 0,
       "total": 7
     },
-    "crates/miyu-hosts/src/platforms/plugins/reply_processor/tests/modes.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/reply_processor/tests/modes.rs": {
       "tests": 0,
       "total": 361
     },
-    "crates/miyu-hosts/src/platforms/plugins/reply_processor/tests/overrides.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/reply_processor/tests/overrides.rs": {
       "tests": 0,
       "total": 60
     },
-    "crates/miyu-hosts/src/platforms/plugins/reply_processor/tests/shared.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/reply_processor/tests/shared.rs": {
       "tests": 0,
       "total": 71
     },
-    "crates/miyu-hosts/src/platforms/plugins/reply_processor/tests/text.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/reply_processor/tests/text.rs": {
       "tests": 0,
       "total": 69
     },
-    "crates/miyu-hosts/src/platforms/plugins/scheduled_messages/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/scheduled_messages/mod.rs": {
       "tests": 37,
       "total": 195
     },
-    "crates/miyu-hosts/src/platforms/plugins/scheduled_messages/schedule.rs": {
+    "crates/yunxi-hosts/src/platforms/plugins/scheduled_messages/schedule.rs": {
       "tests": 89,
       "total": 179
     },
-    "crates/miyu-hosts/src/platforms/render_tool.rs": {
+    "crates/yunxi-hosts/src/platforms/render_tool.rs": {
       "tests": 212,
       "total": 403
     },
-    "crates/miyu-hosts/src/platforms/reply.rs": {
+    "crates/yunxi-hosts/src/platforms/reply.rs": {
       "tests": 150,
       "total": 798
     },
-    "crates/miyu-hosts/src/platforms/scheduling.rs": {
+    "crates/yunxi-hosts/src/platforms/scheduling.rs": {
       "tests": 0,
       "total": 449
     },
-    "crates/miyu-hosts/src/platforms/sponsor_fx.rs": {
+    "crates/yunxi-hosts/src/platforms/sponsor_fx.rs": {
       "tests": 22,
       "total": 115
     },
-    "crates/miyu-hosts/src/platforms/sponsor_tool.rs": {
+    "crates/yunxi-hosts/src/platforms/sponsor_tool.rs": {
       "tests": 60,
       "total": 416
     },
-    "crates/miyu-hosts/src/platforms/test_support.rs": {
+    "crates/yunxi-hosts/src/platforms/test_support.rs": {
       "tests": 0,
       "total": 14
     },
-    "crates/miyu-hosts/src/platforms/tests/activity.rs": {
+    "crates/yunxi-hosts/src/platforms/tests/activity.rs": {
       "tests": 0,
       "total": 104
     },
-    "crates/miyu-hosts/src/platforms/tests/logging.rs": {
+    "crates/yunxi-hosts/src/platforms/tests/logging.rs": {
       "tests": 0,
       "total": 122
     },
-    "crates/miyu-hosts/src/platforms/tests/mod.rs": {
+    "crates/yunxi-hosts/src/platforms/tests/mod.rs": {
       "tests": 0,
       "total": 9
     },
-    "crates/miyu-hosts/src/platforms/tests/reply.rs": {
+    "crates/yunxi-hosts/src/platforms/tests/reply.rs": {
       "tests": 0,
       "total": 865
     },
-    "crates/miyu-hosts/src/platforms/tests/scheduling.rs": {
+    "crates/yunxi-hosts/src/platforms/tests/scheduling.rs": {
       "tests": 0,
       "total": 464
     },
-    "crates/miyu-hosts/src/platforms/tests/shared.rs": {
+    "crates/yunxi-hosts/src/platforms/tests/shared.rs": {
       "tests": 0,
       "total": 227
     },
-    "crates/miyu-hosts/src/platforms/tests/tools.rs": {
+    "crates/yunxi-hosts/src/platforms/tests/tools.rs": {
       "tests": 0,
       "total": 442
     },
-    "crates/miyu-hosts/src/platforms/tool.rs": {
+    "crates/yunxi-hosts/src/platforms/tool.rs": {
       "tests": 48,
       "total": 606
     },
-    "crates/miyu-hosts/src/platforms/tool_context.rs": {
+    "crates/yunxi-hosts/src/platforms/tool_context.rs": {
       "tests": 0,
       "total": 43
     },
-    "crates/miyu-hosts/src/platforms/turn_context.rs": {
+    "crates/yunxi-hosts/src/platforms/turn_context.rs": {
       "tests": 11,
       "total": 1030
     },
-    "crates/miyu-hosts/src/platforms/turn_context/test_support.rs": {
+    "crates/yunxi-hosts/src/platforms/turn_context/test_support.rs": {
       "tests": 0,
       "total": 23
     },
-    "crates/miyu-hosts/src/platforms/turn_order.rs": {
+    "crates/yunxi-hosts/src/platforms/turn_order.rs": {
       "tests": 0,
       "total": 144
     },
-    "crates/miyu-hosts/src/platforms/turn_ownership.rs": {
+    "crates/yunxi-hosts/src/platforms/turn_ownership.rs": {
       "tests": 0,
       "total": 24
     },
-    "crates/miyu-hosts/src/platforms/turn_run.rs": {
+    "crates/yunxi-hosts/src/platforms/turn_run.rs": {
       "tests": 40,
       "total": 407
     },
-    "crates/miyu-hosts/src/render/agent_events.rs": {
+    "crates/yunxi-hosts/src/render/agent_events.rs": {
       "tests": 0,
       "total": 109
     },
-    "crates/miyu-hosts/src/render/blocks.rs": {
+    "crates/yunxi-hosts/src/render/blocks.rs": {
       "tests": 0,
       "total": 398
     },
-    "crates/miyu-hosts/src/render/code.rs": {
+    "crates/yunxi-hosts/src/render/code.rs": {
       "tests": 0,
       "total": 356
     },
-    "crates/miyu-hosts/src/render/command.rs": {
+    "crates/yunxi-hosts/src/render/command.rs": {
       "tests": 4,
       "total": 879
     },
-    "crates/miyu-hosts/src/render/command/test_support.rs": {
+    "crates/yunxi-hosts/src/render/command/test_support.rs": {
       "tests": 0,
       "total": 16
     },
-    "crates/miyu-hosts/src/render/diagram_style.rs": {
+    "crates/yunxi-hosts/src/render/diagram_style.rs": {
       "tests": 0,
       "total": 67
     },
-    "crates/miyu-hosts/src/render/link.rs": {
+    "crates/yunxi-hosts/src/render/link.rs": {
       "tests": 0,
       "total": 193
     },
-    "crates/miyu-hosts/src/render/live_area.rs": {
+    "crates/yunxi-hosts/src/render/live_area.rs": {
       "tests": 60,
       "total": 357
     },
-    "crates/miyu-hosts/src/render/markdown.rs": {
+    "crates/yunxi-hosts/src/render/markdown.rs": {
       "tests": 0,
       "total": 728
     },
-    "crates/miyu-hosts/src/render/math/mod.rs": {
+    "crates/yunxi-hosts/src/render/math/mod.rs": {
       "tests": 243,
       "total": 862
     },
-    "crates/miyu-hosts/src/render/math/raster.rs": {
+    "crates/yunxi-hosts/src/render/math/raster.rs": {
       "tests": 7,
       "total": 389
     },
-    "crates/miyu-hosts/src/render/math/raster/test_support.rs": {
+    "crates/yunxi-hosts/src/render/math/raster/test_support.rs": {
       "tests": 0,
       "total": 10
     },
-    "crates/miyu-hosts/src/render/math/test_support.rs": {
+    "crates/yunxi-hosts/src/render/math/test_support.rs": {
       "tests": 0,
       "total": 16
     },
-    "crates/miyu-hosts/src/render/math/unicode.rs": {
+    "crates/yunxi-hosts/src/render/math/unicode.rs": {
       "tests": 0,
       "total": 295
     },
-    "crates/miyu-hosts/src/render/mermaid.rs": {
+    "crates/yunxi-hosts/src/render/mermaid.rs": {
       "tests": 392,
       "total": 1045
     },
-    "crates/miyu-hosts/src/render/mod.rs": {
+    "crates/yunxi-hosts/src/render/mod.rs": {
       "tests": 4,
       "total": 148
     },
-    "crates/miyu-hosts/src/render/patch.rs": {
+    "crates/yunxi-hosts/src/render/patch.rs": {
       "tests": 0,
       "total": 325
     },
-    "crates/miyu-hosts/src/render/stream/event_clock.rs": {
+    "crates/yunxi-hosts/src/render/stream/event_clock.rs": {
       "tests": 0,
       "total": 30
     },
-    "crates/miyu-hosts/src/render/stream/mod.rs": {
+    "crates/yunxi-hosts/src/render/stream/mod.rs": {
       "tests": 0,
       "total": 903
     },
-    "crates/miyu-hosts/src/render/stream/reasoning_phase.rs": {
+    "crates/yunxi-hosts/src/render/stream/reasoning_phase.rs": {
       "tests": 0,
       "total": 539
     },
-    "crates/miyu-hosts/src/render/stream/reply_tail.rs": {
+    "crates/yunxi-hosts/src/render/stream/reply_tail.rs": {
       "tests": 0,
       "total": 179
     },
-    "crates/miyu-hosts/src/render/stream/surface.rs": {
+    "crates/yunxi-hosts/src/render/stream/surface.rs": {
       "tests": 0,
       "total": 112
     },
-    "crates/miyu-hosts/src/render/stream/timeline/cross_session.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/cross_session.rs": {
       "tests": 0,
       "total": 131
     },
-    "crates/miyu-hosts/src/render/stream/timeline/glyphs.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/glyphs.rs": {
       "tests": 0,
       "total": 149
     },
-    "crates/miyu-hosts/src/render/stream/timeline/job_report.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/job_report.rs": {
       "tests": 0,
       "total": 55
     },
-    "crates/miyu-hosts/src/render/stream/timeline/live.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/live.rs": {
       "tests": 0,
       "total": 764
     },
-    "crates/miyu-hosts/src/render/stream/timeline/mod.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/mod.rs": {
       "tests": 4,
       "total": 1158
     },
-    "crates/miyu-hosts/src/render/stream/timeline/question.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/question.rs": {
       "tests": 0,
       "total": 146
     },
-    "crates/miyu-hosts/src/render/stream/timeline/stall.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/stall.rs": {
       "tests": 0,
       "total": 66
     },
-    "crates/miyu-hosts/src/render/stream/timeline/subagent.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/subagent.rs": {
       "tests": 0,
       "total": 91
     },
-    "crates/miyu-hosts/src/render/stream/timeline/test_support.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/test_support.rs": {
       "tests": 0,
       "total": 16
     },
-    "crates/miyu-hosts/src/render/stream/timeline/thought_rows.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/thought_rows.rs": {
       "tests": 0,
       "total": 136
     },
-    "crates/miyu-hosts/src/render/stream/timeline/turn_end.rs": {
+    "crates/yunxi-hosts/src/render/stream/timeline/turn_end.rs": {
       "tests": 68,
       "total": 199
     },
-    "crates/miyu-hosts/src/render/stream/tool_summary.rs": {
+    "crates/yunxi-hosts/src/render/stream/tool_summary.rs": {
       "tests": 0,
       "total": 802
     },
-    "crates/miyu-hosts/src/render/style.rs": {
+    "crates/yunxi-hosts/src/render/style.rs": {
       "tests": 0,
       "total": 52
     },
-    "crates/miyu-hosts/src/render/table.rs": {
+    "crates/yunxi-hosts/src/render/table.rs": {
       "tests": 0,
       "total": 369
     },
-    "crates/miyu-hosts/src/render/tests/command.rs": {
+    "crates/yunxi-hosts/src/render/tests/command.rs": {
       "tests": 0,
       "total": 413
     },
-    "crates/miyu-hosts/src/render/tests/command_step.rs": {
+    "crates/yunxi-hosts/src/render/tests/command_step.rs": {
       "tests": 0,
       "total": 111
     },
-    "crates/miyu-hosts/src/render/tests/cross_session.rs": {
+    "crates/yunxi-hosts/src/render/tests/cross_session.rs": {
       "tests": 0,
       "total": 125
     },
-    "crates/miyu-hosts/src/render/tests/diagram_style.rs": {
+    "crates/yunxi-hosts/src/render/tests/diagram_style.rs": {
       "tests": 0,
       "total": 121
     },
-    "crates/miyu-hosts/src/render/tests/event_clock.rs": {
+    "crates/yunxi-hosts/src/render/tests/event_clock.rs": {
       "tests": 0,
       "total": 131
     },
-    "crates/miyu-hosts/src/render/tests/golden.rs": {
+    "crates/yunxi-hosts/src/render/tests/golden.rs": {
       "tests": 0,
       "total": 452
     },
-    "crates/miyu-hosts/src/render/tests/markdown.rs": {
+    "crates/yunxi-hosts/src/render/tests/markdown.rs": {
       "tests": 0,
       "total": 322
     },
-    "crates/miyu-hosts/src/render/tests/math.rs": {
+    "crates/yunxi-hosts/src/render/tests/math.rs": {
       "tests": 0,
       "total": 62
     },
-    "crates/miyu-hosts/src/render/tests/mod.rs": {
+    "crates/yunxi-hosts/src/render/tests/mod.rs": {
       "tests": 0,
       "total": 28
     },
-    "crates/miyu-hosts/src/render/tests/patch.rs": {
+    "crates/yunxi-hosts/src/render/tests/patch.rs": {
       "tests": 0,
       "total": 131
     },
-    "crates/miyu-hosts/src/render/tests/question_panel.rs": {
+    "crates/yunxi-hosts/src/render/tests/question_panel.rs": {
       "tests": 0,
       "total": 82
     },
-    "crates/miyu-hosts/src/render/tests/reasoning.rs": {
+    "crates/yunxi-hosts/src/render/tests/reasoning.rs": {
       "tests": 0,
       "total": 593
     },
-    "crates/miyu-hosts/src/render/tests/reasoning_stall.rs": {
+    "crates/yunxi-hosts/src/render/tests/reasoning_stall.rs": {
       "tests": 0,
       "total": 133
     },
-    "crates/miyu-hosts/src/render/tests/reply_preview.rs": {
+    "crates/yunxi-hosts/src/render/tests/reply_preview.rs": {
       "tests": 0,
       "total": 131
     },
-    "crates/miyu-hosts/src/render/tests/shared.rs": {
+    "crates/yunxi-hosts/src/render/tests/shared.rs": {
       "tests": 0,
       "total": 27
     },
-    "crates/miyu-hosts/src/render/tests/surface.rs": {
+    "crates/yunxi-hosts/src/render/tests/surface.rs": {
       "tests": 0,
       "total": 140
     },
-    "crates/miyu-hosts/src/render/tests/table.rs": {
+    "crates/yunxi-hosts/src/render/tests/table.rs": {
       "tests": 0,
       "total": 157
     },
-    "crates/miyu-hosts/src/render/tests/thought_rows.rs": {
+    "crates/yunxi-hosts/src/render/tests/thought_rows.rs": {
       "tests": 0,
       "total": 91
     },
-    "crates/miyu-hosts/src/render/tests/timeline.rs": {
+    "crates/yunxi-hosts/src/render/tests/timeline.rs": {
       "tests": 0,
       "total": 881
     },
-    "crates/miyu-hosts/src/render/tests/timeline_panels.rs": {
+    "crates/yunxi-hosts/src/render/tests/timeline_panels.rs": {
       "tests": 0,
       "total": 203
     },
-    "crates/miyu-hosts/src/render/tests/todo.rs": {
+    "crates/yunxi-hosts/src/render/tests/todo.rs": {
       "tests": 0,
       "total": 37
     },
-    "crates/miyu-hosts/src/render/tests/tool_summary.rs": {
+    "crates/yunxi-hosts/src/render/tests/tool_summary.rs": {
       "tests": 0,
       "total": 1122
     },
-    "crates/miyu-hosts/src/render/tests/usage.rs": {
+    "crates/yunxi-hosts/src/render/tests/usage.rs": {
       "tests": 0,
       "total": 224
     },
-    "crates/miyu-hosts/src/render/tool_display.rs": {
+    "crates/yunxi-hosts/src/render/tool_display.rs": {
       "tests": 2,
       "total": 171
     },
-    "crates/miyu-hosts/src/render/usage.rs": {
+    "crates/yunxi-hosts/src/render/usage.rs": {
       "tests": 41,
       "total": 276
     },
-    "crates/miyu-hosts/src/render/wait_spinner.rs": {
+    "crates/yunxi-hosts/src/render/wait_spinner.rs": {
       "tests": 290,
       "total": 721
     },
-    "crates/miyu-hosts/src/render/wait_spinner/test_support.rs": {
+    "crates/yunxi-hosts/src/render/wait_spinner/test_support.rs": {
       "tests": 0,
       "total": 21
     },
-    "crates/miyu-hosts/src/runtime/actor.rs": {
+    "crates/yunxi-hosts/src/runtime/actor.rs": {
       "tests": 0,
       "total": 120
     },
-    "crates/miyu-hosts/src/runtime/dto.rs": {
+    "crates/yunxi-hosts/src/runtime/dto.rs": {
       "tests": 0,
       "total": 79
     },
-    "crates/miyu-hosts/src/runtime/error.rs": {
+    "crates/yunxi-hosts/src/runtime/error.rs": {
       "tests": 0,
       "total": 44
     },
-    "crates/miyu-hosts/src/runtime/events.rs": {
+    "crates/yunxi-hosts/src/runtime/events.rs": {
       "tests": 0,
       "total": 158
     },
-    "crates/miyu-hosts/src/runtime/ipc_events.rs": {
+    "crates/yunxi-hosts/src/runtime/ipc_events.rs": {
       "tests": 361,
       "total": 625
     },
-    "crates/miyu-hosts/src/runtime/mod.rs": {
+    "crates/yunxi-hosts/src/runtime/mod.rs": {
       "tests": 0,
       "total": 108
     },
-    "crates/miyu-hosts/src/runtime/presence.rs": {
+    "crates/yunxi-hosts/src/runtime/presence.rs": {
       "tests": 25,
       "total": 92
     },
-    "crates/miyu-hosts/src/runtime/questions.rs": {
+    "crates/yunxi-hosts/src/runtime/questions.rs": {
       "tests": 0,
       "total": 242
     },
-    "crates/miyu-hosts/src/runtime/run.rs": {
+    "crates/yunxi-hosts/src/runtime/run.rs": {
       "tests": 0,
       "total": 294
     },
-    "crates/miyu-hosts/src/runtime/session_ops.rs": {
+    "crates/yunxi-hosts/src/runtime/session_ops.rs": {
       "tests": 0,
       "total": 207
     },
-    "crates/miyu-hosts/src/runtime/state.rs": {
+    "crates/yunxi-hosts/src/runtime/state.rs": {
       "tests": 4,
       "total": 589
     },
-    "crates/miyu-hosts/src/runtime/state/test_support.rs": {
+    "crates/yunxi-hosts/src/runtime/state/test_support.rs": {
       "tests": 0,
       "total": 55
     },
-    "crates/miyu-hosts/src/runtime/stores.rs": {
+    "crates/yunxi-hosts/src/runtime/stores.rs": {
       "tests": 0,
       "total": 124
     },
-    "crates/miyu-hosts/src/runtime/turn_update.rs": {
+    "crates/yunxi-hosts/src/runtime/turn_update.rs": {
       "tests": 0,
       "total": 111
     },
-    "crates/miyu-hosts/src/web/accounts_api.rs": {
+    "crates/yunxi-hosts/src/web/accounts_api.rs": {
       "tests": 0,
       "total": 885
     },
-    "crates/miyu-hosts/src/web/actor/delivery.rs": {
+    "crates/yunxi-hosts/src/web/actor/delivery.rs": {
       "tests": 0,
       "total": 245
     },
-    "crates/miyu-hosts/src/web/actor/job_wake.rs": {
+    "crates/yunxi-hosts/src/web/actor/job_wake.rs": {
       "tests": 0,
       "total": 609
     },
-    "crates/miyu-hosts/src/web/actor/mod.rs": {
+    "crates/yunxi-hosts/src/web/actor/mod.rs": {
       "tests": 0,
       "total": 731
     },
-    "crates/miyu-hosts/src/web/actor/restart_resume.rs": {
+    "crates/yunxi-hosts/src/web/actor/restart_resume.rs": {
       "tests": 0,
       "total": 460
     },
-    "crates/miyu-hosts/src/web/assets.rs": {
+    "crates/yunxi-hosts/src/web/assets.rs": {
       "tests": 0,
       "total": 1125
     },
-    "crates/miyu-hosts/src/web/attachments.rs": {
+    "crates/yunxi-hosts/src/web/attachments.rs": {
       "tests": 7,
       "total": 782
     },
-    "crates/miyu-hosts/src/web/attachments/test_support.rs": {
+    "crates/yunxi-hosts/src/web/attachments/test_support.rs": {
       "tests": 0,
       "total": 12
     },
-    "crates/miyu-hosts/src/web/bridge_progress.rs": {
+    "crates/yunxi-hosts/src/web/bridge_progress.rs": {
       "tests": 0,
       "total": 240
     },
-    "crates/miyu-hosts/src/web/bridge_question.rs": {
+    "crates/yunxi-hosts/src/web/bridge_question.rs": {
       "tests": 0,
       "total": 93
     },
-    "crates/miyu-hosts/src/web/commands_api.rs": {
+    "crates/yunxi-hosts/src/web/commands_api.rs": {
       "tests": 0,
       "total": 331
     },
-    "crates/miyu-hosts/src/web/compact_queue.rs": {
+    "crates/yunxi-hosts/src/web/compact_queue.rs": {
       "tests": 0,
       "total": 103
     },
-    "crates/miyu-hosts/src/web/config_api.rs": {
+    "crates/yunxi-hosts/src/web/config_api.rs": {
       "tests": 0,
       "total": 875
     },
-    "crates/miyu-hosts/src/web/cross_session.rs": {
+    "crates/yunxi-hosts/src/web/cross_session.rs": {
       "tests": 67,
       "total": 260
     },
-    "crates/miyu-hosts/src/web/dashboards/affection.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/affection.rs": {
       "tests": 0,
       "total": 266
     },
-    "crates/miyu-hosts/src/web/dashboards/kb.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/kb.rs": {
       "tests": 0,
       "total": 269
     },
-    "crates/miyu-hosts/src/web/dashboards/ledger/csv_io.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/ledger/csv_io.rs": {
       "tests": 0,
       "total": 257
     },
-    "crates/miyu-hosts/src/web/dashboards/ledger/mod.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/ledger/mod.rs": {
       "tests": 0,
       "total": 443
     },
-    "crates/miyu-hosts/src/web/dashboards/ledger/write.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/ledger/write.rs": {
       "tests": 0,
       "total": 333
     },
-    "crates/miyu-hosts/src/web/dashboards/memes.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/memes.rs": {
       "tests": 0,
       "total": 306
     },
-    "crates/miyu-hosts/src/web/dashboards/memory.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/memory.rs": {
       "tests": 0,
       "total": 434
     },
-    "crates/miyu-hosts/src/web/dashboards/mod.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/mod.rs": {
       "tests": 0,
       "total": 95
     },
-    "crates/miyu-hosts/src/web/dashboards/qq.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/qq.rs": {
       "tests": 0,
       "total": 426
     },
-    "crates/miyu-hosts/src/web/dashboards/scripts.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/scripts.rs": {
       "tests": 0,
       "total": 188
     },
-    "crates/miyu-hosts/src/web/dashboards/sponsor.rs": {
+    "crates/yunxi-hosts/src/web/dashboards/sponsor.rs": {
       "tests": 134,
       "total": 495
     },
-    "crates/miyu-hosts/src/web/dto.rs": {
+    "crates/yunxi-hosts/src/web/dto.rs": {
       "tests": 0,
       "total": 625
     },
-    "crates/miyu-hosts/src/web/event_map.rs": {
+    "crates/yunxi-hosts/src/web/event_map.rs": {
       "tests": 0,
       "total": 580
     },
-    "crates/miyu-hosts/src/web/follow_catchup.rs": {
+    "crates/yunxi-hosts/src/web/follow_catchup.rs": {
       "tests": 0,
       "total": 46
     },
-    "crates/miyu-hosts/src/web/goal_driver.rs": {
+    "crates/yunxi-hosts/src/web/goal_driver.rs": {
       "tests": 0,
       "total": 351
     },
-    "crates/miyu-hosts/src/web/ipc_server.rs": {
+    "crates/yunxi-hosts/src/web/ipc_server.rs": {
       "tests": 0,
       "total": 1271
     },
-    "crates/miyu-hosts/src/web/link_preview/fetch.rs": {
+    "crates/yunxi-hosts/src/web/link_preview/fetch.rs": {
       "tests": 63,
       "total": 408
     },
-    "crates/miyu-hosts/src/web/link_preview/html.rs": {
+    "crates/yunxi-hosts/src/web/link_preview/html.rs": {
       "tests": 58,
       "total": 284
     },
-    "crates/miyu-hosts/src/web/link_preview/mod.rs": {
+    "crates/yunxi-hosts/src/web/link_preview/mod.rs": {
       "tests": 21,
       "total": 186
     },
-    "crates/miyu-hosts/src/web/member_persona.rs": {
+    "crates/yunxi-hosts/src/web/member_persona.rs": {
       "tests": 0,
       "total": 382
     },
-    "crates/miyu-hosts/src/web/mod.rs": {
+    "crates/yunxi-hosts/src/web/mod.rs": {
       "tests": 72,
       "total": 347
     },
-    "crates/miyu-hosts/src/web/ownership.rs": {
+    "crates/yunxi-hosts/src/web/ownership.rs": {
       "tests": 0,
       "total": 98
     },
-    "crates/miyu-hosts/src/web/persona.rs": {
+    "crates/yunxi-hosts/src/web/persona.rs": {
       "tests": 0,
       "total": 768
     },
-    "crates/miyu-hosts/src/web/prompt_files.rs": {
+    "crates/yunxi-hosts/src/web/prompt_files.rs": {
       "tests": 0,
       "total": 307
     },
-    "crates/miyu-hosts/src/web/providers_api.rs": {
+    "crates/yunxi-hosts/src/web/providers_api.rs": {
       "tests": 0,
       "total": 101
     },
-    "crates/miyu-hosts/src/web/qq_history.rs": {
+    "crates/yunxi-hosts/src/web/qq_history.rs": {
       "tests": 0,
       "total": 139
     },
-    "crates/miyu-hosts/src/web/sandbox_scope.rs": {
+    "crates/yunxi-hosts/src/web/sandbox_scope.rs": {
       "tests": 46,
       "total": 569
     },
-    "crates/miyu-hosts/src/web/security.rs": {
+    "crates/yunxi-hosts/src/web/security.rs": {
       "tests": 0,
       "total": 491
     },
-    "crates/miyu-hosts/src/web/selection_menu.rs": {
+    "crates/yunxi-hosts/src/web/selection_menu.rs": {
       "tests": 0,
       "total": 305
     },
-    "crates/miyu-hosts/src/web/server.rs": {
+    "crates/yunxi-hosts/src/web/server.rs": {
       "tests": 33,
       "total": 1240
     },
-    "crates/miyu-hosts/src/web/session_cmds.rs": {
+    "crates/yunxi-hosts/src/web/session_cmds.rs": {
       "tests": 0,
       "total": 964
     },
-    "crates/miyu-hosts/src/web/session_effort.rs": {
+    "crates/yunxi-hosts/src/web/session_effort.rs": {
       "tests": 0,
       "total": 123
     },
-    "crates/miyu-hosts/src/web/sessions/delete.rs": {
+    "crates/yunxi-hosts/src/web/sessions/delete.rs": {
       "tests": 0,
       "total": 88
     },
-    "crates/miyu-hosts/src/web/sessions/empty_context.rs": {
+    "crates/yunxi-hosts/src/web/sessions/empty_context.rs": {
       "tests": 0,
       "total": 53
     },
-    "crates/miyu-hosts/src/web/sessions/http.rs": {
+    "crates/yunxi-hosts/src/web/sessions/http.rs": {
       "tests": 0,
       "total": 391
     },
-    "crates/miyu-hosts/src/web/sessions/mod.rs": {
+    "crates/yunxi-hosts/src/web/sessions/mod.rs": {
       "tests": 0,
       "total": 660
     },
-    "crates/miyu-hosts/src/web/sessions/state.rs": {
+    "crates/yunxi-hosts/src/web/sessions/state.rs": {
       "tests": 0,
       "total": 396
     },
-    "crates/miyu-hosts/src/web/sessions/turn_page.rs": {
+    "crates/yunxi-hosts/src/web/sessions/turn_page.rs": {
       "tests": 0,
       "total": 100
     },
-    "crates/miyu-hosts/src/web/shared_files.rs": {
+    "crates/yunxi-hosts/src/web/shared_files.rs": {
       "tests": 0,
       "total": 222
     },
-    "crates/miyu-hosts/src/web/subagent_activity.rs": {
+    "crates/yunxi-hosts/src/web/subagent_activity.rs": {
       "tests": 0,
       "total": 232
     },
-    "crates/miyu-hosts/src/web/subagent_host.rs": {
+    "crates/yunxi-hosts/src/web/subagent_host.rs": {
       "tests": 0,
       "total": 703
     },
-    "crates/miyu-hosts/src/web/subagent_tree.rs": {
+    "crates/yunxi-hosts/src/web/subagent_tree.rs": {
       "tests": 0,
       "total": 139
     },
-    "crates/miyu-hosts/src/web/test_support.rs": {
+    "crates/yunxi-hosts/src/web/test_support.rs": {
       "tests": 0,
       "total": 63
     },
-    "crates/miyu-hosts/src/web/tests/auth_secrets.rs": {
+    "crates/yunxi-hosts/src/web/tests/auth_secrets.rs": {
       "tests": 0,
       "total": 97
     },
-    "crates/miyu-hosts/src/web/tests/commands.rs": {
+    "crates/yunxi-hosts/src/web/tests/commands.rs": {
       "tests": 0,
       "total": 224
     },
-    "crates/miyu-hosts/src/web/tests/compact_queue.rs": {
+    "crates/yunxi-hosts/src/web/tests/compact_queue.rs": {
       "tests": 0,
       "total": 97
     },
-    "crates/miyu-hosts/src/web/tests/cross_session.rs": {
+    "crates/yunxi-hosts/src/web/tests/cross_session.rs": {
       "tests": 0,
       "total": 210
     },
-    "crates/miyu-hosts/src/web/tests/effort.rs": {
+    "crates/yunxi-hosts/src/web/tests/effort.rs": {
       "tests": 0,
       "total": 156
     },
-    "crates/miyu-hosts/src/web/tests/events_questions.rs": {
+    "crates/yunxi-hosts/src/web/tests/events_questions.rs": {
       "tests": 0,
       "total": 303
     },
-    "crates/miyu-hosts/src/web/tests/follow_catchup.rs": {
+    "crates/yunxi-hosts/src/web/tests/follow_catchup.rs": {
       "tests": 0,
       "total": 123
     },
-    "crates/miyu-hosts/src/web/tests/http.rs": {
+    "crates/yunxi-hosts/src/web/tests/http.rs": {
       "tests": 0,
       "total": 564
     },
-    "crates/miyu-hosts/src/web/tests/ipc_bridge.rs": {
+    "crates/yunxi-hosts/src/web/tests/ipc_bridge.rs": {
       "tests": 0,
       "total": 1230
     },
-    "crates/miyu-hosts/src/web/tests/job_report.rs": {
+    "crates/yunxi-hosts/src/web/tests/job_report.rs": {
       "tests": 0,
       "total": 42
     },
-    "crates/miyu-hosts/src/web/tests/live_turn.rs": {
+    "crates/yunxi-hosts/src/web/tests/live_turn.rs": {
       "tests": 0,
       "total": 64
     },
-    "crates/miyu-hosts/src/web/tests/mod.rs": {
+    "crates/yunxi-hosts/src/web/tests/mod.rs": {
       "tests": 0,
       "total": 19
     },
-    "crates/miyu-hosts/src/web/tests/restart_resume.rs": {
+    "crates/yunxi-hosts/src/web/tests/restart_resume.rs": {
       "tests": 0,
       "total": 141
     },
-    "crates/miyu-hosts/src/web/tests/session.rs": {
+    "crates/yunxi-hosts/src/web/tests/session.rs": {
       "tests": 0,
       "total": 1376
     },
-    "crates/miyu-hosts/src/web/tests/session_delete.rs": {
+    "crates/yunxi-hosts/src/web/tests/session_delete.rs": {
       "tests": 0,
       "total": 137
     },
-    "crates/miyu-hosts/src/web/tests/shared.rs": {
+    "crates/yunxi-hosts/src/web/tests/shared.rs": {
       "tests": 0,
       "total": 87
     },
-    "crates/miyu-hosts/src/web/tests/subagent_tree.rs": {
+    "crates/yunxi-hosts/src/web/tests/subagent_tree.rs": {
       "tests": 0,
       "total": 501
     },
-    "crates/miyu-hosts/src/web/tests/turn.rs": {
+    "crates/yunxi-hosts/src/web/tests/turn.rs": {
       "tests": 0,
       "total": 363
     },
-    "crates/miyu-hosts/src/web/tty.rs": {
+    "crates/yunxi-hosts/src/web/tty.rs": {
       "tests": 0,
       "total": 101
     },
-    "crates/miyu-hosts/src/web/turns/mod.rs": {
+    "crates/yunxi-hosts/src/web/turns/mod.rs": {
       "tests": 0,
       "total": 750
     },
-    "crates/miyu-hosts/src/web/turns/task.rs": {
+    "crates/yunxi-hosts/src/web/turns/task.rs": {
       "tests": 0,
       "total": 1029
     },
-    "crates/miyu-hosts/src/web/ui_locale.rs": {
+    "crates/yunxi-hosts/src/web/ui_locale.rs": {
       "tests": 54,
       "total": 120
     },
-    "crates/miyu-hosts/src/web/ui_prefs.rs": {
+    "crates/yunxi-hosts/src/web/ui_prefs.rs": {
       "tests": 0,
       "total": 101
     },
-    "crates/miyu-hosts/src/web/voice_api.rs": {
+    "crates/yunxi-hosts/src/web/voice_api.rs": {
       "tests": 0,
       "total": 219
     },
-    "crates/miyu-hosts/src/web/voice_bridge.rs": {
+    "crates/yunxi-hosts/src/web/voice_bridge.rs": {
       "tests": 11,
       "total": 1093
     },
-    "crates/miyu-hosts/src/web/voice_tts.rs": {
+    "crates/yunxi-hosts/src/web/voice_tts.rs": {
       "tests": 248,
       "total": 891
     },

@@ -2,7 +2,7 @@
 """量 WebUI 链接卡片后端(/api/link-preview)的冷/热延迟,做 A/B。
 
 沙箱 daemon(不需要 LLM),对同一批链接各请求两次:第一次冷(真抓),第二次热(缓存)。
-用法:BIN=… OUT=~/.cache/miyu-linkbench-x python3 testkit/repl-cursor/link_preview_bench.py
+用法:BIN=… OUT=~/.cache/yunxi-linkbench-x python3 testkit/repl-cursor/link_preview_bench.py
 """
 import importlib.util
 import json
@@ -15,10 +15,10 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
-OUT = Path(os.environ.get("OUT") or "~/.cache/miyu-linkbench").expanduser()
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
+OUT = Path(os.environ.get("OUT") or "~/.cache/yunxi-linkbench").expanduser()
 HOME = OUT / "home"
-RUN = Path.home() / ".cache" / "miyu-lb-run"
+RUN = Path.home() / ".cache" / "yunxi-lb-run"
 PORT = int(os.environ.get("PORT", "18396"))
 URLS = os.environ.get("URLS", ",".join([
     "https://b23.tv/BV1GJ411x7h7",
@@ -30,7 +30,7 @@ spec = importlib.util.spec_from_file_location("clitk", REPO / "testkit" / "cli" 
 clitk = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(clitk)
 clitk.HOME, clitk.RUN, clitk.OUT, clitk.PORT, clitk.STUB_PORT = HOME, RUN, OUT / "cli-out", PORT, 18496
-clitk.MIYU = BIN
+clitk.YUNXI = BIN
 
 
 def preview(url):

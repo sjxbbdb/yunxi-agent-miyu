@@ -7,8 +7,8 @@
 点任务条「○ 主会话」、方向键 ↓ 回车、`/back`；每次回来都打几个字看输入框有没有跟上，并逐帧
 看任务条有没有空掉过一帧。
 
-    MIYU_BIN=... MIYU_HOME=~/.cache/miyu-visit-back/home MIYU_TUI_PORT=18971 STUB_PORT=18972 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-visit-back/rt OUT=~/.cache/miyu-visit-back/out \\
+    YUNXI_BIN=... YUNXI_HOME=~/.cache/yunxi-visit-back/home YUNXI_TUI_PORT=18971 STUB_PORT=18972 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-visit-back/rt OUT=~/.cache/yunxi-visit-back/out \\
       python3 testkit/tui/visit_back_probe.py
 
 `ENTER_MIDTURN=1` 是卡死的那条路（09-26 定位）：主会话**自己这一轮还在说**时点进后台子代理

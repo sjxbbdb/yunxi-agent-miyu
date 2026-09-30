@@ -7,14 +7,14 @@
   再点一次收回去。关着就只有抬头。
 - `过程收起成一行摘要`：只管收不收段。关掉的话每一步就地留着，**照样点得开**。
 
-单元测试钉的是字节（`miyu-block-open=` 那个标记）和视图映射；这份钉的是**人眼
+单元测试钉的是字节（`yunxi-block-open=` 那个标记）和视图映射；这份钉的是**人眼
 看到的那一屏**——标记对了但 `paint` 没去开、或者开了又被下一帧顶回去，字节那层
 一个都照不出来。
 
     cargo build
     python3 testkit/tui/expand_switches.py
 
-**这些 TUI 走查只能一个一个跑**：它们共用同一个 `MIYU_HOME`（`/tmp/miyu-tui-smoke/home`）
+**这些 TUI 走查只能一个一个跑**：它们共用同一个 `YUNXI_HOME`（`/tmp/yunxi-tui-smoke/home`）
 和同一个桩模型端口，起头还会 `rmtree` 那个家目录。并行跑的话两边互相掀桌子，红成一片
 而代码一点问题都没有。
 """

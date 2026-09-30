@@ -3,12 +3,12 @@
 累计 layout-shift),两份前端(WEB 目录)对着同一个 daemon 跑,A/B 看谁在抖。
 
     # 对着已有 daemon(比如沙盒)
-    BASE=http://127.0.0.1:8388 PASSWORD=miyu-sandbox WEB=<web 目录> TAG=x python3 testkit/multi-user/typing_probe.py
+    BASE=http://127.0.0.1:8388 PASSWORD=yunxi-sandbox WEB=<web 目录> TAG=x python3 testkit/multi-user/typing_probe.py
     # 自己起桩模型 + 隔离 daemon,先跑一轮长输出,流式中打一遍、结束后再打一遍
-    BIN=<miyu> SPAWN=1 TURN=1 WEB=<web 目录> TAG=x python3 testkit/multi-user/typing_probe.py
+    BIN=<yunxi> SPAWN=1 TURN=1 WEB=<web 目录> TAG=x python3 testkit/multi-user/typing_probe.py
 
 页面用的 index.html/app.js/styles.css 从 WEB 目录拦截替换(同 testkit/webui-timeline/run.py)。
-输出 ~/.cache/miyu-typing-probe/<tag>/{samples.json,typing-*.png,video/}。
+输出 ~/.cache/yunxi-typing-probe/<tag>/{samples.json,typing-*.png,video/}。
 """
 import json
 import os
@@ -19,7 +19,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -31,7 +31,7 @@ import e2e  # noqa: E402
 
 WEB = Path(os.environ.get("WEB", REPO / "web")).resolve()
 TAG = os.environ.get("TAG", WEB.parent.name)
-OUT = Path("~/.cache/miyu-typing-probe").expanduser() / TAG
+OUT = Path("~/.cache/yunxi-typing-probe").expanduser() / TAG
 TEXT = os.environ.get("TEXT", "这是一段用来测试输入框抖动的文字,一边打一边看页面有没有整体在动。再来一行看看换行的时候会不会跳。")
 MOBILE = os.environ.get("MOBILE") == "1"
 SPAWN = os.environ.get("SPAWN") == "1"
@@ -39,7 +39,7 @@ TURN = os.environ.get("TURN") == "1"
 PORT = int(os.environ.get("PORT", "18512"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18516"))
 BASE = os.environ.get("BASE", f"http://127.0.0.1:{PORT}" if SPAWN else "http://127.0.0.1:8388")
-PASSWORD = os.environ.get("PASSWORD", e2e.ADMIN_PASSWORD if SPAWN else "miyu-sandbox")
+PASSWORD = os.environ.get("PASSWORD", e2e.ADMIN_PASSWORD if SPAWN else "yunxi-sandbox")
 USERNAME = os.environ.get("USERNAME_", "admin" if SPAWN else "shorin")
 
 SAMPLE_JS = """() => {
@@ -133,8 +133,8 @@ def main():
         e2e.OUT = OUT / "daemon"
         e2e.HOME = e2e.OUT / "home"
         e2e.RUNTIME = e2e.OUT / "runtime"
-        e2e.ENV = dict(os.environ, MIYU_HOME=str(e2e.HOME), XDG_RUNTIME_DIR=str(e2e.RUNTIME),
-                       MIYU_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), MIYU_ADMIN_USER="admin")
+        e2e.ENV = dict(os.environ, YUNXI_HOME=str(e2e.HOME), XDG_RUNTIME_DIR=str(e2e.RUNTIME),
+                       YUNXI_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), YUNXI_ADMIN_USER="admin")
         import shutil
         if e2e.OUT.exists():
             shutil.rmtree(e2e.OUT)

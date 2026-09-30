@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """OpenAI 兼容桩 + 隔离 daemon + PTY REPL,复现终端逐 delta 成段。
-用法: MODE=seq|interleave|plain|empty BIN=<miyu> python3 repro_openai.py
+用法: MODE=seq|interleave|plain|empty BIN=<yunxi> python3 repro_openai.py
 """
 import fcntl
 import json
@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pyte
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -28,13 +28,13 @@ for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
 HERE = Path(__file__).resolve().parent
 BIN = Path(os.environ["BIN"])
 MODE = os.environ.get("MODE", "seq")
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-wrap-repro-openai")).expanduser() / MODE
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-wrap-repro-openai")).expanduser() / MODE
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18479"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18498"))
 ROWS, COLS = 40, 120
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), TERM="xterm-256color", LANG="zh_CN.UTF-8")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), TERM="xterm-256color", LANG="zh_CN.UTF-8")
 
 
 def write_config():

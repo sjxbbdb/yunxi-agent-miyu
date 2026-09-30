@@ -6,7 +6,7 @@
  * /api/qq-group-management/* 端点,事件流清空走 /api/dash/qq/management/*。
  */
 (() => {
-  const D = window.MiyuDash;
+  const D = window.YunXiDash;
   if (!D) return;
 
   const state = {
@@ -24,7 +24,7 @@
   const ACTION_CLASS = { ban: "is-warn", unban: "is-active", kick: "is-danger", kick_black: "is-danger", title_set: "is-builtin", title_clear: "" };
   const STATUS = { active: t("禁言中"), expired: t("已过期"), unmuted: t("已解除"), overridden: t("被覆盖") };
   const STATUS_CLASS = { active: "is-warn", expired: "is-muted", unmuted: "is-active", overridden: "is-muted" };
-  const SOURCE = { llm_tool: t("Miyu 工具"), onebot_notice: t("外部管理员"), offender_history: t("旧记录") };
+  const SOURCE = { llm_tool: t("YunXi 工具"), onebot_notice: t("外部管理员"), offender_history: t("旧记录") };
   const ROLE = { owner: t("群主"), admin: t("管理员"), member: t("普通成员"), unknown: t("未知") };
   const ts = (unix) => unix ? D.formatTime(unix * 1000) : "—";
   function duration(seconds) {
@@ -75,7 +75,7 @@
       const current = `${state.account}:${state.group}`;
       if (!keys.includes(current)) { const [account, group] = (keys[0] || ":").split(":"); state.account = account; state.group = group; }
       ui.group.value = `${state.account}:${state.group}`;
-      if (!state.group) { ui.cards.replaceChildren(D.el("p.dash-empty", { text: t("还没有任何群管记录。Miyu 在群里禁言、踢人或设头衔后这里才会有数据。") })); ui.body.textContent = ""; return; }
+      if (!state.group) { ui.cards.replaceChildren(D.el("p.dash-empty", { text: t("还没有任何群管记录。YunXi 在群里禁言、踢人或设头衔后这里才会有数据。") })); ui.body.textContent = ""; return; }
       await load();
     } catch (error) {
       ui.stamp.textContent = t("群清单加载失败:{error}", { error: error.message });
@@ -201,7 +201,7 @@
         D.el("button.dash-button.is-danger", { type: "button", text: t("清空违规者"), onclick: () => clearLegacy("offenders", t("违规者名单")) }),
         D.el("button.dash-button.is-danger", { type: "button", text: t("清空踢人记录"), onclick: () => clearLegacy("kicks", t("踢人记录")) }),
         D.el("button.dash-button.is-danger", { type: "button", text: t("清空事件流"), onclick: clearEvents })),
-      D.el("p.dash-field-hint", { text: t("禁言、踢人、改头衔本身只能由 Miyu 在群里带着在场消息执行,这里不提供。") })));
+      D.el("p.dash-field-hint", { text: t("禁言、踢人、改头衔本身只能由 YunXi 在群里带着在场消息执行,这里不提供。") })));
   }
 
   async function removeOffender(o) {

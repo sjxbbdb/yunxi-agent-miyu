@@ -11,7 +11,7 @@
  *
  * 单独成文件:app.js 已经一万三千多行。
  */
-window.MiyuCrossSession = (() => {
+window.YunXiCrossSession = (() => {
   const HEARTBEAT_MS = 20000;
   const CHECK_MS = 1000;
   const viewer = makeViewerId();
@@ -77,7 +77,7 @@ window.MiyuCrossSession = (() => {
 
   const TAG = "<cross-session-message";
   const CLOSE_TAG = "</cross-session-message>";
-  // 与 Rust 侧 miyu_core::state::CROSS_SESSION_SENDER_NOTE 同一句,拆外壳时剥掉。
+  // 与 Rust 侧 yunxi_core::state::CROSS_SESSION_SENDER_NOTE 同一句,拆外壳时剥掉。
   const SENDER_NOTE = "Sent by the AI in another session, not by the user.";
   const SEND_TOOL = "send_to_other_running_session";
   let deps = { makeIconSlot: null, renderMarkdown: null, formatDateTime: null, previewLines: null };
@@ -252,7 +252,7 @@ window.MiyuCrossSession = (() => {
   }
 
   /// 收到的那一块并进紧跟着的那段 AI 回复,放在最前面(用户 09-24 定的版式):
-  /// 「Miyu → 从 X 收到消息 → 她的回复」连成一体。挂在时间线顶层、后面紧跟一段
+  /// 「YunXi → 从 X 收到消息 → 她的回复」连成一体。挂在时间线顶层、后面紧跟一段
   /// 回复的才挪;回复还没出来的先留在原地,等那段回复建出来时再调一次。
   /// 插进正在跑的那一轮的消息,落在它之后那一段回复的最前面,也就是时间线上当时
   /// 的位置。本页实时画过的回复重画时原样复用(那一块已经在里面),撞上一模一样

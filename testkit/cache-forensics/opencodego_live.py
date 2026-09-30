@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """opencodego(deepseek-v4.1-flash)真机复杂场景缓存测试(09-25)。
 
-隔离家目录(~/.cache/miyu-cache-live/<标签>/home)+ 18891–18899 里第一个空端口的 daemon。
-供应商从本机 ~/.miyu/config/config.jsonc 只读地抄 opencodego 这一条(含 key),记忆开着
+隔离家目录(~/.cache/yunxi-cache-live/<标签>/home)+ 18891–18899 里第一个空端口的 daemon。
+供应商从本机 ~/.yunxi/config/config.jsonc 只读地抄 opencodego 这一条(含 key),记忆开着
 (本地 bge 向量模型链进沙箱),上下文与工具设置照抄用户的;请求录制打开,完整请求体留作二分断点用。
-家目录里有 key:不论成败都删;产物(不含 key)留在 ~/.cache/miyu-cache-live/<标签>/ 下。
+家目录里有 key:不论成败都删;产物(不含 key)留在 ~/.cache/yunxi-cache-live/<标签>/ 下。
 
 普通模式会话 main(记忆开着)一轮一个场景,轮与轮之间停不同的秒数(量跨轮对空闲时长的敏感度):
 
@@ -23,7 +23,7 @@
 
 开发模式会话 dev:看目录 → 改代码加测试并跑 → 改 README → 再跑测试。
 
-用法: opencodego_live.py <miyu 二进制> <标签> [--skip-dev] [--gaps 2,5,20,45,90,180]
+用法: opencodego_live.py <yunxi 二进制> <标签> [--skip-dev] [--gaps 2,5,20,45,90,180]
 """
 
 import argparse
@@ -44,9 +44,9 @@ sys.path.insert(0, str(HERE))
 import hit_breakdown  # noqa: E402
 from replay_live import Sandbox, recv_exact, wait_for  # noqa: E402
 
-RUN_ROOT = Path.home() / ".cache/miyu-cache-live"
-USER_CONFIG = Path.home() / ".miyu/config/config.jsonc"
-USER_MODELS_CACHE = Path.home() / ".miyu/cache/models_cache.json"
+RUN_ROOT = Path.home() / ".cache/yunxi-cache-live"
+USER_CONFIG = Path.home() / ".yunxi/config/config.jsonc"
+USER_MODELS_CACHE = Path.home() / ".yunxi/cache/models_cache.json"
 EMBED_MODEL = "bge-small-zh-v1.5-int8"
 # 仓库里的本地 embedding 模型（`assets/models/`），沙箱家目录里放一份，记忆检索才开得起来。
 EMBED_SOURCE = Path(__file__).resolve().parents[2] / "assets" / "models" / EMBED_MODEL
@@ -76,8 +76,8 @@ def port_free(port):
 class GoSandbox(Sandbox):
     """replay_live.Sandbox 的 IPC / ask / 查库照用;家目录、端口、配置换成这次的。"""
 
-    def __init__(self, miyu, label):  # noqa: D401 — 不调父类构造:它会写 deepseek 配置
-        self.miyu = miyu
+    def __init__(self, yunxi, label):  # noqa: D401 — 不调父类构造:它会写 deepseek 配置
+        self.yunxi = yunxi
         self.run_dir = RUN_ROOT / label
         self.home = self.run_dir / "home"
         if self.home.exists():
@@ -111,10 +111,10 @@ class GoSandbox(Sandbox):
             shutil.copyfile(USER_MODELS_CACHE, self.home / "cache" / "models_cache.json")
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith("HERDR_")
-                    and k not in ("MIYU_SESSION", "MIYU_DIRECT", "MIYU_TURN_MODE", "MIYU_HOME",
+                    and k not in ("YUNXI_SESSION", "YUNXI_DIRECT", "YUNXI_TURN_MODE", "YUNXI_HOME",
                                   "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME")}
-        self.env.update(MIYU_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8",
-                        MIYU_LOG="info")
+        self.env.update(YUNXI_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8",
+                        YUNXI_LOG="info")
         self.daemon = None
         self.clients = []
         self.timeline = []
@@ -163,7 +163,7 @@ class GoSandbox(Sandbox):
                 environ = (proc / "environ").read_bytes()
             except OSError:
                 continue
-            if f"MIYU_HOME={self.home}".encode() in environ.split(b"\0"):
+            if f"YUNXI_HOME={self.home}".encode() in environ.split(b"\0"):
                 pids.append(int(proc.name))
         return pids
 
@@ -414,7 +414,7 @@ def analyze(run_dir, summary):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("miyu")
+    parser.add_argument("yunxi")
     parser.add_argument("label")
     parser.add_argument("--skip-dev", action="store_true")
     parser.add_argument("--skip-main", action="store_true")
@@ -422,7 +422,7 @@ def main():
     parser.add_argument("--smoke", action="store_true", help="只跑首轮 + 一个工具轮,验管线")
     args = parser.parse_args()
     gaps = [int(x) for x in args.gaps.split(",")]
-    box = GoSandbox(Path(args.miyu).resolve(), args.label)
+    box = GoSandbox(Path(args.yunxi).resolve(), args.label)
 
     def on_term(*_):
         raise SystemExit("terminated")

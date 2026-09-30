@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Session pickers retain the lobby and reserve a scrollable transcript viewport.
 
-Uses a disposable MIYU_HOME, local stub, and PTY with cursor reports.
-Run: python3 testkit/tui/session_picker.py --binary /absolute/path/to/miyu
+Uses a disposable YUNXI_HOME, local stub, and PTY with cursor reports.
+Run: python3 testkit/tui/session_picker.py --binary /absolute/path/to/yunxi
 """
 
 import argparse
@@ -32,14 +32,14 @@ def main():
     parser.add_argument("--active-only", action="store_true", help="Check choosing the active session is a no-op")
     parser.add_argument("--explicit-active", action="store_true", help="Check explicit active session index is a no-op")
     args = parser.parse_args()
-    os.environ.pop("MIYU_DIRECT", None)
-    sandbox = sandbox_dir.make("miyu-session-picker-")
+    os.environ.pop("YUNXI_DIRECT", None)
+    sandbox = sandbox_dir.make("yunxi-session-picker-")
     os.environ.update(
-        MIYU_HOME=str(sandbox / "home"),
-        MIYU_TUI_RUNTIME=str(sandbox / "run"),
-        MIYU_TUI_PORT=str(free_port()),
+        YUNXI_HOME=str(sandbox / "home"),
+        YUNXI_TUI_RUNTIME=str(sandbox / "run"),
+        YUNXI_TUI_PORT=str(free_port()),
         STUB_PORT=str(free_port()),
-        OUT=os.environ.get("OUT") or str(Path.home() / ".cache" / "miyu-session-picker"),
+        OUT=os.environ.get("OUT") or str(Path.home() / ".cache" / "yunxi-session-picker"),
     )
     import round26 as q
     import pyte

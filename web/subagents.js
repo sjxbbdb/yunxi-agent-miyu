@@ -11,7 +11,7 @@
  *
  * 单独成文件:app.js 已经一万四千行。
  */
-window.MiyuSubagents = (() => {
+window.YunXiSubagents = (() => {
   let openSession = () => {};
   let bar = null;
 

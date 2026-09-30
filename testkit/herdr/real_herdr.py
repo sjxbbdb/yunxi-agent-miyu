@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""真 herdr 端到端(09-23):miyu TUI 跑在 herdr 的 pane 里,中转线的 CLI 带着 herdr
+"""真 herdr 端到端(09-23):yunxi TUI 跑在 herdr 的 pane 里,中转线的 CLI 带着 herdr
 钩子,看侧栏最后停在哪、kill 之后还挂不挂着、通知走哪条路。
 
-    BIN=<miyu 二进制> python3 testkit/herdr/real_herdr.py
+    BIN=<yunxi 二进制> python3 testkit/herdr/real_herdr.py
 
 用户现场:「任务完成了 herdr 还显示进行中,而且没有提示音」。根因是 daemon 由 pane
-里的 miyu 拉起、继承了那个 pane 的 `HERDR_PANE_ID`,中转线的 agy/claude/codex 子
+里的 yunxi 拉起、继承了那个 pane 的 `HERDR_PANE_ID`,中转线的 agy/claude/codex 子
 进程再继承 daemon——它们装着 herdr 的钩子,一启动就往那个 pane 报「我是这里的官方
-会话」,herdr 从此静默丢掉 `custom:miyu` 的所有上报,idle 永远到不了。
+会话」,herdr 从此静默丢掉 `custom:yunxi` 的所有上报,idle 永远到不了。
 
 这份测具用**真 herdr**(不是 `run.py` 那个假 herdr:假的只会照着我们以为的规则
 走,「官方会话占住 pane」这条规则当初就是没人知道才漏的):
@@ -21,13 +21,13 @@
   / `paplay` / `ffplay`,谁被叫到就记一笔。
 
 判定:
-  tui_reported           TUI 起来后侧栏出现 miyu
+  tui_reported           TUI 起来后侧栏出现 yunxi
   relay_cli_no_pane      假 agy 拿不到 HERDR_PANE_ID,也就没去认领 pane
   idle_after_turn        回合结束侧栏回到 idle(被认领时会一直卡在 working)
   popup_via_system       失焦时回合结束:弹窗走 notify-send(herdr 吞 OSC 99)
-  sound_left_to_herdr    失焦时回合结束:Miyu 自己一声不响,提示音交给 herdr
+  sound_left_to_herdr    失焦时回合结束:YunXi 自己一声不响,提示音交给 herdr
   sigterm_releases       对 TUI 发 SIGTERM:进程退出,侧栏那行被释放
-一条判定一行 ✅/❌,最后 n/m passed。产物在 ~/.cache/miyu-herdr-real/。
+一条判定一行 ✅/❌,最后 n/m passed。产物在 ~/.cache/yunxi-herdr-real/。
 
 daemon 自己忘没忘坐标这里看不出来(中转线那层把 HERDR_* 全剥了,假 agy 身上分不出
 是哪层起的作用;`/proc/<pid>/environ` 是启动那一刻的环境区,删了变量也不变),单独
@@ -45,8 +45,8 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu").resolve()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-herdr-real")).expanduser()
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi").resolve()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-herdr-real")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 AGY_CONFIG = OUT / "agy-config"
@@ -63,13 +63,13 @@ HERDR_ENV = dict(
     BASE_ENV,
     XDG_CONFIG_HOME=str(HERDR_ROOT / "config"),
     XDG_STATE_HOME=str(HERDR_ROOT / "state"),
-    # herdr 自己的提示音关掉:这里只看 Miyu 那边叫没叫播放器。
+    # herdr 自己的提示音关掉:这里只看 YunXi 那边叫没叫播放器。
     HERDR_DISABLE_SOUND="1",
     SHELL="/usr/bin/bash",
-    # 下面这些由 pane 里的 bash 继承给 miyu。
-    MIYU_HOME=str(HOME),
+    # 下面这些由 pane 里的 bash 继承给 yunxi。
+    YUNXI_HOME=str(HOME),
     XDG_RUNTIME_DIR=str(RUNTIME),
-    MIYU_AGY_CONFIG_DIR=str(AGY_CONFIG),
+    YUNXI_AGY_CONFIG_DIR=str(AGY_CONFIG),
     FAKE_AGY_LOG=str(AGY_LOG),
     FAKE_SOUND_LOG=str(SOUND_LOG),
     PATH=f"{FAKE_BIN}:{BASE_ENV.get('PATH', '')}",
@@ -110,7 +110,7 @@ if os.environ.get("HERDR_ENV") == "1" and pane and sock:
 record({"kind": "start", "pid": os.getpid(), "pane": pane,
         "herdr_vars": sorted(k for k in os.environ if k.startswith("HERDR_")), "claimed": claimed})
 usage = {"input_tokens": 10, "output_tokens": 2, "thinking_tokens": 0, "cache_read_tokens": 0, "total_tokens": 12}
-# init 里要回显 `--agent`:Miyu 拿它确认人格 agent 真的加载上了,对不上整轮判失败。
+# init 里要回显 `--agent`:YunXi 拿它确认人格 agent 真的加载上了,对不上整轮判失败。
 emit({"event": "init", "conversation_id": sid, "init": {"model": "m", "cwd": "/", "agent": opt("--agent") or "", "tools": []}})
 turn = 0
 for line in sys.stdin:
@@ -209,7 +209,7 @@ def environ_of(pid):
 
 
 def tui_pid():
-    """pane 里跑着的那个 miyu TUI(不是 daemon)。"""
+    """pane 里跑着的那个 yunxi TUI(不是 daemon)。"""
     for entry in Path("/proc").iterdir():
         if not entry.name.isdigit():
             continue
@@ -221,7 +221,7 @@ def tui_pid():
             continue
         if b"__daemon" in argv:
             continue
-        if environ_of(int(entry.name)).get("MIYU_HOME") == str(HOME):
+        if environ_of(int(entry.name)).get("YUNXI_HOME") == str(HOME):
             return int(entry.name)
     return None
 
@@ -246,7 +246,7 @@ def write_config():
         "memory": {"enabled": False},
         "notifications": {"enabled": True, "on_turn_complete": True, "sound": True},
         "plugins": {"antigravity": {
-            "binary": str(FAKE_AGY), "native_tools": "off", "miyu_tools": "off",
+            "binary": str(FAKE_AGY), "native_tools": "off", "yunxi_tools": "off",
             "reuse_process": False,
         }},
     }
@@ -303,7 +303,7 @@ def main():
         wait_until(lambda: "$" in screen(pane), 15)
         herdr("pane", "run", pane, f"exec {BIN}")
         row = wait_until(lambda: agent_status(pane), 40)
-        check("tui_reported", row and row.startswith("miyu:"), row)
+        check("tui_reported", row and row.startswith("yunxi:"), row)
         # 等 TUI 真画出来(大厅)再动手,不然字会被 shell 吃掉。
         time.sleep(3.0)
         herdr("pane", "split", pane, "--direction", "right")
@@ -312,14 +312,14 @@ def main():
         herdr("pane", "send-text", pane, "hello there")
         time.sleep(0.4)
         herdr("pane", "send-keys", pane, "enter")
-        # 人的真实动作:发完消息切去别处。herdr 会给 miyu 那个 pane 发「失焦」
+        # 人的真实动作:发完消息切去别处。herdr 会给 yunxi 那个 pane 发「失焦」
         # (`ESC[O`)——前提是它打开了焦点上报,回合里一定开着。光 split 不挪焦点
         # (实测),得再 focus 一次。假 agy 每轮先睡一秒,来得及。
         time.sleep(0.3)
         herdr("pane", "focus", "--pane", pane, "--direction", "right")
         focused = [p["pane_id"] for p in herdr_json("pane", "list").get("panes", []) if p.get("focused")]
         print(f"   (焦点在: {focused})")
-        working = wait_until(lambda: agent_status(pane) == "miyu:working", 20, step=0.1)
+        working = wait_until(lambda: agent_status(pane) == "yunxi:working", 20, step=0.1)
         print(f"   (回合中侧栏: {agent_status(pane)}; 亮过 working: {bool(working)})")
         wait_until(lambda: any(r["kind"] == "turn" for r in agy_records()), 60)
         # 回合收尾:idle 上报、通知都是回合结束那一刻发的,给它几秒。
@@ -328,7 +328,7 @@ def main():
         starts = [r for r in agy_records() if r["kind"] == "start"]
         check("relay_cli_no_pane", starts and all(not r["pane"] for r in starts),
               json.dumps(starts, ensure_ascii=False)[:300])
-        final = wait_until(lambda: agent_status(pane) in ("miyu:idle", "miyu:done"), 5)
+        final = wait_until(lambda: agent_status(pane) in ("yunxi:idle", "yunxi:done"), 5)
         check("idle_after_turn", final, agent_status(pane))
 
         sounds = sound_lines()

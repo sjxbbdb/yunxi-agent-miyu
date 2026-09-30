@@ -12,7 +12,7 @@
     cargo build
     python3 testkit/tui/exit_keeps_turn.py
 
-这些 TUI 走查只能一个一个跑（共用 MIYU_HOME 与桩模型端口）。
+这些 TUI 走查只能一个一个跑（共用 YUNXI_HOME 与桩模型端口）。
 """
 
 import os
@@ -48,7 +48,7 @@ def turn_rows():
 
 def main():
     report = {}
-    h.ENV["MIYU_LOG"] = "info"
+    h.ENV["YUNXI_LOG"] = "info"
     # 要撞的是**唤醒轮**那条路（`wake.rs::follow_wake_run`），所以后台任务得在
     # 主线回合**收工之后**才完成——否则 daemon 会把报告当 follow-up 排进正在跑
     # 的那一轮，走的是另一条代码路径。主线约 20 秒（一段长思考），后台 25 秒。

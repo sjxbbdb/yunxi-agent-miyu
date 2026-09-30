@@ -15,7 +15,7 @@ kitty 的图片是画到窗口上的，不在文本缓冲里，抓 pyte 是抓�
 
 两点要命的细节，都是第一版踩过的：
 
-- miyu 的输出必须**直通 kitty 的 tty**。`capture_output=True` 会把图片协议的
+- yunxi 的输出必须**直通 kitty 的 tty**。`capture_output=True` 会把图片协议的
   转义序列吞进管道，屏幕上什么都不会有，而 `is_native_kitty_terminal()` 看的是
   `TERM` 不是 isatty，所以它照样"成功"了——一片空屏配一条绿灯。
 - `STUB_REPLY` 是桩模型**启动时**读的，不是每个请求读的。要换正文就得重起桩。
@@ -25,7 +25,7 @@ kitty 的图片是画到窗口上的，不在文本缓冲里，抓 pyte 是抓�
     cargo build
     testkit/kitty-image/run_headless.sh python3 testkit/mermaid/terminal.py
 
-产物在 ~/.cache/miyu-mermaid-term/（截图 + 像素数 + 报告）。
+产物在 ~/.cache/yunxi-mermaid-term/（截图 + 像素数 + 报告）。
 """
 
 import json
@@ -37,15 +37,15 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-mermaid-term"))
-HOME = Path("/tmp/miyu-mermaid-term/home")
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-mermaid-term"))
+HOME = Path("/tmp/yunxi-mermaid-term/home")
 REPO = Path(__file__).resolve().parents[2]
-BIN = REPO / "target" / "debug" / "miyu"
+BIN = REPO / "target" / "debug" / "yunxi"
 SMOKE = REPO / "testkit" / "repl-smoke"
 
 FLOW = (
@@ -142,7 +142,7 @@ def run_case(tag, lang, body, port, report):
         with (OUT / f"{tag}.log").open("wb") as err:
             subprocess.run(
                 [str(BIN), "画个图"],
-                env=dict(os.environ, MIYU_HOME=str(HOME), MIYU_DIRECT="1", MIYU_TUI="0"),
+                env=dict(os.environ, YUNXI_HOME=str(HOME), YUNXI_DIRECT="1", YUNXI_TUI="0"),
                 stdout=None,  # 直通 kitty 的 tty，图片才画得出来
                 stderr=err,
                 stdin=subprocess.DEVNULL,

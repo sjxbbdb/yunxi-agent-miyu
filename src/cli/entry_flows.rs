@@ -4,10 +4,10 @@ use crate::cli::*;
 
 /// 跑新手引导,返回「接下来要不要进 REPL」。
 ///
-/// 开场就退出(Esc / Ctrl+C)什么都不写、也不进 REPL,下次裸 `miyu` 还会再来;
+/// 开场就退出(Esc / Ctrl+C)什么都不写、也不进 REPL,下次裸 `yunxi` 还会再来;
 /// 选了「进入设置界面」就先开完整设置再进;做完或跳过直接进——空会话的
 /// banner 就是第一帧,不做完成页。引导写了配置,顺手让活着的 daemon 重读。
-pub(super) async fn run_oobe_flow(paths: &MiyuPaths) -> Result<bool> {
+pub(super) async fn run_oobe_flow(paths: &YunXiPaths) -> Result<bool> {
     spawn_hangup_watchdog();
     // 后面是全屏 REPL 的话,备用屏一路不退,中间不闪 shell 画面。
     let keep_alt = crate::cli::repl::tail::screen::requested();
@@ -17,7 +17,7 @@ pub(super) async fn run_oobe_flow(paths: &MiyuPaths) -> Result<bool> {
     }
     match outcome {
         crate::oobe::Outcome::Aborted => {
-            miyu_base::terminal::release_alt_screen_if_held();
+            yunxi_base::terminal::release_alt_screen_if_held();
             Ok(false)
         }
         crate::oobe::Outcome::OpenSettings => {
@@ -33,13 +33,13 @@ pub(super) async fn run_oobe_flow(paths: &MiyuPaths) -> Result<bool> {
     }
 }
 
-/// 一次性回合的总入口(`miyu ask …` 与裸 `miyu "…"`)。
+/// 一次性回合的总入口(`yunxi ask …` 与裸 `yunxi "…"`)。
 ///
 /// 没用到任何程序驱动特性时走原路(直连/阅后即焚/终端渲染),行为一字不改;
 /// 带了 `--create/--mode/--model/…` 或 JSON 输出时走新路:会话由
 /// `turn_request` 定,覆盖随 StartTurn 走,需要 daemon。
 pub(super) async fn run_one_shot(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     options: TurnOptions,
     message: String,
     read_stdin: bool,
@@ -102,7 +102,7 @@ pub(super) async fn run_one_shot(
                 .image
                 .iter()
                 .map(|path| {
-                    Some(miyu_base::clipboard::PastedImage::Path(
+                    Some(yunxi_base::clipboard::PastedImage::Path(
                         path.to_string_lossy().into_owned(),
                     ))
                 })

@@ -15,7 +15,7 @@ pub(in crate::cli) async fn handle_live_post_turn_overflow(
     context_tokens: u64,
     show_token_usage: bool,
     cumulative_tokens: Option<&mut TurnTokens>,
-) -> Result<Option<miyu_core::llm::ChatResult>> {
+) -> Result<Option<yunxi_core::llm::ChatResult>> {
     let compact_result = agent
         .handle_overflow_after_turn(context_tokens, |event| {
             handle_live_agent_event(live, renderer, event)
@@ -171,13 +171,13 @@ pub(in crate::cli) fn handle_live_agent_event(
 
 pub(in crate::cli) async fn run_live_agent_turn(
     live: &mut LiveReplTail,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     state: &StateStore,
     agent: &mut Agent,
     input: LiveAgentInput<'_>,
     control: &AgentTurnControl,
     renderer: &mut render::StreamRenderer,
-) -> Result<Option<miyu_core::llm::ChatResult>> {
+) -> Result<Option<yunxi_core::llm::ChatResult>> {
     renderer.use_external_cursor_control();
     renderer.use_buffered_output();
     let (mut raw, _) = live.take_raw_guard()?;
@@ -187,7 +187,7 @@ pub(in crate::cli) async fn run_live_agent_turn(
     }
     renderer.start_waiting()?;
     live.apply_renderer_frame(renderer)?;
-    // 直连模式（`MIYU_DIRECT=1`，不经 daemon）也上报：留半套的话，同一台机器上
+    // 直连模式（`YUNXI_DIRECT=1`，不经 daemon）也上报：留半套的话，同一台机器上
     // 换个跑法侧栏就不动了，查起来比没有还费劲。
     let _herdr_turn = herdr::TurnGuard::begin(&state.session_id());
 
@@ -271,12 +271,12 @@ pub(in crate::cli) async fn run_live_agent_turn(
                         else {
                             unreachable!("just matched")
                         };
-                        // 直连模式（`MIYU_DIRECT=1`）没有 daemon，回合就跑在这
+                        // 直连模式（`YUNXI_DIRECT=1`）没有 daemon，回合就跑在这
                         // 个进程里，做不了远端那条路的「分离 → 执行 → 挂回来」
                         // （09-20）。所以这里仍然吞掉这次回车——但**把原因说
                         // 出来**：原来是全静默，屏幕上一点反应都没有，用户以为
                         // 回车坏了。输入原样留着，这一轮结束后再回车即可。
-                        let reason = miyu_core::slash_commands::during_turn(command, args)
+                        let reason = yunxi_core::slash_commands::during_turn(command, args)
                             .reason()
                             .unwrap_or(t(
                                 "commands run after this reply finishes (direct mode)",

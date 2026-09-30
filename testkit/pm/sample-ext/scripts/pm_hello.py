@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # 显示名称：包管理器示例
-# Description: Echo a greeting; sample script installed by miyu pm.
+# Description: Echo a greeting; sample script installed by yunxi pm.
 # Timeout: 10
 # Permission: read-only
 # Parameters:

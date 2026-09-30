@@ -77,7 +77,7 @@ BACKGROUND = os.environ.get("STUB_BACKGROUND")
 # 置 STUB_EDIT=1:改一次文件。全屏下"编辑文件"那一步点开该是**补丁 diff**,
 # 而且路径只出现一次(时间线那行已经写过了)。
 EDIT = os.environ.get("STUB_EDIT")
-EDIT_PATH = os.environ.get("STUB_EDIT_PATH", "/tmp/miyu-tui-smoke/walk.txt")
+EDIT_PATH = os.environ.get("STUB_EDIT_PATH", "/tmp/yunxi-tui-smoke/walk.txt")
 # 置 STUB_FAIL=1:跑一条必定失败的命令。失败的那一步要渲染成红的。
 FAIL = os.environ.get("STUB_FAIL")
 FAIL_COMMAND = os.environ.get(

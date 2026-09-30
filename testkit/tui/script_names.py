@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """脚本工具在全屏 TUI 时间线上要显示成头部里的「显示名称」，不是裸 id。
 
-脚本的显示名只在 daemon 里登记过，TUI / `miyu "…"` 那条路是另一个进程，表是空的
+脚本的显示名只在 daemon 里登记过，TUI / `yunxi "…"` 那条路是另一个进程，表是空的
 ——WebUI 用的是事件里 daemon 算好的 `display_name`，所以只有它对（用户 09-17）。
 现在客户端从 `tool.preparing` / `tool.started` 事件里把名字学过来。
 

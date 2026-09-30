@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """全屏 TUI 走查：沙箱 daemon + 桩模型，真 PTY 里跑一轮对话再退出。
 
-和 `testkit/repl-smoke` 是同一套骨架（沙箱 MIYU_HOME、桩 LLM、PTY），区别是
+和 `testkit/repl-smoke` 是同一套骨架（沙箱 YUNXI_HOME、桩 LLM、PTY），区别是
 TUI 跑在 alt screen 上，画面要用 pyte 还原成屏幕矩阵才看得清——直接看字节流
 只能看到一堆重绘。
 
@@ -10,10 +10,10 @@ TUI 跑在 alt screen 上，画面要用 pyte 还原成屏幕矩阵才看得清�
     cargo build
     python3 testkit/tui/run.py
 
-产物在 ~/.cache/miyu-tui-smoke/：raw.bin（终端原始输出）、screen.txt（最后一屏）、
+产物在 ~/.cache/yunxi-tui-smoke/：raw.bin（终端原始输出）、screen.txt（最后一屏）、
 report.json、daemon.log。
 
-**这些 TUI 走查只能一个一个跑**：它们共用同一个 `MIYU_HOME`（`/tmp/miyu-tui-smoke/home`）
+**这些 TUI 走查只能一个一个跑**：它们共用同一个 `YUNXI_HOME`（`/tmp/yunxi-tui-smoke/home`）
 和同一个桩模型端口，起头还会 `rmtree` 那个家目录。并行跑的话两边互相掀桌子，红成一片
 而代码一点问题都没有。
 """
@@ -36,7 +36,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fold_summary import FOLD_SUMMARY_RE, is_fold_summary  # noqa: E402,F401
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -48,19 +48,19 @@ except ImportError:
     raise SystemExit(2)
 
 ROOT = Path(__file__).resolve().parents[2]
-# MIYU_BIN 指定别的二进制（A/B 对比修前修后用）。
-BIN = Path(os.environ.get("MIYU_BIN", ROOT / "target" / "debug" / "miyu"))
+# YUNXI_BIN 指定别的二进制（A/B 对比修前修后用）。
+BIN = Path(os.environ.get("YUNXI_BIN", ROOT / "target" / "debug" / "yunxi"))
 SMOKE = ROOT / "testkit" / "repl-smoke"
 
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-tui-smoke/home"))
-RUNTIME = os.environ.get("MIYU_TUI_RUNTIME", "/tmp/mx-tui")
-PORT = int(os.environ.get("MIYU_TUI_PORT", "18433"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-tui-smoke/home"))
+RUNTIME = os.environ.get("YUNXI_TUI_RUNTIME", "/tmp/mx-tui")
+PORT = int(os.environ.get("YUNXI_TUI_PORT", "18433"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18499"))
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-tui-smoke"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-tui-smoke"))
 BASE = f"http://127.0.0.1:{PORT}"
 # 32 行装不下带六行命令尾巴的展开时间线（`Worked for` 的抬头会滚出屏），加高。
 COLS, ROWS = 110, 50
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, MIYU_TUI="1")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, YUNXI_TUI="1")
 # 被测的 TUI 跑在 pyte 模拟的 xterm 里，TERM 要说这个终端，不能照搬调用方的。从
 # systemd 单元起的时候继承来的是 `TERM=linux`（cron 里干脆没有），TUI 就按 Linux 文本
 # 控制台退掉超链接，也不认真彩色——`round26` 的 OSC 8 两条、`readonly_toggle` 的取色
@@ -71,7 +71,7 @@ ENV.setdefault("COLORTERM", "truecolor")
 
 PROMPT = "走查一句"
 # 桩模型要改的那个文件。Add File 语义，跑之前得先不存在。跟着沙箱走（默认仍是
-# /tmp/miyu-tui-smoke/walk.txt）：写死一个路径的话，两个会话同时跑走查，后跑的那个
+# /tmp/yunxi-tui-smoke/walk.txt）：写死一个路径的话，两个会话同时跑走查，后跑的那个
 # 改文件时撞上「file already exists」，item12/22 平白变红（09-24）。
 EDIT_FILE = HOME.parent / "walk.txt"
 # item24 重开后按名字切回主会话用（见那一段）。
@@ -115,7 +115,7 @@ def write_config():
     )
     # 客户端连不上 daemon 时会**自己拉一个**，端口取自这份文件；没有它就用
     # 默认的 8300——那是本机真 daemon 的端口。撞不上端口的那个进程照样会攥着
-    # 沙箱的锁，把后面每一次走查都堵死（09-21 实测：`another Miyu core is
+    # 沙箱的锁，把后面每一次走查都堵死（09-21 实测：`another YunXi core is
     # already running`）。先写好，自拉的也落在沙箱端口上。
     (HOME / "state").mkdir(parents=True, exist_ok=True)
     (HOME / "state" / "daemon-launch.json").write_text(
@@ -145,7 +145,7 @@ def spawn_tui():
         os.setsid()
         fcntl.ioctl(1, termios.TIOCSCTTY, 0)
 
-    # 裸 `miyu` 直接进普通模式(09-13 起 `miyu normal` 退役,只留 `miyu dev`);
+    # 裸 `yunxi` 直接进普通模式(09-13 起 `yunxi normal` 退役,只留 `yunxi dev`);
     # 沙箱配置没有 config_version,迁移会把 oobe_done 标成 true,不会撞上引导。
     process = subprocess.Popen(
         [str(BIN)], stdin=slave, stdout=slave, stderr=slave,
@@ -435,7 +435,7 @@ def kill_stale_daemon():
     """端口上还蹲着上一轮的 daemon 就先请它走。
 
     残留的那个会让这一轮的 daemon 绑不上端口（`Address already in use`），
-    而客户端照样连得上——连的是**上一轮**那个，它的 MIYU_HOME 刚被这一轮
+    而客户端照样连得上——连的是**上一轮**那个，它的 YUNXI_HOME 刚被这一轮
     删掉了。结果是满屏莫名其妙的红，跟代码一点关系没有（实测踩过）。
     """
     for pid in _listeners_on_port(PORT):
@@ -1184,7 +1184,7 @@ def main():
         report["spinner_in_glyph_column"] = bool(
             re.search(
                 r"\x1b\[2m\x1b\[36m[⠁-⣿]\x1b\[0m (?:\x1b\[[0-9;]*m)*"
-                r"(?:\x1b\]1337;miyu-block=\d+\x07)?[\ue000-\uf8ff\U000f0000-\U000fffff$] ",
+                r"(?:\x1b\]1337;yunxi-block=\d+\x07)?[\ue000-\uf8ff\U000f0000-\U000fffff$] ",
                 stream,
             )
         )
@@ -1672,7 +1672,7 @@ def main():
         tui, master = spawn_tui()
         again = bytearray()
         reset_view()
-        # 09-20 起 `miyu` 启动开的是**新会话**（用户拍板），所以重开之后屏幕
+        # 09-20 起 `yunxi` 启动开的是**新会话**（用户拍板），所以重开之后屏幕
         # 上什么都没有——要验回放就得先用 `/session` 切回刚才那条。按名字切，
         # 不走选择器：跑满一整套之后，重开的选择器偶发按第一个 j 就收掉、没切成
         # （09-24，单独复现不出来；选择器本身由 session_picker.py 验），item01/24

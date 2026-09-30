@@ -3,8 +3,8 @@
 
     python3 testkit/reasoning-passback/probe.py <供应商 id> <模型> [<供应商 id> <模型> ...]
 
-读本机配置(默认 ~/.miyu/config/config.jsonc,`MIYU_CONFIG` 可改)里该供应商的
-base_url 与 key,照 Miyu 的形状发两次最小请求:一轮工具调用 + 工具结果,之后让
+读本机配置(默认 ~/.yunxi/config/config.jsonc,`YUNXI_CONFIG` 可改)里该供应商的
+base_url 与 key,照 YunXi 的形状发两次最小请求:一轮工具调用 + 工具结果,之后让
 模型接着说。A 不带 `reasoning_content` 键(不在白名单上的现状),B 带上。
 
 看三样:HTTP 状态、流里有没有 error、B 的 prompt_tokens 是不是比 A 多——多了
@@ -21,8 +21,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-CONFIG = Path(os.environ.get("MIYU_CONFIG", "~/.miyu/config/config.jsonc")).expanduser()
-# 与 crates/miyu-core/src/llm/openai_compatible/zen_headers.rs 同一套识别头。
+CONFIG = Path(os.environ.get("YUNXI_CONFIG", "~/.yunxi/config/config.jsonc")).expanduser()
+# 与 crates/yunxi-core/src/llm/openai_compatible/zen_headers.rs 同一套识别头。
 ZEN_ROOT = "https://opencode.ai/zen"
 ZEN_UA = "opencode/1.18.29 ai-sdk/provider-utils/4.0.46 runtime/bun/1.4.0"
 REASONING = "The user wants 17*23. I will call the calculator instead of guessing."

@@ -15,9 +15,9 @@
     cargo build
     python3 testkit/tui/goal_question.py
 
-产物在 ~/.cache/miyu-goal-question/。
+产物在 ~/.cache/yunxi-goal-question/。
 
-**这些 TUI 走查只能一个一个跑**：共用同一个 `MIYU_HOME` 和桩模型端口。
+**这些 TUI 走查只能一个一个跑**：共用同一个 `YUNXI_HOME` 和桩模型端口。
 """
 
 import json
@@ -30,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-goal-question"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-goal-question"))
 # 面板最多等多久。续轮要先起来、再跑一次模型请求，比普通回合慢。
 PANEL_WAIT = 40.0
 
@@ -76,7 +76,7 @@ def main():
             return 2
         daemon = subprocess.Popen(
             [str(h.BIN), "__daemon", "--port", str(h.PORT)],
-            env=dict(h.ENV, MIYU_LOG="info"),
+            env=dict(h.ENV, YUNXI_LOG="info"),
             cwd=str(h.HOME),
             stdout=(OUT / "daemon.log").open("w"),
             stderr=subprocess.STDOUT,

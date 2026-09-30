@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """agy 中转「重启不全量重放」+「全量重放不越 192K」的真机验收(09-05)。
 
-两个场景都用**单次命令**形态(`miyu -c '…'`,落在当前常驻会话,MIYU_DIRECT=1):
+两个场景都用**单次命令**形态(`yunxi -c '…'`,落在当前常驻会话,YUNXI_DIRECT=1):
 每条命令一个进程,进程之间正是 daemon 重启的等价物——续传映射若只在内存里,
 第二条命令必然全量重放。
 
@@ -9,15 +9,15 @@
      --conversation、stdin 无 <conversation-history>。修复前必红。
   B. 预算收口(假 agy 堆历史,最后一轮真 agy):用假 agy 免费堆出 >192K 的
      历史,再换回真 agy 发一条带暗号的问题——映射指向假会话,真 agy 静默
-     新开,Miyu 判出续传丢失后全量重放。断言 stdin ≤ 预算、带 omitted 标记、
+     新开,YunXi 判出续传丢失后全量重放。断言 stdin ≤ 预算、带 omitted 标记、
      暗号在末尾;再读 agy 落盘的 transcript_full.jsonl,断言第 0 条输入没有
      `<truncated N bytes>`,且回复答出暗号。修复前 stdin 超线、转录里有截断标记。
 
 用法:
-    MIYU_HOME=/tmp/miyu-agy-guard/home python3 testkit/antigravity/replay_guard.py [A|B|AB]
-    (该 home 是 /tmp/miyu-agy/home 的副本;别的会话可能正拿原件跑隔离 daemon)
+    YUNXI_HOME=/tmp/yunxi-agy-guard/home python3 testkit/antigravity/replay_guard.py [A|B|AB]
+    (该 home 是 /tmp/yunxi-agy/home 的副本;别的会话可能正拿原件跑隔离 daemon)
 
-前提:MIYU_HOME 下 config.jsonc 的 active_provider 是 antigravity 协议供应商,
+前提:YUNXI_HOME 下 config.jsonc 的 active_provider 是 antigravity 协议供应商,
 本机 agy 已登录,该 home 没有 daemon 在跑(直连互斥)。
 """
 
@@ -30,14 +30,14 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-agy-guard/home"))
+BIN = Path(os.environ.get("BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-agy-guard/home"))
 CONFIG = HOME / "config" / "config.jsonc"
 BRAIN = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 BUDGET = 172_800
@@ -64,10 +64,10 @@ echo "{\"event\":\"result\",\"result\":{\"conversation_id\":\"$sid\",\"status\":
 
 def env():
     e = dict(os.environ)
-    e["MIYU_HOME"] = str(HOME)
-    e["MIYU_DIRECT"] = "1"
-    e["MIYU_LOG_REQUESTS"] = "1"
-    e["MIYU_LOG"] = "info"
+    e["YUNXI_HOME"] = str(HOME)
+    e["YUNXI_DIRECT"] = "1"
+    e["YUNXI_LOG_REQUESTS"] = "1"
+    e["YUNXI_LOG"] = "info"
     e.setdefault("LANG", "zh_CN.UTF-8")
     return e
 
@@ -117,7 +117,7 @@ def set_binary(path):
 
 def log_lines(pattern: str):
     hits = []
-    for f in sorted(glob.glob(str(HOME / "cache" / "logs" / "miyu.*.log"))):
+    for f in sorted(glob.glob(str(HOME / "cache" / "logs" / "yunxi.*.log"))):
         for line in open(f, encoding="utf-8", errors="replace"):
             if re.search(pattern, line):
                 hits.append(line.rstrip()[:220])

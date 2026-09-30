@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn identical_rows_need_no_bytes() {
-        let row = vec![span("  ✦    ", Some(Color::Blue)), span("MIYU", None)];
+        let row = vec![span("  ✦    ", Some(Color::Blue)), span("YUNXI", None)];
         assert_eq!(patch_row(&row, &row, 5), "");
     }
 
@@ -434,7 +434,7 @@ mod tests {
         // 变了的段不止一个字：整段重写会丢掉格级的精度。
         let old = vec![
             span("  ", None),
-            span("MIYU", Some(Color::Blue)),
+            span("YUNXI", Some(Color::Blue)),
             span(" x", None),
         ];
         let new = vec![

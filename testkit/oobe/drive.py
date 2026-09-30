@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""用 pyte 在 PTY 里驱动真二进制的 `miyu oobe`，逐屏抓下来打印。
+"""用 pyte 在 PTY 里驱动真二进制的 `yunxi oobe`，逐屏抓下来打印。
 
 用法: python3 drive.py [binary] [cols] [rows]
 
 抓的是「终端真正显示成什么样」，不是程序以为自己画了什么——中文宽度、两列对齐、
-滚动视口的边界都能在这里现形。跑在一个临时 MIYU_HOME 里，不碰真配置；
-MIYU_OOBE_NO_IME=1 免得反复开关真输入法。
+滚动视口的边界都能在这里现形。跑在一个临时 YUNXI_HOME 里，不碰真配置；
+YUNXI_OOBE_NO_IME=1 免得反复开关真输入法。
 
 走一遍：欢迎 → 人格（自己捏，起名）→ 功能（关一项）→ 认识你 → 终端（不装）
 → 沙盒模式（开启）→ 接模型（opencode Zen，会真的联网拉目录；没网就停在报错那屏）→ Ctrl+S 跳过收尾。
@@ -19,27 +19,27 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 BIN = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "target", "debug", "miyu"
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "target", "debug", "yunxi"
 )
 COLS = int(sys.argv[2]) if len(sys.argv) > 2 else 90
 ROWS = int(sys.argv[3]) if len(sys.argv) > 3 else 34
 
-home = str(sandbox_dir.make("miyu-oobe-"))
+home = str(sandbox_dir.make("yunxi-oobe-"))
 screen = pyte.Screen(COLS, ROWS)
 stream = pyte.ByteStream(screen)
 
 pid, fd = pty.fork()
 if pid == 0:
     os.environ["TERM"] = "xterm-256color"
-    os.environ["MIYU_HOME"] = home
-    os.environ["MIYU_OOBE_NO_IME"] = "1"
-    os.environ["MIYU_OOBE_VERBOSE"] = "1"
+    os.environ["YUNXI_HOME"] = home
+    os.environ["YUNXI_OOBE_NO_IME"] = "1"
+    os.environ["YUNXI_OOBE_VERBOSE"] = "1"
     os.environ["LANG"] = "zh_CN.UTF-8"
     os.execvp(BIN, [BIN, "oobe"])
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", ROWS, COLS, 0, 0))
@@ -184,7 +184,7 @@ except ProcessLookupError:
     pass
 
 print()
-print("家目录:", home, "（跑完即删；要留着看设 MIYU_KEEP_SANDBOX=1）")
+print("家目录:", home, "（跑完即删；要留着看设 YUNXI_KEEP_SANDBOX=1）")
 for root, _, files in os.walk(home):
     for name in files:
         path = os.path.join(root, name)

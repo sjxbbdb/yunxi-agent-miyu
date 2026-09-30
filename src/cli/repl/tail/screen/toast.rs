@@ -13,8 +13,8 @@ use crossterm::{
     style::Print,
     terminal::{Clear, ClearType},
 };
-use miyu_hosts::render::visible_width;
 use std::time::{Duration, Instant};
+use yunxi_hosts::render::visible_width;
 
 /// 浮层靠哪边。
 #[derive(Clone, Copy, PartialEq)]
@@ -219,7 +219,7 @@ impl Screen {
         // 通知用主色（和代码块、表头一个色），暗色那套是"附注"的语气——
         // 而通知是要人看见的。候选面板照旧走暗色：它是打字时的陪衬。
         let dim = if matches!(align, FloatAlign::Right) {
-            miyu_hosts::render::PRIMARY_STYLE
+            yunxi_hosts::render::PRIMARY_STYLE
         } else {
             "\x1b[2m"
         };

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """在真终端和被测程序之间插一层 PTY，把两个方向的字节都录下来。
 
-用来回答「Miyu 打完图之后到底往终端写了什么」——sixel 发出去了、终端也画了，
+用来回答「YunXi 打完图之后到底往终端写了什么」——sixel 发出去了、终端也画了，
 可屏幕上却是空的，那就只能看字节。屏幕上的观感不变（本层是透明的），录下来
 的 `relay-*.log` 交给分析脚本。
 
-    testkit/chafa-compat/relay.py ~/.cache/miyu-chafa-sandbox/miyu-sb normal
+    testkit/chafa-compat/relay.py ~/.cache/yunxi-chafa-sandbox/yunxi-sb normal
 
 录两份：
     relay-out.log   被测程序 → 终端（sixel、清屏、光标移动都在这里）
@@ -61,7 +61,7 @@ saved = None
 if os.isatty(0):
     saved = termios.tcgetattr(0)
     tty.setraw(0)
-    # 输出端的换行翻译留着，和 Miyu 自己做的一样（restore_output_processing）
+    # 输出端的换行翻译留着，和 YunXi 自己做的一样（restore_output_processing）
     attrs = termios.tcgetattr(0)
     attrs[1] |= termios.OPOST | termios.ONLCR
     termios.tcsetattr(0, termios.TCSANOW, attrs)

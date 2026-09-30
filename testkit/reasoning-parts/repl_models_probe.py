@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """REPL 里 `/models …` 的输出该落在输入框上方,而不是孤零零留在输入框底下。
 
-    BIN=target/release/miyu python3 testkit/reasoning-parts/repl_models_probe.py
+    BIN=target/release/yunxi python3 testkit/reasoning-parts/repl_models_probe.py
 
 复用 repro_openai 的沙箱(隔离 home + daemon + OpenAI 桩 + PTY),依次敲
 `/models stub-model`(钉模型)与 `/models default`(恢复跟随全局),用 pyte 渲染屏幕,
@@ -12,7 +12,7 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]

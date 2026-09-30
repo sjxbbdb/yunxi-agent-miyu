@@ -17,7 +17,7 @@
 第二轮验 Ctrl+C：命令跑到一半打断，它得收成一步「已中断」，而不是漏出
 inline 的命令卡片。
 
-产物在 ~/.cache/miyu-static-timeline/：raw-*.bin（原始字节）、screen-*.txt
+产物在 ~/.cache/yunxi-static-timeline/：raw-*.bin（原始字节）、screen-*.txt
 （pyte 还原的最后一屏）、live-*.txt（跑着时抓的几帧）、report.json。
 """
 
@@ -40,7 +40,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fold_summary import is_fold_summary  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -52,17 +52,17 @@ except ImportError:
     raise SystemExit(2)
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", ROOT / "target" / "debug" / "miyu"))
+BIN = Path(os.environ.get("YUNXI_BIN", ROOT / "target" / "debug" / "yunxi"))
 SMOKE = ROOT / "testkit" / "repl-smoke"
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-static-timeline/home"))
-RUNTIME = os.environ.get("MIYU_ST_RUNTIME", "/tmp/mx-st")
-PORT = int(os.environ.get("MIYU_ST_PORT", "18443"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-static-timeline/home"))
+RUNTIME = os.environ.get("YUNXI_ST_RUNTIME", "/tmp/mx-st")
+PORT = int(os.environ.get("YUNXI_ST_PORT", "18443"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18497"))
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-static-todo"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-static-todo"))
 BASE = f"http://127.0.0.1:{PORT}"
 COLS, ROWS = 110, 200
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
-EDIT_FILE = Path("/tmp/miyu-static-timeline/walk.txt")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
+EDIT_FILE = Path("/tmp/yunxi-static-timeline/walk.txt")
 PROMPT = "走查一句"
 BRAILLE = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 # 时间线那一行的形状：`<图标> <名字> · …`。图标是 Nerd Font 私有区字形或 `$`/`⌄`。

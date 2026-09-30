@@ -198,13 +198,13 @@ pub(in crate::cli) fn layer_hit(
 
 /// 展开一块：从登记处取内容、解析成 `Body`。取不到就没得展开。
 pub(in crate::cli) fn load_body(id: u64, cols: usize) -> Option<Body> {
-    let lines = miyu_hosts::render::blocks::get(id)?;
+    let lines = yunxi_hosts::render::blocks::get(id)?;
     if lines.is_empty() {
         return None;
     }
     // 不补结尾换行：补了会在缓冲里多出一行空的。
     let mut body = Body::parse(&lines.join("\r\n"), cols);
-    body.version = miyu_hosts::render::blocks::version(id);
+    body.version = yunxi_hosts::render::blocks::version(id);
     (!body.rows.is_empty()).then_some(body)
 }
 
@@ -604,7 +604,7 @@ impl Screen {
             // 告诉登记处一声：这一步从「正在跑」落成「跑完了」时要换一块新的,
             // 换的时候得知道用户手上这块是开是关(用户 09-19:点开过的行,想完/
             // 跑完都不该被自动收回去)。
-            miyu_hosts::render::blocks::set_user_open(id, false);
+            yunxi_hosts::render::blocks::set_user_open(id, false);
             self.note_expanded_changed();
             self.restore_follow(following);
             self.invalidate();
@@ -613,7 +613,7 @@ impl Screen {
         let Some(body) = load_body(id, usize::from(self.cols)) else {
             return false;
         };
-        miyu_hosts::render::blocks::set_user_open(id, true);
+        yunxi_hosts::render::blocks::set_user_open(id, true);
         self.expanded.insert(id, body);
         self.note_expanded_changed();
         // 视口顶端不动（`scroll` 记的是顶端在第几行），撑出来的行都在点的那一行下面；
@@ -631,7 +631,7 @@ impl Screen {
         }
         // 一把锁问完所有版本号：几百个展开块每帧各拿一次登记处的锁不值当。
         let ids: Vec<u64> = self.expanded.keys().copied().collect();
-        let versions = miyu_hosts::render::blocks::versions(&ids);
+        let versions = yunxi_hosts::render::blocks::versions(&ids);
         let stale: Vec<u64> = ids
             .iter()
             .zip(versions)
@@ -706,7 +706,7 @@ impl Screen {
 mod tests {
     //! 视图索引和老的逐块遍历算法逐行等价——索引是它的缓存，不是另一套规矩。
     use super::*;
-    use miyu_hosts::render::blocks;
+    use yunxi_hosts::render::blocks;
 
     fn markers(id: u64, open: bool, text: &str) -> String {
         format!(

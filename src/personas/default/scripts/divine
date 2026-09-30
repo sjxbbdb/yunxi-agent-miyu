@@ -48,7 +48,7 @@ Four "shake once, do not interpret" divinations in one tool:
     fortune  pick one of the 7 luck grades with its one-line meaning
     dice     roll `count` d`sides` and add `modifier`
 
-Arguments arrive as one JSON object on stdin (also MIYU_ARGS_JSON):
+Arguments arrive as one JSON object on stdin (also YUNXI_ARGS_JSON):
     {"method":"dice","count":2,"sides":20,"modifier":3}
 """
 
@@ -174,7 +174,7 @@ def divine(args):
 
 
 def read_args():
-    raw = os.environ.get("MIYU_ARGS_JSON")
+    raw = os.environ.get("YUNXI_ARGS_JSON")
     if not raw:
         raw = "" if sys.stdin is None or sys.stdin.isatty() else sys.stdin.read()
     raw = (raw or "").strip() or "{}"

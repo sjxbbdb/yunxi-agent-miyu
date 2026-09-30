@@ -32,11 +32,11 @@ Debian、两个 Ubuntu 与 Linux Mint 共用同一个 DEB，不需要为每个�
 
 | 位置 | 用途 |
 |---|---|
-| `homebrew/Formula/miyu.rb` | formula 真相源。url / version / sha256 / revision 只由 `ci/channel_update.py` 按验收过的包写入 |
+| `homebrew/Formula/yunxi.rb` | formula 真相源。url / version / sha256 / revision 只由 `ci/channel_update.py` 按验收过的包写入 |
 | `homebrew/README.md` | tap 仓库的 README |
-| `SHORiN-KiWATA/homebrew-miyu` | tap 仓库，是上面两个文件的镜像；用户 `brew install shorin-kiwata/miyu/miyu` |
+| `sjxbbdb/homebrew-yunxi` | tap 仓库，是上面两个文件的镜像；用户 `brew install sjxbbdb/yunxi/yunxi` |
 
-formula 直接下载 Release 上的 `miyu-<版本>-<修订>-aarch64-apple-darwin.tar.gz`，把包里的
+formula 直接下载 Release 上的 `yunxi-<版本>-<修订>-aarch64-apple-darwin.tar.gz`，把包里的
 `bin/`、`share/` 原样放进 Cellar；依赖 `chafa`、`ripgrep`、`onnxruntime`（对照 Arch 配方：
 alsa-lib / glibc / gcc-libs 在 macOS 上不适用，python 用 Command Line Tools 自带的 python3，
 装 Homebrew 本来就要它）。formula 经 curl 下载不带隔离标记，所以不签名不公证；Apple Silicon
@@ -47,26 +47,26 @@ alsa-lib / glibc / gcc-libs 在 macOS 上不适用，python 用 Command Line Too
 
 | 目录 | 用途 |
 |---|---|
-| `arch/miyu-git/` | AUR VCS 包，继续从 Git 源码构建；`pkgver()` 读取实际版本和提交 |
-| `arch/miyu-release/` | 从普通版本 tag，或明确声明的补丁提交，构建主包/voice 拆包 |
-| `arch/miyu/` | AUR 主包包装器，下载已发布的 Arch 主包后完整重包 |
-| `arch/miyu-voice/` | AUR voice 包装器，依赖与下载资产一致的主包精确版本 |
+| `arch/yunxi-git/` | AUR VCS 包，继续从 Git 源码构建；`pkgver()` 读取实际版本和提交 |
+| `arch/yunxi-release/` | 从普通版本 tag，或明确声明的补丁提交，构建主包/voice 拆包 |
+| `arch/yunxi/` | AUR 主包包装器，下载已发布的 Arch 主包后完整重包 |
+| `arch/yunxi-voice/` | AUR voice 包装器，依赖与下载资产一致的主包精确版本 |
 
 源构建的 `package()` 调用源码内 `ci/lib/arch_package.py source-install`，直接使用
 `common/assets.json`。因此配方只需 Git 源码及其声明的 source 文件，Python 已列入
 makedepends，不依赖执行机的 CI 绝对路径。VCS 的远端源码必须包含这套资源清单和脚本后
 才能发布对应 AUR 配方；本轮不会自动推送 AUR。
 
-`miyu-release` 默认构建 `v0.6.0`，Wiki 固定为
+`yunxi-release` 默认构建 `v0.6.0`，Wiki 固定为
 `af99c4ac22a1be849206639807577a51b9e12061`。本地安装验收使用冻结源码快照的原生构建，
 不需要先创建公开 tag。若发布资产确实使用 tag 以外的补丁，必须明确提供
-`MIYU_RELEASE_SOURCE_COMMIT`、`MIYU_RELEASE_PATCH_REASON`，并记录到 release input；
+`YUNXI_RELEASE_SOURCE_COMMIT`、`YUNXI_RELEASE_PATCH_REASON`，并记录到 release input；
 Wiki 覆盖同样必须是完整提交哈希。禁止偷偷取远端 main 作为普通 release 来源。
 
 二进制 AUR 配方已同步公开的 0.6.0-2 与真实 SHA256。后续新包产生且通过验收后，
 渠道更新步骤才写入新的 `pkgver`、`pkgrel`、`_release_pkgrel` 和真实资产 SHA256。
 不能预填 0.6.0 的假哈希，也不能把公开二进制资产校验改成 `SKIP`。
-包装器复制整个 `usr/`，因此保留 `miyupm` 别名、字体、资源、许可证和未来新增文件。
+包装器复制整个 `usr/`，因此保留 `yunxipm` 别名、字体、资源、许可证和未来新增文件。
 
 ## 原生 Arch 构建与打包
 
@@ -87,19 +87,19 @@ voice，核对包内资源清单、自报版本与真实模型输出。测试包
 ## 安装资源
 
 资源搜索顺序为显式 override、原本支持的用户覆盖（models）、安装前缀下的
-`share/miyu`、Linux 系统 fallback、仅 debug 的源码 fallback。release 不读当前目录
-伪造的 `src/memes` 或 `assets/models`。所有相对路径均相对安装 prefix；Arch 为 `/usr`，Homebrew 为 keg（`/opt/homebrew/Cellar/miyu/<版本>`，经 `/opt/homebrew/bin` 的链接启动时同样能找到）。
+`share/yunxi`、Linux 系统 fallback、仅 debug 的源码 fallback。release 不读当前目录
+伪造的 `src/memes` 或 `assets/models`。所有相对路径均相对安装 prefix；Arch 为 `/usr`，Homebrew 为 keg（`/opt/homebrew/Cellar/yunxi/<版本>`，经 `/opt/homebrew/bin` 的链接启动时同样能找到）。
 
 | 路径 | 内容 | 缺失时的行为 |
 |---|---|---|
-| `bin/miyu`、`bin/miyupm` | 主程序及别名 | 主程序不可用 |
-| `bin/miyu-voice` | 可选语音前端 | 语音不可用 |
-| `share/miyu/fonts/` | Noto CJK、Noto Emoji、JetBrains Mono；发布资产已包含 | 渲染可能退回文本 |
-| `share/miyu/models/<id>/` | 本地 embedding 模型及 tokenizer | 语义检索退回关键词 |
-| `share/miyu/memes/` | 内置表情库 | 内置表情不可用 |
-| `share/miyu/personas/<人格>/scripts/` | 出厂脚本（09-23 起；老位置 `share/miyu/scripts/personas/<人格>/` 仍会被扫描，新包不再安装） | 对应脚本不可用 |
-| `share/miyu/personas/<人格>/skills/<技能名>/` | 内置技能（`SKILL.md` 与它带路的 `scripts/`，09-23 起读盘加载） | 对应技能静默消失，技能脚本调不到 |
-| `share/miyu/default-kb/` | 项目 kb、固定 Wiki 和来源 manifest | 默认知识库不可用 |
-| `share/licenses/miyu*/` | 项目、字体、模型及语音依赖许可证 | 包验收失败 |
+| `bin/yunxi`、`bin/yunxipm` | 主程序及别名 | 主程序不可用 |
+| `bin/yunxi-voice` | 可选语音前端 | 语音不可用 |
+| `share/yunxi/fonts/` | Noto CJK、Noto Emoji、JetBrains Mono；发布资产已包含 | 渲染可能退回文本 |
+| `share/yunxi/models/<id>/` | 本地 embedding 模型及 tokenizer | 语义检索退回关键词 |
+| `share/yunxi/memes/` | 内置表情库 | 内置表情不可用 |
+| `share/yunxi/personas/<人格>/scripts/` | 出厂脚本（09-23 起；老位置 `share/yunxi/scripts/personas/<人格>/` 仍会被扫描，新包不再安装） | 对应脚本不可用 |
+| `share/yunxi/personas/<人格>/skills/<技能名>/` | 内置技能（`SKILL.md` 与它带路的 `scripts/`，09-23 起读盘加载） | 对应技能静默消失，技能脚本调不到 |
+| `share/yunxi/default-kb/` | 项目 kb、固定 Wiki 和来源 manifest | 默认知识库不可用 |
+| `share/licenses/yunxi*/` | 项目、字体、模型及语音依赖许可证 | 包验收失败 |
 
-GNU 渠道还在 `lib/miyu/` 携带固定 CPU ORT；Arch 继续使用系统 provider。
+GNU 渠道还在 `lib/yunxi/` 携带固定 CPU ORT；Arch 继续使用系统 provider。

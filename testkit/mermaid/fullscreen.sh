@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 全屏 TUI 里的 ```mermaid：借 testkit/tui/kitty_shot.py 的台架跑一遍。
 #
-# 为什么还要这一趟：terminal.py 验的是 inline 形态（`miyu "…"` 一次性输出），
+# 为什么还要这一趟：terminal.py 验的是 inline 形态（`yunxi "…"` 一次性输出），
 # 而日常用的是**全屏 TUI**——那边正文是从缓冲重建的，图靠 kitty 的占位格活着。
 # 「图画出来了」和「重画一帧之后图还在」是两件事，后者只有全屏下才存在。
 #
@@ -10,12 +10,12 @@
 #
 # 看 $OUT/tui-table-math.png（第二轮那张，正文里就是这段 mermaid）。
 set -u
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for __herdr_var in $(env | sed -n 's/^\(HERDR_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$__herdr_var"; done
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-export OUT="${OUT:-$HOME/.cache/miyu-mermaid-tui}"
-export BIN="${BIN:-$REPO/target/debug/miyu}"
+export OUT="${OUT:-$HOME/.cache/yunxi-mermaid-tui}"
+export BIN="${BIN:-$REPO/target/debug/yunxi}"
 # MERMAID_LONG=1 换成一张竖着很长的图：验「长图不再被压扁」那一条。
 if [ -n "${MERMAID_LONG:-}" ]; then
     body="flowchart TD"

@@ -1,4 +1,4 @@
-//! `miyu stdio`:长驻协议模式。stdin 一行一请求(JSON),stdout 一行一事件。
+//! `yunxi stdio`:长驻协议模式。stdin 一行一请求(JSON),stdout 一行一事件。
 //!
 //! 宿主软件起一个进程常驻,多会话多回合并发。daemon 侧是「一连接一回合」,
 //! 所以这里是个 fan-in 分发器:每条 `message` 另开一条 IPC 连接跑回合,
@@ -12,7 +12,7 @@
 //! - `answer`:`{id, question_id, answer}`,answer 为字符串 / 字符串数组 /
 //!   二维数组(多选)
 //! - `cancel`:`{id}`
-//! - `session`:`{id, op, …}`,op 同 `miyu session` 子命令
+//! - `session`:`{id, op, …}`,op 同 `yunxi session` 子命令
 //! - `ping`:`{id}`
 //!
 //! stdin EOF 或 Ctrl+C:取消所有在跑的回合,等它们收尾后退出。
@@ -26,8 +26,6 @@ use crate::cli::repl::session::discard_ephemeral_session;
 use crate::cli::session_cmds::session_op_json;
 use crate::cli::turn_request::{build_overrides, resolve_turn_session};
 use anyhow::Result;
-use miyu_base::paths::MiyuPaths;
-use miyu_core::ipc;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -35,6 +33,8 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 use tokio::sync::{mpsc, watch};
+use yunxi_base::paths::YunXiPaths;
+use yunxi_core::ipc;
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -154,7 +154,7 @@ fn error_kind_for(error: &anyhow::Error) -> ErrorKind {
 }
 
 /// `answer` 字段的三种写法 → 每题一组选择。
-fn parse_answers(value: &Value) -> Result<miyu_base::question::QuestionAnswers> {
+fn parse_answers(value: &Value) -> Result<yunxi_base::question::QuestionAnswers> {
     match value {
         Value::String(text) => Ok(vec![vec![text.clone()]]),
         Value::Array(items) if items.iter().all(Value::is_string) => Ok(items
@@ -184,7 +184,7 @@ struct RunningTurn {
 }
 
 async fn start_message(
-    paths: MiyuPaths,
+    paths: YunXiPaths,
     request: MessageRequest,
     out: Outbound,
 ) -> Option<RunningTurn> {
@@ -254,9 +254,9 @@ async fn start_message(
     })
 }
 
-pub(in crate::cli) async fn run_stdio(paths: &MiyuPaths) -> Result<()> {
+pub(in crate::cli) async fn run_stdio(paths: &YunXiPaths) -> Result<()> {
     let info = ipc::ensure_daemon(paths, None).await?;
-    let paths = MiyuPaths::new()?;
+    let paths = YunXiPaths::new()?;
     let (line_tx, mut line_rx) = mpsc::unbounded_channel::<String>();
     let writer = tokio::spawn(async move {
         let mut stdout = tokio::io::stdout();

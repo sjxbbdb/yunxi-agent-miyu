@@ -9,7 +9,7 @@
 use crate::config_tui::*;
 
 pub(in crate::config_tui) struct ProviderBrowser<'a> {
-    pub(in crate::config_tui) paths: &'a MiyuPaths,
+    pub(in crate::config_tui) paths: &'a YunXiPaths,
     pub(in crate::config_tui) config: &'a mut AppConfig,
     pub(in crate::config_tui) thinking_variants: &'a mut ThinkingVariantPreferences,
     pub(in crate::config_tui) active_col: usize,
@@ -62,7 +62,7 @@ impl ModelEntry {
 /// 手填的必须置顶:它们不在供应商目录里,混进几百条中间就等于没加。同名去重
 /// 是给内置 CLI 供应商准备的——它的目录本来就并了 `models`(见 `provider_catalog::cli`)。
 ///
-/// 抽成自由函数是为了能直接测:`ProviderBrowser` 要一份 `MiyuPaths`,建一个
+/// 抽成自由函数是为了能直接测:`ProviderBrowser` 要一份 `YunXiPaths`,建一个
 /// 就会去碰真实 home。
 pub(in crate::config_tui) fn group_models(
     custom: &[String],
@@ -255,12 +255,14 @@ pub(in crate::config_tui) fn embedding_model_label(config: &AppConfig) -> String
         return t("disabled", "已关闭").to_string();
     }
     match embedding.resolved_backend() {
-        miyu_base::config::EmbeddingBackend::Remote if embedding.remote_is_configured() => format!(
-            "{}/{}",
-            embedding.provider_id.trim(),
-            embedding.model.trim()
-        ),
-        miyu_base::config::EmbeddingBackend::Remote => {
+        yunxi_base::config::EmbeddingBackend::Remote if embedding.remote_is_configured() => {
+            format!(
+                "{}/{}",
+                embedding.provider_id.trim(),
+                embedding.model.trim()
+            )
+        }
+        yunxi_base::config::EmbeddingBackend::Remote => {
             t("remote: not set", "远程：未设置").to_string()
         }
         _ => format!("{} · {}", t("local", "本地"), embedding.local_model.trim()),
@@ -277,7 +279,7 @@ enum EmbeddingRow {
 
 fn embedding_rows(config: &AppConfig) -> Vec<EmbeddingRow> {
     let mut rows = Vec::new();
-    let installed: Vec<String> = miyu_base::embedding::installed_local_models()
+    let installed: Vec<String> = yunxi_base::embedding::installed_local_models()
         .into_iter()
         .map(|model| model.manifest.id)
         .collect();
@@ -311,12 +313,13 @@ fn embedding_rows(config: &AppConfig) -> Vec<EmbeddingRow> {
 fn embedding_row_is_current(config: &AppConfig, row: &EmbeddingRow) -> bool {
     let embedding = &config.embedding;
     match (row, embedding.resolved_backend()) {
-        (EmbeddingRow::Local { id, .. }, miyu_base::config::EmbeddingBackend::Local) => {
+        (EmbeddingRow::Local { id, .. }, yunxi_base::config::EmbeddingBackend::Local) => {
             id == embedding.local_model.trim()
         }
-        (EmbeddingRow::Remote { provider, model }, miyu_base::config::EmbeddingBackend::Remote) => {
-            provider == embedding.provider_id.trim() && model == embedding.model.trim()
-        }
+        (
+            EmbeddingRow::Remote { provider, model },
+            yunxi_base::config::EmbeddingBackend::Remote,
+        ) => provider == embedding.provider_id.trim() && model == embedding.model.trim(),
         _ => false,
     }
 }
@@ -400,9 +403,9 @@ pub(in crate::config_tui) fn edit_embedding_model(
                     // 远程就留 auto，配置文件里少一行显式后端。
                     config.embedding.local_model = id.clone();
                     config.embedding.backend = if config.embedding.remote_is_configured() {
-                        miyu_base::config::EmbeddingBackend::Local
+                        yunxi_base::config::EmbeddingBackend::Local
                     } else {
-                        miyu_base::config::EmbeddingBackend::Auto
+                        yunxi_base::config::EmbeddingBackend::Auto
                     };
                     return Ok(());
                 }
@@ -411,7 +414,7 @@ pub(in crate::config_tui) fn edit_embedding_model(
                     // 清掉远程模型会变成「远程：未设置」的死局。
                     config.embedding.provider_id = provider.clone();
                     config.embedding.model = model.clone();
-                    config.embedding.backend = miyu_base::config::EmbeddingBackend::Auto;
+                    config.embedding.backend = yunxi_base::config::EmbeddingBackend::Auto;
                     return Ok(());
                 }
                 EmbeddingRow::Advanced => edit_embedding_advanced(ui, config)?,
@@ -617,13 +620,13 @@ pub(in crate::config_tui) fn parse_extra_body(
 
 pub(in crate::config_tui) fn edit_model_form(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     provider: &mut ProviderConfig,
     model: &str,
     thinking_variants: &mut ThinkingVariantPreferences,
 ) -> Result<bool> {
     // 目录信息只用来预填与提示;真正落盘的仍是表单里保存的值。
-    let catalog = miyu_base::provider_catalog::catalog_entry(paths, provider, model);
+    let catalog = yunxi_base::provider_catalog::catalog_entry(paths, provider, model);
     let context_window = provider
         .model_context_window
         .get(model)
@@ -658,8 +661,8 @@ pub(in crate::config_tui) fn edit_model_form(
     let cost = provider.model_costs.get(model).copied();
     let currency_value = cost
         .map(|cost| match cost.currency {
-            miyu_base::config::CostCurrency::Usd => "USD",
-            miyu_base::config::CostCurrency::Cny => "CNY",
+            yunxi_base::config::CostCurrency::Usd => "USD",
+            yunxi_base::config::CostCurrency::Cny => "CNY",
         })
         .unwrap_or("")
         .to_string();
@@ -777,11 +780,11 @@ pub(in crate::config_tui) fn edit_model_form(
                 };
                 provider.model_costs.insert(
                     model.to_string(),
-                    miyu_base::config::ModelCostConfig {
+                    yunxi_base::config::ModelCostConfig {
                         currency: if currency == "CNY" {
-                            miyu_base::config::CostCurrency::Cny
+                            yunxi_base::config::CostCurrency::Cny
                         } else {
-                            miyu_base::config::CostCurrency::Usd
+                            yunxi_base::config::CostCurrency::Usd
                         },
                         input,
                         output,

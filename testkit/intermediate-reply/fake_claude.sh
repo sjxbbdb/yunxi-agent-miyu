@@ -6,9 +6,9 @@
 # QQ"就是判据:修复前它跟第二段一起卡在 run.completed,修复后应该在 sleep
 # 期间就已经发出去了。
 #
-# MIYU_FAKE_TOOL_DELAY 控制那段停顿(秒)。
+# YUNXI_FAKE_TOOL_DELAY 控制那段停顿(秒)。
 set -u
-delay="${MIYU_FAKE_TOOL_DELAY:-6}"
+delay="${YUNXI_FAKE_TOOL_DELAY:-6}"
 sid="sess-fake-intermediate"
 
 cat > /dev/null   # 吞掉 stdin 的请求载荷

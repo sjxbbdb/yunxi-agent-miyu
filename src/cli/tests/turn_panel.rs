@@ -50,7 +50,7 @@ fn keys_go_to_the_open_panel_and_mouse_does_not() {
         .unwrap()
         .is_none());
     match live.turn_panel_event(&key(KeyCode::Enter)).unwrap() {
-        Some(PanelDone::Session(SessionPick::Switch(miyu_core::ipc::SessionRef::Id { id }))) => {
+        Some(PanelDone::Session(SessionPick::Switch(yunxi_core::ipc::SessionRef::Id { id }))) => {
             assert_eq!(id, "s1")
         }
         _ => panic!("回车该交出挑中的那条会话"),

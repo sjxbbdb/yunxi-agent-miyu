@@ -128,9 +128,9 @@ def main():
         text = "\n".join(screen)
         header = next((i for i, l in enumerate(screen) if "后台任务跟进" in l), None)
         after = screen[header + 1:] if header is not None else []
-        # 抬头和 REPL 里的一样：暗色齿轮打头，没有老样式的 `✦ Miyu` / `∴`。
+        # 抬头和 REPL 里的一样：暗色齿轮打头，没有老样式的 `✦ YunXi` / `∴`。
         report["header_is_gear_line"] = header is not None and screen[header].startswith("⚙")
-        report["no_legacy_markers"] = "✦ Miyu" not in text and "∴" not in text
+        report["no_legacy_markers"] = "✦ YunXi" not in text and "∴" not in text
         # 时间线：思考那一步、工具那一步（图标在第 2 列），正文另起一段。
         report["thought_step_in_timeline"] = any(
             l.startswith("  ") and "已思考" in l for l in after

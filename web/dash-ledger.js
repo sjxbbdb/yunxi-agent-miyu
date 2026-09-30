@@ -6,7 +6,7 @@
  *
  * 视图分开而不是把配置一股脑塞进一个「管理」抽屉:账户、分类、预算是三种
  * 不同的东西,摞在一个抽屉里没人找得到(09-09 用户走查意见)。后四个视图在
- * dash-ledger-manage.js 里注册进 window.MiyuLedgerViews。
+ * dash-ledger-manage.js 里注册进 window.YunXiLedgerViews。
  *
  * 三条与别的面板不同的约定:
  * - 金额永远带 +/− 符号,不只靠红绿区分(色盲友好)。
@@ -15,7 +15,7 @@
  * - 数字用等宽字体右对齐,一列钱能竖着比大小。
  */
 (() => {
-  const D = window.MiyuDash;
+  const D = window.YunXiDash;
   if (!D) return;
 
   const state = {
@@ -181,7 +181,7 @@
       renderEntriesView(seq);
       return;
     }
-    const views = window.MiyuLedgerViews;
+    const views = window.YunXiLedgerViews;
     const render = views && views[state.view];
     ui.body.replaceChildren(
       render ? render(context()) : D.el("p.dash-empty", { text: t("这个视图没能加载") })

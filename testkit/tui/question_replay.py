@@ -20,7 +20,7 @@
 
     python3 testkit/tui/question_replay.py
 
-产物在 ~/.cache/miyu-question-replay/。用自己的端口和沙箱 home，不和别的走查抢。
+产物在 ~/.cache/yunxi-question-replay/。用自己的端口和沙箱 home，不和别的走查抢。
 """
 
 import codecs
@@ -32,10 +32,10 @@ import time
 from pathlib import Path
 
 # 在 import run 之前定好：run.py 在导入时就读这些。
-_CACHE = Path.home() / ".cache" / "miyu-question-replay"
-os.environ.setdefault("MIYU_HOME", str(_CACHE / "home"))
-os.environ.setdefault("MIYU_TUI_RUNTIME", "/tmp/mx-question-replay")
-os.environ.setdefault("MIYU_TUI_PORT", "18471")
+_CACHE = Path.home() / ".cache" / "yunxi-question-replay"
+os.environ.setdefault("YUNXI_HOME", str(_CACHE / "home"))
+os.environ.setdefault("YUNXI_TUI_RUNTIME", "/tmp/mx-question-replay")
+os.environ.setdefault("YUNXI_TUI_PORT", "18471")
 os.environ.setdefault("STUB_PORT", "18479")
 os.environ.setdefault("OUT", str(_CACHE))
 

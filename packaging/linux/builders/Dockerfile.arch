@@ -1,5 +1,5 @@
 FROM archlinux@sha256:b944cc65c5f28665dfd5fdbf5ed2997c88f5bb4a0aefac7ee8a7ef01893e5ed9
-LABEL io.miyu.distribution.owner="distribution-2026-09-14"
+LABEL io.yunxi.distribution.owner="distribution-2026-09-14"
 # Share the installation verifier's fixed repository snapshot.
 RUN printf 'Server = https://archive.archlinux.org/repos/2026/09/13/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist \
     && pacman -Syuu --noconfirm --disable-download-timeout \

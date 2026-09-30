@@ -2,7 +2,7 @@
 use std::ffi::OsStr;
 
 pub(in crate::cli) fn requested() -> bool {
-    enabled(std::env::var_os("MIYU_TUI").as_deref())
+    enabled(std::env::var_os("YUNXI_TUI").as_deref())
 }
 
 fn enabled(value: Option<&OsStr>) -> bool {

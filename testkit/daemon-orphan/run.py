@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """起 daemon 的人没了之后，daemon 该不该跟着走。
 
-09-20 实录：用户后台攒了 19 个 `miyu __daemon` 僵进程，最老 4 天。全是测具的
+09-20 实录：用户后台攒了 19 个 `yunxi __daemon` 僵进程，最老 4 天。全是测具的
 沙箱 daemon——测具跑成 `timeout N python3 testkit/xxx.py`，超时的时候 SIGTERM
 打在 python 上，而 python 默认的 SIGTERM 处理不跑 `finally`，脚本里那句
 `daemon.terminate()` 永远没机会执行。
@@ -10,13 +10,13 @@
 
 1. 测具那种（直接 spawn `__daemon`）：启动者一死，daemon 跟着退。
    连启动者被 SIGKILL 也得退——这正是 `finally` 救不了的那一种。
-2. 真 daemon（`miyu daemon start` 那条路，带 detached 标记）：启动者退出之后
+2. 真 daemon（`yunxi daemon start` 那条路，带 detached 标记）：启动者退出之后
    照样活着。终端关了 daemon 就没了的话，整个后台服务模型就垮了。
 
 跑法：
 
     cargo build
-    python3 testkit/daemon-orphan/run.py --binary /绝对路径/target/debug/miyu
+    python3 testkit/daemon-orphan/run.py --binary /绝对路径/target/debug/yunxi
 """
 
 import argparse
@@ -31,7 +31,7 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -66,8 +66,8 @@ def wait_gone(pid, timeout):
 
 
 def daemon_env(home, extra=None):
-    env = dict(os.environ, MIYU_HOME=str(home))
-    env.pop("MIYU_DAEMON_DETACHED", None)
+    env = dict(os.environ, YUNXI_HOME=str(home))
+    env.pop("YUNXI_DAEMON_DETACHED", None)
     if extra:
         env.update(extra)
     return env
@@ -98,7 +98,7 @@ def main():
     parser.add_argument(
         "--other-binary",
         type=Path,
-        help="另一个 build id 的 miyu，用来验「换二进制重启不留旧进程」；不给就跳过那一项",
+        help="另一个 build id 的 yunxi，用来验「换二进制重启不留旧进程」；不给就跳过那一项",
     )
     args = parser.parse_args()
     binary = args.binary.resolve()
@@ -106,7 +106,7 @@ def main():
         print(f"! 先 cargo build：{binary} 不存在", file=sys.stderr)
         return 2
 
-    sandbox = sandbox_dir.make("miyu-orphan-", delete_at_exit=False)
+    sandbox = sandbox_dir.make("yunxi-orphan-", delete_at_exit=False)
     report = {}
     leaked = []
     try:
@@ -137,7 +137,7 @@ def main():
         if alive(daemon_pid):
             leaked.append(daemon_pid)
 
-        # 3. 真 daemon：`miyu daemon start` 会 setsid 并打 detached 标记，
+        # 3. 真 daemon：`yunxi daemon start` 会 setsid 并打 detached 标记，
         #    启动它的那条命令退出之后必须继续活着。
         home = sandbox / "real"
         home.mkdir(parents=True)
@@ -165,7 +165,7 @@ def main():
         report["真 daemon 在启动命令退出后仍然活着"] = real_pid != 0 and alive(real_pid)
         if real_pid:
             subprocess.run(
-                # `--port` 只认 start / restart，stop 靠 MIYU_HOME 找自己那只。
+                # `--port` 只认 start / restart，stop 靠 YUNXI_HOME 找自己那只。
                 [str(binary), "daemon", "stop"],
                 env=daemon_env(home),
                 capture_output=True,

@@ -13,7 +13,7 @@
  *
  * 单独成文件:app.js 已经上万行(与 todos.js / shared.js 同构)。
  */
-window.MiyuDiff = (() => {
+window.YunXiDiff = (() => {
   // 三个补丁工具都吃 apply_patch 格式的 patchText:edit(文件系统)/ kb(知识库)/
   // artifact(WebUI 交付文件),外加中转线上的别名。渲染只认 patchText,认不出照样
   // 退回原始参数,所以名单宽一点没风险。

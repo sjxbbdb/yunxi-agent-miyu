@@ -17,12 +17,12 @@ pub(super) mod widgets;
 use super::apply;
 use super::probe::{Facts, Fcitx, Ime, Loader};
 use super::providers::{CatalogJob, Prefetch, ProviderOption};
-use miyu_base::config::feature_catalog::{self, FeatureItem, FeatureKind};
-use miyu_base::config::{AppConfig, ProviderConfig};
-use miyu_base::paths::MiyuPaths;
-use miyu_base::terminal::palette::{Depth, Theme};
-use miyu_base::terminal::starfield::BannerArt;
 use widgets::Cx;
+use yunxi_base::config::feature_catalog::{self, FeatureItem, FeatureKind};
+use yunxi_base::config::{AppConfig, ProviderConfig};
+use yunxi_base::paths::YunXiPaths;
+use yunxi_base::terminal::palette::{Depth, Theme};
+use yunxi_base::terminal::starfield::BannerArt;
 
 pub(super) const STEPS: [&str; 6] = ["人格", "功能", "认识你", "终端", "沙盒", "模型"];
 
@@ -119,7 +119,7 @@ pub(super) struct App {
     pub theme: Theme,
     pub art: BannerArt,
     pub config: AppConfig,
-    pub paths: MiyuPaths,
+    pub paths: YunXiPaths,
     pub loader: Loader,
     pub facts: Facts,
     pub fcitx: Fcitx,
@@ -195,7 +195,7 @@ pub(super) struct App {
 }
 
 impl App {
-    pub fn new(config: AppConfig, paths: MiyuPaths) -> Self {
+    pub fn new(config: AppConfig, paths: YunXiPaths) -> Self {
         let fcitx = Fcitx::probe();
         let theme = Theme::detect();
         let depth_label = match theme.depth {
@@ -204,7 +204,7 @@ impl App {
             Depth::Ansi16 => "16 色",
             Depth::Mono => "无色",
         };
-        // 已经有人格/自述的机器（跑过一半、或手动 `miyu oobe`）：预填，别让人重敲。
+        // 已经有人格/自述的机器（跑过一半、或手动 `yunxi oobe`）：预填，别让人重敲。
         let existing = apply::current_persona(&config, &paths);
         let identity = apply::current_identity(&config, &paths);
         let (persona_custom, name, setting) = match existing {
@@ -293,7 +293,7 @@ impl App {
         if self.persona_custom && !self.name.trim().is_empty() {
             self.name.trim().to_string()
         } else {
-            "Miyu".into()
+            "YunXi".into()
         }
     }
 
@@ -345,7 +345,7 @@ impl App {
             return;
         }
         let manifest = apply::current_manifest(&self.config, &self.paths);
-        let default_persona = miyu_core::skills::is_default_persona(&self.config);
+        let default_persona = yunxi_core::skills::is_default_persona(&self.config);
         let sources = crate::feature_sources::collect(&self.config, &self.paths);
         self.feats = feature_catalog::catalog(
             &manifest,
@@ -476,7 +476,7 @@ impl App {
     }
 
     pub fn commit_features(&mut self) -> bool {
-        let default_persona = miyu_core::skills::is_default_persona(&self.config);
+        let default_persona = yunxi_core::skills::is_default_persona(&self.config);
         // 技能带路的脚本没有自己的行,白名单要按带路技能连动——重扫一次,
         // 与摆表用的是同一份外装件清单。
         let sources = crate::feature_sources::collect(&self.config, &self.paths);
@@ -676,16 +676,16 @@ pub(super) fn filter_models(models: &[String], query: &str) -> Vec<usize> {
 #[cfg(test)]
 mod feature_tests {
     use super::*;
-    use miyu_base::config::McpServerConfig;
+    use yunxi_base::config::McpServerConfig;
 
     /// 功能屏按真实配置摆表:机器级 MCP 开着就列出开着的服务器,关着的服务器与
     /// 机器级关着时整格都不出现。
     #[test]
     fn features_screen_lists_enabled_mcp_servers_only_when_mcp_is_on() {
-        std::env::set_var("MIYU_OOBE_NO_IME", "1");
+        std::env::set_var("YUNXI_OOBE_NO_IME", "1");
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path();
-        let paths = MiyuPaths {
+        let paths = YunXiPaths {
             root_dir: root.to_path_buf(),
             config_dir: root.join("config"),
             config_file: root.join("config/config.jsonc"),
@@ -694,7 +694,7 @@ mod feature_tests {
             cache_dir: root.join("cache"),
             state_dir: root.join("state"),
             pictures_dir: root.join("pictures"),
-            fish_hook_file: root.join("fish/miyu.fish"),
+            fish_hook_file: root.join("fish/yunxi.fish"),
             bash_hook_file: root.join("shell/bash-hook.sh"),
             zsh_hook_file: root.join("shell/zsh-hook.zsh"),
             scripts_dir: root.join("config/scripts"),

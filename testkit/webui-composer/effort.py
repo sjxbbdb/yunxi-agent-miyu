@@ -11,9 +11,9 @@
     model_default_pins     回到 A 选「模型默认」→ 确认:钉的是模型默认档(不是回到跟随全局),小片写 default 带钉子标记
     follow_global_unpins   档位菜单第一项「跟随全局（…）」→ 确认:A 的钉子没了
 
-截图落在 OUT(默认 /tmp/miyu-effort-webui),全过就删(KEEP=1 留着)。
+截图落在 OUT(默认 /tmp/yunxi-effort-webui),全过就删(KEEP=1 留着)。
 
-    python3 testkit/webui-composer/effort.py <miyu 二进制>
+    python3 testkit/webui-composer/effort.py <yunxi 二进制>
 """
 import os
 import re
@@ -27,7 +27,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from sandbox import WebSandbox  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", "/tmp/miyu-effort-webui"))
+OUT = Path(os.environ.get("OUT", "/tmp/yunxi-effort-webui"))
 CODEX = {
     "id": "cx", "display_name": "Codex", "enabled": True, "protocol": "codex",
     "base_url": "", "models": ["gpt-x"], "default_model": "gpt-x",

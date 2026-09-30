@@ -31,8 +31,8 @@ class ProcessSupervisor:
     def run(self, argv, *, env, cwd, timeout, log):
         if timeout <= 0:
             raise ValueError('Timeout must be positive.')
-        if env.get('MIYU_HOME'):
-            self.homes.add(env['MIYU_HOME'])
+        if env.get('YUNXI_HOME'):
+            self.homes.add(env['YUNXI_HOME'])
         with Path(log).open('wb') as output:
             child = subprocess.Popen(argv, env=env, cwd=cwd, stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
@@ -60,7 +60,7 @@ class ProcessSupervisor:
                     self._stop(child)
                     self.children.remove(child)
                     result['exit_code'] = child.returncode
-                    result['reaped_descendants'] = self.reaper.reap(env.get('MIYU_HOME', ''))
+                    result['reaped_descendants'] = self.reaper.reap(env.get('YUNXI_HOME', ''))
                 except (OSError, RuntimeError, subprocess.SubprocessError) as error:
                     result['cleanup_error'] = str(error)
                     raise

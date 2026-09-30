@@ -14,7 +14,7 @@ pyte 只还原字符网格，图形协议那一段它看不见——「图有没
     cargo build --release
     testkit/kitty-image/run_headless.sh python3 testkit/tui/kitty_shot.py
 
-产物在 $OUT（默认 ~/.cache/miyu-tui-kitty）。
+产物在 $OUT（默认 ~/.cache/yunxi-tui-kitty）。
 """
 
 import json
@@ -27,7 +27,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -38,14 +38,14 @@ KITTY = REPO / "testkit" / "kitty-image"
 sys.path.insert(0, str(KITTY))
 import ghost_probe as probe  # noqa: E402
 
-OUT = Path(os.environ.get("OUT") or "~/.cache/miyu-tui-kitty").expanduser()
+OUT = Path(os.environ.get("OUT") or "~/.cache/yunxi-tui-kitty").expanduser()
 # 绝对路径：子进程是拿 `cwd=OUT` 起的，相对路径会按 OUT 解析然后找不到，
 # 抛出来的异常还打在 kitty 窗口里、外面看不见。
-BIN = Path(os.environ.get("BIN") or (REPO / "target" / "release" / "miyu")).resolve()
+BIN = Path(os.environ.get("BIN") or (REPO / "target" / "release" / "yunxi")).resolve()
 HOME = OUT / "home"
 RUN_DIR = OUT / "run"
 STUB_PORT = int(os.environ.get("STUB_PORT", "18497"))
-PORT = int(os.environ.get("MIYU_TUI_PORT", "18437"))
+PORT = int(os.environ.get("YUNXI_TUI_PORT", "18437"))
 STUB_LOG = OUT / "stub.jsonl"
 IMAGE = OUT / "sample.png"
 IMAGE_COLS, IMAGE_ROWS = 28, 8
@@ -129,9 +129,9 @@ def env_for():
     env = dict(os.environ)
     for key in ("XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME"):
         env.pop(key, None)
-    env["MIYU_HOME"] = str(HOME)
+    env["YUNXI_HOME"] = str(HOME)
     env["XDG_RUNTIME_DIR"] = str(RUN_DIR)
-    env["MIYU_TUI"] = "1"
+    env["YUNXI_TUI"] = "1"
     return env
 
 
@@ -201,7 +201,7 @@ def main():
         stderr=subprocess.DEVNULL,
     )
     daemon = None
-    miyu = None
+    yunxi = None
     try:
         if not wait_http(f"http://127.0.0.1:{STUB_PORT}/v1/models"):
             log("! 桩模型没起来")
@@ -215,7 +215,7 @@ def main():
             log("! daemon 没起来")
             return 2
 
-        miyu = subprocess.Popen([str(BIN)], env=env_for(), cwd=str(OUT))
+        yunxi = subprocess.Popen([str(BIN)], env=env_for(), cwd=str(OUT))
         wait_quiet(1.5, timeout=40)
         log("首屏")
         probe.screenshot("tui-start")
@@ -253,7 +253,7 @@ def main():
 
         # SHOT_CLICK_TEXT=<一段文字>：在屏幕上找到它，往那儿真点一下。
         #
-        # 全屏把鼠标捕获走了，"点链接"是 Miyu 自己接的（`select::url_at` +
+        # 全屏把鼠标捕获走了，"点链接"是 YunXi 自己接的（`select::url_at` +
         # `open_url`），所以「点了有没有反应」只有真点一次才验得到。无头 cage 里
         # 没有指针设备，于是直接把 **SGR 鼠标序列**当输入喂进去——crossterm 认的
         # 就是这个，和真鼠标走的是同一条路。
@@ -285,7 +285,7 @@ def main():
             log(f"  {path}  {'有' if path.exists() else '缺'}")
         return 0
     finally:
-        for process in (miyu, daemon, stub):
+        for process in (yunxi, daemon, stub):
             if process and process.poll() is None:
                 process.terminate()
                 try:

@@ -3,8 +3,8 @@
 
 用法: python3 mcp_probe.py [binary] [cols] [rows]
 
-临时 MIYU_HOME 里先 `miyu init`,往 config.jsonc 塞两台 MCP 服务器(一台没显示名),
-再进 `miyu oobe`:欢迎 → 人格(自己捏、起名)→ 功能。断言:
+临时 YUNXI_HOME 里先 `yunxi init`,往 config.jsonc 塞两台 MCP 服务器(一台没显示名),
+再进 `yunxi oobe`:欢迎 → 人格(自己捏、起名)→ 功能。断言:
   1. 功能屏出现「MCP 服务器」分组(排最后,先 End 滚到底)、两台服务器(显示名 / 退回 id)、默认都勾着;
   2. Ctrl+A 按到全关(自定义人格下内置件默认不勾,第一下是全开),MCP 两项都变 [ ];
   3. Enter 离开功能屏(写 persona.toml)后,清单里 `mcp = []`(明细,不是 None)。
@@ -18,20 +18,20 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 BIN = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "target", "debug", "miyu"
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "target", "debug", "yunxi"
 )
 COLS = int(sys.argv[2]) if len(sys.argv) > 2 else 100
 ROWS = int(sys.argv[3]) if len(sys.argv) > 3 else 60
 
-home = str(sandbox_dir.make("miyu-oobe-mcp-"))
+home = str(sandbox_dir.make("yunxi-oobe-mcp-"))
 env = dict(os.environ)
-env.update({"TERM": "xterm-256color", "MIYU_HOME": home, "LANG": "zh_CN.UTF-8"})
+env.update({"TERM": "xterm-256color", "YUNXI_HOME": home, "LANG": "zh_CN.UTF-8"})
 subprocess.run([BIN, "init"], env=env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 cfg_path = os.path.join(home, "config", "config.jsonc")
 cfg = json.loads(open(cfg_path, encoding="utf-8").read())
@@ -52,9 +52,9 @@ pid, fd = pty.fork()
 if pid == 0:
     os.environ.update({
         "TERM": "xterm-256color",
-        "MIYU_HOME": home,
-        "MIYU_OOBE_NO_IME": "1",
-        "MIYU_OOBE_VERBOSE": "1",
+        "YUNXI_HOME": home,
+        "YUNXI_OOBE_NO_IME": "1",
+        "YUNXI_OOBE_VERBOSE": "1",
         "LANG": "zh_CN.UTF-8",
     })
     os.execvp(BIN, [BIN, "oobe"])
@@ -163,7 +163,7 @@ try:
     os.kill(pid, 15)
 except ProcessLookupError:
     pass
-print("家目录:", home, "（跑完即删；要留着看设 MIYU_KEEP_SANDBOX=1）")
+print("家目录:", home, "（跑完即删；要留着看设 YUNXI_KEEP_SANDBOX=1）")
 try:
     after = json.loads(open(cfg_path, encoding="utf-8").read())
     print("跑完后 config.jsonc 的 mcp 段:", json.dumps(after.get("mcp"), ensure_ascii=False))

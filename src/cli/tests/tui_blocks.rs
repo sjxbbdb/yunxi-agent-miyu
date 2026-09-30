@@ -3,7 +3,7 @@
 //! 最要紧的一条是最后那组：**inline 下字节流必须逐字节和以前一样**。全屏是可选
 //! 项，为它往所有人的终端里塞标记是不能接受的。
 
-use miyu_hosts::render::blocks;
+use yunxi_hosts::render::blocks;
 
 /// 测试之间共用同一个进程级开关，串行跑免得互相掀桌子。
 pub(super) fn with_blocks<T>(body: impl FnOnce() -> T) -> T {
@@ -39,7 +39,7 @@ fn enabled_stream_wraps_the_collapsed_body() {
         .unwrap();
         let text = String::from_utf8(out).unwrap();
         assert!(text.contains("summary"));
-        assert!(text.starts_with("\x1b]1337;miyu-block="));
+        assert!(text.starts_with("\x1b]1337;yunxi-block="));
         assert!(text.ends_with(blocks::END_MARKER));
     });
 }
@@ -63,7 +63,7 @@ fn expand_under_keeps_the_summary_as_the_handle() {
         let lines = blocks::expand_under(
             "思考 · 30 词元",
             vec!["正文".into()],
-            miyu_hosts::render::SummaryStyle::Reasoning,
+            yunxi_hosts::render::SummaryStyle::Reasoning,
         );
         // 头行 + 详情 + 收尾空行:展开版永远比折叠版(摘要 + 空行)高,
         // 视图偏移不会为负。
@@ -88,7 +88,7 @@ fn registry_evicts_oldest_beyond_the_line_budget() {
 #[test]
 fn markers_parse_both_ways() {
     assert!(matches!(
-        blocks::parse_marker("miyu-block=42"),
+        blocks::parse_marker("yunxi-block=42"),
         Some(blocks::BlockMarker::Begin {
             id: 42,
             open: false
@@ -96,11 +96,11 @@ fn markers_parse_both_ways() {
     ));
     // 「出来就是展开态」那一档走另一个载荷（`展开思考内容 / 展开工具内容`）。
     assert!(matches!(
-        blocks::parse_marker("miyu-block-open=42"),
+        blocks::parse_marker("yunxi-block-open=42"),
         Some(blocks::BlockMarker::Begin { id: 42, open: true })
     ));
     assert!(matches!(
-        blocks::parse_marker("miyu-block-end"),
+        blocks::parse_marker("yunxi-block-end"),
         Some(blocks::BlockMarker::End)
     ));
     // 同号段的别家载荷(以及全屏自己的 paint trace)不能误判成块标记。
@@ -210,7 +210,7 @@ fn expanding_near_the_bottom_grows_downward_from_the_clicked_row() {
     });
 }
 
-/// 「展开思考内容 / 展开工具内容 = 开」落到字节流上就是 `miyu-block-open=`：
+/// 「展开思考内容 / 展开工具内容 = 开」落到字节流上就是 `yunxi-block-open=`：
 /// 视图第一次见到就替用户开一次，**不用点**（用户 09-17：「不用我点击他的 tag
 /// 行，他出来就是展开的效果」）。
 ///
@@ -406,7 +406,7 @@ fn graphics_leave_no_trace_in_the_body() {
 /// 正文自己折行：续行也带装订边，转义序列不被切断，能断在空格就断在空格。
 #[test]
 fn body_wraps_itself_instead_of_letting_the_buffer_do_it() {
-    use miyu_hosts::render::wrap_display_text;
+    use yunxi_hosts::render::wrap_display_text;
 
     // 断在空格处，不硬切在词中间。
     assert_eq!(
@@ -572,7 +572,7 @@ fn the_overlay_can_select_and_copy_text() {
 #[test]
 fn job_panel_shows_the_command_it_is_running() {
     with_blocks(|| {
-        let dir = std::env::temp_dir().join(format!("miyu-log-cmd-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("yunxi-log-cmd-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("建目录");
         let path = dir.join("job.log");
         // 纯输出,没有 [思考]/[工具] 这些标记——后台命令的日志就长这样。

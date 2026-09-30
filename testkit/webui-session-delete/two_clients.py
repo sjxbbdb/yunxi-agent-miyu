@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """复现:WebUI 删掉最后一个可见会话后冒出几个新会话。
 
-    BIN=target/release/miyu python3 delete_last.py
+    BIN=target/release/yunxi python3 delete_last.py
 """
 import json
 import os
@@ -14,18 +14,18 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 BIN = Path(os.environ["BIN"])
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-delete-last")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-delete-last")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18493"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 
 
 def write_config():

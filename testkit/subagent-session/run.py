@@ -24,7 +24,7 @@
     cargo build
     python3 testkit/subagent-session/run.py
 
-绝不触碰线上 8300 daemon;产物在 ~/.cache/miyu-subagent-session/。
+绝不触碰线上 8300 daemon;产物在 ~/.cache/yunxi-subagent-session/。
 """
 import importlib.util
 import json
@@ -38,18 +38,18 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
 BASE = Path(__file__).resolve().parent
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-subagent-session")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-subagent-session")).expanduser()
 HOME = OUT / "home"
 # unix socket 有 SUN_LEN(108B)上限,运行目录放短路径。
-RUN = Path.home() / ".cache" / "miyu-sas-run"
+RUN = Path.home() / ".cache" / "yunxi-sas-run"
 PORT = int(os.environ.get("PORT", "18548"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18547"))
 STUB_LOG = OUT / "stub.jsonl"
@@ -94,7 +94,7 @@ def build_home():
     cfg.setdefault("cache", {})["request_log"] = False
     cfg.setdefault("display", {})["show_token_usage"] = False
     (HOME / "config" / "config.jsonc").write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
-    real_cache = Path.home() / ".miyu" / "cache" / "models_cache.json"
+    real_cache = Path.home() / ".yunxi" / "cache" / "models_cache.json"
     if real_cache.exists():
         (HOME / "cache").mkdir(parents=True, exist_ok=True)
         shutil.copy(real_cache, HOME / "cache" / "models_cache.json")
@@ -102,13 +102,13 @@ def build_home():
 
 def env():
     e = dict(os.environ)
-    e["MIYU_HOME"] = str(HOME)
+    e["YUNXI_HOME"] = str(HOME)
     e["XDG_RUNTIME_DIR"] = str(RUN)
-    for key in ("MIYU_DIRECT", "MIYU_SESSION", "MIYU_TURN_MODE", "XDG_CACHE_HOME", "XDG_CONFIG_HOME",
+    for key in ("YUNXI_DIRECT", "YUNXI_SESSION", "YUNXI_TURN_MODE", "XDG_CACHE_HOME", "XDG_CONFIG_HOME",
                 "XDG_DATA_HOME", "XDG_STATE_HOME"):
         e.pop(key, None)
     e["LANG"] = "zh_CN.UTF-8"
-    e["MIYU_LOG"] = os.environ.get("MIYU_LOG", "info")
+    e["YUNXI_LOG"] = os.environ.get("YUNXI_LOG", "info")
     return e
 
 
@@ -244,7 +244,7 @@ def stop_daemon(daemon):
 
 
 def ipc_request(command):
-    """直接对 daemon 的 unix socket 发一条命令:4 字节大端长度 + JSON(见 miyu_core::ipc::send),
+    """直接对 daemon 的 unix socket 发一条命令:4 字节大端长度 + JSON(见 yunxi_core::ipc::send),
     客户端先说话(没有握手帧),daemon 回一帧。"""
     import socket
     import struct
@@ -475,7 +475,7 @@ def main():
             stop_daemon(daemon)
         stub.terminate()
         time.sleep(1.0)
-        left = leftovers("miyu-subagent-test")
+        left = leftovers("yunxi-subagent-test")
         check("no_orphans", not left, left)
         (OUT / "verdict.json").write_text(json.dumps(results, ensure_ascii=False, indent=2), "utf-8")
         print("ask seconds:", ASK_SECONDS)

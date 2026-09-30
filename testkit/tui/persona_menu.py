@@ -7,9 +7,9 @@
 - 回车 = 这台机器上它怎么配 → 插件设置表单；
 - 两者都**跟着「保存并退出」落盘**，退出时答「不保存」就一起丢掉。
 
-真二进制 + PTY + pyte，隔离的 MIYU_HOME，不起 daemon、不发模型请求。
+真二进制 + PTY + pyte，隔离的 YUNXI_HOME，不起 daemon、不发模型请求。
 
-Run: python3 testkit/tui/persona_menu.py --binary /absolute/path/to/miyu
+Run: python3 testkit/tui/persona_menu.py --binary /absolute/path/to/yunxi
 """
 
 import argparse
@@ -30,7 +30,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -59,7 +59,7 @@ class Driver:
         self.process = subprocess.Popen(
             [str(binary), "config"],
             stdin=slave, stdout=slave, stderr=slave, cwd=home,
-            env=dict(os.environ, MIYU_HOME=str(home), TERM="xterm-256color",
+            env=dict(os.environ, YUNXI_HOME=str(home), TERM="xterm-256color",
                      COLORTERM="truecolor", LANG="zh_CN.UTF-8",
                      XDG_RUNTIME_DIR=str(home / "run")),
             preexec_fn=setup,
@@ -136,8 +136,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
     args = parser.parse_args()
-    sandbox = sandbox_dir.make("miyu-persona-menu-")
-    out = Path(os.environ.get("OUT") or Path.home() / ".cache" / "miyu-persona-menu")
+    sandbox = sandbox_dir.make("yunxi-persona-menu-")
+    out = Path(os.environ.get("OUT") or Path.home() / ".cache" / "yunxi-persona-menu")
     out.mkdir(parents=True, exist_ok=True)
     home = sandbox / "home"
     (home / "config").mkdir(parents=True)
@@ -162,7 +162,7 @@ def main():
         check("人格" in text, "主菜单有「人格」这一项")
         check("插件配置" not in text and "自定义提示词" not in text,
               "「插件配置」「自定义提示词」已经并进去了")
-        check("Miyu" in text, "人格那行带着当前人格的名字")
+        check("YunXi" in text, "人格那行带着当前人格的名字")
 
         # ── 人格菜单 ──
         text = driver.send(b"j" * 5 + b"\r", "当前人格", "启用的功能")

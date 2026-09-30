@@ -15,14 +15,14 @@ use crossterm::event::{
 };
 use crossterm::terminal::{self, Clear, ClearType};
 use crossterm::{execute, queue};
-use miyu_base::i18n::text as t;
-use miyu_base::question::{
-    validate_answers, QuestionAnswers, QuestionPrompt, QuestionRequest, QuestionResponse,
-    MAX_CUSTOM_ANSWER_CHARS,
-};
 use std::io::{self, IsTerminal, Write};
 use std::time::{Duration, Instant};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use yunxi_base::i18n::text as t;
+use yunxi_base::question::{
+    validate_answers, QuestionAnswers, QuestionPrompt, QuestionRequest, QuestionResponse,
+    MAX_CUSTOM_ANSWER_CHARS,
+};
 
 const CANCEL_CONFIRM_WINDOW: Duration = Duration::from_secs(2);
 
@@ -535,7 +535,7 @@ impl Drop for QuestionSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use miyu_base::question::QuestionOption;
+    use yunxi_base::question::QuestionOption;
 
     fn multi_request() -> QuestionRequest {
         QuestionRequest {

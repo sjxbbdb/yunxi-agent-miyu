@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""设置界面（`miyu config`）的版式走查：banner / 面包屑 / 两列 / 按键条 /
+"""设置界面（`yunxi config`）的版式走查：banner / 面包屑 / 两列 / 按键条 /
 动画 / 窄屏降级 / 编辑态光标。
 
-真二进制 + PTY + pyte，隔离的 MIYU_HOME，不起 daemon、不发模型请求。
+真二进制 + PTY + pyte，隔离的 YUNXI_HOME，不起 daemon、不发模型请求。
 
 注意：界面每 30ms 画一帧（星空与扫光在动），所以**不能**拿「输出停了」当判据，
 只能等屏幕文本出现预期内容。
 
-Run: python3 testkit/tui/config_visual.py --binary /absolute/path/to/miyu
+Run: python3 testkit/tui/config_visual.py --binary /absolute/path/to/yunxi
 """
 
 import argparse
@@ -32,7 +32,7 @@ import pyte
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -90,7 +90,7 @@ class Driver:
             [str(binary), "config"],
             stdin=slave, stdout=slave, stderr=slave, cwd=home,
             # 真彩：pyte 才会把前景色原样给出来，颜色断言要用。
-            env=dict(os.environ, MIYU_HOME=str(home), TERM="xterm-256color",
+            env=dict(os.environ, YUNXI_HOME=str(home), TERM="xterm-256color",
                      COLORTERM="truecolor", LANG="zh_CN.UTF-8",
                      XDG_RUNTIME_DIR=str(runtime)),
             preexec_fn=setup,
@@ -254,13 +254,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
     args = parser.parse_args()
-    sandbox = sandbox_dir.make("miyu-config-visual-")
-    out = Path(os.environ.get("OUT") or Path.home() / ".cache" / "miyu-config-visual")
+    sandbox = sandbox_dir.make("yunxi-config-visual-")
+    out = Path(os.environ.get("OUT") or Path.home() / ".cache" / "yunxi-config-visual")
     out.mkdir(parents=True, exist_ok=True)
     home = sandbox / "home"
     (home / "config").mkdir(parents=True)
     # 运行时目录**不能**挂在沙箱底下。daemon 的 IPC socket 落在
-    # `<runtime>/miyu-<12 位摘要>/core.sock`,而 unix socket 的路径在 macOS 上
+    # `<runtime>/yunxi-<12 位摘要>/core.sock`,而 unix socket 的路径在 macOS 上
     # 顶格 104 字节;那儿的默认 TMPDIR 是
     # `/var/folders/dz/6m5cg9zj6fb081f1r4f75gmr0000gn/T/`,光前缀就 48 字节,
     # 算下来 113,daemon 直接起不来(09-23 在真机上量的)。所以给它单独找个短的。

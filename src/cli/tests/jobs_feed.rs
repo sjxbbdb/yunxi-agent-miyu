@@ -2,7 +2,7 @@
 //! 别的会话的后台任务）。真机走查见 `testkit/tui/other_session_jobs.py`。
 
 use crate::cli::repl::jobs::SharedJobsFeed;
-use miyu_engine::tools::jobs::JobOverview;
+use yunxi_engine::tools::jobs::JobOverview;
 
 fn job(id: &str, session: Option<&str>, root: Option<&str>) -> JobOverview {
     JobOverview {

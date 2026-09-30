@@ -5,8 +5,8 @@
 /session /effort /models 面板开着时至少 4/6(以前是 0/6:面板循环从不推动画);
 关掉面板、/config 按 q 退出后回到大厅都应回到 ≥5/6。
 
-和 session_picker.py 同一套骨架:一次性 MIYU_HOME、桩模型、带光标应答的 PTY。
-Run: python3 testkit/tui/lobby_anim.py --binary /absolute/path/to/miyu
+和 session_picker.py 同一套骨架:一次性 YUNXI_HOME、桩模型、带光标应答的 PTY。
+Run: python3 testkit/tui/lobby_anim.py --binary /absolute/path/to/yunxi
 """
 
 import argparse
@@ -31,14 +31,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
     args = parser.parse_args()
-    os.environ.pop("MIYU_DIRECT", None)
-    sandbox = sandbox_dir.make("miyu-lobby-anim-")
+    os.environ.pop("YUNXI_DIRECT", None)
+    sandbox = sandbox_dir.make("yunxi-lobby-anim-")
     os.environ.update(
-        MIYU_HOME=str(sandbox / "home"),
-        MIYU_TUI_RUNTIME=str(sandbox / "run"),
-        MIYU_TUI_PORT=str(free_port()),
+        YUNXI_HOME=str(sandbox / "home"),
+        YUNXI_TUI_RUNTIME=str(sandbox / "run"),
+        YUNXI_TUI_PORT=str(free_port()),
         STUB_PORT=str(free_port()),
-        OUT=os.environ.get("OUT") or str(Path.home() / ".cache" / "miyu-lobby-anim"),
+        OUT=os.environ.get("OUT") or str(Path.home() / ".cache" / "yunxi-lobby-anim"),
     )
     import round26 as q
     import pyte
@@ -84,7 +84,7 @@ def main():
                 lobby=lobby,
                 menu=any("Enter" in line and ("取消" in line or "完成" in line or "确认" in line) for line in actual),
                 # 设置界面 09-20 改用引导那套版面（main `a87ef15b`），标题从
-                # 「MIYU 配置」变成「◉ 配置」，判据跟着换成只有它才有的那行。
+                # 「YUNXI 配置」变成「◉ 配置」，判据跟着换成只有它才有的那行。
                 #
                 # **不再要求大厅已经消失**：新版面自带 banner，艺术字和星空本来
                 # 就该留在上面（用户 09-20 确认是新设计）。原来那条

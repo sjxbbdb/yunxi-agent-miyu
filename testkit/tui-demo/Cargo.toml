@@ -1,8 +1,8 @@
 [package]
-name = "miyu-tui-demo"
+name = "yunxi-tui-demo"
 version = "0.2.0"
 edition = "2021"
-description = "ratatui 全屏 TUI 手感演示（沿用 Miyu 现有 REPL 视觉）：锚定选择器 / 覆盖层 / 流式对话 / 滚动 / kitty 图片"
+description = "ratatui 全屏 TUI 手感演示（沿用 YunXi 现有 REPL 视觉）：锚定选择器 / 覆盖层 / 流式对话 / 滚动 / kitty 图片"
 
 [dependencies]
 ratatui = { version = "0.29", default-features = false, features = ["crossterm", "unstable-rendered-line-info"] }

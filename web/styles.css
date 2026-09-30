@@ -31,7 +31,7 @@
   /*
    * 夜阑 (dusk) —— 默认暗色主题。
    * MD3 system tokens;matugen 生成的 /theme.css 可整套覆盖。
-   * 种子色取自 miyu-logo:primary=瞳色减淡的雾蓝,secondary=发色暖金,
+   * 种子色取自 yunxi-logo:primary=瞳色减淡的雾蓝,secondary=发色暖金,
    * tertiary=丝带酒红,surface=傍晚蓝紫。
    */
   --md-sys-color-primary: #aebde8;
@@ -649,7 +649,7 @@ textarea:disabled {
 /* 运行中:转圈。动效表达「正在发生」——静态点和「有未读」看不出区别。 */
 /* 盲文点阵转圈,和 REPL 里工具运行时那个同款(`wait_spinner.rs` 的
    BRAILLE_FRAMES)。同一件事在两个界面用同一个形状;圆环那种到处都是,
-   这个一眼就认得出是 Miyu 在干活。
+   这个一眼就认得出是 YunXi 在干活。
 
    换帧交给 JS(`startBrailleTicker`)。CSS 那两种做法都不可靠:动画
    `content` 只有 Chrome 认;十帧竖排靠 `steps()` 平移则要求行高和字形
@@ -4827,8 +4827,8 @@ body[data-color-scheme="matugen"] .tool-card.is-command {
    两套 keyframes 零交集):三颗点摆成三角,顺时针转一圈 → 聚合到中心 → 展开成三角
    → 逆时针转一圈 → 聚合 → 展开成三角,6s/圈循环。没有「水平一行」这个姿态
    (用户 09-18:水平展开也不用了,连尾段的水平弹跳一起去掉),100% 与 0% 同姿态,
-   接缝无跳变。三色用 Miyu logo 三原色(发金/丝带/瞳蓝)。无光效。 */
-.miyu-run {
+   接缝无跳变。三色用 YunXi logo 三原色(发金/丝带/瞳蓝)。无光效。 */
+.yunxi-run {
   --mrun: 6s;
   display: inline-block;
   width: 34px;
@@ -4836,12 +4836,12 @@ body[data-color-scheme="matugen"] .tool-card.is-command {
   position: relative;
   align-self: center;
 }
-.miyu-run .mr-spin {
+.yunxi-run .mr-spin {
   position: absolute;
   inset: 0;
   animation: mr-spin var(--mrun) ease-in-out infinite;
 }
-.miyu-run i {
+.yunxi-run i {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -4850,9 +4850,9 @@ body[data-color-scheme="matugen"] .tool-card.is-command {
   margin: -3px;
   border-radius: 50%;
 }
-.miyu-run .mr1 { background: var(--gold); animation: mr1 var(--mrun) ease-in-out infinite; }
-.miyu-run .mr2 { background: var(--ribbon); animation: mr2 var(--mrun) ease-in-out infinite; }
-.miyu-run .mr3 { background: var(--accent); animation: mr3 var(--mrun) ease-in-out infinite; }
+.yunxi-run .mr1 { background: var(--gold); animation: mr1 var(--mrun) ease-in-out infinite; }
+.yunxi-run .mr2 { background: var(--ribbon); animation: mr2 var(--mrun) ease-in-out infinite; }
+.yunxi-run .mr3 { background: var(--accent); animation: mr3 var(--mrun) ease-in-out infinite; }
 /* 0-25% 顺时针一圈(三角展开着),25-50% 保持在 360°(聚合/展开期间不转),
    50-75% 逆时针转回 0°,75-100% 保持(聚合/展开)。 */
 @keyframes mr-spin { 0%{transform:rotate(0)} 25%{transform:rotate(360deg)} 50%{transform:rotate(360deg)} 75%{transform:rotate(0)} 100%{transform:rotate(0)} }
@@ -4868,11 +4868,11 @@ body[data-color-scheme="matugen"] .tool-card.is-command {
   0%,25%{transform:translate(8px,5px)} 37%{transform:translate(0,0) scale(.72)} 50%,75%{transform:translate(8px,5px)}
   87%{transform:translate(0,0) scale(.72)} 100%{transform:translate(8px,5px)} }
 @media (prefers-reduced-motion: reduce) {
-  .miyu-run .mr-spin, .miyu-run i { animation-duration: 0s; }
+  .yunxi-run .mr-spin, .yunxi-run i { animation-duration: 0s; }
 }
 /* AI 输出气泡里那份「加载中」:留一点上下留白,别贴着头像行。
    整体缩小一点(用户觉得偏大):等比缩到 0.7,左对齐锚点不动。 */
-.miyu-run.typing-run { margin: 3px 0 5px 2px; transform: scale(0.7); transform-origin: left center; }
+.yunxi-run.typing-run { margin: 3px 0 5px 2px; transform: scale(0.7); transform-origin: left center; }
 
 .artifact-toggle-button {
   position: relative;
@@ -9217,12 +9217,12 @@ body[data-theme="linen"] .u-type-pill.t-aux { color: var(--md-sys-color-on-secon
 }
 
 /* ── G2:不可见即暂停 ──
-   页面隐藏(切标签/最小化)时由 app.js 挂 miyu-paused。所有无限动画
+   页面隐藏(切标签/最小化)时由 app.js 挂 yunxi-paused。所有无限动画
    (status-pulse/shimmer/typing-bounce/spin 等)暂停,恢复可见时原地续播,
    视觉零变化。实测隐藏窗口不暂停时合成负载与可见时相同。 */
-body.miyu-paused *,
-body.miyu-paused *::before,
-body.miyu-paused *::after {
+body.yunxi-paused *,
+body.yunxi-paused *::before,
+body.yunxi-paused *::after {
   animation-play-state: paused !important;
 }
 

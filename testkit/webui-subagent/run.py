@@ -2,8 +2,8 @@
 """会话项目第 4 段：网页里点子代理卡片进它的会话，「↑ 主会话」回来。
 
     cargo build
-    BIN=target/debug/miyu python3 testkit/webui-subagent/run.py
-    # 对照改前：BIN=~/.local/bin/miyu …
+    BIN=target/debug/yunxi python3 testkit/webui-subagent/run.py
+    # 对照改前：BIN=~/.local/bin/yunxi …
 
 沙箱 daemon + repl-smoke 的桩（主线派一个子代理，子代理跑一条 15 秒的命令；09-26 起子代理只在后台跑，
 主线派完这一轮就收）+ Playwright：
@@ -37,13 +37,13 @@ sys.path.insert(0, str(KIT))
 import authlib  # noqa: E402
 
 BIN = Path(os.environ["BIN"]).expanduser().resolve()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-webui-subagent")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-webui-subagent")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18595"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18596"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 TASK_TEXT = "子代理走查任务"
 REPLY_HEAD = "好的,收到"
 # 老标记中继的那几种（`__subagent_session__`、`__subagent_metric__`、`__subtool_preparing__`

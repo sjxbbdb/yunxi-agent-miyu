@@ -14,9 +14,9 @@
     cargo build
     python3 testkit/tui/softwrap.py
 
-产物在 ~/.cache/miyu-softwrap/（每个宽度一张屏）。
+产物在 ~/.cache/yunxi-softwrap/（每个宽度一张屏）。
 
-**这些 TUI 走查只能一个一个跑**：共用同一个 `MIYU_HOME` 和桩模型端口。
+**这些 TUI 走查只能一个一个跑**：共用同一个 `YUNXI_HOME` 和桩模型端口。
 """
 
 import fcntl
@@ -34,7 +34,7 @@ from pathlib import Path
 
 import pyte
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -42,7 +42,7 @@ for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-softwrap"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-softwrap"))
 PROMPT = "走查一句"
 START_COLS, ROWS = 80, 40
 # 一段没有空格可断的长正文：中文本来就随处可断，正好逼出「按宽度折」这条路。

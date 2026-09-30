@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""直连模式（`MIYU_DIRECT=1`）回合进行中的浮层与状态行，要和远端那条路一样。
+"""直连模式（`YUNXI_DIRECT=1`）回合进行中的浮层与状态行，要和远端那条路一样。
 
 09-24 顺手发现：直连回合的循环里按键直接进输入框、不经浮层，状态行也一次都不刷。
 于是回合进行中：浮层上按 Esc 关不掉（连按两下反倒把这一轮打断了）、按 x 停不了任务，
@@ -118,7 +118,7 @@ def scenario_x_stops_the_job(report):
 def main():
     report = {}
     saved_env = h.ENV
-    h.ENV = dict(h.ENV, MIYU_DIRECT="1")
+    h.ENV = dict(h.ENV, YUNXI_DIRECT="1")
     try:
         scenario_esc_closes_the_overlay(report)
         scenario_x_stops_the_job(report)

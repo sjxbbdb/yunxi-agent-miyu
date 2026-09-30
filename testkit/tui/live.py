@@ -8,9 +8,9 @@
     python3 testkit/tui/live.py --prompt "…"    # 自己指定
 
 沙箱：只从真配置里借一个供应商（连 key），会话库、记忆、日志全在
-/tmp 下另开一份，不碰 ~/.miyu。
+/tmp 下另开一份，不碰 ~/.yunxi。
 
-产物在 ~/.cache/miyu-tui-live/：每一步的 screen-NN.txt 是当时的整屏，
+产物在 ~/.cache/yunxi-tui-live/：每一步的 screen-NN.txt 是当时的整屏，
 raw.bin 是原始字节流。
 """
 
@@ -35,18 +35,18 @@ import pyte
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fold_summary import is_fold_summary  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = ROOT / "target" / "release" / "miyu"
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-tui-live/home"))
-WORKSPACE = Path("/tmp/miyu-tui-live/work")
-RUNTIME = os.environ.get("MIYU_TUI_RUNTIME", "/tmp/mx-live")
-PORT = int(os.environ.get("MIYU_TUI_PORT", "18455"))
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-tui-live"))
+BIN = ROOT / "target" / "release" / "yunxi"
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-tui-live/home"))
+WORKSPACE = Path("/tmp/yunxi-tui-live/work")
+RUNTIME = os.environ.get("YUNXI_TUI_RUNTIME", "/tmp/mx-live")
+PORT = int(os.environ.get("YUNXI_TUI_PORT", "18455"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-tui-live"))
 COLS, ROWS = 120, 40
 PROVIDER = os.environ.get("LIVE_PROVIDER", "opencodego")
 MODEL = os.environ.get("LIVE_MODEL", "deepseek-v4.1-flash")
@@ -56,7 +56,7 @@ MODEL = os.environ.get("LIVE_MODEL", "deepseek-v4.1-flash")
 #   子代理（覆盖层）、后台命令（状态行）。
 TASKS = [
     "用一句话说说你现在看到的工作目录里有什么。先用 run_command 跑 ls -la 看一眼。",
-    "把 /tmp/miyu-tui-live/work/notes.md 写成一份三行的待办清单，然后读回来确认。",
+    "把 /tmp/yunxi-tui-live/work/notes.md 写成一份三行的待办清单，然后读回来确认。",
     "用 edit 工具把 notes.md 的第一行改成「第一件事：验收 TUI」，别用命令行改。",
     "用 markdown 表格列出三个终端模拟器：名字、一句话特点、是否支持图片。要有表头。",
     "开个后台命令：每秒打印一行，打十行就停。别等它，直接告诉我 job id。",
@@ -71,7 +71,7 @@ def jsonc(path):
 
 def borrow_provider():
     """从真配置里借一个供应商（含 key）。借不到就没法真跑。"""
-    real = Path.home() / ".miyu" / "config" / "config.jsonc"
+    real = Path.home() / ".yunxi" / "config" / "config.jsonc"
     if not real.exists():
         raise SystemExit(f"! 找不到真配置 {real}")
     data = jsonc(real)
@@ -121,9 +121,9 @@ def spawn():
 
     env = dict(
         os.environ,
-        MIYU_HOME=str(HOME),
+        YUNXI_HOME=str(HOME),
         XDG_RUNTIME_DIR=RUNTIME,
-        MIYU_TUI="1",
+        YUNXI_TUI="1",
         TERM="xterm-256color",
     )
     process = subprocess.Popen(
@@ -258,7 +258,7 @@ def main():
 
     daemon = subprocess.Popen(
         [str(BIN), "__daemon", "--port", str(PORT)],
-        env=dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME),
+        env=dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME),
         cwd=str(WORKSPACE),
         stdout=(OUT / "daemon.log").open("w"),
         stderr=subprocess.STDOUT,

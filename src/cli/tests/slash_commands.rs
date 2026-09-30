@@ -13,7 +13,7 @@ fn reset_is_a_repl_command() {
 /// 退回修复前这条会红：`/clear` 是另一条命令（清屏）。
 #[test]
 fn clear_is_an_alias_of_reset() {
-    use miyu_core::slash_commands::{
+    use yunxi_core::slash_commands::{
         names_repl_command, repl_command_spec_for_name, ReplSlashCommand,
     };
     assert!(names_repl_command("/clear", ReplSlashCommand::Reset));
@@ -286,7 +286,7 @@ fn every_repl_slash_command_has_a_table_entry() {
 /// `GET /api/commands` 直接从这张表按 `web` 标记过滤。
 #[test]
 fn web_commands_are_a_subset_of_the_repl_table() {
-    let web = miyu_core::slash_commands::web_commands();
+    let web = yunxi_core::slash_commands::web_commands();
     assert!(!web.is_empty(), "WebUI 一条命令都没开，命令平面等于没做");
     for spec in &web {
         assert!(
@@ -343,14 +343,14 @@ fn session_list_groups_the_current_lane_first() {
     assert_eq!(
         names(order_entries_for_lane(
             mixed.clone(),
-            miyu_base::config::PersonaLane::Active
+            yunxi_base::config::PersonaLane::Active
         )),
         ["n1", "n2", "d1", "d2"]
     );
     assert_eq!(
         names(order_entries_for_lane(
             mixed,
-            miyu_base::config::PersonaLane::Dev
+            yunxi_base::config::PersonaLane::Dev
         )),
         ["d1", "d2", "n1", "n2"]
     );
@@ -363,7 +363,7 @@ fn session_list_groups_the_current_lane_first() {
 #[test]
 fn the_goal_hint_says_state_rounds_and_elapsed() {
     use crate::cli::footer::goal_hint_text;
-    use miyu_core::ipc::GoalHint;
+    use yunxi_core::ipc::GoalHint;
 
     assert_eq!(goal_hint_text(None), "", "没目标就什么都不画");
 

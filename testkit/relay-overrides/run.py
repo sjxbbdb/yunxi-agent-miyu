@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""中转线认单轮覆盖项(09-23):`miyu ask --tools / --no-tools / --no-memory` 在中转线上也生效。
+"""中转线认单轮覆盖项(09-23):`yunxi ask --tools / --no-tools / --no-memory` 在中转线上也生效。
 
-    BIN=<miyu 二进制> python3 testkit/relay-overrides/run.py
+    BIN=<yunxi 二进制> python3 testkit/relay-overrides/run.py
 
-中转线(claude-code / codebuddy / codex / agy)的 Miyu 工具只从 MCP 桥拿,桥按会话另建
+中转线(claude-code / codebuddy / codex / agy)的 YunXi 工具只从 MCP 桥拿,桥按会话另建
 工具面;覆盖项原来只在回合装配里裁剪,桥看不到——模型照样拿到全部工具,`--no-memory`
 的回合还摆着 remember_fact;`--no-tools` 时 CLI 自带的原生工具(Bash/Edit)也照开。
 
 沙箱 daemon + 假 agy(stream-json,同 testkit/agy-reuse 的协议)。假 agy 每轮用自己环境
-里的 `MIYU_SESSION` 跑一次 `miyu tool-call --list`——那条路就是桥的目录(同一条
+里的 `YUNXI_SESSION` 跑一次 `yunxi tool-call --list`——那条路就是桥的目录(同一条
 `attach_owner_turn_tools`)——并读 `--agent` 指向的代理文件看原生工具开没开。
 
 判定:
@@ -18,7 +18,7 @@
   no_tools_bridge           --no-tools:桥不挂(或挂了也是空的),原生工具关掉
   restricted_not_resumed    同一会话带 --tools 那一轮不续上前面不带限制的那条 agy 会话、不借它的进程
   plain_still_resumes       同一会话再回到不带覆盖项:接着原来那条(同进程或 --conversation 续上)
-一条判定一行 ✅/❌,最后 n/m passed。产物 ~/.cache/miyu-relay-overrides/。
+一条判定一行 ✅/❌,最后 n/m passed。产物 ~/.cache/yunxi-relay-overrides/。
 """
 import json
 import os
@@ -30,23 +30,23 @@ import time
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu").resolve()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-relay-overrides")).expanduser()
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi").resolve()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-relay-overrides")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 AGY_CONFIG = OUT / "agy-config"
 FAKE = OUT / "fake-agy"
 LOG = OUT / "fake-agy.jsonl"
 PORT = int(os.environ.get("PORT", "18583"))
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME),
-           MIYU_AGY_CONFIG_DIR=str(AGY_CONFIG), FAKE_AGY_LOG=str(LOG), FAKE_MIYU_BIN=str(BIN),
-           MIYU_LOG=os.environ.get("MIYU_LOG", "info"))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME),
+           YUNXI_AGY_CONFIG_DIR=str(AGY_CONFIG), FAKE_AGY_LOG=str(LOG), FAKE_YUNXI_BIN=str(BIN),
+           YUNXI_LOG=os.environ.get("YUNXI_LOG", "info"))
 
 FAKE_AGY = r'''#!/usr/bin/env python3
 import json, os, subprocess, sys, time
@@ -63,7 +63,7 @@ def emit(obj):
 def record(obj):
     with open(log, "a", encoding="utf-8") as f:
         f.write(json.dumps(obj, ensure_ascii=False) + "\n")
-agent_file = Path(os.environ["MIYU_AGY_CONFIG_DIR"]) / "agents" / agent / "agent.md"
+agent_file = Path(os.environ["YUNXI_AGY_CONFIG_DIR"]) / "agents" / agent / "agent.md"
 try:
     agent_text = agent_file.read_text(encoding="utf-8")
     native = "tools: []" not in agent_text.split("---\n\n", 1)[0]
@@ -71,15 +71,15 @@ except OSError:
     native = None
 def bridge_names():
     # 桥的会话身份就是这个变量(relay_env);没有它 = 桥没挂。
-    if not os.environ.get("MIYU_SESSION"):
+    if not os.environ.get("YUNXI_SESSION"):
         return None
-    listed = subprocess.run([os.environ["FAKE_MIYU_BIN"], "tool-call", "--list"],
+    listed = subprocess.run([os.environ["FAKE_YUNXI_BIN"], "tool-call", "--list"],
                             stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
     return sorted(line.split("\t")[0].strip() for line in listed.stdout.splitlines() if line.strip())
 usage = {"input_tokens": 10, "output_tokens": 2, "thinking_tokens": 0, "cache_read_tokens": 0, "total_tokens": 12}
 emit({"event": "init", "conversation_id": sid, "init": {"model": "m", "cwd": "/", "agent": agent, "tools": []}})
 record({"kind": "start", "pid": os.getpid(), "sid": sid, "resumed": resumed, "native": native,
-        "session": os.environ.get("MIYU_SESSION")})
+        "session": os.environ.get("YUNXI_SESSION")})
 turn = 0
 for line in sys.stdin:
     if not line.strip():
@@ -91,7 +91,7 @@ for line in sys.stdin:
     emit({"event": "step_update", "step_update": {"conversation_id": sid, "step_index": 2 * turn, "state": "DONE", "step_type": "agent_response", "text_delta": body, "usage": usage}})
     emit({"event": "result", "result": {"conversation_id": sid, "status": "SUCCESS", "response": body, "num_turns": turn, "usage": usage}})
     record({"kind": "turn", "pid": os.getpid(), "sid": sid, "turn": turn, "bridge": names, "native": native,
-            "session": os.environ.get("MIYU_SESSION")})
+            "session": os.environ.get("YUNXI_SESSION")})
 '''
 
 results = []
@@ -113,7 +113,7 @@ def write_config():
         }],
         "memory": {"enabled": True},
         "plugins": {"antigravity": {
-            "binary": str(FAKE), "native_tools": "all", "miyu_tools": "all",
+            "binary": str(FAKE), "native_tools": "all", "yunxi_tools": "all",
             "reuse_process": True, "reuse_idle_seconds": 30,
         }},
     }

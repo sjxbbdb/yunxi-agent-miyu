@@ -240,7 +240,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         if directive.startswith("CHILD run-bg-cmd"):
             seconds = 60 if "long" in directive else 3
-            call("run_command", {"command": f"sleep {seconds}; echo BGDONE # miyu-subagent-test", "background": True, "title": "bg probe"})
+            call("run_command", {"command": f"sleep {seconds}; echo BGDONE # yunxi-subagent-test", "background": True, "title": "bg probe"})
             return
         if directive.startswith("CHILD spawn-gc-bg"):
             call("subagent", {"description": "bg grandchild", "prompt": "GRANDCHILD plain", "background": True})

@@ -147,7 +147,7 @@ impl PanelModel for SessionPicker {
             InlineSelectKey::Accept => Some(matches.get(self.selected).map_or(
                 SessionPick::Cancelled,
                 |(_, index)| {
-                    SessionPick::Switch(miyu_core::ipc::SessionRef::Id {
+                    SessionPick::Switch(yunxi_core::ipc::SessionRef::Id {
                         id: self.entries[*index].id.clone(),
                     })
                 },

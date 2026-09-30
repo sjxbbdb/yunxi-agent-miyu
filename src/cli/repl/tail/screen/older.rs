@@ -54,7 +54,7 @@ impl Screen {
         let frame = self.take_graphics(&page.frame);
         earlier.feed(&frame);
         if self.term.line_count() + earlier.line_count() > MAX_LINES {
-            self.toast(miyu_base::i18n::text(
+            self.toast(yunxi_base::i18n::text(
                 "Nothing older fits here; /history has the full record",
                 "更早的放不下了，完整记录用 /history 看",
             ));

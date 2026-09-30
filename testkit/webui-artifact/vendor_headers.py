@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """验 /vendor/ 的响应头:gzip 直发、不收压缩时现解、PNA 预检。
 
-    BIN=<miyu 二进制> python3 testkit/webui-artifact/vendor_headers.py
+    BIN=<yunxi 二进制> python3 testkit/webui-artifact/vendor_headers.py
 
 「存 gzip、原样发出去让浏览器自己解」是这次唯一的新花样,单独立一道量尺:
 一旦哪天有人给 vendor 加了鉴权、或者压缩存法被改回明文,这里会直接报红。
@@ -16,18 +16,18 @@ import time
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 BIN = Path(os.environ["BIN"]).expanduser()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-vendor-headers")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-vendor-headers")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18488"))
 PATH = "/vendor/echarts/echarts.min.js"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 
 
 def wait_http(url, timeout=40):

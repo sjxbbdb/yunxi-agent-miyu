@@ -5,7 +5,7 @@ use crate::config_tui::{
     aux_role_label, aux_role_summary, embedding_model_label, pool_ref_summary, qq_pool_slots, t,
     tier_hint, tier_pool_summary,
 };
-use miyu_base::config::{
+use yunxi_base::config::{
     AppConfig, AuxRole, EmbeddingBackend, ModelPoolRef, ModelTier, ProviderConfig,
 };
 

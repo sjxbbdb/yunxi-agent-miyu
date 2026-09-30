@@ -11,8 +11,8 @@
 「前半段/后半段」判，面板开得比后半段还晚，等于没测（09-20）。面板一开出来就
 死等库里那一轮变成 completed，确保「回合在面板开着的时候跑完」这个现场真的成立。
 
-    MIYU_HOME=/tmp/miyu-panels/home MIYU_TUI_PORT=18485 STUB_PORT=18486 \\
-      MIYU_TUI_RUNTIME=/tmp/mx-panels OUT=~/.cache/miyu-panels \\
+    YUNXI_HOME=/tmp/yunxi-panels/home YUNXI_TUI_PORT=18485 STUB_PORT=18486 \\
+      YUNXI_TUI_RUNTIME=/tmp/mx-panels OUT=~/.cache/yunxi-panels \\
       python3 testkit/tui/midturn_panels.py
 """
 
@@ -27,7 +27,7 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]

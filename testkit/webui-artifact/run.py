@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """WebUI Artifact 交付能力探针:沙箱 daemon + 工具剧本桩 + Playwright(Chromium)。
 
-    BIN=<miyu 二进制> WEB=<web 目录> python3 testkit/webui-artifact/run.py
+    BIN=<yunxi 二进制> WEB=<web 目录> python3 testkit/webui-artifact/run.py
 
 一轮里让她用 artifact 工具写四份探针文件,然后逐个在右侧面板里看,记录**现状**——
 这不是回归测试,是给「增强交付能力」立基线的量尺,所以每一项只记事实不判对错。
@@ -19,7 +19,7 @@ PROPOSED=1 则在路由层预演「放开脚本」的候选值(不改仓库、�
   md_mermaid    probe.md 里的 mermaid 围栏渲染成图还是代码块
   md_katex      probe.md 里的公式有没有 KaTeX
   src_highlight 源码视图里有没有语法高亮 token
-产物:~/.cache/miyu-webui-artifact/{report.json,daemon.log,*.png}
+产物:~/.cache/yunxi-webui-artifact/{report.json,daemon.log,*.png}
 """
 import json
 import os
@@ -32,7 +32,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -40,13 +40,13 @@ for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
 HERE = Path(__file__).resolve().parent
 BIN = Path(os.environ["BIN"]).expanduser()
 WEB = Path(os.environ.get("WEB", HERE.parent.parent / "web")).resolve()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-webui-artifact")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-webui-artifact")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18485"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18499"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 
 # PROPOSED=1:不改仓库、不重编译,在路由层把「放开脚本」的方案预演一遍——
 # app.js 的 sandbox 属性和后端下发的 CSP 都换成候选值,看六格探针分别变成什么。

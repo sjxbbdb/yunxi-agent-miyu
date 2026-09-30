@@ -14,9 +14,9 @@
 //! 那儿存着密钥和尺寸，关掉再勾回来就得重填。
 
 use crate::config_tui::*;
-use miyu_base::config::feature_catalog::{self, CatalogScope, FeatureItem, FeatureKind};
-use miyu_base::terminal::chrome::{clip, nil, View};
 use ratatui::text::Line;
+use yunxi_base::config::feature_catalog::{self, CatalogScope, FeatureItem, FeatureKind};
+use yunxi_base::terminal::chrome::{clip, nil, View};
 
 /// 正文里的一行是什么。分节线不可选中，光标要跳过它。
 enum Row {
@@ -50,12 +50,12 @@ fn marks(ui: &Ui, item: &FeatureItem) -> String {
 
 pub(in crate::config_tui) fn edit_features(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     pending: &mut PendingWrites,
 ) -> Result<()> {
     let scope = config.active_persona_scope();
-    let default_persona = miyu_core::skills::is_default_persona(config);
+    let default_persona = yunxi_core::skills::is_default_persona(config);
     // 这一轮改过就看改过的：退出去再进来要还是自己刚勾的样子。
     let mut manifest = pending.manifest(config, paths, &scope);
     let sources = crate::feature_sources::collect(config, paths);
@@ -221,7 +221,7 @@ fn show_details(ui: &mut Ui, item: &FeatureItem) -> Result<()> {
     let kind = section_of(item.kind);
     let origin = match item.kind {
         FeatureKind::Script | FeatureKind::Skill => Some(if item.builtin {
-            t("bundled with Miyu", "Miyu 自带")
+            t("bundled with YunXi", "YunXi 自带")
         } else {
             t("yours", "你自己加的")
         }),
@@ -251,7 +251,7 @@ fn show_details(ui: &mut Ui, item: &FeatureItem) -> Result<()> {
 
 fn open_settings(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     id: &str,
     display_name: &str,

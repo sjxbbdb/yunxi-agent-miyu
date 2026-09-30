@@ -12,9 +12,9 @@
     cargo build
     python3 testkit/tui/round26.py
 
-复用 `run.py` 的沙箱与 PTY 辅助。产物在 ~/.cache/miyu-tui-smoke/round26-*.txt。
+复用 `run.py` 的沙箱与 PTY 辅助。产物在 ~/.cache/yunxi-tui-smoke/round26-*.txt。
 
-**这些 TUI 走查只能一个一个跑**：它们共用同一个 `MIYU_HOME`（`/tmp/miyu-tui-smoke/home`）
+**这些 TUI 走查只能一个一个跑**：它们共用同一个 `YUNXI_HOME`（`/tmp/yunxi-tui-smoke/home`）
 和同一个桩模型端口，起头还会 `rmtree` 那个家目录。并行跑的话两边互相掀桌子，红成一片
 而代码一点问题都没有。
 """
@@ -30,7 +30,7 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -401,7 +401,7 @@ def scenario_links(report):
     saved_env = h.ENV
     h.ENV = dict(h.ENV, PATH=f"{fakebin}:{os.environ.get('PATH', '')}")
     stub, daemon, tui, master, sink = start({
-        "STUB_REPLY": "See [Miyu docs](https://example.com/miyu-doc) and https://example.org/bare done.",
+        "STUB_REPLY": "See [YunXi docs](https://example.com/yunxi-doc) and https://example.org/bare done.",
     })
     try:
         os.write(master, h.PROMPT.encode())
@@ -416,15 +416,15 @@ def scenario_links(report):
         screen = h.render(bytes(sink))
         save("links", screen)
         raw = bytes(sink)
-        report["r26_07_painter_emits_osc8"] = b"\x1b]8;;https://example.com/miyu-doc" in raw
-        row = next((i for i, l in enumerate(screen) if "Miyu docs" in l), None)
+        report["r26_07_painter_emits_osc8"] = b"\x1b]8;;https://example.com/yunxi-doc" in raw
+        row = next((i for i, l in enumerate(screen) if "YunXi docs" in l), None)
         report["r26_07_markdown_link_title_shown"] = row is not None
         if row is not None:
-            column = screen[row].index("Miyu docs") + 2
+            column = screen[row].index("YunXi docs") + 2
             h.click(master, sink, column, row, quiet=0.3, timeout=2.0)
             time.sleep(0.5)
             opened = log.read_text(encoding="utf-8") if log.exists() else ""
-            report["r26_07_markdown_link_click_opens"] = "https://example.com/miyu-doc" in opened
+            report["r26_07_markdown_link_click_opens"] = "https://example.com/yunxi-doc" in opened
         row = next((i for i, l in enumerate(screen) if "example.org/bare" in l), None)
         if row is not None:
             column = screen[row].index("example.org/bare") + 3

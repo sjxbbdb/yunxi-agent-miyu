@@ -37,8 +37,8 @@ use crate::cli::*;
 /// down with "The cursor position could not be read within a normal duration".
 /// The answer is only ever used to re-anchor a redraw, so a stale one costs a
 /// single imperfect frame — losing the session costs the session.
-/// 活动区重绘轨迹（`MIYU_TAIL_TRACE=1` 打开，落
-/// `~/.miyu/cache/logs/tail-trace.log`）。
+/// 活动区重绘轨迹（`YUNXI_TAIL_TRACE=1` 打开，落
+/// `~/.yunxi/cache/logs/tail-trace.log`）。
 ///
 /// 这段重绘靠绝对屏幕行号 + DECSTBM 受限滚动区 + 插入/删除行来搬动活动
 /// 区（上边距为 1 时，受限区里滚出去的行照样进 scrollback）。kitty 的占位
@@ -88,7 +88,7 @@ pub(in crate::cli) fn trace_tail_redraw(
         }
     );
     let path = std::path::Path::new(&std::env::var("HOME").unwrap_or_default())
-        .join(".miyu/cache/logs/tail-trace.log");
+        .join(".yunxi/cache/logs/tail-trace.log");
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -118,8 +118,8 @@ pub(in crate::cli) fn cursor_position_or(fallback: (u16, u16)) -> (u16, u16) {
     // 取证：这一问要是没答上来，活动区就会按**外部输出之前**的位置重画，
     // 正好盖在刚打出来的图上。终端渲染大图（sixel 动辄上百 KB）期间不会
     // 回答 ESC[6n，图越大越容易在这里超时——所以要看得见它。
-    if miyu_base::terminal::chafa::trace_enabled() {
-        miyu_base::terminal::chafa::trace(&format!(
+    if yunxi_base::terminal::chafa::trace_enabled() {
+        yunxi_base::terminal::chafa::trace(&format!(
             "CPR {:?} {}ms fallback={:?}{}",
             answer,
             started.elapsed().as_millis(),
@@ -183,7 +183,7 @@ pub(in crate::cli) struct LiveReplTail {
     /// 光比 `GoalHint` 比不出来；比字符串则「没变就不重画」，空闲时一秒最多
     /// 一帧。见 [`Self::tick_goal_hint`]。
     pub(in crate::cli) goal_hint_drawn: String,
-    pub(in crate::cli) jobs: Vec<miyu_engine::tools::jobs::JobOverview>,
+    pub(in crate::cli) jobs: Vec<yunxi_engine::tools::jobs::JobOverview>,
     /// 已经下过"停"的任务 → 下达的时刻。见 `suppress_jobs`。
     pub(in crate::cli) suppressed_jobs: std::collections::HashMap<String, std::time::Instant>,
     /// Σ 上那份实时加数：这一轮里跑着的前台子代理此刻烧了多少。
@@ -245,7 +245,7 @@ pub(in crate::cli) struct LiveReplTail {
     /// 活动区靠 DECSTBM 钉在底下。`Some` 时正文改由它持有，活动区照旧
     /// 由 `render_repl_input_with_footer` 打，只是 `tail_start` 指向视口底部。
     pub(in crate::cli) screen: Option<screen::Screen>,
-    /// 空会话的画面(渐变 MIYU + 星空 + 模式行)。会话一有回合就撤。
+    /// 空会话的画面(渐变 YUNXI + 星空 + 模式行)。会话一有回合就撤。
     pub(in crate::cli) banner: Option<crate::cli::repl::banner::BannerScene>,
     /// inline 后端里 banner 占了活动区顶上的几行(全屏下为 0,画在正文区)。
     pub(in crate::cli) banner_rows: u16,
@@ -717,7 +717,7 @@ impl LiveReplTail {
     pub(in crate::cli) fn set_session_empty(
         &mut self,
         config: &AppConfig,
-        paths: &MiyuPaths,
+        paths: &YunXiPaths,
         empty: bool,
     ) {
         self.editor.mode_switchable = empty;
@@ -1043,7 +1043,7 @@ impl LiveReplTail {
     /// 字**——一样就什么都不做，不一样才重画一帧（空闲时一秒最多一次）。
     pub(in crate::cli) fn tick_goal_hint(
         &mut self,
-        goal: Option<miyu_core::ipc::GoalHint>,
+        goal: Option<yunxi_core::ipc::GoalHint>,
     ) -> Result<()> {
         self.footer.goal = goal;
         if !self.rendered || self.external_output_active {

@@ -59,7 +59,7 @@
     bangumi subject 400602            条目详情（id 或名字都行）
     bangumi episodes 葬送的芙莉莲      剧集列表
 
-工具层（Miyu）调用时把参数打成 JSON 从 stdin 喂进来，键名同命令行选项：
+工具层（YunXi）调用时把参数打成 JSON 从 stdin 喂进来，键名同命令行选项：
     {"action":"search","query":"芙莉莲","type":"anime","top":8,"format":"md"}
 """
 
@@ -74,7 +74,7 @@ import urllib.request
 
 API = "https://api.bgm.tv"
 # Bangumi 要求可识别的 UA（匿名 UA 会被限流甚至拒绝）。
-UA = "miyu-bangumi/0.1 (+https://github.com/shorinkiwata/Miyu)"
+UA = "yunxi-bangumi/0.1 (+https://github.com/shorinkiwata/YunXi)"
 TIMEOUT = 20
 
 SUBJECT_TYPES = {"book": 1, "anime": 2, "music": 3, "game": 4, "real": 6}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """WebUI 五项修复的 A/B 走查:沙箱 daemon + OpenAI 桩 + Playwright(Chromium)。
 
-    BIN=<miyu 二进制> TAG=old|new python3 webui_verify.py
+    BIN=<yunxi 二进制> TAG=old|new python3 webui_verify.py
 
 判定项:
   ctx_after_reload   会话钉了 stub-b(50k)后,刷新页面上下文条仍显示 50k(不是全局 stub-a 的 100k)
@@ -11,7 +11,7 @@
   usage_stacked      手机视口用量页:环形图在表格上方,不并排
   jump_offset_synced 后台任务条撑高 dock 后,「回到底部」按钮的 bottom 跟着更新
   autoscroll_kept    第一轮结束触发整段重建时第二轮仍在流式,结束时视口仍贴底且按钮隐藏
-产物:~/.cache/miyu-arch-fixes/webui-<TAG>/{report.json,daemon.log,*.png}
+产物:~/.cache/yunxi-arch-fixes/webui-<TAG>/{report.json,daemon.log,*.png}
 """
 import json
 import os
@@ -24,7 +24,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -35,13 +35,13 @@ import authlib  # noqa: E402
 HERE = Path(__file__).resolve().parent
 BIN = Path(os.environ["BIN"])
 TAG = os.environ.get("TAG", "run")
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-arch-fixes")).expanduser() / f"webui-{TAG}"
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-arch-fixes")).expanduser() / f"webui-{TAG}"
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18481"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18499"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 
 
 def write_config():

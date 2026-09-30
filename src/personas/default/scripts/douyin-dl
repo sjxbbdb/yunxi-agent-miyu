@@ -38,7 +38,7 @@
 #     }
 #   }
 # }
-"""Douyin / TikTok downloader for Miyu.
+"""Douyin / TikTok downloader for YunXi.
 
 Design notes
 ------------
@@ -202,7 +202,7 @@ _TTWID_BODY = {
 
 
 def _cache_dir():
-    path = os.environ.get("MIYU_SCRIPT_CACHE_DIR") or os.path.expanduser(
+    path = os.environ.get("YUNXI_SCRIPT_CACHE_DIR") or os.path.expanduser(
         "~/.cache/douyin-dl")
     os.makedirs(path, exist_ok=True)
     return path
@@ -655,7 +655,7 @@ def doctor(fmt):
 
 
 def main():
-    raw = os.environ.get("MIYU_ARGS_JSON") or sys.stdin.read() or "{}"
+    raw = os.environ.get("YUNXI_ARGS_JSON") or sys.stdin.read() or "{}"
     try:
         args = json.loads(raw)
     except json.JSONDecodeError:

@@ -4,7 +4,7 @@
 子代理派出去,派它的那一轮当场收尾;结论在子代理跑完、报告叫醒会话再起的那一轮里。
 一次性命令要等整棵子树收尾、带着结论退出。判据:
 
-    text_waits_for_the_report        `miyu "…"` 输出里先有主回合、再有报告叫醒的那一轮(带抬头与结论),退出码 0
+    text_waits_for_the_report        `yunxi "…"` 输出里先有主回合、再有报告叫醒的那一轮(带抬头与结论),退出码 0
     ephemeral_session_cleaned        退出后阅后即焚的会话删掉了,没有留下在跑的任务
     json_done_carries_the_conclusion `--output-format json` 的终态正文是报告叫醒那一轮的
     stream_json_one_done_at_the_end  stream-json:两个 started、一条 waiting 提示、done 只有一条且在最后
@@ -15,7 +15,7 @@
     cargo build
     python3 testkit/subagent-session/oneshot_wait.py        # BIN=<旧二进制> 可证明修之前是红的
 
-绝不触碰线上 8300 daemon;产物在 ~/.cache/miyu-oneshot-wait/。
+绝不触碰线上 8300 daemon;产物在 ~/.cache/yunxi-oneshot-wait/。
 """
 import fcntl
 import importlib.util
@@ -32,7 +32,7 @@ import termios
 import time
 from pathlib import Path
 
-os.environ.setdefault("OUT", "~/.cache/miyu-oneshot-wait")
+os.environ.setdefault("OUT", "~/.cache/yunxi-oneshot-wait")
 os.environ.setdefault("PORT", "18558")
 os.environ.setdefault("STUB_PORT", "18557")
 
@@ -41,7 +41,7 @@ spec = importlib.util.spec_from_file_location("sas", BASE / "run.py")
 sas = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sas)
 # 运行目录和 run.py 分开,两个走查先后跑互不踩。
-sas.RUN = Path.home() / ".cache" / "miyu-osw-run"
+sas.RUN = Path.home() / ".cache" / "yunxi-osw-run"
 
 ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07|\r")
 
@@ -65,7 +65,7 @@ def keep(name, text):
 
 def daemon_log():
     """daemon 的 tracing 日志(stdout 那份只有启动横幅)。"""
-    logs = sorted((sas.HOME / "cache" / "logs").glob("miyu.*.log"))
+    logs = sorted((sas.HOME / "cache" / "logs").glob("yunxi.*.log"))
     return "\n".join(p.read_text(errors="replace") for p in logs)
 
 

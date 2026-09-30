@@ -5,7 +5,9 @@
 <p align="center">
   <a href="https://github.com/SHORiN-KiWATA/miyu-agent">Fork 自 Miyu</a>
   ·
-  <a href="https://github.com/sjxbbdb/YunXi-Agent">Windows 版历史参照</a>
+  <a href="https://github.com/sjxbbdb/YunXi-Native">Linux 历史参考</a>
+  ·
+  <a href="https://github.com/sjxbbdb/YunXi-Agent">Windows 历史参考</a>
 </p>
 
 <p align="center">
@@ -14,9 +16,13 @@
 
 <p align="center">让人通过自然语言与终端交互，并让 Agent 逐步理解整个 Linux 系统。</p>
 
-> 当前状态：Miyu 基线继承与 YunXi 化改造进行中。
+> 当前状态：已完成第一轮产品层 YunXi 化迁移，正在进行 Linux 实机验证与系统级交互迭代。
 
 这是我从 [SHORiN-KiWATA/miyu-agent](https://github.com/SHORiN-KiWATA/miyu-agent) Fork 出来的项目。首先要感谢 Shorin 大佬，Miyu 已经把 Linux 原生 Agent 最难的基础打通了：Fish 终端接管、daemon 常驻、TUI、知识库、记忆、工具调用和多种终端入口。这个项目会在这些基础上继续往前走。
+
+项目背景已经固定整理在 [`docs/YUNXI-PRODUCT-BACKGROUND.md`](./docs/YUNXI-PRODUCT-BACKGROUND.md)：
+`YunXi-Native` 是历史 Linux 参考，`yunxi-agent-miyu` 是当前产品基线；Miyu 提供
+Linux 原生交互底座，YunXi 逐步补充人格、灵魂、用户画像、记忆、知识库和陪伴能力。
 
 ## 我想把它做成什么
 
@@ -67,7 +73,8 @@
 - 网络搜索、天气、汇率、Man 手册和 Linux 生态查询；
 - WebUI 与通讯平台接入等扩展入口。
 
-这些能力目前仍然带有 Miyu 的命名和实现痕迹。它们属于继承中的基线，不代表 YunXi 化改造已经完成。
+这些能力的底层实现来自 Miyu，但对外的产品命名、命令入口、资源路径和 TUI/Web 文案已经统一为 YunXi。
+为保证旧安装可以平滑迁移，少量 `MIYU_*` 环境变量、`.miyu` 数据目录和浏览器存储键仍保留兼容读取；它们不是新的产品入口。
 
 ## YunXi 化改造方向
 
@@ -107,18 +114,19 @@ Fish 是主要实验场。目标不是增加一个“自然语言命令”子命
 
 ## 当前项目阶段
 
-项目现在处于迁移早期，当前重点不是发布一个已经完成的 YunXi，而是建立可靠的 Linux 原生基线：
+项目当前处于 Linux 原生化迭代阶段，先把产品层和运行链路稳定下来，再继续扩展系统级能力：
 
-1. 保证 Miyu Fork 可以独立编译、运行和接管 Fish；
+1. 保证 YunXi 可以独立编译、运行和接管 Fish；
 2. 保持上游更新可追踪、可同步；
 3. 逐步替换人格、记忆和陪伴层；
 4. 在真实 Linux 环境中验证系统级交互；
 5. 根据实机结果决定最终的执行边界和产品形态。
 
-因此，当前版本中仍可能看到 `miyu` 的命令名、路径和资源名称。这是迁移过程中的正常状态，后续会随着 YunXi 化改造逐步统一。
+因此，新的安装、配置和运行流程统一使用 `yunxi`；只有迁移兼容逻辑和上游历史文档中还会保留 `miyu` 字样。
 
-此前的 Windows / Web / 语音方向实现保存在历史仓库
-[YunXi-Native](https://github.com/sjxbbdb/YunXi-Native)。它现在作为设计决策、已有实现和测试经验的参照，不再是本项目的主开发线。
+Linux 历史产品参考仓库是 [YunXi-Native](https://github.com/sjxbbdb/YunXi-Native)，
+Windows / Web / 语音方向的历史实现保存在 [YunXi-Agent](https://github.com/sjxbbdb/YunXi-Agent)。
+它们都只作为历史设计和实现参照，不再是本项目的主开发线。
 
 ## 安装与运行
 
@@ -130,27 +138,27 @@ cd yunxi-agent-miyu
 cargo build --release
 ```
 
-构建完成后，当前主程序仍使用 Miyu 的过渡命令名：
+构建完成后，主程序使用 YunXi 命令名：
 
 ```bash
-./target/release/miyu
+./target/release/yunxi
 ```
 
 进入配置界面：
 
 ```bash
-./target/release/miyu config
+./target/release/yunxi config
 ```
 
 初始化 Fish 终端集成：
 
 ```bash
-./target/release/miyu fish-init
+./target/release/yunxi fish-init
 ```
 
 完成初始化后，重新打开 Fish，即可在终端中使用自然语言进行交互。
 
-> 独立的 Arch 包、发行版安装脚本和最终的 `yunxi` 命令名会在基线稳定后重新整理。当前不要把上游 `miyu` 软件包当成 YunXi 发行版。
+> Arch 包、发行版安装脚本和发布资产已经按 `yunxi` 命名迁移；当前仍以源码构建和 Linux 实机验证结果作为发布准入条件。
 
 ## 上游关系与致谢
 
@@ -162,7 +170,8 @@ cargo build --release
 
 本项目会保留上游的许可证和必要署名，并通过 `upstream` 远程持续跟踪 Miyu 的变化。
 
-历史参照仓库：[sjxbbdb/YunXi-Native](https://github.com/sjxbbdb/YunXi-Native)
+历史参照仓库：[sjxbbdb/YunXi-Agent](https://github.com/sjxbbdb/YunXi-Agent)
+Linux 历史参考仓库：[sjxbbdb/YunXi-Native](https://github.com/sjxbbdb/YunXi-Native)
 
 ## 许可证
 

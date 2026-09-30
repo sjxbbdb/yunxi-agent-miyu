@@ -44,11 +44,11 @@ Usage (terminal):
     game_compat 1245620 --max-reports 3
     game_compat 黑神话悟空
 
-Tool layer (Miyu) feeds a JSON object on stdin instead:
+Tool layer (YunXi) feeds a JSON object on stdin instead:
     {"query": "Apex Legends", "max_reports": 8}
 
-Caches (24h, keyed by file mtime) live in $MIYU_SCRIPT_CACHE_DIR, falling back
-to ~/.cache/miyu-scripts:
+Caches (24h, keyed by file mtime) live in $YUNXI_SCRIPT_CACHE_DIR, falling back
+to ~/.cache/yunxi-scripts:
     awacy-games.json             full AreWeAntiCheatYet table (~460KB)
     caniplayonlinux-sitemap.xml  site map used for fuzzy slug matching
 """
@@ -86,7 +86,7 @@ MAX_AWACY_BYTES = 4 * 1024 * 1024
 DEFAULT_REPORTS = 8
 MAX_REPORTS = 40
 NOTE_CAP = 300
-UA = "miyu-game-compat/0.1 (+https://github.com/shorinkiwata/Miyu)"
+UA = "yunxi-game-compat/0.1 (+https://github.com/shorinkiwata/YunXi)"
 
 MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
 
@@ -119,10 +119,10 @@ class HttpError(RuntimeError):
 # ---------------------------------------------------------------- cache dir
 
 def cache_dir():
-    base = os.environ.get("MIYU_SCRIPT_CACHE_DIR")
+    base = os.environ.get("YUNXI_SCRIPT_CACHE_DIR")
     if not base:
         xdg = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
-        base = os.path.join(xdg, "miyu-scripts")
+        base = os.path.join(xdg, "yunxi-scripts")
     return base
 
 
@@ -832,7 +832,7 @@ def parse_max_reports(value):
 
 
 def read_json_args():
-    raw = os.environ.get("MIYU_ARGS_JSON")
+    raw = os.environ.get("YUNXI_ARGS_JSON")
     if not raw and sys.stdin is not None and not sys.stdin.isatty():
         raw = sys.stdin.read()
     raw = (raw or "").strip()

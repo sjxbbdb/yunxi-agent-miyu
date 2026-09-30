@@ -1,5 +1,5 @@
 //! 静态时间线（面 S3）：目的地是终端、但不是全屏的那个面。宿主有 shellhook、
-//! 单次 `miyu "…"`、inline REPL、唤醒跟进、daemon 回写——**同一个面**，清单见
+//! 单次 `yunxi "…"`、inline REPL、唤醒跟进、daemon 回写——**同一个面**，清单见
 //! `render::stream::surface`。
 //!
 //! 长相照着全屏的时间线来，只是没处点开：每一步跑完当场落进 scrollback，
@@ -10,10 +10,10 @@
 //! 屏幕，看到的才是用户看到的。
 
 use crate::cli::repl::tail::screen::term::Term;
-use miyu_base::i18n::text as t;
-use miyu_core::llm::{ChatStreamChunk, ChatStreamKind};
-use miyu_engine::tools::CommandOutputStream;
-use miyu_hosts::render::{ReasoningDisplayMode, StreamRenderer, ToolCallDisplayMode};
+use yunxi_base::i18n::text as t;
+use yunxi_core::llm::{ChatStreamChunk, ChatStreamKind};
+use yunxi_engine::tools::CommandOutputStream;
+use yunxi_hosts::render::{ReasoningDisplayMode, StreamRenderer, ToolCallDisplayMode};
 
 /// 测试里 stdout 不是终端，出厂按「stdout 是不是终端」选的是管道那一面；
 /// shellhook 真跑起来时目的地是终端，得显式选才走到静态时间线这条路。
@@ -68,7 +68,7 @@ impl Screen {
 }
 
 fn strip_ansi(text: &str) -> String {
-    miyu_hosts::render::strip_ansi_text(text)
+    yunxi_hosts::render::strip_ansi_text(text)
 }
 
 #[test]
@@ -426,7 +426,7 @@ fn a_full_thought_streams_under_its_live_heading() {
         .unwrap_or_else(|| panic!("半行也该露着: {live:?}"));
     assert!(heading < first && first < second, "{live:?}");
     assert!(
-        rows[heading].starts_with(miyu_hosts::render::wait_spinner::BLOCK_MARKER),
+        rows[heading].starts_with(yunxi_hosts::render::wait_spinner::BLOCK_MARKER),
         "转轮该挂在抬头上: {:?}",
         rows[heading]
     );
@@ -507,8 +507,8 @@ fn a_thought_taller_than_the_screen_scrolls_its_heading_away() {
     let live = live.expect("live 区是空的");
     // 抬头滚出去了，正文行上不再挂转轮：只有留空的标记，没有转轮标记。
     assert!(
-        live.contains(miyu_hosts::render::wait_spinner::BLOCK_MARKER_IDLE)
-            && !live.contains(miyu_hosts::render::wait_spinner::BLOCK_MARKER),
+        live.contains(yunxi_hosts::render::wait_spinner::BLOCK_MARKER_IDLE)
+            && !live.contains(yunxi_hosts::render::wait_spinner::BLOCK_MARKER),
         "抬头滚出去后 live 区不该再有转轮: {live:?}"
     );
     let live = strip_ansi(&live);
@@ -650,7 +650,7 @@ fn the_spinner_stays_on_the_rail_between_steps() {
     let rows = live.lines().collect::<Vec<_>>();
     assert_eq!(rows.len(), 2, "该是连线 + 转轮两行: {live:?}");
     assert!(
-        rows[1].contains(miyu_hosts::render::wait_spinner::BLOCK_MARKER),
+        rows[1].contains(yunxi_hosts::render::wait_spinner::BLOCK_MARKER),
         "第二行不是转轮: {live:?}"
     );
 }
@@ -733,9 +733,9 @@ fn piped_output_keeps_the_plain_summary() {
 /// `⠹ 󰝨 思考中 · 0.1s好的,收到。…` 粘成一行）。
 #[test]
 fn a_written_back_turn_keeps_the_reply_off_the_spinner_row() {
-    use miyu_hosts::runtime::{decode_ipc_event, DecodedIpc};
+    use yunxi_hosts::runtime::{decode_ipc_event, DecodedIpc};
     // 写线程报了宽度，转轮才认自己是在往终端画。
-    miyu_hosts::render::set_cols_override(100);
+    yunxi_hosts::render::set_cols_override(100);
     let mut renderer = static_renderer();
     let mut screen = Screen::new();
     let feed = |renderer: &mut StreamRenderer, screen: &mut Screen| {
@@ -796,7 +796,7 @@ fn a_written_back_turn_keeps_the_reply_off_the_spinner_row() {
         }
         feed(&mut renderer, &mut screen);
     }
-    miyu_hosts::render::set_cols_override(0);
+    yunxi_hosts::render::set_cols_override(0);
     let lines = screen.lines();
     let text = lines.join("\n");
     let reply = lines

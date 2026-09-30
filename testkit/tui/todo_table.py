@@ -9,8 +9,8 @@
 - 终屏里表格边框是否完整、下面紧跟的是不是 `Worked for` → 「被截断」
 
 跑法:
-    python3 testkit/tui/todo_table.py [--binary /abs/path/to/miyu]
-产物在 ~/.cache/miyu-todo-table/
+    python3 testkit/tui/todo_table.py [--binary /abs/path/to/yunxi]
+产物在 ~/.cache/yunxi-todo-table/
 """
 
 import argparse
@@ -27,17 +27,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fold_summary import is_fold_summary  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 ROOT = Path(__file__).resolve().parents[2]
 SMOKE = ROOT / "testkit" / "repl-smoke"
-SESSION = "miyutodo"
+SESSION = "yunxitodo"
 PORT = int(os.environ.get("STUB_PORT", "18497"))
-HOME = Path("/tmp/miyu-todo-table/home")
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-todo-table"))
+HOME = Path("/tmp/yunxi-todo-table/home")
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-todo-table"))
 COLS = int(os.environ.get("COLS", "120"))
 ROWS = int(os.environ.get("ROWS", "45"))
 
@@ -103,7 +103,7 @@ def belongs_to_sandbox(pid):
     `/private/tmp` 的符号链接,所以两种写法都要比。"""
     try:
         env = pathlib.Path(f"/proc/{pid}/environ").read_bytes().decode("utf-8", "replace")
-        return f"MIYU_HOME={HOME}" in env
+        return f"YUNXI_HOME={HOME}" in env
     except OSError:
         pass
     if not shutil.which("lsof"):
@@ -126,7 +126,7 @@ def kill_sandbox_daemon():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", default=str(ROOT / "target" / "debug" / "miyu"))
+    parser.add_argument("--binary", default=str(ROOT / "target" / "debug" / "yunxi"))
     args = parser.parse_args()
     binary = Path(args.binary).resolve()
 
@@ -156,7 +156,7 @@ def main():
                        capture_output=True, check=False)
         subprocess.run(
             ["tmux", "new-session", "-d", "-s", SESSION, "-x", str(COLS), "-y", str(ROWS),
-             f"MIYU_HOME={HOME} TERM=xterm-256color MIYU_TUI={os.environ.get('MIYU_TUI', '1')} {binary}"],
+             f"YUNXI_HOME={HOME} TERM=xterm-256color YUNXI_TUI={os.environ.get('YUNXI_TUI', '1')} {binary}"],
             check=True,
         )
         time.sleep(9)

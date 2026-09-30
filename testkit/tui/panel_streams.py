@@ -8,10 +8,10 @@
 变化」会被转轮和面板重画骗过去。
 
     cargo build
-    MIYU_HOME=~/.cache/miyu-panel-streams/home MIYU_TUI_PORT=18691 STUB_PORT=18692 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-panel-streams/rt OUT=~/.cache/miyu-panel-streams/out \\
+    YUNXI_HOME=~/.cache/yunxi-panel-streams/home YUNXI_TUI_PORT=18691 STUB_PORT=18692 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-panel-streams/rt OUT=~/.cache/yunxi-panel-streams/out \\
       python3 testkit/tui/panel_streams.py
-    # 对照改前：MIYU_BIN=~/.local/bin/miyu …（同上）
+    # 对照改前：YUNXI_BIN=~/.local/bin/yunxi …（同上）
 
 每场：说一句（回复是带编号的长正文，慢慢吐）→ 流一会儿 → 开面板 → 面板开着等 4 秒，
 看最大编号涨没涨 → Esc 收掉 → 输入框回来、这一轮跑完。

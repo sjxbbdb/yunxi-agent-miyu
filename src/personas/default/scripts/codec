@@ -52,7 +52,7 @@ Port of the built-in Rust `codec` tool (src/tools/hash_codec.rs).
     op=hash    hash the input bytes with one or more algorithms
     op=decode  decode base64 / hex / url / html entities / rot13 to text
 
-Arguments arrive as one JSON object on stdin (also MIYU_ARGS_JSON):
+Arguments arrive as one JSON object on stdin (also YUNXI_ARGS_JSON):
     {"op":"hash","input_text":"arch\\n","algorithms":"sha256,b2sum"}
     {"op":"decode","input_text":"aGVsbG8=","input_format":"base64"}
 
@@ -225,7 +225,7 @@ def decode(args):
 
 
 def read_args():
-    raw = os.environ.get("MIYU_ARGS_JSON")
+    raw = os.environ.get("YUNXI_ARGS_JSON")
     if not raw:
         raw = "" if sys.stdin is None or sys.stdin.isatty() else sys.stdin.read()
     raw = (raw or "").strip() or "{}"

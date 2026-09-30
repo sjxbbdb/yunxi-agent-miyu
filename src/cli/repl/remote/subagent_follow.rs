@@ -12,7 +12,7 @@ use std::collections::HashSet;
 
 /// 主回合之后：跟着报告叫醒的那几轮画，直到整棵子树收尾。
 pub(in crate::cli) async fn follow_subagent_reports(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     main: &RemoteTurnSummary,
     show_reasoning: Option<bool>,
     plain: bool,
@@ -55,7 +55,7 @@ pub(in crate::cli) async fn follow_subagent_reports(
 
 /// 等下一轮可跟（或者整棵子树收尾）。等的时候转轮上写还有几个子代理在跑。
 async fn next_step(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     wait: &mut SubagentWait,
     config: &AppConfig,
     plain: bool,
@@ -143,7 +143,7 @@ fn waiting_phase(running: usize) -> String {
 /// 叫醒的那一轮开头那一行，和 REPL 里后台任务完成那一行一个样子。目标续轮不打：
 /// 一个长任务几十轮，每轮一行只会把真正的输出挤散。
 fn print_wake_header(label: &str, plain: bool) -> Result<()> {
-    if label == miyu_engine::tools::goal::GOAL_ROUND_LABEL {
+    if label == yunxi_engine::tools::goal::GOAL_ROUND_LABEL {
         return Ok(());
     }
     let label = if label.is_empty() {
@@ -163,7 +163,7 @@ fn print_wake_header(label: &str, plain: bool) -> Result<()> {
 
 /// 从会话库补画的轮：和重开会话时的回放同一套画法；plain 只要正文。
 fn print_missed_turns(
-    missed: &[miyu_core::state::TurnReplay],
+    missed: &[yunxi_core::state::TurnReplay],
     config: &AppConfig,
     mode: PersonaLane,
     plain: bool,

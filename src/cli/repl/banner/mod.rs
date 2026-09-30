@@ -1,4 +1,4 @@
-//! 空会话的画面：渐变 MIYU 艺术字、两侧稀疏的星空、周期扫光、模式行。
+//! 空会话的画面：渐变 YUNXI 艺术字、两侧稀疏的星空、周期扫光、模式行。
 //!
 //! 只在**会话没有任何回合**时存在。第一条消息一发它就撤，会话模式随之钉死
 //! （中途换模式 = 系统提示词换血 = 全量缓存作废）；`/new` 开出空会话它又回来。
@@ -11,12 +11,12 @@
 
 use crate::cli::repl::tail::screen::ansi::{spans_to_ansi, AnsiSpan};
 use crate::cli::repl::tail::screen::cells::trim_end_spans;
-use miyu_base::config::AppConfig;
-use miyu_base::config::PersonaLane;
-use miyu_base::i18n::text as t;
-use miyu_base::paths::MiyuPaths;
-use miyu_base::terminal::palette::{Theme, BLUE, CORAL, DIM, FAINT, GOLD};
-use miyu_base::terminal::starfield::{
+use yunxi_base::config::AppConfig;
+use yunxi_base::config::PersonaLane;
+use yunxi_base::i18n::text as t;
+use yunxi_base::paths::YunXiPaths;
+use yunxi_base::terminal::palette::{Theme, BLUE, CORAL, DIM, FAINT, GOLD};
+use yunxi_base::terminal::starfield::{
     fade, gradient_banner, segs_width, star_seg, subtitle_rule, BannerArt, Seg,
 };
 
@@ -26,7 +26,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 /// 用户自带艺术字的文件名（放在配置目录下）。
-pub(in crate::cli) use miyu_base::terminal::chrome::BANNER_FILE;
+pub(in crate::cli) use yunxi_base::terminal::chrome::BANNER_FILE;
 
 /// 扫光的周期（帧）与一次扫过的速度（列/帧）。空闲 tick 是 80ms 一帧。
 const GLINT_PAUSE: usize = 25;
@@ -63,7 +63,7 @@ type LobbyKey = (usize, usize, usize, usize, usize, usize, bool, bool);
 
 impl BannerScene {
     /// 按配置决定画不画、画哪份艺术字。`None` = 关掉了。
-    pub fn load(config: &AppConfig, paths: &MiyuPaths, mode: PersonaLane) -> Option<Self> {
+    pub fn load(config: &AppConfig, paths: &YunXiPaths, mode: PersonaLane) -> Option<Self> {
         if !config.display.banner {
             return None;
         }
@@ -574,7 +574,7 @@ pub(in crate::cli) fn plain_mode_hint(mode: PersonaLane) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use miyu_base::terminal::palette::Depth;
+    use yunxi_base::terminal::palette::Depth;
 
     fn scene() -> BannerScene {
         BannerScene {
@@ -698,7 +698,7 @@ mod tests {
         std::fs::write(dir.path().join(BANNER_FILE), "subtitle: MINE\nAB\nCD\n").unwrap();
         let mut config = AppConfig::default();
         config.display.banner = true;
-        let mut paths = miyu_base::paths::MiyuPaths::new().unwrap();
+        let mut paths = yunxi_base::paths::YunXiPaths::new().unwrap();
         paths.config_dir = dir.path().to_path_buf();
         let scene = BannerScene::load(&config, &paths, PersonaLane::Active).unwrap();
         assert_eq!(scene.art.subtitle, "MINE");

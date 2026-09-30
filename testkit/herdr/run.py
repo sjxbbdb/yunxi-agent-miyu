@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """herdr 状态上报：在 pane 里报什么、不在 pane 里报不报。
 
-用户 09-20：让 Miyu 出现在 herdr 的 agents 侧栏，带状态色。走的是 herdr 给外部
+用户 09-20：让 YunXi 出现在 herdr 的 agents 侧栏，带状态色。走的是 herdr 给外部
 agent 留的官方接口 `herdr pane report-agent`。
 
 这个走查**不需要真的 herdr**：把 `HERDR_BIN_PATH` 指向一个只把 argv 记进文件的
@@ -35,19 +35,19 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", ROOT / "target" / "debug" / "miyu"))
+BIN = Path(os.environ.get("YUNXI_BIN", ROOT / "target" / "debug" / "yunxi"))
 SMOKE = ROOT / "testkit" / "repl-smoke"
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-herdr/home"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-herdr/home"))
 RUNTIME = os.environ.get("RUNTIME", "/tmp/mx-herdr")
 PORT = int(os.environ.get("PORT", "18471"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18479"))
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-herdr"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-herdr"))
 COLS, ROWS = 100, 40
 PANE_ID = "w9:pTEST"
 LOG = OUT / "herdr-calls.jsonl"
@@ -250,7 +250,7 @@ def main():
 
     tui.HOME, tui.PORT, tui.STUB_PORT, tui.BIN = HOME, PORT, STUB_PORT, BIN
     tui.COLS, tui.ROWS = COLS, ROWS
-    tui.ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, MIYU_TUI="1")
+    tui.ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, YUNXI_TUI="1")
     for stale in ("HERDR_ENV", "HERDR_PANE_ID", "HERDR_BIN_PATH"):
         tui.ENV.pop(stale, None)
     tui.write_config()
@@ -325,9 +325,9 @@ def main():
         report["_序号"] = seqs
         report["序号严格递增"] = all(a < b for a, b in zip(seqs, seqs[1:]))
         sources = {arg_of(argv, "--source") for argv in reports + releases}
-        report["source 全程唯一"] = sources == {"custom:miyu"}
+        report["source 全程唯一"] = sources == {"custom:yunxi"}
         agents = {arg_of(argv, "--agent") for argv in reports + releases}
-        report["agent 标签是 miyu"] = agents == {"miyu"}
+        report["agent 标签是 yunxi"] = agents == {"yunxi"}
         report["pane id 带对了"] = all(argv[2] == PANE_ID for argv in reports + releases)
         report["带上了会话 id"] = any(
             arg_of(argv, "--agent-session-id") for argv in reports
@@ -346,7 +346,7 @@ def main():
             input="上报会失败的这一句\n",
             env=dict(
                 tui.ENV,
-                MIYU_TUI="0",
+                YUNXI_TUI="0",
                 HERDR_ENV="1",
                 HERDR_PANE_ID=PANE_ID,
                 HERDR_BIN_PATH=str(broken),
@@ -361,7 +361,7 @@ def main():
         # ── 四、**重开一次之后照样报得出来** ──
         #
         # herdr 按 source 记序号水位、丢掉过期序号，而 source 是固定的
-        # `custom:miyu`。序号只在进程内单调的话，第二次开 Miyu 报的全部小于
+        # `custom:yunxi`。序号只在进程内单调的话，第二次开 YunXi 报的全部小于
         # 水位，被静默丢光——用户 09-20 实测到的「彻底不显示」。
         LOG.unlink(missing_ok=True)
         pane_env = {
@@ -424,7 +424,7 @@ def main():
         # ── 五、一次性 / shellhook：收尾要把 pane 还回去，且不许改终端标题 ──
         #
         # 一次性进程跑完就没了。收尾只报 idle 的话，那个 pane 上会永远挂着一个
-        # 已经不存在的 miyu——人在终端里说了一句自然语言，侧栏就多个赖着不走的
+        # 已经不存在的 yunxi——人在终端里说了一句自然语言，侧栏就多个赖着不走的
         # agent。标题同理：改完就退出，没人改回来，标签页被永久改名。
         LOG.unlink(missing_ok=True)
         shell = subprocess.run(
@@ -432,7 +432,7 @@ def main():
             input="一次性这一句\n",
             env=dict(
                 tui.ENV,
-                MIYU_TUI="0",
+                YUNXI_TUI="0",
                 HERDR_ENV="1",
                 HERDR_PANE_ID=PANE_ID,
                 HERDR_BIN_PATH=str(fake),

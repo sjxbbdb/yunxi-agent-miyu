@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """真机 kitty(无头 cage)里复现「回车后光标瞬移到左下角」。
 
-在 kitty 窗口内起 miyu REPL(沙箱 home + 独立端口 daemon + 桩 LLM),用 kitten 远程控制
+在 kitty 窗口内起 yunxi REPL(沙箱 home + 独立端口 daemon + 桩 LLM),用 kitten 远程控制
 敲入提示并回车,回车前后用 grim 连拍;逐帧统计屏幕最底一行左侧(活动区永远不占最后
 一行,那格本该是纯背景)有没有亮像素——有就是光标本体或 cursor_trail 拖尾跑到了左下角。
 
 用法(kitty 会读用户自己的 kitty.conf,里面 cursor_trail 1):
-    OUT=~/.cache/miyu-trail-probe BIN=target/debug/miyu \
+    OUT=~/.cache/yunxi-trail-probe BIN=target/debug/yunxi \
       testkit/kitty-image/run_headless.sh python3 <this>/trail_probe.py
 产物:$OUT/frames/turn<N>-<i>.png、$OUT/verdict.json
 """
@@ -22,21 +22,21 @@ from pathlib import Path
 
 from PIL import Image
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
-REPO = Path("/home/shorin/Documents/github/Miyu")
+REPO = Path("/home/shorin/Documents/github/YunXi")
 sys.path.insert(0, str(REPO / "testkit" / "kitty-image"))
 import ghost_probe as probe  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
-OUT = Path(os.environ.get("OUT") or "~/.cache/miyu-trail-probe").expanduser()
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
+OUT = Path(os.environ.get("OUT") or "~/.cache/yunxi-trail-probe").expanduser()
 TAG = os.environ.get("TAG", "run")
 HOME = OUT / "home"
-RUN = Path.home() / ".cache" / "miyu-tp-run"
+RUN = Path.home() / ".cache" / "yunxi-tp-run"
 FRAMES = OUT / f"frames-{TAG}"
 PORT = int(os.environ.get("PORT", "18398"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18498"))
@@ -49,7 +49,7 @@ spec = importlib.util.spec_from_file_location("clitk", REPO / "testkit" / "cli" 
 clitk = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(clitk)
 clitk.HOME, clitk.RUN, clitk.OUT, clitk.PORT, clitk.STUB_PORT = HOME, RUN, OUT / "cli-out", PORT, STUB_PORT
-clitk.MIYU = BIN
+clitk.YUNXI = BIN
 
 
 def log(msg):
@@ -149,7 +149,7 @@ def main():
     daemon = subprocess.Popen([str(BIN), "daemon", "--port", str(PORT)], env=env(),
                               stdout=(OUT / f"daemon-{TAG}.log").open("w"), stderr=subprocess.STDOUT)
     verdict = {"tag": TAG, "geometry": {"rows": rows, "cols": cols, "cell_w": cell_w, "cell_h": cell_h}, "turns": []}
-    miyu = None
+    yunxi = None
     try:
         for _ in range(60):
             if clitk.find_socket():
@@ -158,7 +158,7 @@ def main():
         assert clitk.find_socket(), "daemon socket never appeared"
         time.sleep(1.0)
         log("starting repl")
-        miyu = subprocess.Popen([str(BIN)], env=env(), cwd=str(OUT))
+        yunxi = subprocess.Popen([str(BIN)], env=env(), cwd=str(OUT))
         log("kitten probe: " + repr(probe.kitten("ls").stderr[:200]))
         assert wait_text("┃", 40), "input box never appeared: " + screen_text()[-300:]
         wait_stable(20)
@@ -192,12 +192,12 @@ def main():
                                      "first_frame_dt": round(frames[0][0] - t_enter, 3) if frames else None})
             log(f"turn {i}: frames={len(frames)} hits={len(hits)} {hits[:6]}")
     finally:
-        if miyu:
+        if yunxi:
             probe.kitten("send-text", "/exit\r")
             try:
-                miyu.wait(timeout=8)
+                yunxi.wait(timeout=8)
             except subprocess.TimeoutExpired:
-                miyu.kill()
+                yunxi.kill()
         subprocess.run([str(BIN), "daemon", "stop"], env=env(), capture_output=True, timeout=30)
         try:
             daemon.wait(timeout=10)

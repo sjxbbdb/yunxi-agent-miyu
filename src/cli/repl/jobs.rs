@@ -11,7 +11,7 @@ pub(in crate::cli) const JOB_SPINNER_FRAMES: [char; 10] =
 
 /// 后台任务条的用时:时分秒(过了一小时也带秒,09-23 与其它用时统一)。
 pub(in crate::cli) fn format_job_duration(seconds: u64) -> String {
-    miyu_base::durations::format_hms(std::time::Duration::from_secs(seconds))
+    yunxi_base::durations::format_hms(std::time::Duration::from_secs(seconds))
 }
 
 /// 这条排队消息是 daemon 合成的后台任务报告吗。判据和剥前缀的那个函数同源，
@@ -25,8 +25,8 @@ pub(in crate::cli) fn is_job_wake_headline(headline: &str) -> bool {
 /// 通知那条路。
 pub(in crate::cli) fn is_daemon_notice(display: &str) -> bool {
     is_job_wake_headline(display)
-        || miyu_core::state::parse_cross_session_message(display).is_some()
-        || miyu_core::state::service_restart_attempt(display).is_some()
+        || yunxi_core::state::parse_cross_session_message(display).is_some()
+        || yunxi_core::state::service_restart_attempt(display).is_some()
 }
 
 /// Strips the bracketed prefix off a background-job wake headline, leaving
@@ -42,7 +42,7 @@ pub(in crate::cli) fn job_wake_headline(headline: &str) -> String {
 
 /// Fires a desktop notification unless the REPL window has focus.
 ///
-/// `focused` is `None` when there is no live tail — a one-shot `miyu ask` has
+/// `focused` is `None` when there is no live tail — a one-shot `yunxi ask` has
 /// no window to be away from, so it stays quiet.
 ///
 /// kitty 那条路由终端自己弹（09-18）：只有终端自己能在点击时把自己的窗口拉到
@@ -53,40 +53,40 @@ pub(in crate::cli) fn notify_if_unfocused(
     focused: Option<bool>,
     title: &str,
     body: &str,
-    sound: miyu_base::notify::NotifySound,
+    sound: yunxi_base::notify::NotifySound,
 ) {
     if !config.notifications.enabled || focused.is_none() {
         return;
     }
-    let tone = notification_tone(config, sound, miyu_base::terminal::herdr::in_pane());
-    let body = miyu_base::notify::clip_body(body, 120);
-    if miyu_base::notify::notify_via_kitty(title, &body, &tone) {
+    let tone = notification_tone(config, sound, yunxi_base::terminal::herdr::in_pane());
+    let body = yunxi_base::notify::clip_body(body, 120);
+    if yunxi_base::notify::notify_via_kitty(title, &body, &tone) {
         // 自定义音频文件 kitty 放不了（`s=` 只认声音主题里的名字），得我们自己
         // 放；而它是不是该响就得自己判了——kitty 有焦点时会把通知整条扣下，
         // 声音不跟着扣就成了「人对着屏幕坐着，它自己叮一声」。
-        if matches!(tone, miyu_base::notify::NotifyTone::File(_)) && focused == Some(false) {
-            miyu_base::notify::play_tone(&tone);
+        if matches!(tone, yunxi_base::notify::NotifyTone::File(_)) && focused == Some(false) {
+            yunxi_base::notify::play_tone(&tone);
         }
         return;
     }
     if focused != Some(false) {
         return;
     }
-    miyu_base::notify::notify_with_sound(title, &body, &tone);
+    yunxi_base::notify::notify_with_sound(title, &body, &tone);
 }
 
 /// 这一声由谁来放。
 ///
 /// 在 herdr 的 pane 里交给 herdr（用户 09-23 拍板）：它按 tab 可见性自己放
 /// 「完成」「在等你」两声（`[ui.sound]`，默认开），跟 Claude 在 herdr 里的体验
-/// 一致；Miyu 再响一声就成了两声。弹窗不受影响，照走系统通知。
+/// 一致；YunXi 再响一声就成了两声。弹窗不受影响，照走系统通知。
 pub(in crate::cli) fn notification_tone(
     config: &AppConfig,
-    sound: miyu_base::notify::NotifySound,
+    sound: yunxi_base::notify::NotifySound,
     in_herdr: bool,
-) -> miyu_base::notify::NotifyTone {
+) -> yunxi_base::notify::NotifyTone {
     if in_herdr {
-        return miyu_base::notify::NotifyTone::Silent;
+        return yunxi_base::notify::NotifyTone::Silent;
     }
     config.notifications.tone(sound)
 }
@@ -97,7 +97,7 @@ pub(in crate::cli) struct SharedJobsFeed {
     /// The owning REPL's current session — strip snapshots are filtered to
     /// it (daemon "current session" can drift from the REPL's after /new).
     pub(in crate::cli) repl_session: std::sync::Mutex<Option<String>>,
-    pub(in crate::cli) jobs: std::sync::Mutex<Vec<miyu_engine::tools::jobs::JobOverview>>,
+    pub(in crate::cli) jobs: std::sync::Mutex<Vec<yunxi_engine::tools::jobs::JobOverview>>,
     /// Rendered wake-turn reports waiting to be printed into the scrollback.
     pub(in crate::cli) reports: std::sync::Mutex<Vec<BackgroundReport>>,
     /// Latest session Σ read straight from the store. Background subagents
@@ -117,7 +117,7 @@ pub(in crate::cli) struct SharedJobsFeed {
     /// 这条 REPL 的会话上挂着的目标。轮询线程一秒问一次（`GoalStatus`）——
     /// 输入框右上角那行 `/goal …` 靠它自己往前走（轮次、暂停、受阻、上一轮
     /// 空转停下来等人），不必等下一条命令或下一个回合。
-    pub(in crate::cli) goal: std::sync::Mutex<Option<miyu_core::ipc::GoalHint>>,
+    pub(in crate::cli) goal: std::sync::Mutex<Option<yunxi_core::ipc::GoalHint>>,
     /// 两条车道各自开一条新会话时的上下文（`[普通, 开发]`）。大厅里按 Tab 只换显示，
     /// 换过去那条车道还没有会话，footer 上的数靠它（`EmptySessionContext`）。轮询
     /// 线程起来时问一次。
@@ -171,7 +171,7 @@ pub(in crate::cli) struct BackgroundReport {
     pub(in crate::cli) headline: String,
     pub(in crate::cli) reply: String,
     /// 后台任务报告附的结果段：铃铛那一行点开看（09-26）。
-    pub(in crate::cli) job_report: Option<miyu_core::state::JobReportResult>,
+    pub(in crate::cli) job_report: Option<yunxi_core::state::JobReportResult>,
     /// 回复末尾那行 `✻`：跑完或被打断的轮才有（报错的轮不画，回放也没有它）。
     pub(in crate::cli) turn_end: Option<ReportTurnEnd>,
 }
@@ -189,7 +189,7 @@ pub(in crate::cli) struct ReportTurnEnd {
 /// 它们的），没挂会话的老任务也留着。任务条第一层只列会话自己的，后代的收进「（+N）」，但切进去
 /// 那一下就要展开——手里先留着，不等下一轮轮询。
 pub(in crate::cli) fn retain_tree_jobs(
-    jobs: &mut Vec<miyu_engine::tools::jobs::JobOverview>,
+    jobs: &mut Vec<yunxi_engine::tools::jobs::JobOverview>,
     current: &str,
     path: &[String],
 ) {
@@ -206,7 +206,7 @@ pub(in crate::cli) fn retain_tree_jobs(
 /// Session isolation for the strip: keep only `session`'s jobs (sessionless
 /// jobs stay visible as a legacy fallback; `None` session shows everything).
 pub(in crate::cli) fn retain_session_jobs(
-    jobs: &mut Vec<miyu_engine::tools::jobs::JobOverview>,
+    jobs: &mut Vec<yunxi_engine::tools::jobs::JobOverview>,
     session: Option<&str>,
 ) {
     if let Some(session) = session {
@@ -272,8 +272,8 @@ impl SharedJobsFeed {
     /// 于是先闪一下别的会话的后台任务（todolist 09-24）。
     pub(in crate::cli) fn publish_jobs(
         &self,
-        mut jobs: Vec<miyu_engine::tools::jobs::JobOverview>,
-    ) -> Vec<miyu_engine::tools::jobs::JobOverview> {
+        mut jobs: Vec<yunxi_engine::tools::jobs::JobOverview>,
+    ) -> Vec<yunxi_engine::tools::jobs::JobOverview> {
         let session = self.repl_session.lock().unwrap();
         let path = self.visit_path.lock().unwrap();
         match session.as_deref() {
@@ -288,7 +288,7 @@ impl SharedJobsFeed {
     pub(in crate::cli) fn strip_items(
         &self,
         visits: &[super::strip::ParentRow],
-        jobs: &[miyu_engine::tools::jobs::JobOverview],
+        jobs: &[yunxi_engine::tools::jobs::JobOverview],
     ) -> Vec<super::strip::StripItem> {
         let current = self.repl_session.lock().unwrap().clone();
         let children = self.children.lock().unwrap();
@@ -314,11 +314,11 @@ pub(in crate::cli) enum JobsFeed {
 }
 
 impl JobsFeed {
-    pub(in crate::cli) fn current(&self) -> Vec<miyu_engine::tools::jobs::JobOverview> {
+    pub(in crate::cli) fn current(&self) -> Vec<yunxi_engine::tools::jobs::JobOverview> {
         match self {
             JobsFeed::Shared(shared) => shared.jobs.lock().unwrap().clone(),
             JobsFeed::Local(session) => {
-                let mut jobs = miyu_engine::tools::jobs::overview();
+                let mut jobs = yunxi_engine::tools::jobs::overview();
                 retain_session_jobs(&mut jobs, session.as_deref());
                 jobs
             }
@@ -346,7 +346,7 @@ impl JobsFeed {
 
     /// 这条 REPL 的会话上挂着的目标（`/goal`）。直连道没有 daemon，也就没有
     /// 续轮驱动器——那边永远是 None。
-    pub(in crate::cli) fn goal(&self) -> Option<miyu_core::ipc::GoalHint> {
+    pub(in crate::cli) fn goal(&self) -> Option<yunxi_core::ipc::GoalHint> {
         match self {
             JobsFeed::Shared(shared) => shared.goal.lock().unwrap().clone(),
             JobsFeed::Local(_) => None,
@@ -369,7 +369,7 @@ impl JobsFeed {
     /// 必须写回这里而不只是写 footer：轮询一秒一次，这一秒里每一拍
     /// `tick_goal_hint` 都会拿这份快照去盖 footer——不同步的话「清掉的目标」
     /// 会自己回来待满一秒。
-    pub(in crate::cli) fn set_goal(&self, goal: Option<miyu_core::ipc::GoalHint>) {
+    pub(in crate::cli) fn set_goal(&self, goal: Option<yunxi_core::ipc::GoalHint>) {
         if let JobsFeed::Shared(shared) = self {
             *shared.goal.lock().unwrap() = goal;
         }
@@ -466,7 +466,7 @@ impl JobsFeed {
 /// `session` 是这个 REPL 起步时的会话：轮询线程第一次拉任务表就按它过滤。原来要等
 /// 主循环转到第一圈才写进来，在那之前拉到的一份没有过滤。
 pub(in crate::cli) fn spawn_jobs_poll_thread(
-    paths: MiyuPaths,
+    paths: YunXiPaths,
     session: &str,
 ) -> std::sync::Arc<SharedJobsFeed> {
     let shared = std::sync::Arc::new(SharedJobsFeed::default());
@@ -630,7 +630,7 @@ const POLL_EVERY: std::time::Duration = std::time::Duration::from_millis(1000);
 /// 最后一项是 `(run_id, session_id)`：同一个会话的另一个客户端靠它发现
 /// 「这儿有一轮在跑」并挂上去。
 pub(in crate::cli) type JobsOverviewSnapshot = (
-    Vec<miyu_engine::tools::jobs::JobOverview>,
+    Vec<yunxi_engine::tools::jobs::JobOverview>,
     Option<String>,
     Vec<WakeRun>,
     Vec<(String, String)>,
@@ -656,14 +656,14 @@ pub(in crate::cli) struct WakeRun {
 /// daemon 的当前会话，而 `GetSessionState` 对非当前会话要现装一个 Agent 估
 /// 上下文——一秒一次的轮询用不起。
 pub(in crate::cli) async fn fetch_goal_status(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: &str,
-) -> Result<Option<miyu_core::ipc::GoalHint>> {
+) -> Result<Option<yunxi_core::ipc::GoalHint>> {
     let mut stream = ipc::connect(&paths.ipc_socket()).await?;
     ipc::send(
         &mut stream,
         &IpcRequest::new(IpcCommand::GoalStatus {
-            target: miyu_core::ipc::SessionRef::Id {
+            target: yunxi_core::ipc::SessionRef::Id {
                 id: session_id.to_string(),
             },
         }),
@@ -684,7 +684,7 @@ fn presence_viewer_id() -> String {
     format!("tui-{}-{started:x}", std::process::id())
 }
 
-async fn report_presence(paths: &MiyuPaths, viewer: &str, session_id: &str) -> Result<()> {
+async fn report_presence(paths: &YunXiPaths, viewer: &str, session_id: &str) -> Result<()> {
     let mut stream = ipc::connect(&paths.ipc_socket()).await?;
     ipc::send(
         &mut stream,
@@ -701,7 +701,7 @@ async fn report_presence(paths: &MiyuPaths, viewer: &str, session_id: &str) -> R
 /// 这条车道开一条新会话时的上下文（`EmptySessionContext`）。daemon 不认这条命令
 /// 或者没带数，都是 `None`。
 pub(in crate::cli) async fn fetch_empty_session_context(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     lane: PersonaLane,
 ) -> Result<Option<u64>> {
     let mut stream = ipc::connect(&paths.ipc_socket()).await?;
@@ -724,11 +724,13 @@ pub(in crate::cli) async fn fetch_empty_session_context(
 /// 解析只此一处，两条路的形状不会分叉。
 pub(in crate::cli) fn goal_hint_from_admin_data(
     data: &serde_json::Value,
-) -> Option<miyu_core::ipc::GoalHint> {
+) -> Option<yunxi_core::ipc::GoalHint> {
     serde_json::from_value(data.get("goal")?.clone()).ok()?
 }
 
-pub(in crate::cli) async fn fetch_jobs_overview(paths: &MiyuPaths) -> Result<JobsOverviewSnapshot> {
+pub(in crate::cli) async fn fetch_jobs_overview(
+    paths: &YunXiPaths,
+) -> Result<JobsOverviewSnapshot> {
     let Some((state, data)) = jobs_overview_frame(paths).await? else {
         return Ok((Vec::new(), None, Vec::new(), Vec::new()));
     };
@@ -757,8 +759,8 @@ pub(in crate::cli) async fn fetch_jobs_overview(paths: &MiyuPaths) -> Result<Job
 /// 一次性命令等子代理时看的那一份：任务，加上这会儿在跑的和刚跑完的唤醒轮（09-26）。
 /// 刚跑完的是两次看之间就收了的，按起点补看得到；按起点排，先起的在前。
 pub(in crate::cli) async fn fetch_wake_overview(
-    paths: &MiyuPaths,
-) -> Result<(Vec<miyu_engine::tools::jobs::JobOverview>, Vec<WakeRun>)> {
+    paths: &YunXiPaths,
+) -> Result<(Vec<yunxi_engine::tools::jobs::JobOverview>, Vec<WakeRun>)> {
     let Some((_, data)) = jobs_overview_frame(paths).await? else {
         return Ok((Vec::new(), Vec::new()));
     };
@@ -769,8 +771,8 @@ pub(in crate::cli) async fn fetch_wake_overview(
 }
 
 async fn jobs_overview_frame(
-    paths: &MiyuPaths,
-) -> Result<Option<(miyu_core::ipc::SessionState, serde_json::Value)>> {
+    paths: &YunXiPaths,
+) -> Result<Option<(yunxi_core::ipc::SessionState, serde_json::Value)>> {
     let mut stream = ipc::connect(&paths.ipc_socket()).await?;
     ipc::send(&mut stream, &IpcRequest::new(IpcCommand::JobsOverview)).await?;
     match ipc::receive::<IpcFrame>(&mut stream).await? {
@@ -779,7 +781,7 @@ async fn jobs_overview_frame(
     }
 }
 
-fn overview_jobs(data: &serde_json::Value) -> Vec<miyu_engine::tools::jobs::JobOverview> {
+fn overview_jobs(data: &serde_json::Value) -> Vec<yunxi_engine::tools::jobs::JobOverview> {
     data.get("jobs")
         .cloned()
         .map(serde_json::from_value)

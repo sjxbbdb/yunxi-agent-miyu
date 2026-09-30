@@ -8,7 +8,7 @@ impl RemoteRepl {
     pub(super) async fn submit_chat(
         &mut self,
         input: &str,
-        images: &[Option<miyu_base::clipboard::PastedImage>],
+        images: &[Option<yunxi_base::clipboard::PastedImage>],
         history_entry: &ReplHistoryEntry,
     ) -> Result<LoopStep> {
         push_history_capped(&mut self.history, history_entry.clone());
@@ -54,8 +54,8 @@ impl RemoteRepl {
             Ok(None) => bail!(
                 "{}",
                 t(
-                    "the Miyu Web core stopped; start the REPL again to use direct self.mode",
-                    "Miyu Web 核心已停止；请重新启动 REPL 以使用直连模式"
+                    "the YunXi Web core stopped; start the REPL again to use direct self.mode",
+                    "YunXi Web 核心已停止；请重新启动 REPL 以使用直连模式"
                 )
             ),
             // 回合跑着的时候敲了一条要占屏的斜杠命令（用户 09-20）：这一轮
@@ -102,7 +102,7 @@ impl RemoteRepl {
             }
             Err(err)
                 if is_remote_turn_cancelled(&err)
-                    || miyu_base::question::is_question_cancelled(&err) =>
+                    || yunxi_base::question::is_question_cancelled(&err) =>
             {
                 // 走通知条：「已取消」不是对话内容，几秒之后就不再有意义。
                 // 直接塞进正文的话它会贴着第 0 列、还会被前面那个收缩块吃进去

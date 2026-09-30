@@ -10,7 +10,7 @@ use crate::cli::*;
 /// （转轮起转比它晚零点几秒，短回合会差出一整秒）；库读不到才用活动区的回合计时（熄转轮之前
 /// 取）。轮号不知道就不画：动词按轮号挑，回放时才对得上。
 pub(in crate::cli) fn show_turn_end(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     turn_id: Option<&str>,
     model: Option<&str>,
@@ -40,7 +40,7 @@ pub(in crate::cli) fn show_turn_end(
 /// 收尾那行的模型位置写什么。混合模型池开着「本次供应商 / 模型」时写「供应商 / 模型」，原来单独
 /// 那一行就不画了（用户 09-26：同一个模型名写了两遍）；否则只写模型。供应商不知道时也只写模型。
 pub(in crate::cli) fn turn_end_model(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     session_id: &str,
     provider: Option<&str>,
@@ -65,7 +65,7 @@ pub(in crate::cli) fn turn_end_model(
 
 /// 库里这一轮开始的时刻，换算成本进程的 `Instant`（计时要的是单调钟）。
 pub(in crate::cli) fn turn_started_instant(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     turn_id: &str,
 ) -> Option<std::time::Instant> {
     let started = StateStore::new(paths)

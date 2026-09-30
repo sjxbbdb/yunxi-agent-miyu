@@ -80,7 +80,7 @@ def plan(args):
 def default_download_cache():
     """机器级下载缓存:跟发版 root 无关,换一个 root 也命中。"""
     root = os.environ.get('XDG_CACHE_HOME') or (Path.home()/'.cache')
-    return Path(root)/'miyu-release'/'downloads'
+    return Path(root)/'yunxi-release'/'downloads'
 
 
 def freeze(args):
@@ -138,7 +138,7 @@ def verify_packages(args):
         raise ValueError('Live CI acceptance only supports the Linux smoke profile.')
     config = provider_configuration()
     # The dedicated credential never enters the artifact/output tree.
-    with tempfile.TemporaryDirectory(prefix='miyu-ci-provider-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='yunxi-ci-provider-') as temporary:
         path = Path(temporary)/'provider.json'
         write_json(path, config)
         path.chmod(0o600)
@@ -237,7 +237,7 @@ def macos_verify(args):
             raise ValueError(f'macOS preview checks failed: {failed}')
         return None
     config = provider_configuration()
-    with tempfile.TemporaryDirectory(prefix='miyu-ci-provider-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='yunxi-ci-provider-') as temporary:
         path = Path(temporary)/'provider.json'
         write_json(path, config)
         path.chmod(0o600)
@@ -248,7 +248,7 @@ def macos_verify(args):
 def macos_import(args):
     """Bring the runner's macOS package and report into the local release tree, byte-checked."""
     expected = sha256_file(args.manifest)
-    with tempfile.TemporaryDirectory(prefix='miyu-macos-import-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='yunxi-macos-import-') as temporary:
         unpacked = Path(temporary)/'results'
         unpack_transport(args.archive, unpacked)
         record = load_json(unpacked/'packages/macos-core/package-record.json')
@@ -329,7 +329,7 @@ def channels(args):
     command = ['--manifest', args.root/'release-input.json', '--release-output', output, '--out', args.out]
     if args.published_url:
         command += ['--published-url', args.published_url]
-    with tempfile.TemporaryDirectory(prefix='miyu-ci-channel-builder-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='yunxi-ci-channel-builder-') as temporary:
         iid = Path(temporary)/'image.id'
         subprocess.run(['docker', 'build', '--platform', 'linux/amd64', '--iidfile', str(iid),
             '--build-arg', 'RUST_VERSION='+manifest['toolchain']['rust'], '-f',
@@ -353,7 +353,7 @@ def main():
         if name == 'freeze':
             command.add_argument('--download-cache', type=Path,
                                  help='Reusable locked-archive cache; defaults to '
-                                      '$XDG_CACHE_HOME/miyu-release/downloads.')
+                                      '$XDG_CACHE_HOME/yunxi-release/downloads.')
     commands.add_parser('check-provider')
     for name in ('build', 'verify'):
         command = commands.add_parser(name)

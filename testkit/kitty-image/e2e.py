@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Miyu 级真机验收:在无头 kitty 里跑真 REPL,打图后滚上去看历史,新输出会不会留残影。
+"""YunXi 级真机验收:在无头 kitty 里跑真 REPL,打图后滚上去看历史,新输出会不会留残影。
 
 流程(全部在 kitty 窗口里由本脚本驱动,不碰用户桌面):
 
-    1. 隔离 MIYU_HOME(拷真实 config,供应商换成本地桩 LLM,记忆关掉)
+    1. 隔离 YUNXI_HOME(拷真实 config,供应商换成本地桩 LLM,记忆关掉)
     2. 起桩 LLM(stub_llm.py):先 load_tools、再 print_image、再逐行慢速流式正文
     3. 直连模式起 REPL($BIN,默认本工作树的 debug 构建),用 kitten 远程控制敲入提示
     4. 桩开始流正文后,把视口往上滚 $VIEW_UP 行(模拟用户鼠标滚上去看历史)
     5. 正文流完,grim 截图,按像素统计蓝色行:图片本该只占 4 行,多的就是残影
 
 用法:
-    BIN=/usr/bin/miyu   testkit/kitty-image/run_headless.sh python3 testkit/kitty-image/e2e.py   # 对照组(旧版)
-    BIN=target/debug/miyu testkit/kitty-image/run_headless.sh python3 testkit/kitty-image/e2e.py # 修复后
+    BIN=/usr/bin/yunxi   testkit/kitty-image/run_headless.sh python3 testkit/kitty-image/e2e.py   # 对照组(旧版)
+    BIN=target/debug/yunxi testkit/kitty-image/run_headless.sh python3 testkit/kitty-image/e2e.py # 修复后
 产物:$OUT/e2e-<tag>-{ready,streaming,after}.png、$OUT/e2e-<tag>.json
 """
 import json
@@ -23,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -35,8 +35,8 @@ sys.path.insert(0, str(REPO / "testkit" / "persona-ab"))
 import ghost_probe as probe  # noqa: E402
 from run import strip_jsonc  # noqa: E402
 
-OUT = Path(os.environ.get("OUT") or "~/.cache/miyu-kitty-probe").expanduser()
-BIN = os.environ.get("BIN") or str(REPO / "target" / "debug" / "miyu")
+OUT = Path(os.environ.get("OUT") or "~/.cache/yunxi-kitty-probe").expanduser()
+BIN = os.environ.get("BIN") or str(REPO / "target" / "debug" / "yunxi")
 TAG = os.environ.get("TAG") or ("release" if BIN.startswith("/usr") else "fixed")
 HOME = OUT / "home"
 RUN_DIR = OUT / "run"
@@ -46,8 +46,8 @@ IMAGE = OUT / "blue.png"
 IMAGE_COLS, IMAGE_ROWS = 24, 4
 VIEW_UP = int(os.environ.get("VIEW_UP", "12"))
 PROMPT = "STUB_SCRIPT 请把那张蓝图显示出来然后接着说"
-REAL_CONFIG = Path.home() / ".miyu" / "config" / "config.jsonc"
-REAL_MODELS_CACHE = Path.home() / ".miyu" / "cache" / "models_cache.json"
+REAL_CONFIG = Path.home() / ".yunxi" / "config" / "config.jsonc"
+REAL_MODELS_CACHE = Path.home() / ".yunxi" / "cache" / "models_cache.json"
 LOG = open(OUT / f"e2e-{TAG}.log", "a", encoding="utf-8")
 
 
@@ -94,9 +94,9 @@ def env_for():
     env = dict(os.environ)
     for k in ("XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME"):
         env.pop(k, None)
-    env["MIYU_HOME"] = str(HOME)
+    env["YUNXI_HOME"] = str(HOME)
     env["XDG_RUNTIME_DIR"] = str(RUN_DIR)
-    env["MIYU_DIRECT"] = "1"
+    env["YUNXI_DIRECT"] = "1"
     return env
 
 
@@ -153,10 +153,10 @@ def main():
     stub = subprocess.Popen([sys.executable, str(HERE / "stub_llm.py")], env=stub_env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     verdict = {"bin": BIN, "tag": TAG, "geometry": {"rows": rows, "cols": cols, "cell_w": cell_w, "cell_h": cell_h}}
-    miyu = None
+    yunxi = None
     try:
         time.sleep(0.5)
-        miyu = subprocess.Popen([BIN], env=env_for(), cwd=str(OUT))
+        yunxi = subprocess.Popen([BIN], env=env_for(), cwd=str(OUT))
         ready = wait_stable()
         log("ready screen:\n" + ready[-600:])
         probe.screenshot(f"e2e-{TAG}-ready")
@@ -187,12 +187,12 @@ def main():
         log("final screen:\n" + screen_text()[-1200:])
         return verdict
     finally:
-        if miyu and miyu.poll() is None:
-            miyu.send_signal(signal.SIGTERM)
+        if yunxi and yunxi.poll() is None:
+            yunxi.send_signal(signal.SIGTERM)
             try:
-                miyu.wait(timeout=5)
+                yunxi.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                miyu.kill()
+                yunxi.kill()
         stub.terminate()
         (OUT / f"e2e-{TAG}.json").write_text(json.dumps(verdict, ensure_ascii=False, indent=2))
         log("verdict: " + json.dumps(verdict, ensure_ascii=False))

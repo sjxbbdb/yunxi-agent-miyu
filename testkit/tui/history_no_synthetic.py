@@ -8,7 +8,7 @@
 
     cargo build
     python3 testkit/tui/history_no_synthetic.py            # 修后
-    MIYU_BIN=<旧二进制> python3 testkit/tui/history_no_synthetic.py   # A/B
+    YUNXI_BIN=<旧二进制> python3 testkit/tui/history_no_synthetic.py   # A/B
 """
 
 import json

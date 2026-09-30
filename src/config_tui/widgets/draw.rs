@@ -1,7 +1,7 @@
 //! 菜单、并排列表、提示屏的绘制，以及宽度计算。
 //!
 //! 2026-09-20 起这里不再自己画框：每屏组一份 [`View`] 交给
-//! [`miyu_base::terminal::chrome`]，版面和引导（OOBE）同一套。
+//! [`yunxi_base::terminal::chrome`]，版面和引导（OOBE）同一套。
 //!
 //! 两处「不动业务代码」的取巧，都写在这儿：
 //! - 菜单项是业务拼好的整串（`配置全局文本模型 (当前: Stub / stub-model)`），
@@ -15,11 +15,11 @@
 //! 错位。光标移动同理，`byte_index_for_char` 负责在字节与字符之间换算。
 
 use crate::config_tui::*;
-use miyu_base::terminal::chrome::{self, ln, nil, Cx, View};
-use miyu_base::terminal::palette::{BLUE, CORAL, DIM, GOLD};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use yunxi_base::terminal::chrome::{self, ln, nil, Cx, View};
+use yunxi_base::terminal::palette::{BLUE, CORAL, DIM, GOLD};
 
 /// 名字那一列最窄/最宽多少。太窄右列会贴脸，太宽右列被挤出屏幕。
 pub(in crate::config_tui) const NAME_COL_MIN: usize = 22;
@@ -421,7 +421,7 @@ pub(in crate::config_tui) fn truncate(value: &str, max: usize) -> String {
 /// 一段文字占几列。
 ///
 /// 2026-09-20 从自己手写的 CJK 区间表换成 `unicode-width`：版面现在由
-/// [`miyu_base::terminal::chrome`] 排，它补白用的就是这一套；两边各算各的话，
+/// [`yunxi_base::terminal::chrome`] 排，它补白用的就是这一套；两边各算各的话，
 /// emoji（手写那份按 1 列算，实际占 2 列）会让整行错开一格。
 pub(in crate::config_tui) fn display_width(value: &str) -> usize {
     UnicodeWidthStr::width(value)
@@ -440,7 +440,7 @@ pub(in crate::config_tui) fn pad(value: &str, width: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use miyu_base::terminal::palette::{Depth, Theme};
+    use yunxi_base::terminal::palette::{Depth, Theme};
 
     fn cx() -> Cx {
         Cx::new(Theme {

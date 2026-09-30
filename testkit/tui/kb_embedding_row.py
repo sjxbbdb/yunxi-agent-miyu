@@ -11,9 +11,9 @@
 - 回车进的是主页同一个 Embedding 菜单，选完回到表单，这一行跟着变；
 - 跳之前在表单里改的值不丢，保存后落盘；embedding 写进全局，旧字段一个字不碰。
 
-真二进制 + PTY + pyte，隔离的 MIYU_HOME，不起 daemon、不发模型请求。
+真二进制 + PTY + pyte，隔离的 YUNXI_HOME，不起 daemon、不发模型请求。
 
-Run: python3 testkit/tui/kb_embedding_row.py --binary /absolute/path/to/miyu
+Run: python3 testkit/tui/kb_embedding_row.py --binary /absolute/path/to/yunxi
 """
 
 import argparse
@@ -50,8 +50,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
     args = parser.parse_args()
-    sandbox = sandbox_dir.make("miyu-kb-embedding-row-")
-    out = Path(os.environ.get("OUT") or Path.home() / ".cache" / "miyu-kb-embedding-row")
+    sandbox = sandbox_dir.make("yunxi-kb-embedding-row-")
+    out = Path(os.environ.get("OUT") or Path.home() / ".cache" / "yunxi-kb-embedding-row")
     out.mkdir(parents=True, exist_ok=True)
     home = sandbox / "home"
     (home / "config").mkdir(parents=True)

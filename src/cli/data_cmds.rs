@@ -1,6 +1,6 @@
 //! 数据类命令：知识库、记忆、技能。
 //!
-//! 三者的共性是「Miyu 记住的东西」的增删查改入口——知识库是人喂的资料，记忆
+//! 三者的共性是「YunXi 记住的东西」的增删查改入口——知识库是人喂的资料，记忆
 //! 是它自己攒的，技能是可复用的操作手册。放在一起是因为它们的子命令结构与
 //! 输出格式高度相似，改一个通常要顺手对齐另外两个。
 
@@ -142,7 +142,7 @@ pub struct KbEmbedReindexArgs {
     pub quiet: bool,
 }
 
-pub(in crate::cli) async fn run_kb(paths: &MiyuPaths, args: KbArgs) -> Result<()> {
+pub(in crate::cli) async fn run_kb(paths: &YunXiPaths, args: KbArgs) -> Result<()> {
     let config = AppConfig::load(paths)?;
     let kb = tools::knowledge_base::KnowledgeBase::new(config, paths.clone())?;
     match args.command {
@@ -186,7 +186,7 @@ pub(in crate::cli) async fn run_kb(paths: &MiyuPaths, args: KbArgs) -> Result<()
         KbCommand::Stats => {
             let mut stats = kb.stats()?;
             if let Some(object) = stats.as_object_mut() {
-                if let Ok(status) = miyu_engine::default_kb::status(paths) {
+                if let Ok(status) = yunxi_engine::default_kb::status(paths) {
                     object.insert(
                         "default_kb_update_available".to_string(),
                         serde_json::json!(status.has_update_notice),
@@ -204,9 +204,9 @@ pub(in crate::cli) async fn run_kb(paths: &MiyuPaths, args: KbArgs) -> Result<()
     Ok(())
 }
 
-pub(in crate::cli) async fn run_update_default_kb(paths: &MiyuPaths) -> Result<()> {
+pub(in crate::cli) async fn run_update_default_kb(paths: &YunXiPaths) -> Result<()> {
     let config = AppConfig::load_or_default(paths)?;
-    let state = miyu_engine::default_kb::update(paths, &config, |stage| {
+    let state = yunxi_engine::default_kb::update(paths, &config, |stage| {
         let mut stderr = io::stderr().lock();
         let _ = write_default_kb_update_progress(&mut stderr, stage);
     })?;
@@ -220,13 +220,13 @@ pub(in crate::cli) async fn run_update_default_kb(paths: &MiyuPaths) -> Result<(
 
 pub(in crate::cli) fn write_default_kb_update_progress(
     output: &mut impl Write,
-    stage: miyu_engine::default_kb::UpdateStage,
+    stage: yunxi_engine::default_kb::UpdateStage,
 ) -> io::Result<()> {
     writeln!(output, "[default-kb] {}", stage.message())?;
     output.flush()
 }
 
-pub(in crate::cli) fn run_memory(paths: &MiyuPaths, args: MemoryArgs) -> Result<()> {
+pub(in crate::cli) fn run_memory(paths: &YunXiPaths, args: MemoryArgs) -> Result<()> {
     let config = AppConfig::load_or_default(paths)?;
     let store = MemoryStore::new(&config, paths);
     match args.command {
@@ -236,7 +236,7 @@ pub(in crate::cli) fn run_memory(paths: &MiyuPaths, args: MemoryArgs) -> Result<
             None => {
                 store.reset_all()?;
                 if args.include_skills {
-                    miyu_core::skills::purge_generated_skills(
+                    yunxi_core::skills::purge_generated_skills(
                         &config.active_persona_skills_dir(paths),
                     )?;
                 }
@@ -257,7 +257,7 @@ pub(in crate::cli) fn run_memory(paths: &MiyuPaths, args: MemoryArgs) -> Result<
     Ok(())
 }
 
-pub(in crate::cli) fn run_skills(paths: &MiyuPaths, args: SkillsArgs) -> Result<()> {
+pub(in crate::cli) fn run_skills(paths: &YunXiPaths, args: SkillsArgs) -> Result<()> {
     std::fs::create_dir_all(&paths.skills_dir)?;
     match args.command {
         SkillsCommand::List => {
@@ -317,7 +317,7 @@ pub(in crate::cli) fn run_skills(paths: &MiyuPaths, args: SkillsArgs) -> Result<
             for name in skill_names(paths)? {
                 let dir = paths.skills_dir.join(&name);
                 let raw = std::fs::read_to_string(dir.join("SKILL.md")).unwrap_or_default();
-                if miyu_core::skills::is_generated_skill(&raw) && dir.join(".disabled").exists() {
+                if yunxi_core::skills::is_generated_skill(&raw) && dir.join(".disabled").exists() {
                     std::fs::remove_dir_all(dir)?;
                     removed += 1;
                 }
@@ -328,7 +328,7 @@ pub(in crate::cli) fn run_skills(paths: &MiyuPaths, args: SkillsArgs) -> Result<
     Ok(())
 }
 
-pub(in crate::cli) fn skill_names(paths: &MiyuPaths) -> Result<Vec<String>> {
+pub(in crate::cli) fn skill_names(paths: &YunXiPaths) -> Result<Vec<String>> {
     let mut names = Vec::new();
     if !paths.skills_dir.exists() {
         return Ok(names);
@@ -343,7 +343,7 @@ pub(in crate::cli) fn skill_names(paths: &MiyuPaths) -> Result<Vec<String>> {
     Ok(names)
 }
 
-pub(in crate::cli) fn skill_dir(paths: &MiyuPaths, name: &str) -> Result<PathBuf> {
+pub(in crate::cli) fn skill_dir(paths: &YunXiPaths, name: &str) -> Result<PathBuf> {
     let clean = name.trim();
     if clean.is_empty()
         || clean.contains('/')

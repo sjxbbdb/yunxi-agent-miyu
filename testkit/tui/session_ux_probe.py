@@ -12,8 +12,8 @@ sleep 90）。09-26 起子代理只在后台跑，主线派完这一轮就收。
 6. 主会话里 `/session` 按 Ctrl+D：名下还有子代理在跑的当前会话第一下只出提醒；第二下连同子代理树
    删干净，面板留着（落到兜底会话上）。
 
-    MIYU_BIN=... MIYU_HOME=~/.cache/miyu-session-ux/home MIYU_TUI_PORT=18961 STUB_PORT=18962 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-session-ux/rt OUT=~/.cache/miyu-session-ux/out \\
+    YUNXI_BIN=... YUNXI_HOME=~/.cache/yunxi-session-ux/home YUNXI_TUI_PORT=18961 STUB_PORT=18962 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-session-ux/rt OUT=~/.cache/yunxi-session-ux/out \\
       python3 testkit/tui/session_ux_probe.py
 """
 

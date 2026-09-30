@@ -13,8 +13,8 @@
 孙代理、切回主会话按 Ctrl+C。子代理的镜像任务在第一次 Ctrl+C 时就收了，原来主会话的 Ctrl+C 只停
 主会话自己名下的任务，一个都停不到；现在整棵树一起停。
 
-    MIYU_BIN=... MIYU_HOME=~/.cache/miyu-stop-main/home MIYU_TUI_PORT=18995 STUB_PORT=18996 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-stop-main/rt OUT=~/.cache/miyu-stop-main/out \\
+    YUNXI_BIN=... YUNXI_HOME=~/.cache/yunxi-stop-main/home YUNXI_TUI_PORT=18995 STUB_PORT=18996 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-stop-main/rt OUT=~/.cache/yunxi-stop-main/out \\
       python3 testkit/tui/stop_from_main.py
 """
 
@@ -68,7 +68,7 @@ def main():
 
 def scenario_fresh(report):
     stub, daemon, tui, master, sink = r.start(STUB)
-    home = os.environ["MIYU_HOME"]
+    home = os.environ["YUNXI_HOME"]
     try:
         os.write(master, (h.PROMPT + " STUB_SUBBG").encode())
         h.drain_until(master, sink, "STUB_SUBBG", 3.0)
@@ -124,7 +124,7 @@ AGAIN = "走查孙代理又一个"
 
 def scenario_revisited(report):
     stub, daemon, tui, master, sink = r.start(REVISIT_STUB)
-    home = os.environ["MIYU_HOME"]
+    home = os.environ["YUNXI_HOME"]
     try:
         os.write(master, (h.PROMPT + " STUB_SUBBG").encode())
         h.drain_until(master, sink, "STUB_SUBBG", 3.0)

@@ -11,7 +11,7 @@ use crate::cli::*;
 ///
 /// daemon 管的任务走 IPC；直连模式（`JobsFeed::Local`）的任务就在本进程里。
 pub(in crate::cli) async fn stop_background_job(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     feed: &JobsFeed,
     live: &mut LiveReplTail,
     job_id: &str,
@@ -25,7 +25,7 @@ pub(in crate::cli) async fn stop_background_job(
         )
         .await
         .is_ok(),
-        JobsFeed::Local(_) => miyu_engine::tools::jobs::stop_job(job_id).await.is_ok(),
+        JobsFeed::Local(_) => yunxi_engine::tools::jobs::stop_job(job_id).await.is_ok(),
     };
     let note = if stopped {
         // 压住它：紧接着那次轮询还带着它，状态行会闪一下。
@@ -47,7 +47,7 @@ pub(in crate::cli) async fn stop_background_job(
 /// 浮层里按过 x 就当场停掉那个任务。回合循环把按键交给浮层之后调；空闲时这件事
 /// 由主循环经 `LiveReplOutcome::StopJob` 做，不走这里。
 pub(in crate::cli) async fn stop_pending_job(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     feed: &JobsFeed,
     live: &mut LiveReplTail,
 ) -> Result<()> {

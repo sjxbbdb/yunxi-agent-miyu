@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """只测后台任务行点击：F4 → 点命令行 → 截图 → Esc → 点子代理行 → 截图。
-    OUT=~/.cache/miyu-tui-probe MIYU_DEMO_LOG=~/.cache/miyu-tui-demo-events.log \
+    OUT=~/.cache/yunxi-tui-probe YUNXI_DEMO_LOG=~/.cache/yunxi-tui-demo-events.log \
       testkit/kitty-image/run_headless.sh python3 testkit/tui-demo/kitty_probe_jobs.py <bin>
 """
 import os, subprocess, sys, time
 
 BIN = sys.argv[1]
-OUT = os.environ.get("OUT") or os.path.expanduser("~/.cache/miyu-tui-probe")
+OUT = os.environ.get("OUT") or os.path.expanduser("~/.cache/yunxi-tui-probe")
 os.makedirs(OUT, exist_ok=True)
 listen = os.environ["KITTY_LISTEN_ON"]
 

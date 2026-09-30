@@ -7,7 +7,7 @@
  * 情绪标签:功能落地前显示占位说明。数据来自 /api/dash/affection/*。
  */
 (() => {
-  const D = window.MiyuDash;
+  const D = window.YunXiDash;
   if (!D) return;
 
   const state = {

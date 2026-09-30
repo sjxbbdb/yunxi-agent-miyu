@@ -123,7 +123,7 @@ impl Term {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use miyu_hosts::render::blocks::{live_rewind_marker_at, LIVE_END_MARKER, LIVE_REWIND_MARKER};
+    use yunxi_hosts::render::blocks::{live_rewind_marker_at, LIVE_END_MARKER, LIVE_REWIND_MARKER};
 
     fn text(term: &Term) -> Vec<String> {
         (0..term.line_count())
@@ -245,8 +245,8 @@ mod tests {
                 "  step".to_string(),
                 format!(
                     "{}  thinking {secs}s{}",
-                    miyu_hosts::render::blocks::begin_marker(42),
-                    miyu_hosts::render::blocks::END_MARKER
+                    yunxi_hosts::render::blocks::begin_marker(42),
+                    yunxi_hosts::render::blocks::END_MARKER
                 ),
             ]
         };

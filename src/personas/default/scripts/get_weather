@@ -56,7 +56,7 @@
     echo '{"location":"北京","query_type":"air_quality"}' | get_weather
     echo '{"location":"Paris","query_type":"historical","start_date":"2024-01-01"}' | get_weather
 
-工具层（Miyu）调用时把参数打成 JSON 从 stdin 喂进来（同一份也在 MIYU_ARGS_JSON）：
+工具层（YunXi）调用时把参数打成 JSON 从 stdin 喂进来（同一份也在 YUNXI_ARGS_JSON）：
     {"location":"东京","query_type":"forecast","days":3,"country_code":"JP"}
 """
 
@@ -78,7 +78,7 @@ CLIMATE_URL = "https://climate-api.open-meteo.com/v1/climate"
 ELEVATION_URL = "https://api.open-meteo.com/v1/elevation"
 WTTR_URL = "https://wttr.in/"
 
-UA = "miyu-weather/0.1"
+UA = "yunxi-weather/0.1"
 TIMEOUT = 15  # 每个请求的秒数上限
 
 GEOCODING_CACHE_TTL = 7 * 24 * 60 * 60
@@ -97,8 +97,8 @@ class Failed(RuntimeError):
 # 语义保持一致：读只判过期，写时清扫过期并封顶条数。
 
 def cache_path():
-    base = os.environ.get("MIYU_SCRIPT_CACHE_DIR") or os.path.join(
-        os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "miyu-scripts"
+    base = os.environ.get("YUNXI_SCRIPT_CACHE_DIR") or os.path.join(
+        os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "yunxi-scripts"
     )
     return os.path.join(base, "get_weather-cache.json")
 
@@ -819,7 +819,7 @@ def fail(error, fix=None, code=1):
 
 
 def main():
-    raw = os.environ.get("MIYU_ARGS_JSON") or sys.stdin.read() or "{}"
+    raw = os.environ.get("YUNXI_ARGS_JSON") or sys.stdin.read() or "{}"
     try:
         args = json.loads(raw)
     except json.JSONDecodeError as exc:

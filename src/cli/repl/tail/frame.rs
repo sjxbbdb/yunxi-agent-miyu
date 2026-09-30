@@ -269,12 +269,12 @@ impl LiveReplTail {
                 text: lobby.rows.clone(),
                 spans: lobby.spans.clone(),
             }));
-            if std::env::var_os("MIYU_LOBBY_TRACE").is_some() {
+            if std::env::var_os("YUNXI_LOBBY_TRACE").is_some() {
                 if let Some(lobby) = &lobby {
                     if let Ok(mut file) = std::fs::OpenOptions::new()
                         .create(true)
                         .append(true)
-                        .open("/tmp/miyu-lobby-trace.log")
+                        .open("/tmp/yunxi-lobby-trace.log")
                     {
                         let _ = writeln!(
                             file,
@@ -531,18 +531,18 @@ impl LiveReplTail {
         // 全屏：字节交给终端模拟器，它按光标动作落到对的行上——spinner 的
         // 原地刷新、命令块的实时输出都靠这个，输出方一行不用改。
         if let Some(screen) = &mut self.screen {
-            if std::env::var_os("MIYU_SCREEN_TRACE").is_some() {
+            if std::env::var_os("YUNXI_SCREEN_TRACE").is_some() {
                 // 排查「点开正在想的那一步之后出现两份」：这一帧里开始标记和
                 // 结束标记各有几个。只有开始没有结束 = 块留在半开状态,展开层
                 // 会把内容插进去而不是替换掉。
                 let text = String::from_utf8_lossy(frame);
-                let begins =
-                    text.matches("miyu-block=").count() + text.matches("miyu-block-open=").count();
-                let ends = text.matches("miyu-block-end").count();
+                let begins = text.matches("yunxi-block=").count()
+                    + text.matches("yunxi-block-open=").count();
+                let ends = text.matches("yunxi-block-end").count();
                 if let Ok(mut file) = std::fs::OpenOptions::new()
                     .create(true)
                     .append(true)
-                    .open("/tmp/miyu-screen-trace.log")
+                    .open("/tmp/yunxi-screen-trace.log")
                 {
                     let _ = std::io::Write::write_all(
                         &mut file,
@@ -603,7 +603,7 @@ impl LiveReplTail {
             )?;
         }
         let lifted = output_bottom.filter(|_| {
-            miyu_base::terminal::kitty::images_emitted()
+            yunxi_base::terminal::kitty::images_emitted()
                 && (leading_scroll > 0 || !scrolls.is_empty())
         });
         if let Some(bottom) = lifted {
@@ -643,7 +643,7 @@ impl LiveReplTail {
         let input_row = (i32::from(self.input_cursor.1) + shift)
             .clamp(0, i32::from(terminal_rows.saturating_sub(1))) as u16;
         queue!(transaction, MoveTo(self.input_cursor.0, input_row))?;
-        if std::env::var_os("MIYU_TAIL_TRACE").is_some() {
+        if std::env::var_os("YUNXI_TAIL_TRACE").is_some() {
             trace_tail_redraw(
                 self.tail_start,
                 next_tail,

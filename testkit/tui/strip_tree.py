@@ -16,8 +16,8 @@
 - footer 上的 Σ 在停下那一下不往回掉（09-26：切进一条回合正跑着的会话时本回合算了两遍，
   跟着看的那一阵虚高，一停又掉回去）。
 
-    MIYU_BIN=... MIYU_HOME=~/.cache/miyu-strip-tree/home MIYU_TUI_PORT=18975 STUB_PORT=18976 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-strip-tree/rt OUT=~/.cache/miyu-strip-tree/out \\
+    YUNXI_BIN=... YUNXI_HOME=~/.cache/yunxi-strip-tree/home YUNXI_TUI_PORT=18975 STUB_PORT=18976 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-strip-tree/rt OUT=~/.cache/yunxi-strip-tree/out \\
       python3 testkit/tui/strip_tree.py
 """
 
@@ -217,7 +217,7 @@ def main():
         report["ctrl_c_takes_the_grandchildren_off_the_strip"] = stopped is not None
         states = {}
         for _ in range(40):
-            states = task_states(os.environ["MIYU_HOME"])
+            states = task_states(os.environ["YUNXI_HOME"])
             if all(states.get(name) == "interrupted" for name in GRANDCHILDREN):
                 break
             time.sleep(0.25)

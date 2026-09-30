@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """空会话大厅的输入框走查：窄框里的换行、光标落点、缩行时的 footer 残影。
 
-和 `testkit/tui/run.py` 同一套骨架（沙箱 MIYU_HOME、桩模型、真 PTY、pyte），
+和 `testkit/tui/run.py` 同一套骨架（沙箱 YUNXI_HOME、桩模型、真 PTY、pyte），
 只盯一件事：**大厅里输入框只有终端的三分之二宽**，测行数、画字、算光标、
 擦旧行必须用同一个宽度。
 
@@ -18,7 +18,7 @@
     cargo build
     python3 testkit/tui/lobby.py
 
-产物在 ~/.cache/miyu-lobby-smoke/：screen.txt（最后一屏）、report.json、
+产物在 ~/.cache/yunxi-lobby-smoke/：screen.txt（最后一屏）、report.json、
 ghost.txt（抓到残影时那一屏）、daemon.log。
 """
 
@@ -37,7 +37,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -49,18 +49,18 @@ except ImportError:
     raise SystemExit(2)
 
 ROOT = Path(__file__).resolve().parents[2]
-# 验「修复前会红」时把 MIYU_BIN 指到旧构建上，别的都不用改。
-BIN = Path(os.environ.get("MIYU_BIN", ROOT / "target" / "debug" / "miyu"))
+# 验「修复前会红」时把 YUNXI_BIN 指到旧构建上，别的都不用改。
+BIN = Path(os.environ.get("YUNXI_BIN", ROOT / "target" / "debug" / "yunxi"))
 SMOKE = ROOT / "testkit" / "repl-smoke"
 
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-lobby-smoke/home"))
-RUNTIME = os.environ.get("MIYU_LOBBY_RUNTIME", "/tmp/mx-lobby")
-PORT = int(os.environ.get("MIYU_LOBBY_PORT", "18435"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-lobby-smoke/home"))
+RUNTIME = os.environ.get("YUNXI_LOBBY_RUNTIME", "/tmp/mx-lobby")
+PORT = int(os.environ.get("YUNXI_LOBBY_PORT", "18435"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18497"))
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-lobby-smoke"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-lobby-smoke"))
 BASE = f"http://127.0.0.1:{PORT}"
 COLS, ROWS = 110, 44
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, MIYU_TUI="1")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, YUNXI_TUI="1")
 
 BAR = "┃"
 # 同步更新的收尾。TUI 的每一帧都裹在 `\x1b[?2026h` … `\x1b[?2026l` 里，
@@ -71,7 +71,7 @@ FOOTER_NEEDLE = "stub-model"
 # 这一段的显示宽度是 84 列：窄框（110 的三分之二 ≈ 73，去掉提示前缀剩 71）
 # 放不下，整个终端（去掉前缀 108）放得下——两种宽度算出来的行数必然不同，
 # 用错哪一个都藏不住。
-SENTENCE = "你试试基于Miyu的landlock功能在Projects目录里新建一个简易的小工具然后再把它跑起来看看"
+SENTENCE = "你试试基于YunXi的landlock功能在Projects目录里新建一个简易的小工具然后再把它跑起来看看"
 HEAD = SENTENCE[:6]
 TAIL = SENTENCE[-3:]
 

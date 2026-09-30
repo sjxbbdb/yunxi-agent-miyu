@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """daemon 忘掉拉起它的 herdr pane(09-23):它起的子进程拿不到 pane 坐标。
 
-    BIN=<miyu 二进制> python3 testkit/herdr/daemon_env.py
+    BIN=<yunxi 二进制> python3 testkit/herdr/daemon_env.py
 
 daemon 由哪个 pane 里的客户端拉起,就继承了哪个 pane 的 `HERDR_PANE_ID` 等坐标;
 它再起的子进程(中转线 CLI、run_command 跑的 claude……)装着 herdr 钩子的话,会拿着
-坐标去认领那个 pane,herdr 从此丢掉 Miyu 的上报(真 herdr 复现见 `real_herdr.py`)。
+坐标去认领那个 pane,herdr 从此丢掉 YunXi 的上报(真 herdr 复现见 `real_herdr.py`)。
 
 中转线那边另有一层兜底(起 CLI 时把 HERDR_* 全剥),所以从假 agy 身上分不出 daemon
 自己有没有忘。这里换一条不经中转线的路:桩模型让 daemon 跑一次 run_command,命令
@@ -28,8 +28,8 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu").resolve()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-herdr-daemon-env")).expanduser()
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi").resolve()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-herdr-daemon-env")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 CHILD_ENV = OUT / "child-env.txt"
@@ -39,7 +39,7 @@ STUB = REPO / "testkit" / "repl-smoke" / "stub_llm.py"
 
 # 跑测具的进程自己的 HERDR_* 一个都不能漏进来,下面只给 daemon 一组假的。
 BASE_ENV = {key: value for key, value in os.environ.items() if not key.startswith("HERDR_")}
-BASE_ENV.update(MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+BASE_ENV.update(YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 FAKE_PANE = {
     "HERDR_ENV": "1",
     "HERDR_PANE_ID": "w9:p9",

@@ -1,10 +1,10 @@
 // WebUI 双语运行时(2026-09-23 用户拍板:界面语言跟 config 的 display.language,
-// auto = 浏览器语言)。语言由服务端解析后注入 `window.MIYU_LANG`(见
-// crates/miyu-hosts/src/web/ui_locale.rs)—— 同一个 daemon 可能同时服务中英
+// auto = 浏览器语言)。语言由服务端解析后注入 `window.YUNXI_LANG`(见
+// crates/yunxi-hosts/src/web/ui_locale.rs)—— 同一个 daemon 可能同时服务中英
 // 浏览器,前端不自己读 navigator.language,也不自己猜。
 //
 // 词典以中文原文为键(gettext 风格):中文界面直接返回原文,英文界面查
-// window.MIYU_I18N_EN,查不到回退中文原文(宁可混一句中文,不要空文案)。
+// window.YUNXI_I18N_EN,查不到回退中文原文(宁可混一句中文,不要空文案)。
 //
 // 用法:
 //   t("删除会话")                     → 静态文案
@@ -12,11 +12,11 @@
 //   <span data-i18n="删除会话"></span> → index.html 静态骨架,启动时扫一遍
 // 新增文案必须同步 web/i18n-en.js;漏掉会被 scripts/check-webui-i18n.py
 // 与 testkit/webui-i18n 拦下。
-window.MiyuI18n = (() => {
+window.YunXiI18n = (() => {
   "use strict";
 
-  const LANG = window.MIYU_LANG === "zh" ? "zh" : "en";
-  const DICT = LANG === "en" && window.MIYU_I18N_EN ? window.MIYU_I18N_EN : {};
+  const LANG = window.YUNXI_LANG === "zh" ? "zh" : "en";
+  const DICT = LANG === "en" && window.YUNXI_I18N_EN ? window.YUNXI_I18N_EN : {};
 
   function translate(text, params) {
     if (text == null) return text;
@@ -93,5 +93,5 @@ window.MiyuI18n = (() => {
   return { lang: LANG, intlLocale: INTL_LOCALE, t: translate, number, date, applyDom };
 })();
 
-// 短别名:文案调用点太多,`MiyuI18n.t(...)` 到处写太长;`t` 只做这一件事。
-window.t = window.MiyuI18n.t;
+// 短别名:文案调用点太多,`YunXiI18n.t(...)` 到处写太长;`t` 只做这一件事。
+window.t = window.YunXiI18n.t;

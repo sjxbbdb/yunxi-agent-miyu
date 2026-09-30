@@ -1,4 +1,4 @@
-//! 人格与用户身份的待写改动（用户 09-26：编辑人格、Miyu 人格附加、编辑用户身份也跟设置界面
+//! 人格与用户身份的待写改动（用户 09-26：编辑人格、YunXi 人格附加、编辑用户身份也跟设置界面
 //! 其余部分一样，改完只进内存，按「保存并退出」才一起写，选「不保存」就整批丢掉）。
 //!
 //! 键一律是**盘上**的文件名：改名要到落盘时才真的搬（[`apply_persona_edit`] 连着搬目录、迁
@@ -10,8 +10,8 @@
 //! 它还占着那个文件），删除要先把这一项攒着的改动作废（[`PersonaDrafts::forget_persona`]）。
 
 use crate::config_tui::*;
-use miyu_base::config::persona_scope_name;
 use std::collections::BTreeMap;
+use yunxi_base::config::persona_scope_name;
 
 /// 编辑人格攒下的样子。`name` 和键不同 = 改了名。
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -33,15 +33,15 @@ pub(in crate::config_tui) struct IdentityDraft {
 pub(in crate::config_tui) struct PersonaDrafts {
     /// 盘上的人格文件名 → 这一轮改成的样子。
     personas: BTreeMap<String, PersonaDraft>,
-    /// Miyu（`default`）的防失忆提示与预设对话。
-    miyu_extras: Option<(String, String)>,
+    /// YunXi（`default`）的防失忆提示与预设对话。
+    yunxi_extras: Option<(String, String)>,
     /// 盘上的用户身份文件名 → 这一轮改成的样子。
     identities: BTreeMap<String, IdentityDraft>,
 }
 
 impl PersonaDrafts {
     pub(in crate::config_tui) fn is_empty(&self) -> bool {
-        self.personas.is_empty() && self.miyu_extras.is_none() && self.identities.is_empty()
+        self.personas.is_empty() && self.yunxi_extras.is_none() && self.identities.is_empty()
     }
 
     // —— 人格 ——
@@ -105,14 +105,14 @@ impl PersonaDrafts {
             .unwrap_or_else(|| scope.to_string())
     }
 
-    // —— Miyu 附加 ——
+    // —— YunXi 附加 ——
 
-    pub(in crate::config_tui) fn miyu_extras(&self) -> Option<&(String, String)> {
-        self.miyu_extras.as_ref()
+    pub(in crate::config_tui) fn yunxi_extras(&self) -> Option<&(String, String)> {
+        self.yunxi_extras.as_ref()
     }
 
-    pub(in crate::config_tui) fn set_miyu_extras(&mut self, hint: String, dialogs: String) {
-        self.miyu_extras = Some((hint, dialogs));
+    pub(in crate::config_tui) fn set_yunxi_extras(&mut self, hint: String, dialogs: String) {
+        self.yunxi_extras = Some((hint, dialogs));
     }
 
     // —— 用户身份 ——
@@ -163,7 +163,7 @@ impl PersonaDrafts {
     pub(in crate::config_tui) fn flush(
         &mut self,
         config: &mut AppConfig,
-        paths: &MiyuPaths,
+        paths: &YunXiPaths,
     ) -> Result<()> {
         while let Some((disk, draft)) = self
             .personas
@@ -181,9 +181,9 @@ impl PersonaDrafts {
             )?;
             self.personas.remove(&disk);
         }
-        if let Some((hint, dialogs)) = &self.miyu_extras {
+        if let Some((hint, dialogs)) = &self.yunxi_extras {
             write_persona_aux(paths, config, "default", hint, dialogs)?;
-            self.miyu_extras = None;
+            self.yunxi_extras = None;
         }
         while let Some((disk, draft)) = self
             .identities

@@ -1,7 +1,7 @@
 //! 程序驱动形态的「带着结论收尾」（09-26 起子代理只在后台跑）。
 //!
 //! 主回合派了子代理的话，这一轮收尾时说的只是「派出去了」，结论在子代理跑完、报告
-//! 叫醒这条会话再起的那几轮里。一次性 JSON 输出和 `miyu stdio` 的一条消息都要带着结论
+//! 叫醒这条会话再起的那几轮里。一次性 JSON 输出和 `yunxi stdio` 的一条消息都要带着结论
 //! 收尾：主回合之后接着等（`subagent_wait`），叫醒的那几轮照样往外吐事件；终态 `done`
 //! 只有一条、在最后，正文是最后那一轮的，用时算整条命令的。
 
@@ -11,12 +11,12 @@ use super::turn_client::{
 };
 use crate::cli::subagent_wait::{stop_subagents, turns_after_main, SubagentWait, WaitStep};
 use anyhow::Result;
-use miyu_base::paths::MiyuPaths;
 use std::time::Instant;
+use yunxi_base::paths::YunXiPaths;
 
 /// 跑一轮，再等它派出去的子代理都收尾。取消 / 超时连整棵子树一起停。
 pub async fn run_turn_to_conclusion(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     request: TurnRequest,
     policy: QuestionPolicy,
     cancel: Option<CancelSignal>,
@@ -120,7 +120,7 @@ pub async fn run_turn_to_conclusion(
 /// 用时算整条命令的。
 fn conclude(
     last: TurnOutcome,
-    missed_final: Option<&miyu_core::state::TurnReplay>,
+    missed_final: Option<&yunxi_core::state::TurnReplay>,
     started_at: Instant,
 ) -> TurnOutcome {
     match last {
@@ -221,7 +221,7 @@ mod tests {
             text_of(conclude(done("followed"), None, Instant::now())),
             "followed"
         );
-        let missed = miyu_core::state::TurnReplay {
+        let missed = yunxi_core::state::TurnReplay {
             assistant_content: "from the database".to_string(),
             ..Default::default()
         };
@@ -230,7 +230,7 @@ mod tests {
             "from the database"
         );
         // 库里最后那一轮是被打断的：它没有结论，留跟上的那一轮。
-        let interrupted = miyu_core::state::TurnReplay {
+        let interrupted = yunxi_core::state::TurnReplay {
             interrupted: true,
             ..missed
         };

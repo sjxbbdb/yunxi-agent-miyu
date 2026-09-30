@@ -14,7 +14,7 @@ cargo build
 python3 testkit/repl-smoke/run.py
 ```
 
-产物在 `~/.cache/miyu-repl-smoke/`:`raw.bin`(终端原始输出)、`report.json`、
+产物在 `~/.cache/yunxi-repl-smoke/`:`raw.bin`(终端原始输出)、`report.json`、
 `daemon.log`。
 
 ## 判定

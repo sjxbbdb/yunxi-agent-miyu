@@ -16,7 +16,7 @@ mermaid 分支再接回卡片，无限递归——第一版就是这么写的，
     cargo build    # 静态资源编进二进制，改了 JS/CSS 必须重新构建
     python3 testkit/mermaid/webui.py
 
-截图落在 /tmp/miyu-mermaid-webui/。不花额度。
+截图落在 /tmp/yunxi-mermaid-webui/。不花额度。
 """
 
 import json
@@ -31,7 +31,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -40,10 +40,10 @@ REPO = Path(__file__).resolve().parents[2]
 # 09-11 起 WebUI 永远要登录，登录那套在这儿：内置账号 → 建管理员 → 账号登录。
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "webui-fixes"))
 import authlib  # noqa: E402
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path("/tmp/miyu-mermaid-webui/home")
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path("/tmp/yunxi-mermaid-webui/home")
 RUNTIME = "/tmp/mx-mermaid"
-OUT = Path(os.environ.get("OUT", "/tmp/miyu-mermaid-webui"))
+OUT = Path(os.environ.get("OUT", "/tmp/yunxi-mermaid-webui"))
 SMOKE = REPO / "testkit" / "repl-smoke"
 
 GOOD = (
@@ -280,7 +280,7 @@ def main():
             return 2
         daemon = subprocess.Popen(
             [str(BIN), "__daemon", "--port", str(port)],
-            env=dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME),
+            env=dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME),
             cwd=str(HOME),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

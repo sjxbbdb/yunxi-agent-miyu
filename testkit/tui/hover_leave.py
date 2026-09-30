@@ -59,7 +59,7 @@ def row_is_dim(raw, marker):
 
 def main():
     report = {}
-    h.ENV["MIYU_LOG"] = "info"
+    h.ENV["YUNXI_LOG"] = "info"
     stub, daemon, tui, master, sink = r.start({
         "STUB_REASONING": "1",
         "STUB_REASONING_TEXT": "想一下。",

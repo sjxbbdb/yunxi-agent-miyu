@@ -1,17 +1,17 @@
 #!/bin/bash
-# 用 tmux 驱动 miyu config TUI，逐屏 capture-pane 存文本。
-# 用法: MIYU_BIN=<二进制> tui-shoot.sh <lang> <outdir>   （home 默认 testkit/settings-ui/home）
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 用 tmux 驱动 yunxi config TUI，逐屏 capture-pane 存文本。
+# 用法: YUNXI_BIN=<二进制> tui-shoot.sh <lang> <outdir>   （home 默认 testkit/settings-ui/home）
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for __herdr_var in $(env | sed -n 's/^\(HERDR_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$__herdr_var"; done
 LANG_ARG="${1:-zh_CN.UTF-8}"
 OUT="${2:-/tmp/tui-shots}"
 mkdir -p "$OUT"
-BIN="${MIYU_BIN:-$(dirname "$0")/../../target/debug/miyu}"
-HOME_DIR="${MIYU_TEST_HOME:-$(dirname "$0")/home}"
-S=miyucfg$$
+BIN="${YUNXI_BIN:-$(dirname "$0")/../../target/debug/yunxi}"
+HOME_DIR="${YUNXI_TEST_HOME:-$(dirname "$0")/home}"
+S=yunxicfg$$
 tmux kill-session -t "$S" 2>/dev/null
-tmux new-session -d -s "$S" -x 100 -y 40 "env MIYU_HOME=$HOME_DIR XDG_RUNTIME_DIR=$HOME_DIR/../xdg-run MIYU_LANG=$LANG_ARG TERM=xterm-256color $BIN config"
+tmux new-session -d -s "$S" -x 100 -y 40 "env YUNXI_HOME=$HOME_DIR XDG_RUNTIME_DIR=$HOME_DIR/../xdg-run YUNXI_LANG=$LANG_ARG TERM=xterm-256color $BIN config"
 cap() { sleep 0.6; tmux capture-pane -p -t "$S" > "$OUT/$1.txt"; echo "captured $1"; }
 key() { tmux send-keys -t "$S" "$@"; sleep 0.35; }
 sleep 1.5

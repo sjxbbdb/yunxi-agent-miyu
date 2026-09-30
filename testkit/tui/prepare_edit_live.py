@@ -3,11 +3,11 @@
 
 桩模型把工具名先吐、参数分片慢吐,「准备编辑」总看得见;真供应商未必——有的把
 工具名和整段参数一口气给完,准备窗口只有一瞬。这里借真配置里的一条线路(连 key,
-沙箱 home 与 live.py 同一套,不碰 ~/.miyu),让它用 edit 写一段长内容,每 0.2 秒抓一屏。
+沙箱 home 与 live.py 同一套,不碰 ~/.yunxi),让它用 edit 写一段长内容,每 0.2 秒抓一屏。
 
     LIVE_PROVIDER=opencodego LIVE_MODEL=deepseek-v4.1-flash python3 testkit/tui/prepare_edit_live.py
 
-产物在 ~/.cache/miyu-prepare-edit-live/<供应商>-<模型>/(frames.jsonl、raw.bin)。
+产物在 ~/.cache/yunxi-prepare-edit-live/<供应商>-<模型>/(frames.jsonl、raw.bin)。
 frames.jsonl 是每 0.2 秒一帧的状态:思考中 / 已思考 / 只剩转轮 / 准备编辑 / 编辑文件。
 把工具调用扣着不放的线路上,思考停了 1.5s 起应当只剩转轮(`timeline/stall.rs`)。
 """
@@ -23,13 +23,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import live as L  # noqa: E402
 
-# live.py 默认用 release;探针跟着 debug 构建走(MIYU_BIN 可换)。
-L.BIN = Path(os.environ.get("MIYU_BIN", L.ROOT / "target" / "debug" / "miyu"))
+# live.py 默认用 release;探针跟着 debug 构建走(YUNXI_BIN 可换)。
+L.BIN = Path(os.environ.get("YUNXI_BIN", L.ROOT / "target" / "debug" / "yunxi"))
 
 BRAILLE = set("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-prepare-edit-live")) / f"{L.PROVIDER}-{L.MODEL}".replace("/", "_")
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-prepare-edit-live")) / f"{L.PROVIDER}-{L.MODEL}".replace("/", "_")
 TASKS = [
-    "用 edit 工具新建 /tmp/miyu-tui-live/work/story.md,写一段 30 行的小说开头,每行一句话。别用命令行,也别先读目录,直接写。",
+    "用 edit 工具新建 /tmp/yunxi-tui-live/work/story.md,写一段 30 行的小说开头,每行一句话。别用命令行,也别先读目录,直接写。",
     "用 edit 工具把 story.md 的第 3 行改成「雨下了一整夜」,别用命令行。",
 ]
 
@@ -61,7 +61,7 @@ def main():
     L.write_config()
     daemon = subprocess.Popen(
         [str(L.BIN), "__daemon", "--port", str(L.PORT)],
-        env=dict(os.environ, MIYU_HOME=str(L.HOME), XDG_RUNTIME_DIR=L.RUNTIME),
+        env=dict(os.environ, YUNXI_HOME=str(L.HOME), XDG_RUNTIME_DIR=L.RUNTIME),
         cwd=str(L.WORKSPACE), stdin=subprocess.DEVNULL,
         stdout=(OUT / "daemon.log").open("w"), stderr=subprocess.STDOUT,
     )

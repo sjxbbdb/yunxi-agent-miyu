@@ -7,8 +7,8 @@
 `/back` 或点「○ 主会话」回去，主会话那一轮接着看。
 
     cargo build
-    MIYU_HOME=~/.cache/miyu-subagent-visit/home MIYU_TUI_PORT=18661 STUB_PORT=18662 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-subagent-visit/rt OUT=~/.cache/miyu-subagent-visit/out \\
+    YUNXI_HOME=~/.cache/yunxi-subagent-visit/home YUNXI_TUI_PORT=18661 STUB_PORT=18662 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-subagent-visit/rt OUT=~/.cache/yunxi-subagent-visit/out \\
       python3 testkit/tui/subagent_visit.py
 
 步骤：说一句 → 主线派一个子代理（09-26 起只在后台跑：派完这一轮就收，它跑一条 40 秒的命令）→

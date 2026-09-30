@@ -5,7 +5,7 @@ A 组是改之前（压缩借用裁剪的水位，两者打平），B 组是改�
 的水位，裁剪退为兜底）。四个口径：
 
 - **压缩触发**：库里的摘要轮（`is_summary=1`，压缩每跑一次插一行）。**不能
-  数日志**——压缩那条 `tracing::info!` 没写 `miyu::qq` 这个 target，而 daemon
+  数日志**——压缩那条 `tracing::info!` 没写 `yunxi::qq` 这个 target，而 daemon
   默认只有它记 INFO，于是那个计数恒为 0，看着像「压缩没跑」其实是「日志没
   记」。A 组预期为 0：裁剪在回合开头就把上下文压到线下了，压缩等不到条件。
 - **裁剪触发**：日志里「上下文裁剪已触发」的条数，以及它一共计划逐出多少轮。
@@ -42,7 +42,7 @@ def read_cache_usage(home):
 
 def count_log(home, needle):
     total = 0
-    for path in glob.glob(os.path.join(home, "cache/logs/miyu.*.log")):
+    for path in glob.glob(os.path.join(home, "cache/logs/yunxi.*.log")):
         with open(path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 if needle in line:
@@ -52,7 +52,7 @@ def count_log(home, needle):
 
 def planned_evictions(home):
     total = 0
-    for path in glob.glob(os.path.join(home, "cache/logs/miyu.*.log")):
+    for path in glob.glob(os.path.join(home, "cache/logs/yunxi.*.log")):
         with open(path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 if "上下文裁剪已触发" not in line:

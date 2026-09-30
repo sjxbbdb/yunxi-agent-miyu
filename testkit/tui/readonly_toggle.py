@@ -8,20 +8,20 @@
 2. 回合进行中按 Tab(会话已经不空)→ 下一次工具调用就生效:同一轮两条命令,
    第一条在按键前已经起跑、照常写进去,第二条被拦;再按 Tab 关掉,`/sandbox` 查看
    不再说只读。
-3. 全局「默认开启沙盒模式」、在 Miyu 家里打开 → 默认根是工作区:`/sandbox` 查看说
+3. 全局「默认开启沙盒模式」、在 YunXi 家里打开 → 默认根是工作区:`/sandbox` 查看说
    「沙盒根(默认)」,往工作区里写得进去,往外写被拒;模型收到带工作区根的 `<sandbox …>`。
 4. 同样开着默认沙盒、但在项目目录里打开(自动检测,用户 09-23)→ 默认根就是这个
    目录:写项目成功、写外面被拒。
 
 场景 1 另外验「彻底只读」:往 /tmp 写也被拒(用户 09-23)。
 
-写的目标放在 `~/.cache/miyu-readonly-walk`:沙箱家在 /tmp 下,而只读模式下 /tmp
+写的目标放在 `~/.cache/yunxi-readonly-walk`:沙箱家在 /tmp 下,而只读模式下 /tmp
 照样可写,放那里验不出东西。
 
     cargo build
     python3 testkit/tui/readonly_toggle.py
 
-产物(屏幕、桩模型收到的请求)在 ~/.cache/miyu-tui-smoke/readonly-*。和别的 TUI 走查
+产物(屏幕、桩模型收到的请求)在 ~/.cache/yunxi-tui-smoke/readonly-*。和别的 TUI 走查
 共用沙箱家与端口,**只能一个一个跑**(见 round26.py 模块头)。
 """
 
@@ -36,9 +36,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import round26 as r  # noqa: E402
 import run as h  # noqa: E402
 
-TARGET = Path.home() / ".cache" / "miyu-readonly-walk"
+TARGET = Path.home() / ".cache" / "yunxi-readonly-walk"
 REQUEST_LOG = h.OUT / "readonly-requests.jsonl"
-TMP_PROBE = Path("/tmp/miyu-readonly-walk-tmp-probe.txt")
+TMP_PROBE = Path("/tmp/yunxi-readonly-walk-tmp-probe.txt")
 PROJECT = h.HOME.parent / "project"
 BACKTAB = b"\x1b[Z"
 

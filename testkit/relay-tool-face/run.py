@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """中转线工具面按会话种类收口的黑盒验收(09-23)。
 
-中转线(claude-code 等)的工具只从 MCP 桥拿,`miyu tool-call --list` 走的就是桥的
+中转线(claude-code 等)的工具只从 MCP 桥拿,`yunxi tool-call --list` 走的就是桥的
 目录。开着语音唤醒时,普通会话的目录里不该有 end_voice_chat——修之前每条会话都有。
-子代理那一半要真模型开出子代理才走得到,由 miyu-hosts 的单测
+子代理那一半要真模型开出子代理才走得到,由 yunxi-hosts 的单测
 the_bridge_scopes_tools_by_session_kind_like_the_turn_does 覆盖。
 
-用法: run.py <miyu 二进制>      退出码 0 = 普通会话目录里没有 end_voice_chat
+用法: run.py <yunxi 二进制>      退出码 0 = 普通会话目录里没有 end_voice_chat
 
 隔离:/tmp 下的临时家目录 + 独立 XDG_RUNTIME_DIR + 独立端口,不碰线上 8300。
-PATH 换成空目录:配置里开了语音唤醒,daemon 会去 PATH 和程序所在目录找 miyu-voice
+PATH 换成空目录:配置里开了语音唤醒,daemon 会去 PATH 和程序所在目录找 yunxi-voice
 拉起来(开麦克风);所以二进制也别用装在 /usr/bin 或 ~/.local/bin 的那份——
-那两处旁边就放着 miyu-voice。
+那两处旁边就放着 yunxi-voice。
 """
 
 import json
@@ -39,7 +39,7 @@ def leftovers(home: Path) -> list[str]:
             environ = (proc / "environ").read_bytes()
         except OSError:
             continue
-        if str(home) in cmdline or f"MIYU_HOME={home}".encode() in environ:
+        if str(home) in cmdline or f"YUNXI_HOME={home}".encode() in environ:
             found.append(proc.name)
     return found
 
@@ -48,9 +48,9 @@ def main() -> int:
     if len(sys.argv) != 2:
         print(__doc__)
         return 2
-    miyu = Path(sys.argv[1]).resolve()
-    if (miyu.parent / "miyu-voice").exists():
-        print(f"{miyu.parent} 里有 miyu-voice,开着语音唤醒会把它拉起来开麦克风,换一个二进制")
+    yunxi = Path(sys.argv[1]).resolve()
+    if (yunxi.parent / "yunxi-voice").exists():
+        print(f"{yunxi.parent} 里有 yunxi-voice,开着语音唤醒会把它拉起来开麦克风,换一个二进制")
         return 2
     home = sandbox_dir.make("relay-face-", delete_at_exit=False)
     run = home / "run"
@@ -81,16 +81,16 @@ def main() -> int:
     env = {
         key: value
         for key, value in os.environ.items()
-        if key not in ("MIYU_SESSION", "MIYU_DIRECT", "MIYU_TURN_MODE", "MIYU_HOME")
+        if key not in ("YUNXI_SESSION", "YUNXI_DIRECT", "YUNXI_TURN_MODE", "YUNXI_HOME")
     }
     env.update(
-        MIYU_HOME=str(home),
+        YUNXI_HOME=str(home),
         XDG_RUNTIME_DIR=str(run),
         PATH=str(empty_path),
         LANG="zh_CN.UTF-8",
     )
     daemon = subprocess.Popen(
-        [str(miyu), "daemon", "--port", PORT],
+        [str(yunxi), "daemon", "--port", PORT],
         env=env,
         stdout=(home / "daemon.log").open("w"),
         stderr=subprocess.STDOUT,
@@ -103,7 +103,7 @@ def main() -> int:
             print("daemon 没起来,日志:\n" + (home / "daemon.log").read_text()[-2000:])
             return 2
         listed = subprocess.run(
-            [str(miyu), "tool-call", "--list"],
+            [str(yunxi), "tool-call", "--list"],
             env=env,
             capture_output=True,
             text=True,
@@ -115,12 +115,12 @@ def main() -> int:
             return 2
         leaked = "end_voice_chat" in names
         verdict = "FAIL:普通会话的目录里有 end_voice_chat" if leaked else "PASS:普通会话的目录里没有 end_voice_chat"
-        print(f"{verdict}(开着语音唤醒,桥目录共 {len(names)} 件)  {miyu}")
+        print(f"{verdict}(开着语音唤醒,桥目录共 {len(names)} 件)  {yunxi}")
         return 1 if leaked else 0
     finally:
-        # `miyu daemon` 只是启动器:真正的 __daemon 脱离出去单独跑,只关启动器会把它
+        # `yunxi daemon` 只是启动器:真正的 __daemon 脱离出去单独跑,只关启动器会把它
         # 留在后台(家目录都删了它还占着端口)。先按同一个家目录让它自己停,再清剩下的。
-        subprocess.run([str(miyu), "daemon", "stop"], env=env, capture_output=True, timeout=30)
+        subprocess.run([str(yunxi), "daemon", "stop"], env=env, capture_output=True, timeout=30)
         if daemon.poll() is None:
             daemon.terminate()
             try:

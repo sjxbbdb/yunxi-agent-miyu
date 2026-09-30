@@ -35,7 +35,7 @@ def signing_channel(profile):
 
 
 def filename(asset_id, version, revision, fedora):
-    component = 'miyu-voice' if asset_id.endswith('-voice') else 'miyu'
+    component = 'yunxi-voice' if asset_id.endswith('-voice') else 'yunxi'
     stem = f'{component}-{version}-{revision}'
     family = asset_id.rsplit('-', 1)[0]
     if family == 'arch':

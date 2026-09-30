@@ -9,7 +9,7 @@ use crate::cli::repl::tail::{
 };
 use crate::cli::repl::width::*;
 use crate::cli::*;
-use miyu_core::llm::ChatStreamKind;
+use yunxi_core::llm::ChatStreamKind;
 #[test]
 fn terminal_frame_tracks_ansi_and_wide_graphemes() {
     let layout = terminal_frame_layout("\x1b[32mAB\x1b[0m\n中👨‍👩‍👧‍👦".as_bytes(), (3, 2), 12, None);
@@ -62,7 +62,7 @@ fn live_frame_uses_the_gap_only_for_a_terminating_newline() {
 #[test]
 fn replayed_job_wake_turns_are_not_drawn_as_user_prompts() {
     let config = AppConfig::default();
-    let wake = miyu_core::state::TurnReplay {
+    let wake = yunxi_core::state::TurnReplay {
         seq: 0,
         display_content: "[后台任务完成] 子代理完成 82bea3 · 后台测试A".to_string(),
         assistant_content: "跑完了。".to_string(),
@@ -75,7 +75,7 @@ fn replayed_job_wake_turns_are_not_drawn_as_user_prompts() {
         from_parent: false,
         ..Default::default()
     };
-    let typed = miyu_core::state::TurnReplay {
+    let typed = yunxi_core::state::TurnReplay {
         seq: 0,
         display_content: "帮我改一下 README".to_string(),
         assistant_content: "改好了。".to_string(),
@@ -108,26 +108,26 @@ fn replayed_job_wake_turns_are_not_drawn_as_user_prompts() {
 #[test]
 fn replayed_job_wake_notice_expands_to_what_the_job_returned() {
     let config = AppConfig::default();
-    let wake = |report: Option<miyu_core::state::JobReportResult>| miyu_core::state::TurnReplay {
+    let wake = |report: Option<yunxi_core::state::JobReportResult>| yunxi_core::state::TurnReplay {
         display_content: "[后台任务完成] 子代理完成 82bea3 · 后台测试A".to_string(),
         assistant_content: "跑完了。".to_string(),
         is_synthetic: true,
         job_report: report,
         ..Default::default()
     };
-    let conclusion = Some(miyu_core::state::JobReportResult {
-        kind: miyu_core::state::JobReportKind::Conclusion,
+    let conclusion = Some(yunxi_core::state::JobReportResult {
+        kind: yunxi_core::state::JobReportKind::Conclusion,
         body: "结论第一行\n\n**结论第二行**".to_string(),
     });
     let block_of = |frame: &str| -> Option<Vec<String>> {
-        let at = frame.find("miyu-block=")? + "miyu-block=".len();
+        let at = frame.find("yunxi-block=")? + "yunxi-block=".len();
         let id: u64 = frame[at..]
             .chars()
             .take_while(char::is_ascii_digit)
             .collect::<String>()
             .parse()
             .ok()?;
-        miyu_hosts::render::blocks::get(id)
+        yunxi_hosts::render::blocks::get(id)
     };
     super::tui_blocks::with_blocks(|| {
         let frame = session_replay_frame(
@@ -142,7 +142,7 @@ fn replayed_job_wake_notice_expands_to_what_the_job_returned() {
         let expanded = block_of(&frame).expect("the bell line is expandable");
         let plain: Vec<String> = expanded
             .iter()
-            .map(|line| miyu_hosts::render::strip_ansi_text(line))
+            .map(|line| yunxi_hosts::render::strip_ansi_text(line))
             .collect();
         assert!(
             plain[0].contains("子代理完成 82bea3 · 后台测试A"),
@@ -172,7 +172,7 @@ fn replayed_job_wake_notice_expands_to_what_the_job_returned() {
         session_replay_frame(&[wake(conclusion)], PersonaLane::Active, &config, 80, false).unwrap();
     let frame = String::from_utf8_lossy(&frame);
     assert!(frame.contains("\n\x1b[2m⚙ 子代理完成 82bea3 · 后台测试A\x1b[0m\n\n"));
-    assert!(!frame.contains("miyu-block"));
+    assert!(!frame.contains("yunxi-block"));
 }
 
 /// 回放的每一轮末尾也有那行 `✻ 模型 · 处理了多久 · 几点完成`（用户 09-26），和实时收尾一个
@@ -181,7 +181,7 @@ fn replayed_job_wake_notice_expands_to_what_the_job_returned() {
 #[test]
 fn replayed_turns_end_with_the_turn_end_line() {
     let config = AppConfig::default();
-    let turn = |interrupted: bool, finished: Option<&str>| miyu_core::state::TurnReplay {
+    let turn = |interrupted: bool, finished: Option<&str>| yunxi_core::state::TurnReplay {
         display_content: "第一句走查".to_string(),
         assistant_content: "回放里的回复".to_string(),
         assistant_model: Some("stub-b".to_string()),
@@ -191,9 +191,9 @@ fn replayed_turns_end_with_the_turn_end_line() {
         finished_at: finished.map(str::to_string),
         ..Default::default()
     };
-    let replay = |turn: miyu_core::state::TurnReplay| {
+    let replay = |turn: yunxi_core::state::TurnReplay| {
         let frame = session_replay_frame(&[turn], PersonaLane::Active, &config, 80, false).unwrap();
-        miyu_hosts::render::strip_ansi_text(&String::from_utf8_lossy(&frame))
+        yunxi_hosts::render::strip_ansi_text(&String::from_utf8_lossy(&frame))
     };
     let done = replay(turn(false, Some("2026-09-26T01:53:07+00:00")));
     let line = done
@@ -226,7 +226,7 @@ fn replayed_turns_end_with_the_turn_end_line() {
 #[test]
 fn replayed_mixed_pool_turns_show_the_endpoint_in_the_end_line() {
     let config = AppConfig::default();
-    let answered = miyu_core::state::TurnReplay {
+    let answered = yunxi_core::state::TurnReplay {
         display_content: "第一句走查".to_string(),
         assistant_content: "回放里的回复".to_string(),
         assistant_provider_id: Some("stub".to_string()),
@@ -238,7 +238,7 @@ fn replayed_mixed_pool_turns_show_the_endpoint_in_the_end_line() {
     };
     let frame = session_replay_frame(&[answered], PersonaLane::Active, &config, 80, true).unwrap();
     let raw = String::from_utf8_lossy(&frame).to_string();
-    let plain = miyu_hosts::render::strip_ansi_text(&raw);
+    let plain = yunxi_hosts::render::strip_ansi_text(&raw);
     let line = plain
         .lines()
         .find(|line| line.starts_with("✻ "))
@@ -261,7 +261,7 @@ fn replayed_mixed_pool_turns_show_the_endpoint_in_the_end_line() {
 #[test]
 fn replayed_turns_keep_the_mixed_pool_endpoint_line() {
     let config = AppConfig::default();
-    let answered = miyu_core::state::TurnReplay {
+    let answered = yunxi_core::state::TurnReplay {
         seq: 0,
         display_content: "第一句走查".to_string(),
         assistant_content: "回放里的回复".to_string(),
@@ -309,7 +309,7 @@ fn footer_reset_clears_turn_and_cumulative_tokens() {
             total: 50,
             ..Default::default()
         },
-        miyu_core::llm::GenerationSpeed::default(),
+        yunxi_core::llm::GenerationSpeed::default(),
         100,
         Some(200_000),
         TurnTokens {
@@ -1008,7 +1008,7 @@ fn cursor_after_frame_clamps_to_the_last_row_when_the_echo_scrolls() {
 /// 左侧应该有一个 token 记述）。命令类任务没有词元这个概念，那儿就只有时间。
 #[test]
 fn the_job_strip_reports_tokens_left_of_the_timer() {
-    let job = |metric: Option<&str>| miyu_engine::tools::jobs::JobOverview {
+    let job = |metric: Option<&str>| yunxi_engine::tools::jobs::JobOverview {
         job_id: "82bea3".into(),
         title: "查目录".into(),
         command: "seq 1 5".to_string(),
@@ -1061,7 +1061,7 @@ fn the_job_strip_reports_tokens_left_of_the_timer() {
 #[test]
 fn the_job_panel_title_carries_the_token_figure() {
     use crate::cli::repl::tail::screen::job_panel_title;
-    let mut job = miyu_engine::tools::jobs::JobOverview {
+    let mut job = yunxi_engine::tools::jobs::JobOverview {
         job_id: "82bea3".into(),
         title: "走查后台子代理".into(),
         command: "seq 1 5".to_string(),

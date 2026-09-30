@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """多用户(09-10 分层架构阶段 5)端到端:隔离 daemon + 桩模型,走 HTTP 接口。
 
-BIN=~/.cache/miyu-arch-fixes/target/release/miyu python3 testkit/multi-user/e2e.py
+BIN=~/.cache/yunxi-arch-fixes/target/release/yunxi python3 testkit/multi-user/e2e.py
 
 检查项:
   1. `-p` 起 daemon → 账号表里出现管理员 admin;只填口令能登录,用户名+口令也能登录
@@ -25,7 +25,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -33,18 +33,18 @@ for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 BIN = Path(os.environ["BIN"]).expanduser()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-multi-user")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-multi-user")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18491"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18497"))
 BASE = f"http://127.0.0.1:{PORT}"
-BUILTIN_USERNAME = "miyu"  # 首次访问的内置账号 miyu/miyu,建完管理员就失效
-BUILTIN_PASSWORD = "miyu"
+BUILTIN_USERNAME = "yunxi"  # 首次访问的内置账号 yunxi/yunxi,建完管理员就失效
+BUILTIN_PASSWORD = "yunxi"
 ADMIN_PASSWORD = "hunter2-admin"
-# MIYU_ADMIN_USER 固定成 admin:管理员用户名 = 家目录名,不能随跑测试的系统用户名变。
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME),
-           MIYU_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), MIYU_ADMIN_USER="admin")
+# YUNXI_ADMIN_USER 固定成 admin:管理员用户名 = 家目录名,不能随跑测试的系统用户名变。
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME),
+           YUNXI_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), YUNXI_ADMIN_USER="admin")
 STUB_SYSTEM_DUMP = OUT / "stub-system.jsonl"
 
 results = []
@@ -242,7 +242,7 @@ def main():
         check("只填密码不能登录 401", status == 401, str(status))
         admin = Client()
         status, _ = admin.login(BUILTIN_PASSWORD, BUILTIN_USERNAME)
-        check("建号前内置账号 miyu/miyu 能登录", status == 204, str(status))
+        check("建号前内置账号 yunxi/yunxi 能登录", status == 204, str(status))
         status, boot = admin.call("GET", "/api/bootstrap")
         check("建号前 bootstrap 标记 setup_pending", boot.get("account", {}).get("setup_pending") is True
               and boot.get("account", {}).get("setup_username") == "admin", json.dumps(boot.get("account")))
@@ -486,7 +486,7 @@ def main():
               and len(libs.get("libraries", [])) == 1, f"{status} {json.dumps(libs)[:120]}")
         status, items = member.call("GET", "/api/dash/memes/items")
         check("成员表情包条目 200", status == 200, f"{status} {json.dumps(items)[:80]}")
-        status, _ = member.call("GET", "/api/dash/memes/items?library=miyu")
+        status, _ = member.call("GET", "/api/dash/memes/items?library=yunxi")
         check("成员点名别人的表情包库 403", status == 403, str(status))
         status, boot = member.call("GET", "/api/bootstrap")
         dashboards = boot.get("account", {}).get("persona", {}).get("dashboards")
@@ -531,7 +531,7 @@ def main():
             # CLI 按 state/daemon-launch.json 找 daemon 端口;直接起 __daemon 的测试环境自己补一份
             (HOME / "state").mkdir(exist_ok=True)
             (HOME / "state/daemon-launch.json").write_text(json.dumps({"port": PORT}))
-            listing = subprocess.run([str(BIN), "tool-call", "--list"], env=dict(ENV, MIYU_SESSION=sid),
+            listing = subprocess.run([str(BIN), "tool-call", "--list"], env=dict(ENV, YUNXI_SESSION=sid),
                                      capture_output=True, text=True, timeout=60, cwd=str(HOME))
             names = listing.stdout + listing.stderr
             check("工具桥目录按人格过滤(无 ledger,有 use_meme)", listing.returncode == 0 and "use_meme" in names
@@ -543,13 +543,13 @@ def main():
         lines = STUB_SYSTEM_DUMP.read_text().splitlines()[before:]
         systems = [json.loads(line)["system"] for line in lines if line.strip()]
         check("成员回合的系统提示词是私有人格设定", any("会说话的橘猫" in s for s in systems), str(len(systems)))
-        check("私有人格回合不带共享人格提示词", not any("Miyu" in s.split("<current-user-profile>")[0] and "橘猫" not in s for s in systems))
+        check("私有人格回合不带共享人格提示词", not any("YunXi" in s.split("<current-user-profile>")[0] and "橘猫" not in s for s in systems))
         status, view = member.call("GET", f"/api/sessions/{sid}/turns")
         check("私有人格会话回合落库且成员可见", status == 200 and len(view.get("turns", [])) == 1, str(status))
         status, data = member.call("PUT", "/api/account/active-persona", {"slug": None})
-        check("切回共享 Miyu", status == 200 and data.get("active") is None, json.dumps(data))
+        check("切回共享 YunXi", status == 200 and data.get("active") is None, json.dumps(data))
         status, boot = member.call("GET", "/api/bootstrap")
-        check("切回后 bootstrap 人格是 Miyu", boot.get("persona", {}).get("name") == "Miyu", json.dumps(boot.get("persona"))[:100])
+        check("切回后 bootstrap 人格是 YunXi", boot.get("persona", {}).get("name") == "YunXi", json.dumps(boot.get("persona"))[:100])
         status, listing = member.call("GET", "/api/sessions")
         ids = {item["session_id"] for item in listing.get("sessions", [])}
         check("切换人格后旧会话仍在成员列表里", sid in ids, str(len(ids)))

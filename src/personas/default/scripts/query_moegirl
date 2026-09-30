@@ -70,7 +70,7 @@ MAX_PAGE_BYTES = 512 * 1024
 MAX_HTML_RESPONSE_BYTES = 5 * 1024 * 1024
 MAX_OUTPUT_CHARS = 20_000
 TIMEOUT = 5
-USER_AGENT = "miyu/0.1"
+USER_AGENT = "yunxi/0.1"
 
 SITES = {
     "zh": ("https://zh.moegirl.org.cn", "https://zh.moegirl.org.cn", "https://zh.moegirl.org.cn/"),
@@ -542,7 +542,7 @@ def query(args):
 
 
 def read_args():
-    raw = os.environ.get("MIYU_ARGS_JSON")
+    raw = os.environ.get("YUNXI_ARGS_JSON")
     if not raw:
         if sys.stdin is None or sys.stdin.isatty():
             raw = "{}"

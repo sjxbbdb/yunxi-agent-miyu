@@ -9,16 +9,16 @@ use crate::cli::exit_code::exit_with;
 use anyhow::Result;
 use conclusion::run_turn_to_conclusion;
 use event::PublicEvent;
-use miyu_base::paths::MiyuPaths;
 use std::io::Write;
 use turn_client::{QuestionPolicy, TurnOutcome, TurnRequest};
+use yunxi_base::paths::YunXiPaths;
 
-/// `miyu ask --output-format json|stream-json` 的一次性回合:stream-json 逐
+/// `yunxi ask --output-format json|stream-json` 的一次性回合:stream-json 逐
 /// 事件一行,json 只打终态一行;两种都只往 stdout 写 JSON,别的一个字节
 /// 不漏。失败按 [`event::ErrorKind`] 映射退出码,错误行也走 stdout(宿主
 /// 只解析一个流)。派了子代理就等它们的报告回完，终态带的是结论（09-26）。
 pub async fn run_json_one_shot(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     request: TurnRequest,
     format: OutputFormat,
 ) -> Result<()> {

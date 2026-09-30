@@ -279,7 +279,7 @@ mod models_inherit {
 /// off 永不、all 永远、interactive 只给交互会话。
 #[test]
 fn mixed_endpoint_switch_has_three_values_and_needs_a_mixed_pool() {
-    use miyu_base::config::{ActiveProviderModelConfig, ProviderConfig};
+    use yunxi_base::config::{ActiveProviderModelConfig, ProviderConfig};
     let mut config = AppConfig::default();
     let mut provider = ProviderConfig::template("p", "P", "http://127.0.0.1:1/v1");
     provider.models = vec!["a".to_string(), "b".to_string()];
@@ -359,21 +359,21 @@ fn effort_in_a_session_pins_that_session_only() {
     let model = provider.default_model.clone();
     config.active_provider = provider_id.clone();
     config.active_provider_models = None;
-    let mut global = miyu_core::llm::ThinkingVariantPreferences::load(&paths);
+    let mut global = yunxi_core::llm::ThinkingVariantPreferences::load(&paths);
     global.set(&provider_id, &model, Some("low".to_string()));
     global.save(&paths).unwrap();
     // 钉子存在会话库里(09-24 入库),得是库里真有的会话。
     let store = StateStore::new(&paths).unwrap();
     let sess_a = store
-        .create_session("miyu", "a", "user", None)
+        .create_session("yunxi", "a", "user", None)
         .unwrap()
         .session_id;
-    let scope = miyu_core::llm::ThinkingVariantScope::Session {
+    let scope = yunxi_core::llm::ThinkingVariantScope::Session {
         store: &store,
         session_id: &sess_a,
     };
     let pinned = || {
-        miyu_core::llm::ThinkingVariantPreferences::load_scoped(&paths, scope)
+        yunxi_core::llm::ThinkingVariantPreferences::load_scoped(&paths, scope)
             .selected(&provider_id, &model)
             .map(str::to_string)
     };
@@ -392,7 +392,7 @@ fn effort_in_a_session_pins_that_session_only() {
     assert_eq!(pinned().as_deref(), Some("high"));
     assert_eq!(client.thinking_variant_summary().as_deref(), Some("high"));
     assert_eq!(
-        miyu_core::llm::ThinkingVariantPreferences::load(&paths).selected(&provider_id, &model),
+        yunxi_core::llm::ThinkingVariantPreferences::load(&paths).selected(&provider_id, &model),
         Some("low"),
         "the global default stays where it was"
     );
@@ -435,6 +435,9 @@ fn effort_in_a_session_pins_that_session_only() {
         |_| unreachable!("a named level needs no menu"),
     )
     .unwrap();
-    assert_eq!(pinned().as_deref(), Some(miyu_core::llm::MODEL_DEFAULT_PIN));
+    assert_eq!(
+        pinned().as_deref(),
+        Some(yunxi_core::llm::MODEL_DEFAULT_PIN)
+    );
     assert_eq!(client.thinking_variant_summary(), None);
 }

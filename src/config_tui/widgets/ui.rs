@@ -2,7 +2,7 @@
 //!
 //! 2026-09-20 重做。以前这里是一堆 `queue!(MoveTo, Print)` 手画的 `┌─┐` 框；
 //! 现在每屏只说「有哪些行」（[`View`]），版面交给
-//! [`miyu_base::terminal::chrome`]——和引导（OOBE）同一份，两边的脸才一样。
+//! [`yunxi_base::terminal::chrome`]——和引导（OOBE）同一份，两边的脸才一样。
 //!
 //! 三件只在这儿管的事：
 //! 1. **动画**。星空闪烁与 banner 扫光要 30ms 一帧。业务侧全是
@@ -16,14 +16,14 @@
 
 use crate::config_tui::*;
 use crossterm::terminal::{BeginSynchronizedUpdate, EndSynchronizedUpdate};
-use miyu_base::terminal::chrome::{self, compose, Anchor, Chrome, Cx, Stop, View, BODY_MAX};
-use miyu_base::terminal::palette::Theme;
-use miyu_base::terminal::starfield::BannerArt;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::Rect;
 use ratatui::widgets::Paragraph;
 use ratatui::Terminal;
 use std::time::Instant;
+use yunxi_base::terminal::chrome::{self, compose, Anchor, Chrome, Cx, Stop, View, BODY_MAX};
+use yunxi_base::terminal::palette::Theme;
+use yunxi_base::terminal::starfield::BannerArt;
 
 /// 一帧多久。跟引导同一个节拍，两边的星空才是同一片星空。
 pub(in crate::config_tui) const TICK: Duration = Duration::from_millis(30);
@@ -55,7 +55,7 @@ pub(in crate::config_tui) struct Ui {
 }
 
 impl Ui {
-    pub(in crate::config_tui) fn new(paths: &MiyuPaths) -> Result<Self> {
+    pub(in crate::config_tui) fn new(paths: &YunXiPaths) -> Result<Self> {
         let theme = Theme::detect();
         let art = chrome::load_banner(&paths.config_dir, theme.ascii);
         let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;

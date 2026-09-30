@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MIYU_IMAGE_TRACE 开/关，Miyu 写给终端的字节一样吗？
+"""YUNXI_IMAGE_TRACE 开/关，YunXi 写给终端的字节一样吗？
 
 取证模式下 `run_chafa` 把 chafa 的 stdout 收进管道、判完格式再由 Rust 的
 `io::stdout()` 写回；正常模式是 chafa 直接 inherit 写 fd 1。两条路径不同，
@@ -9,7 +9,7 @@
 """
 import os, pty, re, select, subprocess, sys, time, fcntl, termios, struct, errno
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -18,8 +18,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from pty_probe import respond  # 会应答 DA1/sixel-geometry/cell-px 的假终端
 
-SB = "/home/shorin/.cache/miyu-chafa-sandbox/miyu-sb"
-IMG = "/home/shorin/.cache/miyu-chafa-sandbox/images/tall.png"
+SB = "/home/shorin/.cache/yunxi-chafa-sandbox/yunxi-sb"
+IMG = "/home/shorin/.cache/yunxi-chafa-sandbox/images/tall.png"
 PROMPT = f"显示 {IMG}"
 
 
@@ -31,9 +31,9 @@ def run(trace: bool, cols=138, rows=67, timeout=70):
     for key in ("KITTY_WINDOW_ID", "KITTY_PID", "KITTY_INSTALLATION_DIR", "TERM_PROGRAM"):
         env.pop(key, None)
     if trace:
-        env["MIYU_IMAGE_TRACE"] = "1"
+        env["YUNXI_IMAGE_TRACE"] = "1"
     else:
-        env.pop("MIYU_IMAGE_TRACE", None)
+        env.pop("YUNXI_IMAGE_TRACE", None)
 
     def setup():
         os.setsid()

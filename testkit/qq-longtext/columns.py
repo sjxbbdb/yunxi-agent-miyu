@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """长文转图的换栏与尺寸（用户 09-24）：`<br>` 换行、换栏不留大片空档、长宽跟着内容走。
 
-    BIN=<miyu> python3 testkit/qq-longtext/columns.py
+    BIN=<yunxi> python3 testkit/qq-longtext/columns.py
 
-直接驱动真二进制的渲染子进程（`miyu __renderer-worker` + `MIYU_INTERNAL_RENDERER_WORKER=1`，
+直接驱动真二进制的渲染子进程（`yunxi __renderer-worker` + `YUNXI_INTERNAL_RENDERER_WORKER=1`，
 长度前缀的 JSON 请求，二进制帧回 PNG），喂一篇和用户截图同结构的合成长文（标题、说明、
 格子里带 `<br>` 的大表、小节标题），数像素判定：
 
@@ -55,10 +55,10 @@ def read_u32(stream):
 
 def render(markdown, extra_config=None):
     """起一个渲染子进程渲一张图，返回 PIL 图像。"""
-    home = tempfile.mkdtemp(prefix="miyu-longtext-columns-")
+    home = tempfile.mkdtemp(prefix="yunxi-longtext-columns-")
     config = dict(BASE_CONFIG, **(extra_config or {}))
     payload = json.dumps({"markdown": markdown, "config": config}).encode()
-    env = dict(os.environ, MIYU_HOME=home, MIYU_INTERNAL_RENDERER_WORKER="1")
+    env = dict(os.environ, YUNXI_HOME=home, YUNXI_INTERNAL_RENDERER_WORKER="1")
     worker = subprocess.Popen([str(BIN), "__renderer-worker"], env=env, cwd=home,
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     try:

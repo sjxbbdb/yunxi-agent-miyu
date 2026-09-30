@@ -18,7 +18,7 @@ use crate::cli::*;
 /// 3. 本会话的历史文件（`/reset` 删掉 turn 之后它仍在，是持久真相）
 pub(in crate::cli) fn load_repl_input_history(
     state: &StateStore,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
 ) -> Result<Vec<ReplHistoryEntry>> {
     let session_id = state.session_id();
     let mut merged: Vec<ReplHistoryEntry> =
@@ -30,7 +30,7 @@ pub(in crate::cli) fn load_repl_input_history(
         .user_inputs()?
         .into_iter()
         .filter(|content| {
-            !content.trim().is_empty() && !miyu_core::state::is_synthetic_user_content(content)
+            !content.trim().is_empty() && !yunxi_core::state::is_synthetic_user_content(content)
         })
         .map(|content| strip_terminal_control_sequences(&content))
         .filter(|content| !content.trim().is_empty());
@@ -54,7 +54,7 @@ pub(in crate::cli) fn load_repl_input_history(
 /// 只在「从空输入框开始翻」时调用：翻到一半重载会让 `history_index` 错位。
 pub(in crate::cli) fn refresh_repl_input_history(
     history: &mut Vec<ReplHistoryEntry>,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: &str,
 ) -> bool {
     let mut added = false;
@@ -69,7 +69,7 @@ pub(in crate::cli) fn restore_history_entry(
     entry: &ReplHistoryEntry,
     input: &mut String,
     cursor: &mut usize,
-    pasted_images: &mut Vec<Option<miyu_base::clipboard::PastedImage>>,
+    pasted_images: &mut Vec<Option<yunxi_base::clipboard::PastedImage>>,
     pasted_texts: &mut Vec<Option<PastedText>>,
     raw_pasted_lines: &mut usize,
 ) {
@@ -87,7 +87,7 @@ pub(in crate::cli) struct StashedInput {
     input: String,
     cursor: usize,
     raw_pasted_lines: usize,
-    pasted_images: Vec<Option<miyu_base::clipboard::PastedImage>>,
+    pasted_images: Vec<Option<yunxi_base::clipboard::PastedImage>>,
     pasted_texts: Vec<Option<PastedText>>,
 }
 
@@ -105,7 +105,7 @@ pub(in crate::cli) struct LiveReplEditor {
     /// 当前缓冲区里由**生粘贴**带进来的行数(折成占位符的不算)。输入区的
     /// 整体折叠只在这种内容占满缓冲区时才发生,见 `repl_visible_input_lines`。
     pub(in crate::cli) raw_pasted_lines: usize,
-    pub(in crate::cli) pasted_images: Vec<Option<miyu_base::clipboard::PastedImage>>,
+    pub(in crate::cli) pasted_images: Vec<Option<yunxi_base::clipboard::PastedImage>>,
     pub(in crate::cli) pasted_texts: Vec<Option<PastedText>>,
     pub(in crate::cli) escape_armed_until: Option<Instant>,
     /// Ctrl+S 存起来的输入。只活在这个终端界面里：切会话还在，退出就没了。
@@ -247,7 +247,7 @@ impl LiveReplEditor {
     pub(in crate::cli) fn handle_event(
         &mut self,
         event: Event,
-        paths: &MiyuPaths,
+        paths: &YunXiPaths,
         allow_interrupt: bool,
     ) -> Result<LiveEditorAction> {
         let is_escape = matches!(
@@ -492,7 +492,7 @@ impl LiveReplEditor {
                     if let Some(selected) =
                         placeholder_text_near_cursor(&self.input, self.cursor, &self.pasted_texts)
                     {
-                        let _ = miyu_base::clipboard::write_clipboard_text(&selected)?;
+                        let _ = yunxi_base::clipboard::write_clipboard_text(&selected)?;
                     }
                 }
                 KeyCode::Char('v') if modifiers.contains(KeyModifiers::CONTROL) => {
@@ -518,19 +518,19 @@ impl LiveReplEditor {
         Ok(LiveEditorAction::Redraw)
     }
 
-    pub(in crate::cli) fn paste_clipboard(&mut self, paths: &MiyuPaths) -> Result<()> {
-        match miyu_base::clipboard::read_clipboard() {
-            Ok(miyu_base::clipboard::ClipboardContent::Image(image)) => {
+    pub(in crate::cli) fn paste_clipboard(&mut self, paths: &YunXiPaths) -> Result<()> {
+        match yunxi_base::clipboard::read_clipboard() {
+            Ok(yunxi_base::clipboard::ClipboardContent::Image(image)) => {
                 let index = self.pasted_images.len() + 1;
                 // 占位符只认序号,文件名不进输入框(模型侧路径另拼)。
                 let _ = image.write_temp_file(&paths.cache_dir, index);
                 let placeholder = format!("[Image {index}]");
                 insert_str_at_cursor(&mut self.input, &mut self.cursor, &placeholder);
                 self.pasted_images
-                    .push(Some(miyu_base::clipboard::PastedImage::Binary(image)));
+                    .push(Some(yunxi_base::clipboard::PastedImage::Binary(image)));
                 self.raw_pasted_lines = 0;
             }
-            Ok(miyu_base::clipboard::ClipboardContent::MediaPath(path)) => {
+            Ok(yunxi_base::clipboard::ClipboardContent::MediaPath(path)) => {
                 let index = self.pasted_images.len() + 1;
                 let label = media_placeholder_label(&path);
                 insert_str_at_cursor(
@@ -539,15 +539,15 @@ impl LiveReplEditor {
                     &format!("[{label} {index}]"),
                 );
                 self.pasted_images
-                    .push(Some(miyu_base::clipboard::PastedImage::Path(path)));
+                    .push(Some(yunxi_base::clipboard::PastedImage::Path(path)));
                 self.raw_pasted_lines = 0;
             }
-            Ok(miyu_base::clipboard::ClipboardContent::TextPath(path)) => {
+            Ok(yunxi_base::clipboard::ClipboardContent::TextPath(path)) => {
                 insert_str_at_cursor(&mut self.input, &mut self.cursor, &path);
                 self.raw_pasted_lines = 0;
             }
             _ => {
-                if let Ok(Some(text)) = miyu_base::clipboard::read_clipboard_text() {
+                if let Ok(Some(text)) = yunxi_base::clipboard::read_clipboard_text() {
                     let raw_lines = insert_pasted_text_at_cursor(
                         &mut self.input,
                         &mut self.cursor,

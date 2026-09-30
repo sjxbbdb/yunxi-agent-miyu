@@ -66,7 +66,7 @@ def tool_outputs():
 
 def main():
     report = {}
-    h.ENV["MIYU_LOG"] = "info"
+    h.ENV["YUNXI_LOG"] = "info"
     if LOG.exists():
         LOG.unlink()
     stub, daemon, tui, master, sink = r.start({

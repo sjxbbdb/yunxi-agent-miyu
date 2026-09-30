@@ -1,4 +1,4 @@
-//! 思考档位菜单（/effort、`miyu effort`）：状态、每帧的行、按键。
+//! 思考档位菜单（/effort、`yunxi effort`）：状态、每帧的行、按键。
 //!
 //! 画法与形态无关：行内（终端光标处）与全屏面板（`repl::pickers`）拿的是同一份
 //! `lines()`，只是落笔的位置不同。09-17 从 `model_cmds` 搬出（那边过千行），顺手
@@ -77,7 +77,7 @@ impl VariantMenuItem {
             },
             VariantMenuOption {
                 label: "default".to_string(),
-                value: Some(miyu_core::llm::MODEL_DEFAULT_PIN.to_string()),
+                value: Some(yunxi_core::llm::MODEL_DEFAULT_PIN.to_string()),
             },
         ];
         entries.extend(Self::from_options(options).options.into_iter().skip(1));

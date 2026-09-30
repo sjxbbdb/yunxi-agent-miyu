@@ -101,6 +101,6 @@ E --polite on                  stdin=tty        symbols symbols   sixel   sixel 
   `dbus-run-session` + `QT_QPA_PLATFORM=xcb` + 摘掉 `WAYLAND_DISPLAY`（否则 Qt
   连的是你的真实 Wayland 会话，窗口开在真桌面上、Xvfb 里拍到一片黑），起来之后
   截图依然是空的。**真终端的图像问题只能在真终端测。**
-- **拿 `miyu tool-call print_image` 当端到端入口**：`tool-call` 在 daemon 侧执行，
+- **拿 `yunxi tool-call print_image` 当端到端入口**：`tool-call` 在 daemon 侧执行，
   那边没有终端，只会返回 `image emitted to the host`，测不到任何渲染。要走真实
   路径就得进 REPL（见 `HANDTEST.md`）。

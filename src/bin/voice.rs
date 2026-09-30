@@ -1,8 +1,8 @@
-//! `miyu-voice`:语音前端进程的可执行入口。
+//! `yunxi-voice`:语音前端进程的可执行入口。
 //!
-//! 与主程序 `miyu` 共用同一个 lib crate,但只有它链接 sherpa-onnx。语音实现
-//! 09-16 拆 crate 时搬进了 `miyu-engine`(`voice` feature 一起带过去),所以这里
-//! 引的是 `miyu_engine::voice::*`。
+//! 与主程序 `yunxi` 共用同一个 lib crate,但只有它链接 sherpa-onnx。语音实现
+//! 09-16 拆 crate 时搬进了 `yunxi-engine`(`voice` feature 一起带过去),所以这里
+//! 引的是 `yunxi_engine::voice::*`。
 //! 默认形态是被 daemon 拉起的 worker;`test` / `devices` / `cue` 子命令
 //! 供人工排查。
 
@@ -10,9 +10,9 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(
-    name = "miyu-voice",
+    name = "yunxi-voice",
     version,
-    about = "Miyu 语音前端(唤醒词 + 本地识别)"
+    about = "YunXi 语音前端(唤醒词 + 本地识别)"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -50,7 +50,7 @@ fn main() {
         libc::mallopt(libc::M_ARENA_MAX, 2);
     }
     tracing_subscriber::fmt()
-        .with_max_level(if std::env::var_os("MIYU_VOICE_DEBUG").is_some() {
+        .with_max_level(if std::env::var_os("YUNXI_VOICE_DEBUG").is_some() {
             tracing::Level::DEBUG
         } else {
             tracing::Level::INFO
@@ -60,23 +60,23 @@ fn main() {
         .init();
     let cli = Cli::parse();
     let outcome = match cli.command {
-        None => miyu_engine::voice::worker::run_worker(),
+        None => yunxi_engine::voice::worker::run_worker(),
         Some(Command::Test {
             keyword,
             device,
             timings,
-        }) => miyu_engine::voice::worker::run_test(keyword, device, timings),
+        }) => yunxi_engine::voice::worker::run_test(keyword, device, timings),
         Some(Command::Devices) => {
             // 一行一个:`源名<TAB>描述`,源名写进配置。
-            for source in miyu_engine::voice::mic::list_input_sources() {
+            for source in yunxi_engine::voice::mic::list_input_sources() {
                 println!("{}\t{}", source.name, source.label);
             }
             Ok(())
         }
-        Some(Command::Cue { name, volume }) => miyu_engine::voice::worker::play_cue(&name, volume),
+        Some(Command::Cue { name, volume }) => yunxi_engine::voice::worker::play_cue(&name, volume),
     };
     if let Err(error) = outcome {
-        eprintln!("{}: {error:#}", miyu::error_label());
+        eprintln!("{}: {error:#}", yunxi::error_label());
         std::process::exit(1);
     }
 }

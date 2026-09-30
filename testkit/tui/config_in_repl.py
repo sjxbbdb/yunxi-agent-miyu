@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """全屏 TUI 里的 `/config`：设置界面借用 REPL 的备用屏，退出时要原样还回去。
 
-独立 `miyu config` 自己进备用屏，这条路不是——`run_embedded` 只擦屏不进屏，
+独立 `yunxi config` 自己进备用屏，这条路不是——`run_embedded` 只擦屏不进屏，
 交接稍有差池就会看到 shell 画面闪一下、或者退出后留一片设置界面的残影。
 
     cargo build
     python3 testkit/tui/config_in_repl.py
 
-跟别的 TUI 走查一样**只能单独跑**：共用同一个 MIYU_HOME 与端口。
+跟别的 TUI 走查一样**只能单独跑**：共用同一个 YUNXI_HOME 与端口。
 """
 
 import os

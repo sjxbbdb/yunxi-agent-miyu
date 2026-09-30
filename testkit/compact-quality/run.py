@@ -8,7 +8,7 @@
     1. 播种：在 fixture 副本里跑 25 条脚本化提示（读文件、改文件、被纠正一次、
        声明若干规则），事实全落在前 20 轮，最后几轮是无关闲聊——保证 2 轮逐字
        尾巴里没有答案。播完整份 home 拷成 home.seeded。
-    2. 变体：每个变体从 home.seeded 恢复、改配置/环境、`miyu compact`，再把压
+    2. 变体：每个变体从 home.seeded 恢复、改配置/环境、`yunxi compact`，再把压
        完的 home 拷成 home.compacted-<变体>。
     3. 答题：每题都从 home.compacted-<变体> 恢复后单独问，答完丢弃——20 道题
        互不污染，且每题都是「压完第一句话」。关键字命中即得分。
@@ -25,7 +25,7 @@
     python3 testkit/compact-quality/run.py --variants V0,V2      # 只跑两个
     python3 testkit/compact-quality/run.py --quiz-limit 5        # 冒烟
 
-绝不触碰线上 8300 daemon：独立 MIYU_HOME、独立端口、独立 XDG_RUNTIME_DIR。
+绝不触碰线上 8300 daemon：独立 YUNXI_HOME、独立端口、独立 XDG_RUNTIME_DIR。
 产物：testkit/compact-quality/out/（compact-quality.md、verdict.json、摘要文本）。
 """
 import argparse
@@ -40,17 +40,17 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
 BASE = Path(__file__).resolve().parent
-MIYU = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
+YUNXI = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
 OUT = BASE / "out"
 # unix socket 有 SUN_LEN(108B)上限，worktree 路径太深，运行目录放短路径。
-WORK = Path.home() / ".cache" / "miyu-compact-quality"
+WORK = Path.home() / ".cache" / "yunxi-compact-quality"
 HOME = WORK / "home"
 SEEDED = WORK / "home.seeded"
 PROJECT = WORK / "project"
@@ -84,13 +84,13 @@ def log(text):
 
 def env(extra=None):
     e = dict(os.environ)
-    e["MIYU_HOME"] = str(HOME)
+    e["YUNXI_HOME"] = str(HOME)
     e["XDG_RUNTIME_DIR"] = str(WORK / "run")
-    e["MIYU_LOG"] = "info"
+    e["YUNXI_LOG"] = "info"
     e["LANG"] = "zh_CN.UTF-8"
-    for key in ("MIYU_DIRECT", "MIYU_SESSION", "MIYU_TURN_MODE", "XDG_CACHE_HOME",
+    for key in ("YUNXI_DIRECT", "YUNXI_SESSION", "YUNXI_TURN_MODE", "XDG_CACHE_HOME",
                 "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME",
-                "MIYU_COMPACT_PROMPT_FILE", "MIYU_COMPACT_ANALYSIS"):
+                "YUNXI_COMPACT_PROMPT_FILE", "YUNXI_COMPACT_ANALYSIS"):
         e.pop(key, None)
     if extra:
         e.update(extra)
@@ -104,7 +104,7 @@ def write_config(provider_id, model, restore, transcript):
     providers = [p for p in cfg.get("providers", []) if p.get("id") == provider_id]
     if not providers:
         raise SystemExit(
-            f"供应商 {provider_id} 不在 ~/.miyu/config/config.jsonc 里；"
+            f"供应商 {provider_id} 不在 ~/.yunxi/config/config.jsonc 里；"
             f"可选：{[p.get('id') for p in cfg.get('providers', [])]}"
         )
     providers[0]["enabled"] = True
@@ -144,7 +144,7 @@ def start_daemon():
     global daemon
     OUT.mkdir(parents=True, exist_ok=True)
     daemon = subprocess.Popen(
-        [str(MIYU), "daemon", "--port", str(PORT)],
+        [str(YUNXI), "daemon", "--port", str(PORT)],
         env=env(),
         cwd=str(PROJECT),
         stdout=(OUT / "daemon.log").open("a"),
@@ -162,7 +162,7 @@ def stop_daemon():
     global daemon
     if daemon is None:
         return
-    subprocess.run([str(MIYU), "daemon", "stop"], env=env(), capture_output=True, timeout=30)
+    subprocess.run([str(YUNXI), "daemon", "stop"], env=env(), capture_output=True, timeout=30)
     try:
         daemon.wait(timeout=15)
     except subprocess.TimeoutExpired:
@@ -172,7 +172,7 @@ def stop_daemon():
 
 def cli(args, stdin=None, timeout=300, extra_env=None):
     proc = subprocess.run(
-        [str(MIYU), *args],
+        [str(YUNXI), *args],
         env=env(extra_env),
         cwd=str(PROJECT),
         input=stdin,
@@ -281,7 +281,7 @@ def meter_samples():
     """从 daemon 日志里捞 `context meter estimate=.. anchor=..`。"""
     samples = []
     log_dir = HOME / "cache" / "logs"
-    candidates = sorted(log_dir.glob("miyu*.log")) if log_dir.is_dir() else []
+    candidates = sorted(log_dir.glob("yunxi*.log")) if log_dir.is_dir() else []
     for path in candidates + [OUT / "daemon.log"]:
         if not path.exists():
             continue
@@ -302,7 +302,7 @@ def seed(args):
     shutil.copytree(BASE / "fixture", PROJECT)
     HOME.mkdir(parents=True)
     write_config(args.provider, args.model, restore=False, transcript=False)
-    real_cache = Path.home() / ".miyu" / "cache" / "models_cache.json"
+    real_cache = Path.home() / ".yunxi" / "cache" / "models_cache.json"
     if real_cache.exists():
         (HOME / "cache").mkdir(parents=True, exist_ok=True)
         shutil.copy(real_cache, HOME / "cache" / "models_cache.json")
@@ -339,9 +339,9 @@ def run_variant(name, args, before_tokens):
     write_config(args.provider, args.model, restore=restore, transcript=transcript)
     extra = {}
     if prompt_file:
-        extra["MIYU_COMPACT_PROMPT_FILE"] = str(BASE / prompt_file)
+        extra["YUNXI_COMPACT_PROMPT_FILE"] = str(BASE / prompt_file)
     if analysis == "off":
-        extra["MIYU_COMPACT_ANALYSIS"] = "0"
+        extra["YUNXI_COMPACT_ANALYSIS"] = "0"
 
     start_daemon()
     started = time.time()
@@ -449,7 +449,7 @@ def write_report(samples):
             f"样本 {len(errors)} 条。"
         )
     else:
-        lines.append("（没抓到 `context meter` 日志行；确认 MIYU_LOG=info 且跑过至少一轮完整回合。）")
+        lines.append("（没抓到 `context meter` 日志行；确认 YUNXI_LOG=info 且跑过至少一轮完整回合。）")
 
     (OUT / "compact-quality.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     log("\n" + "\n".join(lines))
@@ -501,8 +501,8 @@ def main():
         rescore()
         return
 
-    if not MIYU.exists():
-        raise SystemExit(f"missing binary {MIYU}; run cargo build")
+    if not YUNXI.exists():
+        raise SystemExit(f"missing binary {YUNXI}; run cargo build")
     OUT.mkdir(parents=True, exist_ok=True)
 
     try:

@@ -9,10 +9,10 @@
 `--serve` 打印地址后一直挂着，Ctrl-C 收摊。想用真模型看（比如验目标续轮插话），
 把自己的配置拷进沙箱再 --serve：
 
-    MIYU_CH_SEED_CONFIG=~/.miyu/config/config.jsonc \\
+    YUNXI_CH_SEED_CONFIG=~/.yunxi/config/config.jsonc \\
       python3 testkit/settings-ui/console-hash-run.py --serve
 
-沙箱只共用那一份 config，会话库、记忆、账本全是空的新家，碰不到 ~/.miyu。
+沙箱只共用那一份 config，会话库、记忆、账本全是空的新家，碰不到 ~/.yunxi。
 
 前置：`cargo build`（web/*.js 与 styles.css 编进二进制），
       以及该目录下的 playwright（node_modules 已在；走查才需要，--serve 不需要）。
@@ -28,26 +28,26 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-console-hash/home"))
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-console-hash/home"))
 RUNTIME = "/tmp/mx-ch"  # 路径要短，否则撞 unix socket 的 SUN_LEN
-PORT = int(os.environ.get("MIYU_CH_PORT", "18412"))
-SHOTS = Path(os.environ.get("MIYU_CH_SHOTS", Path.home() / ".cache" / "miyu-console-hash"))
+PORT = int(os.environ.get("YUNXI_CH_PORT", "18412"))
+SHOTS = Path(os.environ.get("YUNXI_CH_SHOTS", Path.home() / ".cache" / "yunxi-console-hash"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
 
 
 def write_config():
     (HOME / "config").mkdir(parents=True, exist_ok=True)
     # 想用真模型看的话，把自己的 config 拷进来（只拷这一份，其余全是空的新家）。
-    seed = os.environ.get("MIYU_CH_SEED_CONFIG")
+    seed = os.environ.get("YUNXI_CH_SEED_CONFIG")
     if seed:
         shutil.copyfile(Path(seed).expanduser(), HOME / "config" / "config.jsonc")
         return
@@ -106,7 +106,7 @@ def main():
         if serve:
             print(f"沙箱 WebUI: {BASE}")
             print(f"沙箱 home:  {HOME}")
-            print(f"日志:      {HOME / 'state' / 'logs'}（要 info 级加 MIYU_LOG=info 重跑）")
+            print(f"日志:      {HOME / 'state' / 'logs'}（要 info 级加 YUNXI_LOG=info 重跑）")
             print("Ctrl-C 收摊（沙箱目录会留着，下次跑会重建）")
             try:
                 daemon.wait()
@@ -116,8 +116,8 @@ def main():
         # playwright 装在主检出的 testkit/settings-ui/node_modules（不入库）；
         # 在 worktree 里跑时要指回去。
         modules = [HERE / "node_modules"]
-        if os.environ.get("MIYU_MAIN_CHECKOUT"):
-            modules.append(Path(os.environ["MIYU_MAIN_CHECKOUT"]) / "testkit" / "settings-ui" / "node_modules")
+        if os.environ.get("YUNXI_MAIN_CHECKOUT"):
+            modules.append(Path(os.environ["YUNXI_MAIN_CHECKOUT"]) / "testkit" / "settings-ui" / "node_modules")
         node_env = dict(os.environ, NODE_PATH=os.pathsep.join(str(p) for p in modules))
         return subprocess.call(
             ["node", str(HERE / "console-hash-shoot.js"), BASE, str(SHOTS)],

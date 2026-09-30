@@ -93,7 +93,7 @@ class OwnedReaper:
             # The supervisor launches serially. Its subreaper boundary owns new
             # direct children, including detached/execed/cleared-environment ones.
             # Preexisting children remain outside that boundary, even if their
-            # environment happens to contain the same MIYU_HOME.
+            # environment happens to contain the same YUNXI_HOME.
             for pid in self._children() - self.preexisting:
                 try:
                     identity = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()[19]

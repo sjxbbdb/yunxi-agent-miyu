@@ -8,7 +8,7 @@ todolist 09-23「webui 删除会话触发的会话切换不会刷新 footer」�
 沙箱 daemon + stub_usage.py + Playwright(Chromium)。网页资源从本地 web/ 读
 (WEB=… 指到别的目录就能对照修前修后),改前端不用重编二进制。
 
-    BIN=/path/to/miyu python3 testkit/webui-delete-footer/run.py
+    BIN=/path/to/yunxi python3 testkit/webui-delete-footer/run.py
 """
 import json
 import os
@@ -29,13 +29,13 @@ import authlib  # noqa: E402
 BIN = Path(os.environ["BIN"]).expanduser()
 WEB = Path(os.environ.get("WEB", HERE.parent.parent / "web")).resolve()
 # 放 /tmp 下的短路径:unix socket 有 SUN_LEN 上限。
-OUT = Path(os.environ.get("OUT", "/tmp/miyu-delete-footer"))
+OUT = Path(os.environ.get("OUT", "/tmp/yunxi-delete-footer"))
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18510"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18511"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 BIG, SMALL = 50000, 2000
 
 

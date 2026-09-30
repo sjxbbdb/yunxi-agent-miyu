@@ -7,8 +7,8 @@
     cargo build
     python3 testkit/tui/prepare_edit.py
 
-产物在 ~/.cache/miyu-prepare-edit/(frames/*.txt、frames.jsonl、raw.bin)。
-**这些 TUI 走查只能一个一个跑**:共用同一个 `MIYU_HOME` 和桩模型端口。
+产物在 ~/.cache/yunxi-prepare-edit/(frames/*.txt、frames.jsonl、raw.bin)。
+**这些 TUI 走查只能一个一个跑**:共用同一个 `YUNXI_HOME` 和桩模型端口。
 """
 
 import json
@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import round26 as r  # noqa: E402
 import run as h  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-prepare-edit"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-prepare-edit"))
 
 
 def main():

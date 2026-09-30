@@ -1,4 +1,4 @@
-//! `miyu tool` 与 `miyu tool-call`：在命令行里直接调工具。
+//! `yunxi tool` 与 `yunxi tool-call`：在命令行里直接调工具。
 //!
 //! 调试与脚本化用的入口。工具的产出（图片、artifact）在终端里要能看见，所以
 //! 这里有一小段远端图片预览的处理。
@@ -6,7 +6,7 @@
 use crate::cli::*;
 
 pub(in crate::cli) async fn run_tool(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     mode: PersonaLane,
     args: ToolArgs,
 ) -> Result<()> {
@@ -23,9 +23,9 @@ pub(in crate::cli) async fn run_tool(
 /// 工具,中间数据本地流动、不经模型上下文往返;每次内层调用都以本回合的
 /// 会话身份与来源在 daemon 侧过 guard/超时管线。daemon 不在(直连调试
 /// 形态)则本地执行,语义一致但 jobs 等 daemon 态不可见。
-pub(in crate::cli) async fn run_tool_call(paths: &MiyuPaths, args: ToolCallArgs) -> Result<()> {
+pub(in crate::cli) async fn run_tool_call(paths: &YunXiPaths, args: ToolCallArgs) -> Result<()> {
     let config = AppConfig::load_or_default(paths)?;
-    let env_mode = std::env::var("MIYU_TURN_MODE").unwrap_or_default();
+    let env_mode = std::env::var("YUNXI_TURN_MODE").unwrap_or_default();
     let mode = if env_mode == "dev" {
         PersonaLane::Dev
     } else {
@@ -37,10 +37,12 @@ pub(in crate::cli) async fn run_tool_call(paths: &MiyuPaths, args: ToolCallArgs)
         }
         // daemon 存活时目录走 IPC:与 ToolCall 同一条会话→模式→registry
         // 解析链,--list 列出的就是本会话真能调的集合。此前本地建表按
-        // MIYU_TURN_MODE 环境变量定模式(run_command 并不注入它),dev 会话
+        // YUNXI_TURN_MODE 环境变量定模式(run_command 并不注入它),dev 会话
         // 里 --list 展示普通人格全量目录,实测逐个调用全报 unknown tool。
         if ipc::daemon_info(paths).await.is_some() {
-            let session = std::env::var("MIYU_SESSION").ok().filter(|s| !s.is_empty());
+            let session = std::env::var("YUNXI_SESSION")
+                .ok()
+                .filter(|s| !s.is_empty());
             let (_, data) = send_ipc_admin(
                 paths,
                 IpcCommand::ToolCatalog {
@@ -137,7 +139,7 @@ pub(in crate::cli) async fn run_tool_call(paths: &MiyuPaths, args: ToolCallArgs)
         return Ok(());
     }
     let Some(name) = args.name.clone() else {
-        // 裸 `miyu tool-call` 是来问路的,给完整帮助而不是一行报错。
+        // 裸 `yunxi tool-call` 是来问路的,给完整帮助而不是一行报错。
         localized_command()
             .find_subcommand_mut("tool-call")
             .expect("tool-call subcommand exists")
@@ -154,11 +156,13 @@ pub(in crate::cli) async fn run_tool_call(paths: &MiyuPaths, args: ToolCallArgs)
     } else {
         args.arguments.clone().unwrap_or_else(|| "{}".to_string())
     };
-    let session = std::env::var("MIYU_SESSION").ok().filter(|s| !s.is_empty());
-    let origin = std::env::var("MIYU_TURN_ORIGIN")
+    let session = std::env::var("YUNXI_SESSION")
         .ok()
         .filter(|s| !s.is_empty());
-    let depth: u32 = std::env::var("MIYU_BRIDGE_DEPTH")
+    let origin = std::env::var("YUNXI_TURN_ORIGIN")
+        .ok()
+        .filter(|s| !s.is_empty());
+    let depth: u32 = std::env::var("YUNXI_BRIDGE_DEPTH")
         .ok()
         .and_then(|raw| raw.parse().ok())
         .unwrap_or(0);
@@ -185,7 +189,7 @@ pub(in crate::cli) async fn run_tool_call(paths: &MiyuPaths, args: ToolCallArgs)
 
     // 直连回退:本地建 registry(guard/超时同源),会话与来源按环境作用域化。
     // jobs 等 daemon 内存态在本地进程不可见,直连调试形态可接受。
-    if depth >= miyu_base::workspace::MAX_BRIDGE_DEPTH {
+    if depth >= yunxi_base::workspace::MAX_BRIDGE_DEPTH {
         bail!("tool bridge recursion limit reached (depth {depth})");
     }
     let registry = build_tool_registry(&config, paths, mode, false)?;
@@ -194,25 +198,25 @@ pub(in crate::cli) async fn run_tool_call(paths: &MiyuPaths, args: ToolCallArgs)
             "{:#}. {}",
             registry.unknown_tool_error(&name),
             t(
-                "run `miyu tool-call --list` to see tools callable in this session",
-                "用 `miyu tool-call --list` 查看本会话可调用的工具"
+                "run `yunxi tool-call --list` to see tools callable in this session",
+                "用 `yunxi tool-call --list` 查看本会话可调用的工具"
             )
         );
     }
-    let turn_origin: miyu_base::workspace::TurnOrigin = origin
+    let turn_origin: yunxi_base::workspace::TurnOrigin = origin
         .as_deref()
         .and_then(|raw| serde_json::from_str(raw).ok())
-        .unwrap_or(miyu_base::workspace::TurnOrigin::Human);
-    let invoke = miyu_base::workspace::with_turn_origin(
+        .unwrap_or(yunxi_base::workspace::TurnOrigin::Human);
+    let invoke = yunxi_base::workspace::with_turn_origin(
         turn_origin,
-        miyu_base::workspace::with_bridge_depth(depth + 1, async {
+        yunxi_base::workspace::with_bridge_depth(depth + 1, async {
             registry.call(&name, &arguments).await
         }),
     );
     let output = match session {
         Some(session) => {
             let session: std::sync::Arc<str> = session.into();
-            miyu_base::workspace::with_session(session, invoke).await?
+            yunxi_base::workspace::with_session(session, invoke).await?
         }
         None => invoke.await?,
     };
@@ -229,7 +233,7 @@ pub(in crate::cli) async fn run_tool_call(paths: &MiyuPaths, args: ToolCallArgs)
 pub(in crate::cli) fn remote_tool_image_size(
     tool_name: &str,
     requested: &str,
-    config: &miyu_base::config::AppConfig,
+    config: &yunxi_base::config::AppConfig,
 ) -> Option<String> {
     let requested = requested.trim();
     if !requested.is_empty() {
@@ -279,7 +283,7 @@ pub(in crate::cli) fn remote_tool_image_asset_id(event: &serde_json::Value) -> O
 }
 
 pub(in crate::cli) fn remote_image_preview(
-    asset: &miyu_core::state::ImageAssetData,
+    asset: &yunxi_core::state::ImageAssetData,
 ) -> Result<tempfile::NamedTempFile> {
     let suffix = if asset.asset.mime == "image/gif" {
         ".png"
@@ -307,7 +311,7 @@ pub(in crate::cli) fn remote_image_preview(
 mod remote_tool_image_tests {
     use crate::cli::tool_cmds::*;
     use image::{Delay, Frame, Rgba, RgbaImage};
-    use miyu_core::ipc::Frame as IpcFrame;
+    use yunxi_core::ipc::Frame as IpcFrame;
 
     #[test]
     fn web_tool_image_event_exposes_asset_id_to_remote_cli() {
@@ -325,7 +329,7 @@ mod remote_tool_image_tests {
         assert!(validate_ipc_command_response(Some(IpcFrame::Ack)).is_ok());
         let rejected = validate_ipc_command_response(Some(IpcFrame::Error {
             code: None,
-            message: "Miyu is busy with another operation".to_string(),
+            message: "YunXi is busy with another operation".to_string(),
         }))
         .unwrap_err();
         assert!(rejected.to_string().contains("busy with another operation"));
@@ -359,8 +363,8 @@ mod remote_tool_image_tests {
                 }))
                 .unwrap();
         }
-        let asset = miyu_core::state::ImageAssetData {
-            asset: miyu_core::state::ImageAsset {
+        let asset = yunxi_core::state::ImageAssetData {
+            asset: yunxi_core::state::ImageAsset {
                 asset_id: "img-gif".to_string(),
                 turn_id: "turn-1".to_string(),
                 tool_id: Some("tool-1".to_string()),

@@ -251,7 +251,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "miyu-tui-demo"
+name = "yunxi-tui-demo"
 version = "0.2.0"
 dependencies = [
  "base64",

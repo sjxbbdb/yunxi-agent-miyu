@@ -1,19 +1,19 @@
 //! 把一屏画到 ratatui 的帧上。
 //!
 //! 版面（banner、进度轨、视口、细线、按键条、星空边栏）全在
-//! [`miyu_base::terminal::chrome`] 里——设置界面用的是同一份。这里只剩引导
-//! 独有的那一屏：开场，一片星空里凝聚出 MIYU。
+//! [`yunxi_base::terminal::chrome`] 里——设置界面用的是同一份。这里只剩引导
+//! 独有的那一屏：开场，一片星空里凝聚出 YUNXI。
 
 use super::build::build;
 use super::widgets::{compose, nil, set_body_w, Chrome, Stop, BODY_MAX};
 use super::{App, Screen, FORM_AT, GLINT_AT, INTRO_END, STEPS, SUBTITLE_AT};
-use miyu_base::terminal::chrome::glint_position;
-use miyu_base::terminal::palette::{BLUE, CORAL, DIM, FAINT};
-use miyu_base::terminal::starfield::{fade, gradient_t, hash2, star_seg, subtitle_rule, Seg};
 use ratatui::layout::Rect;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
+use yunxi_base::terminal::chrome::glint_position;
+use yunxi_base::terminal::palette::{BLUE, CORAL, DIM, FAINT};
+use yunxi_base::terminal::starfield::{fade, gradient_t, hash2, star_seg, subtitle_rule, Seg};
 
 /// 星域比 banner 大一圈——星星要把字**围住**，挤在外接框里就没那个味道。
 const STAR_PAD_X: usize = 17;
@@ -29,7 +29,7 @@ fn star(x: usize, y: usize, app: &App, scale: f32, sparsity: u32) -> Span<'stati
     seg_span(star_seg(x, y, app.tick, app.theme, scale, sparsity))
 }
 
-/// 开场那一屏：星空 + 从中间凝聚出来的 MIYU。
+/// 开场那一屏：星空 + 从中间凝聚出来的 YUNXI。
 fn intro_head(app: &App, tw: usize) -> Vec<Line<'static>> {
     let theme = app.theme;
     let cx = app.cx();

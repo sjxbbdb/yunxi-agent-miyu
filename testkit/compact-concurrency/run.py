@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """压缩期间其他会话还能不能用（09-09 实况事故的回归测具）。
 
-事故：一次 `miyu compact` 把**所有**会话拖死四分半。根因是
+事故：一次 `yunxi compact` 把**所有**会话拖死四分半。根因是
 `ActorCommand::Compact` 在 actor 主循环里同步 await 整个压缩，而回合是
 `spawn_local` 出去的——压缩几分钟，actor 就几分钟收不到任何命令，所有会话的
 StartTurn 全排在 mpsc 队列里。
@@ -26,17 +26,17 @@ import threading
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
 BASE = Path(__file__).resolve().parent
-MIYU = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
+YUNXI = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
 OUT = BASE / "out"
 # unix socket 有 SUN_LEN(108B)上限，worktree 路径太深，运行目录放短路径。
-WORK = Path.home() / ".cache" / "miyu-compact-conc"
+WORK = Path.home() / ".cache" / "yunxi-compact-conc"
 HOME = WORK / "home"
 PORT = 18762
 STUB_PORT = 18761
@@ -60,12 +60,12 @@ def check(name, ok, detail=""):
 
 def env():
     e = dict(os.environ)
-    e["MIYU_HOME"] = str(HOME)
+    e["YUNXI_HOME"] = str(HOME)
     e["XDG_RUNTIME_DIR"] = str(WORK / "run")
     e["LANG"] = "zh_CN.UTF-8"
-    for key in ("MIYU_DIRECT", "MIYU_SESSION", "MIYU_TURN_MODE", "XDG_CACHE_HOME",
+    for key in ("YUNXI_DIRECT", "YUNXI_SESSION", "YUNXI_TURN_MODE", "XDG_CACHE_HOME",
                 "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME",
-                "MIYU_COMPACT_PROMPT_FILE", "MIYU_COMPACT_ANALYSIS"):
+                "YUNXI_COMPACT_PROMPT_FILE", "YUNXI_COMPACT_ANALYSIS"):
         e.pop(key, None)
     return e
 
@@ -112,7 +112,7 @@ def find_socket():
 
 
 def cli(args, stdin=None, timeout=180):
-    proc = subprocess.run([str(MIYU), *args], env=env(), input=stdin,
+    proc = subprocess.run([str(YUNXI), *args], env=env(), input=stdin,
                           capture_output=True, text=True, timeout=timeout)
     return proc.returncode, proc.stdout, proc.stderr
 
@@ -126,8 +126,8 @@ def ask(session, text, create=False, timeout=180):
 
 
 def main():
-    if not MIYU.exists():
-        raise SystemExit(f"missing binary {MIYU}; run cargo build")
+    if not YUNXI.exists():
+        raise SystemExit(f"missing binary {YUNXI}; run cargo build")
     build_home()
     stub = subprocess.Popen(
         [sys.executable, str(BASE / "stub.py")],
@@ -135,7 +135,7 @@ def main():
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     daemon = subprocess.Popen(
-        [str(MIYU), "daemon", "--port", str(PORT)], env=env(),
+        [str(YUNXI), "daemon", "--port", str(PORT)], env=env(),
         stdout=(OUT / "daemon.log").open("w"), stderr=subprocess.STDOUT,
     )
     try:
@@ -195,7 +195,7 @@ def main():
             f"{compact_result.get('secs', 0):.1f}s >= {COMPACT_SECS}s",
         )
     finally:
-        subprocess.run([str(MIYU), "daemon", "stop"], env=env(), capture_output=True, timeout=30)
+        subprocess.run([str(YUNXI), "daemon", "stop"], env=env(), capture_output=True, timeout=30)
         try:
             daemon.wait(timeout=15)
         except subprocess.TimeoutExpired:

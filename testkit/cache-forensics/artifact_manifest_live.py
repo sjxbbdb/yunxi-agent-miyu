@@ -24,8 +24,8 @@
 建/删文件由模型调 artifact 工具(照没照做看清单有没有变);发没发清单读库里的回合尾巴
 化石,缓存看 cache-usage.jsonl 每轮第一条请求的 cache_read 盖没盖住上一条请求。
 
-用法: artifact_manifest_live.py <miyu 二进制> [标签] [--real] [--baseline]
-产物: ~/.cache/miyu-cache-replay/artifact-<标签>.json
+用法: artifact_manifest_live.py <yunxi 二进制> [标签] [--real] [--baseline]
+产物: ~/.cache/yunxi-cache-replay/artifact-<标签>.json
 """
 
 import json
@@ -61,7 +61,7 @@ SCRIPT = [
     ("最后一句,一个字就行。", "B", False),
     (ASK, "B", False),
 ]
-OUT = Path.home() / ".cache/miyu-cache-replay"
+OUT = Path.home() / ".cache/yunxi-cache-replay"
 
 
 def text_of(message):
@@ -175,8 +175,8 @@ class Stub:
 class WebBox(Sandbox):
     """replay_live 的沙箱 + 网页接口。桩模式把供应商换成本地桩。"""
 
-    def __init__(self, miyu, stub):
-        super().__init__(miyu)
+    def __init__(self, yunxi, stub):
+        super().__init__(yunxi)
         if stub is not None:
             config = json.loads((self.home / "config" / "config.jsonc").read_text(encoding="utf-8"))
             config["providers"] = [{
@@ -228,7 +228,7 @@ class WebBox(Sandbox):
 
     def send(self, session_id, text, timeout=300):
         count = len(self.turns(session_id)) + 1
-        # 库里回合已落「完成」时运行槽可能还没释放,这时发下一句会撞 409「Miyu is busy」。
+        # 库里回合已落「完成」时运行槽可能还没释放,这时发下一句会撞 409「YunXi is busy」。
         if not wait_for(self.idle, 60):
             raise AssertionError("daemon never went idle")
         self.api("POST", "/api/turns", {"content": text, "session_id": session_id})

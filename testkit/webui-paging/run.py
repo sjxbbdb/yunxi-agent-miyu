@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """会话项目第 2 段：网页按页取回合。
 
-    BIN=<miyu> python3 testkit/webui-paging/run.py
+    BIN=<yunxi> python3 testkit/webui-paging/run.py
 
 沙箱 daemon + OpenAI 桩（MODE=plain，回得快，每轮报 42 token）+ Playwright（无头 Chromium）。
 先经 /api/turns 连发 40 句攒出一个长会话，再开网页：
@@ -23,7 +23,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里：HERDR_* 漏给被测的 miyu 会搅乱那个 pane（09-23）。
+# 跑测具的进程多半坐在某个 herdr pane 里：HERDR_* 漏给被测的 yunxi 会搅乱那个 pane（09-23）。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
@@ -32,13 +32,13 @@ sys.path.insert(0, str(KIT))
 import authlib  # noqa: E402
 
 BIN = Path(os.environ["BIN"])
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-webui-paging")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-webui-paging")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18591"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18592"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 TURNS = 40
 PAGE = 30
 

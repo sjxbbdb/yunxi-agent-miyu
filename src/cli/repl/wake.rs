@@ -15,7 +15,7 @@ use crate::cli::*;
 /// the turn was already rendered here). Typed submissions queue into the
 /// wake turn as follow-ups.
 pub(in crate::cli) async fn follow_wake_run(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     run_id: &str,
     label: &str,
@@ -91,10 +91,10 @@ pub(in crate::cli) async fn follow_wake_run(
         // 端正在说话。它自己的用户消息会从 `turn.started` 画出来，那才是该有
         // 的抬头（用户 09-19 实测：第二个 TUI 顶上写着「后台任务完成」）。
         let header =
-            if from_start || resuming || label == miyu_engine::tools::goal::GOAL_ROUND_LABEL {
+            if from_start || resuming || label == yunxi_engine::tools::goal::GOAL_ROUND_LABEL {
                 String::new()
             } else if label.is_empty() {
-                miyu_base::i18n::text("⚙ background task finished", "⚙ 后台任务完成").to_string()
+                yunxi_base::i18n::text("⚙ background task finished", "⚙ 后台任务完成").to_string()
             } else {
                 format!("⚙ {label}")
             };
@@ -110,7 +110,7 @@ pub(in crate::cli) async fn follow_wake_run(
                     .as_deref()
                     .and_then(|turn_id| turn_job_report(paths, turn_id));
                 let mut line = Vec::new();
-                miyu_hosts::render::timeline::write_job_report_notice(
+                yunxi_hosts::render::timeline::write_job_report_notice(
                     &mut line,
                     text,
                     report.as_ref(),
@@ -277,8 +277,8 @@ pub(in crate::cli) async fn follow_wake_run(
                     ) {
                         let line = live.editor.input.trim_start().to_string();
                         match crate::cli::repl::editor::parse_repl_input(&line) {
-                            miyu_core::slash_commands::ReplInput::Slash(
-                                miyu_core::slash_commands::ReplSlashCommand::Goal,
+                            yunxi_core::slash_commands::ReplInput::Slash(
+                                yunxi_core::slash_commands::ReplSlashCommand::Goal,
                                 args,
                             ) => {
                                 let args = args.trim().to_string();
@@ -305,7 +305,7 @@ pub(in crate::cli) async fn follow_wake_run(
                                     crate::cli::repl::session::send_ipc_admin(
                                         paths,
                                         IpcCommand::Goal {
-                                            target: miyu_core::ipc::SessionRef::Id {
+                                            target: yunxi_core::ipc::SessionRef::Id {
                                                 id: session_id.to_string(),
                                             },
                                             input: args,
@@ -354,10 +354,10 @@ pub(in crate::cli) async fn follow_wake_run(
                             }
                             // 其余命令按「回合中能不能做」分流（用户 09-20），
                             // 和 `one_shot.rs` 那条路同一张表。
-                            miyu_core::slash_commands::ReplInput::Slash(command, args) => {
-                                use miyu_core::slash_commands::DuringTurn;
+                            yunxi_core::slash_commands::ReplInput::Slash(command, args) => {
+                                use yunxi_core::slash_commands::DuringTurn;
                                 let verdict =
-                                    miyu_core::slash_commands::during_turn(command, args);
+                                    yunxi_core::slash_commands::during_turn(command, args);
                                 match verdict {
                                     DuringTurn::Inline => continue,
                                     DuringTurn::Blocked { .. } => {
@@ -396,7 +396,7 @@ pub(in crate::cli) async fn follow_wake_run(
                                     DuringTurn::Panel | DuringTurn::Detach => {
                                         let args = args.trim().to_string();
                                         live.editor.clear();
-                                        if miyu_core::slash_commands::switches_session(command, &args) {
+                                        if yunxi_core::slash_commands::switches_session(command, &args) {
                                             crate::cli::repl::tail::begin_frame_hold();
                                         }
                                         renderer.finish()?;
@@ -417,7 +417,7 @@ pub(in crate::cli) async fn follow_wake_run(
                                     }
                                 }
                             }
-                            miyu_core::slash_commands::ReplInput::Chat => {}
+                            yunxi_core::slash_commands::ReplInput::Chat => {}
                         }
                     }
                     if live.handle_screen_event(&event)? {
@@ -467,7 +467,7 @@ pub(in crate::cli) async fn follow_wake_run(
                             // daemon 按子代理会话的规矩连它名下的孙代理、后台命令一起收
                             // （09-26 用户拍板）。原来这儿只脱离，子代理和孙代理在 daemon
                             // 里照跑（用户：Ctrl+C 关掉了子代理，孙代理没停下）。
-                            if label == miyu_engine::tools::goal::GOAL_ROUND_LABEL
+                            if label == yunxi_engine::tools::goal::GOAL_ROUND_LABEL
                                 || !live.visits.is_empty()
                             {
                                 let _ = send_ipc_command(
@@ -545,12 +545,13 @@ pub(in crate::cli) async fn follow_wake_run(
                     let said = ipc_text(&data, "display_content").trim_end().to_string();
                     // 另一个会话里的 AI 发来的那条（09-23）起的这一轮：开头画成
                     // 「从 xxx 收到消息」那一块，不是这个会话里谁说的话。
-                    if let Some(message) = miyu_core::state::parse_cross_session_message(&said) {
+                    if let Some(message) = yunxi_core::state::parse_cross_session_message(&said) {
                         live.show_cross_session_message(
                             &message,
                             config.display.cross_session_preview_lines,
                         )?;
-                    } else if let Some(attempt) = miyu_core::state::service_restart_attempt(&said) {
+                    } else if let Some(attempt) = yunxi_core::state::service_restart_attempt(&said)
+                    {
                         // daemon 重启后接着跑的这一轮（09-24）：一行提示，不是谁说的话。
                         live.show_restart_notice(attempt)?;
                     } else if turn_from_parent(paths, turn_id.as_deref()) {
@@ -610,7 +611,7 @@ pub(in crate::cli) async fn follow_wake_run(
                 live,
                 &mut renderer,
                 AgentEvent::Chunk(ChatStreamChunk {
-                    kind: miyu_core::llm::ChatStreamKind::Content,
+                    kind: yunxi_core::llm::ChatStreamKind::Content,
                     text: ipc_text(&data, "delta").to_string(),
                 }),
             )?,
@@ -618,7 +619,7 @@ pub(in crate::cli) async fn follow_wake_run(
                 live,
                 &mut renderer,
                 AgentEvent::Chunk(ChatStreamChunk {
-                    kind: miyu_core::llm::ChatStreamKind::Reasoning,
+                    kind: yunxi_core::llm::ChatStreamKind::Reasoning,
                     text: ipc_text(&data, "delta").to_string(),
                 }),
             )?,
@@ -656,7 +657,7 @@ pub(in crate::cli) async fn follow_wake_run(
                 AgentEvent::ReasoningTitle(ipc_text(&data, "title").to_string()),
             )?,
             "tool.preparing" => {
-                miyu_hosts::runtime::learn_tool_display_name(&data);
+                yunxi_hosts::runtime::learn_tool_display_name(&data);
                 handle_live_agent_event(
                     live,
                     &mut renderer,
@@ -671,7 +672,7 @@ pub(in crate::cli) async fn follow_wake_run(
             }
             "tool.started" => {
                 // 脚本的显示名只有 daemon 知道，事件里带过来，先记下再画。
-                miyu_hosts::runtime::learn_tool_display_name(&data);
+                yunxi_hosts::runtime::learn_tool_display_name(&data);
                 handle_live_agent_event(
                     live,
                     &mut renderer,
@@ -697,7 +698,7 @@ pub(in crate::cli) async fn follow_wake_run(
                 AgentEvent::SubagentProgress {
                     call_id: ipc_text(&data, "tool_id").to_string(),
                     name: ipc_text(&data, "name").to_string(),
-                    status: miyu_hosts::runtime::subagent_status_from(&data),
+                    status: yunxi_hosts::runtime::subagent_status_from(&data),
                 },
             )?,
             "tool.output" => handle_live_agent_event(
@@ -764,7 +765,7 @@ pub(in crate::cli) async fn follow_wake_run(
                     .any(|queued| queued.prompt_id == prompt_id);
                 if !prompt_id.is_empty() && !already {
                     let content = ipc_text(&prompt, "content").to_string();
-                    live.enqueue(miyu_core::state::QueuedPrompt {
+                    live.enqueue(yunxi_core::state::QueuedPrompt {
                         prompt_id,
                         seq: data
                             .get("seq")
@@ -957,14 +958,17 @@ pub(in crate::cli) fn round_session_tokens(data: &serde_json::Value) -> TurnToke
     }
 }
 
-fn turn_from_parent(paths: &MiyuPaths, turn_id: Option<&str>) -> bool {
+fn turn_from_parent(paths: &YunXiPaths, turn_id: Option<&str>) -> bool {
     turn_id.is_some_and(|turn_id| {
         StateStore::new(paths).is_ok_and(|store| store.turn_from_parent(turn_id).unwrap_or(false))
     })
 }
 
 /// 后台任务唤醒那一轮附的结果段，库打不开就当没有。
-fn turn_job_report(paths: &MiyuPaths, turn_id: &str) -> Option<miyu_core::state::JobReportResult> {
+fn turn_job_report(
+    paths: &YunXiPaths,
+    turn_id: &str,
+) -> Option<yunxi_core::state::JobReportResult> {
     StateStore::new(paths)
         .ok()?
         .turn_job_report(turn_id)

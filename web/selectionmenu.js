@@ -15,7 +15,7 @@
  * 菜单与浮窗挂 document.body、fixed 定位:聊天区外层有 overflow 裁剪。
  * 单独成文件:app.js 已经上万行(与 contextpanel.js / todos.js 同构)。
  */
-window.MiyuSelectionMenu = (() => {
+window.YunXiSelectionMenu = (() => {
   const ACTIONS = [
     { key: "explain", label: t("解释"), needsModel: true },
     { key: "translate", label: t("翻译"), needsModel: true },
@@ -399,8 +399,8 @@ window.MiyuSelectionMenu = (() => {
       // 不走 procLineBreak:它会再收成一行「Thought」总结。思考块自己已经收成
       // 「已思考」了,再套一层是重复(用户 09-14)。这里只把时间线标成结束。
       const line = blocks.lastElementChild;
-      if (line?.miyuProc) {
-        line.miyuProc.closed = true;
+      if (line?.yunxiProc) {
+        line.yunxiProc.closed = true;
         line.classList.remove("is-live");
       }
     };

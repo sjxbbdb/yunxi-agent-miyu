@@ -2,7 +2,7 @@
 """会话钉的模型没了：退回全局池、说一声、别把 REPL 整个锁死。
 
 09-18 真机撞到的那条：会话钉着 `opencodego / union-alpha`，供应商清单里早没了，
-于是 `miyu` 整个进不去、只报一句「invalid admin response」——daemon 侧给这条会话
+于是 `yunxi` 整个进不去、只报一句「invalid admin response」——daemon 侧给这条会话
 装 Agent 估上下文时报「没有可用端点」，`?` 一路冒到顶、连接直接断掉。
 
 这里验四件事：
@@ -13,7 +13,7 @@
 3. 启动时落到的会话钉着失效模型：屏上有一行说明、覆盖被清掉，再开一次不再提示；
 4. 一半失效时只筛掉失效那条，覆盖留着。
 
-09-20 起 `miyu` 启动开的是新会话（05e57350）：车道指针指着的会话有内容就另开一条，
+09-20 起 `yunxi` 启动开的是新会话（05e57350）：车道指针指着的会话有内容就另开一条，
 空的才接着用。所以第 1、2、4 条要先 `/session` 切回钉了模型的那条；第 3 条只有
 「指针指着一条空会话、它钉着失效模型」才走得到，就这么摆出来。
 
@@ -26,9 +26,9 @@
     cargo build
     python3 testkit/tui/stale_model.py
 
-产物在 ~/.cache/miyu-stale-model/。
+产物在 ~/.cache/yunxi-stale-model/。
 
-**这些 TUI 走查只能一个一个跑**：共用同一个 `MIYU_HOME` 和桩模型端口。
+**这些 TUI 走查只能一个一个跑**：共用同一个 `YUNXI_HOME` 和桩模型端口。
 """
 
 import json
@@ -40,7 +40,7 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -48,9 +48,9 @@ for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-stale-model"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-stale-model"))
 PROMPT = "走查一句"
-GHOST = "miyu-model-the-provider-removed"
+GHOST = "yunxi-model-the-provider-removed"
 # 会话名是按第一条回复起的，桩模型每次回同一句，几条会话会重名：先改成独一份的名字，
 # 之后 `/session 名字` 才切得准。
 NAME = "钉模型走查"

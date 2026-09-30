@@ -3,7 +3,7 @@
 
 在 kitty 里通知改由**终端自己**弹（通知协议 OSC 99）：只有它能在点击时把自己的
 窗口拉到前面（Wayland 下外部进程抢不了焦点），顺带按系统声音主题响一声。这里验
-的是 Miyu 这一侧——**发没发、发的是什么**：真 PTY 里跑一轮带提问的对话，把终端
+的是 YunXi 这一侧——**发没发、发的是什么**：真 PTY 里跑一轮带提问的对话，把终端
 收到的原始字节捞出来，按 kitty 的协议拆开逐项对。
 
 kitty/mako/niri 那一侧（通知真的弹出来了、真的响了、点了真的跳回窗口）不在这个
@@ -14,9 +14,9 @@ kitty/mako/niri 那一侧（通知真的弹出来了、真的响了、点了真�
     cargo build
     python3 testkit/tui/notify_sound.py
 
-产物在 ~/.cache/miyu-notify-sound/。
+产物在 ~/.cache/yunxi-notify-sound/。
 
-**这些 TUI 走查只能一个一个跑**：共用同一个 `MIYU_HOME` 和桩模型端口。
+**这些 TUI 走查只能一个一个跑**：共用同一个 `YUNXI_HOME` 和桩模型端口。
 """
 
 import base64
@@ -29,7 +29,7 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -37,7 +37,7 @@ for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-notify-sound"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-notify-sound"))
 PROMPT = "走查一句"
 # 一段 OSC 99：`ESC ] 99 ; <元数据> ; <载荷> ESC \`
 OSC99 = re.compile(rb"\x1b\]99;([^;]*);([^\x1b]*)\x1b\\")
@@ -166,16 +166,16 @@ def main():
             json.dumps(sent, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         by_title = {title: (body, fields) for title, body, fields in sent}
-        report["提问发通知"] = "Miyu 在等你回答" in by_title
-        report["回复完成发通知"] = "Miyu 回复完成" in by_title
-        question = by_title.get("Miyu 在等你回答", ("", {}))
-        done = by_title.get("Miyu 回复完成", ("", {}))
+        report["提问发通知"] = "YunXi 在等你回答" in by_title
+        report["回复完成发通知"] = "YunXi 回复完成" in by_title
+        question = by_title.get("YunXi 在等你回答", ("", {}))
+        done = by_title.get("YunXi 回复完成", ("", {}))
         report["正文是「正在等待处理」"] = (
             question[0] == "正在等待处理" and done[0] == "正在等待处理"
         )
-        # 默认用 Miyu 内置的木琴音（用户 09-18 挑的：两个事件都用 wake）。
+        # 默认用 YunXi 内置的木琴音（用户 09-18 挑的：两个事件都用 wake）。
         # kitty 的 `s=` 只认声音主题里的名字、喂不了文件路径，所以让它闭嘴，
-        # 音由 Miyu 自己放——通知栏里看不到，看的是它有没有落到盘上。
+        # 音由 YunXi 自己放——通知栏里看不到，看的是它有没有落到盘上。
         report["默认让 kitty 闭嘴(音自己放)"] = (
             question[1].get("s") == "silent" and done[1].get("s") == "silent"
         )
@@ -193,7 +193,7 @@ def main():
         )
         report["同一进程复用一个 id"] = (
             len({fields.get("i") for _, _, fields in sent}) == 1
-            and re.fullmatch(r"miyu-\d+", sent[0][2].get("i", "")) is not None
+            and re.fullmatch(r"yunxi-\d+", sent[0][2].get("i", "")) is not None
         )
         report["标题正文都走 base64"] = all(
             fields.get("e") == "1" for _, _, fields in sent
@@ -205,7 +205,7 @@ def main():
         (OUT / "kitty-muted.bin").write_bytes(raw)
         muted = titles(raw)
         report["关音后通知还在"] = any(
-            title == "Miyu 回复完成" for title, _, _ in muted
+            title == "YunXi 回复完成" for title, _, _ in muted
         )
         report["关音后音名是 silent"] = bool(muted) and all(
             fields.get("s") == "silent" for _, _, fields in muted
@@ -213,7 +213,7 @@ def main():
 
         # ── 3. 换成自己的音频文件：通知照发，但让 kitty 闭嘴（`s=` 只认声音
         #      主题里的名字，文件得我们自己放）────────────────────────────
-        custom = Path("/tmp/miyu-notify-sound/ding.wav")
+        custom = Path("/tmp/yunxi-notify-sound/ding.wav")
         custom.parent.mkdir(parents=True, exist_ok=True)
         custom.write_bytes(b"RIFF\x00\x00\x00\x00WAVE")
         write_config({"notifications": {"sound_file": str(custom)}})
@@ -221,7 +221,7 @@ def main():
         (OUT / "kitty-custom.bin").write_bytes(raw)
         custom_sent = titles(raw)
         report["自定义文件时通知还在"] = any(
-            title == "Miyu 回复完成" for title, _, _ in custom_sent
+            title == "YunXi 回复完成" for title, _, _ in custom_sent
         )
         report["自定义文件时 kitty 不出声"] = bool(custom_sent) and all(
             fields.get("s") == "silent" for _, _, fields in custom_sent
@@ -229,13 +229,13 @@ def main():
 
         # ── 4. 自定义文件指到不存在的路径：退回内置音，别变哑的。退到主题音
         #      的话 `s=` 会写成 `complete`，所以这里仍是 silent 才对 ────────
-        write_config({"notifications": {"sound_file": "/nonexistent/miyu-ding.wav"}})
+        write_config({"notifications": {"sound_file": "/nonexistent/yunxi-ding.wav"}})
         raw = run_one_turn("xterm-kitty")
         (OUT / "kitty-missing-file.bin").write_bytes(raw)
         missing = {title: fields for title, _, fields in titles(raw)}
-        report["文件不存在仍发通知"] = "Miyu 回复完成" in missing
+        report["文件不存在仍发通知"] = "YunXi 回复完成" in missing
         report["文件不存在退回内置音"] = (
-            missing.get("Miyu 回复完成", {}).get("s") == "silent"
+            missing.get("YunXi 回复完成", {}).get("s") == "silent"
         )
 
         # ── 5. 关掉桌面通知：一条都不发 ────────────────────────────────

@@ -10,7 +10,7 @@
 前端由 Playwright 拦下换成 `WEB` 目录里的文件，二进制不用重编；`WEB` 指向改之前的
 前端就能看到修前的红。
 
-    BIN=<miyu 二进制> [WEB=<web 目录>] python3 testkit/webui-fixes/todo_and_question.py
+    BIN=<yunxi 二进制> [WEB=<web 目录>] python3 testkit/webui-fixes/todo_and_question.py
 """
 
 import json
@@ -32,7 +32,7 @@ import authlib  # noqa: E402
 
 BIN = Path(os.environ["BIN"]).expanduser().resolve()
 WEB = Path(os.environ.get("WEB", HERE.parent.parent / "web")).resolve()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-webui-todo-question")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-webui-todo-question")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18541"))
@@ -198,7 +198,7 @@ def main():
     stub = ThreadingHTTPServer(("127.0.0.1", STUB_PORT), Stub)
     threading.Thread(target=stub.serve_forever, daemon=True).start()
     daemon = subprocess.Popen([str(BIN), "__daemon", "--port", str(PORT)],
-                              env=dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME)),
+                              env=dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME)),
                               cwd=str(HOME), stdout=(OUT / "daemon.log").open("w"), stderr=subprocess.STDOUT)
     report = {"web": str(WEB)}
     try:

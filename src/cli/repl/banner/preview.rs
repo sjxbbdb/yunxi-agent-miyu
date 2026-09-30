@@ -1,4 +1,4 @@
-//! `miyu --banner`：只看 banner。全屏画空会话那一帧的星空与渐变字（不带输入框），
+//! `yunxi --banner`：只看 banner。全屏画空会话那一帧的星空与渐变字（不带输入框），
 //! Tab 切换模式行看两种颜色，其余任意键退出。调 `config/banner.txt` 时用它对样。
 
 use super::BannerScene;
@@ -11,14 +11,14 @@ use crossterm::terminal::{
     LeaveAlternateScreen,
 };
 use crossterm::{execute, queue};
-use miyu_base::config::AppConfig;
-use miyu_base::config::PersonaLane;
-use miyu_base::i18n::text as t;
-use miyu_base::paths::MiyuPaths;
 use std::io::{self, IsTerminal, Write};
 use std::time::Duration;
+use yunxi_base::config::AppConfig;
+use yunxi_base::config::PersonaLane;
+use yunxi_base::i18n::text as t;
+use yunxi_base::paths::YunXiPaths;
 
-pub fn run(config: &AppConfig, paths: &MiyuPaths) -> Result<()> {
+pub fn run(config: &AppConfig, paths: &YunXiPaths) -> Result<()> {
     if !io::stdout().is_terminal() {
         bail!(
             "{}",

@@ -286,12 +286,12 @@ impl Screen {
         }
         self.selection = Some(selection);
         let text = self.selection_text(selection);
-        if std::env::var_os("MIYU_SCREEN_TRACE").is_some() {
+        if std::env::var_os("YUNXI_SCREEN_TRACE").is_some() {
             use std::io::Write as _;
             if let Ok(mut f) = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open("/tmp/miyu-screen-trace.log")
+                .open("/tmp/yunxi-screen-trace.log")
             {
                 let _ = writeln!(
                     f,
@@ -468,7 +468,7 @@ mod decoration_tests {
         // 空会话:左边有星空。跳到竖线之后那一格。
         assert_eq!(decoration_width(&spans("   .  ✦   ┃ hello")), 12);
         assert_eq!(decoration_width(&spans(" + ┃ hi")), 5);
-        // ASCII 星空(MIYU_ASCII=1)同样认。
+        // ASCII 星空(YUNXI_ASCII=1)同样认。
         assert_eq!(decoration_width(&spans("  * # ┃ hi")), 8);
     }
 

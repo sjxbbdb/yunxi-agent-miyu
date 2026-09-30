@@ -1,10 +1,10 @@
-//! `miyu layout`:家目录布局(阶段 6)的查看、手动执行与回滚。
+//! `yunxi layout`:家目录布局(阶段 6)的查看、手动执行与回滚。
 //!
 //! 搬家本身在 daemon 起来时自动做;这里给用户一个能提前看计划(干跑)、
 //! 在没 daemon 时手动搬、以及后悔了搬回去的入口。
 
 use crate::cli::*;
-use miyu_base::paths::{
+use yunxi_base::paths::{
     admin_home_name_from_env, clear_home_layout_opt_out, current_process_is_daemon,
     home_layout_opted_out, read_home_layout_admin, rollback_home_layout, try_migrate_home_layout,
     HomeLayout, Layout,
@@ -23,7 +23,7 @@ pub struct LayoutArgs {
     pub admin: Option<String>,
 }
 
-fn home_layout_for(paths: &MiyuPaths, admin_override: Option<&str>) -> Result<HomeLayout> {
+fn home_layout_for(paths: &YunXiPaths, admin_override: Option<&str>) -> Result<HomeLayout> {
     let layout = Layout {
         root_dir: paths.root_dir.clone(),
         config_dir: paths.config_dir.clone(),
@@ -34,7 +34,7 @@ fn home_layout_for(paths: &MiyuPaths, admin_override: Option<&str>) -> Result<Ho
     let admin = match read_home_layout_admin(&paths.root_dir)? {
         Some(admin) => admin,
         None => match admin_override {
-            Some(name) if miyu_base::paths::is_valid_home_name(name) => name.to_string(),
+            Some(name) if yunxi_base::paths::is_valid_home_name(name) => name.to_string(),
             Some(name) => bail!(
                 "{}",
                 owned(
@@ -48,7 +48,7 @@ fn home_layout_for(paths: &MiyuPaths, admin_override: Option<&str>) -> Result<Ho
     Ok(HomeLayout { layout, admin })
 }
 
-pub(in crate::cli) fn run_layout(paths: &MiyuPaths, args: LayoutArgs) -> Result<()> {
+pub(in crate::cli) fn run_layout(paths: &YunXiPaths, args: LayoutArgs) -> Result<()> {
     let layout = home_layout_for(paths, args.admin.as_deref())?;
     let migrated = read_home_layout_admin(&paths.root_dir)?.is_some();
     if args.rollback {
@@ -66,16 +66,16 @@ pub(in crate::cli) fn run_layout(paths: &MiyuPaths, args: LayoutArgs) -> Result<
             bail!(
                 "{}",
                 t(
-                    "a Miyu daemon is running; stop it (miyu daemon stop) and retry",
-                    "daemon 还在跑;先 miyu daemon stop 再试"
+                    "a YunXi daemon is running; stop it (yunxi daemon stop) and retry",
+                    "daemon 还在跑;先 yunxi daemon stop 再试"
                 )
             );
         }
         println!(
             "{}",
             t(
-                "Rolled back to the legacy layout (data/ and state/); automatic migration stays off until `miyu layout --apply`.",
-                "已搬回老布局(data/ 与 state/);自动搬家已关,`miyu layout --apply` 再开。"
+                "Rolled back to the legacy layout (data/ and state/); automatic migration stays off until `yunxi layout --apply`.",
+                "已搬回老布局(data/ 与 state/);自动搬家已关,`yunxi layout --apply` 再开。"
             )
         );
         return Ok(());
@@ -96,8 +96,8 @@ pub(in crate::cli) fn run_layout(paths: &MiyuPaths, args: LayoutArgs) -> Result<
             bail!(
                 "{}",
                 t(
-                    "a Miyu daemon is running; stop it (miyu daemon stop) and retry",
-                    "daemon 还在跑;先 miyu daemon stop 再试"
+                    "a YunXi daemon is running; stop it (yunxi daemon stop) and retry",
+                    "daemon 还在跑;先 yunxi daemon stop 再试"
                 )
             );
         }
@@ -133,22 +133,22 @@ pub(in crate::cli) fn run_layout(paths: &MiyuPaths, args: LayoutArgs) -> Result<
         } else if opted_out {
             owned(
                 format!(
-                    "Layout: legacy (rolled back; automatic migration is off). `miyu layout --apply` would move (admin home {}):",
+                    "Layout: legacy (rolled back; automatic migration is off). `yunxi layout --apply` would move (admin home {}):",
                     layout.admin_home().display()
                 ),
                 format!(
-                    "当前布局:老布局(已回滚,自动搬家已关)。`miyu layout --apply` 会搬(管理员家目录 {}):",
+                    "当前布局:老布局(已回滚,自动搬家已关)。`yunxi layout --apply` 会搬(管理员家目录 {}):",
                     layout.admin_home().display()
                 ),
             )
         } else {
             owned(
                 format!(
-                    "Layout: legacy (data/ + state/). `miyu layout --apply` would move (admin home {}):",
+                    "Layout: legacy (data/ + state/). `yunxi layout --apply` would move (admin home {}):",
                     layout.admin_home().display()
                 ),
                 format!(
-                    "当前布局:老布局(data/ + state/)。`miyu layout --apply` 会搬(管理员家目录 {}):",
+                    "当前布局:老布局(data/ + state/)。`yunxi layout --apply` 会搬(管理员家目录 {}):",
                     layout.admin_home().display()
                 ),
             )

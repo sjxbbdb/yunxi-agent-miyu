@@ -31,20 +31,20 @@ fn models_argument_parses_the_global_switch() {
 
 #[test]
 fn variant_is_a_cli_subcommand_with_an_optional_name() {
-    let cli = parse_args(["miyu", "variant"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "variant"].map(OsString::from).to_vec()).unwrap();
     assert!(matches!(
         cli.command,
         Some(Command::Variant(VariantArgs { name: None }))
     ));
 
-    let cli = parse_args(["miyu", "variant", "high"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "variant", "high"].map(OsString::from).to_vec()).unwrap();
     assert!(matches!(
         cli.command,
         Some(Command::Variant(VariantArgs { name })) if name.as_deref() == Some("high")
     ));
 
     assert!(parse_args(
-        ["miyu", "variant", "high", "extra"]
+        ["yunxi", "variant", "high", "extra"]
             .map(OsString::from)
             .to_vec()
     )
@@ -53,12 +53,12 @@ fn variant_is_a_cli_subcommand_with_an_optional_name() {
 
 #[test]
 fn continue_and_session_flags_are_mutually_exclusive() {
-    let cli = parse_args(["miyu", "-c", "hello"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "-c", "hello"].map(OsString::from).to_vec()).unwrap();
     assert!(cli.turn.continue_session);
     assert_eq!(cli.message, vec!["hello".to_string()]);
 
     let cli = parse_args(
-        ["miyu", "--session", "2", "hello"]
+        ["yunxi", "--session", "2", "hello"]
             .map(OsString::from)
             .to_vec(),
     )
@@ -67,7 +67,7 @@ fn continue_and_session_flags_are_mutually_exclusive() {
     assert_eq!(cli.turn.session.as_deref(), Some("2"));
 
     assert!(parse_args(
-        ["miyu", "-c", "--session", "2", "hello"]
+        ["yunxi", "-c", "--session", "2", "hello"]
             .map(OsString::from)
             .to_vec()
     )
@@ -130,7 +130,7 @@ fn picker_keys_reach_delete_only_through_a_modifier() {
 #[test]
 fn web_is_a_cli_subcommand_with_local_server_options() {
     let cli = parse_args(
-        ["miyu", "web", "--port", "4100"]
+        ["yunxi", "web", "--port", "4100"]
             .map(OsString::from)
             .to_vec(),
     )
@@ -145,10 +145,10 @@ fn web_is_a_cli_subcommand_with_local_server_options() {
     ));
 
     for arg in ["stop", "status", "restart", "--status", "--stop"] {
-        assert!(parse_args(["miyu", "web", arg].map(OsString::from).to_vec()).is_err());
+        assert!(parse_args(["yunxi", "web", arg].map(OsString::from).to_vec()).is_err());
     }
 
-    let cli = parse_args(["miyu", "web"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "web"].map(OsString::from).to_vec()).unwrap();
     assert!(matches!(
         cli.command,
         Some(Command::Web(WebArgs {
@@ -159,13 +159,13 @@ fn web_is_a_cli_subcommand_with_local_server_options() {
     ));
 
     for args in [
-        vec!["miyu", "web", "-p"],
-        vec!["miyu", "web", "--password-file", "/tmp/x"],
+        vec!["yunxi", "web", "-p"],
+        vec!["yunxi", "web", "--password-file", "/tmp/x"],
     ] {
         assert!(parse_args(args.into_iter().map(OsString::from).collect()).is_err());
     }
 
-    assert!(parse_args(["miyu", "web", "--public"].map(OsString::from).to_vec(),).is_err());
+    assert!(parse_args(["yunxi", "web", "--public"].map(OsString::from).to_vec(),).is_err());
 }
 
 #[test]
@@ -189,7 +189,7 @@ fn daemon_owns_lifecycle_and_log_commands() {
         ("restart", "restart"),
         ("status", "status"),
     ] {
-        let cli = parse_args(["miyu", "daemon", arg].map(OsString::from).to_vec()).unwrap();
+        let cli = parse_args(["yunxi", "daemon", arg].map(OsString::from).to_vec()).unwrap();
         let actual = match cli.command {
             Some(Command::Daemon(DaemonArgs {
                 command: Some(DaemonCommand::Start),
@@ -212,7 +212,7 @@ fn daemon_owns_lifecycle_and_log_commands() {
         assert_eq!(actual, expected);
     }
 
-    let cli = parse_args(["miyu", "daemon", "logs"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "daemon", "logs"].map(OsString::from).to_vec()).unwrap();
     assert!(matches!(
         cli.command,
         Some(Command::Daemon(DaemonArgs {
@@ -222,7 +222,7 @@ fn daemon_owns_lifecycle_and_log_commands() {
     ));
 
     let cli = parse_args(
-        ["miyu", "daemon", "logs", "-n", "25"]
+        ["yunxi", "daemon", "logs", "-n", "25"]
             .map(OsString::from)
             .to_vec(),
     )
@@ -241,15 +241,15 @@ fn daemon_owns_lifecycle_and_log_commands() {
 
 #[test]
 fn reload_is_a_top_level_command() {
-    let cli = parse_args(["miyu", "reload"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "reload"].map(OsString::from).to_vec()).unwrap();
     assert!(matches!(cli.command, Some(Command::Reload)));
-    assert!(parse_args(["miyu", "reload", "extra"].map(OsString::from).to_vec()).is_err());
+    assert!(parse_args(["yunxi", "reload", "extra"].map(OsString::from).to_vec()).is_err());
 }
 
 #[test]
 fn daemon_accepts_a_port_and_defaults_to_start() {
     let cli = parse_args(
-        ["miyu", "daemon", "--port", "9412"]
+        ["yunxi", "daemon", "--port", "9412"]
             .map(OsString::from)
             .to_vec(),
     )
@@ -263,7 +263,7 @@ fn daemon_accepts_a_port_and_defaults_to_start() {
     ));
 
     let cli = parse_args(
-        ["miyu", "daemon", "--port", "9412", "restart"]
+        ["yunxi", "daemon", "--port", "9412", "restart"]
             .map(OsString::from)
             .to_vec(),
     )
@@ -277,7 +277,7 @@ fn daemon_accepts_a_port_and_defaults_to_start() {
     ));
 
     let cli = parse_args(
-        ["miyu", "daemon", "start", "--port", "9412"]
+        ["yunxi", "daemon", "start", "--port", "9412"]
             .map(OsString::from)
             .to_vec(),
     )
@@ -291,7 +291,7 @@ fn daemon_accepts_a_port_and_defaults_to_start() {
     ));
 
     assert!(parse_args(
-        ["miyu", "daemon", "--password"]
+        ["yunxi", "daemon", "--password"]
             .map(OsString::from)
             .to_vec(),
     )
@@ -322,42 +322,42 @@ fn daemon_web_urls_are_rendered_on_separate_aligned_lines() {
 
 #[test]
 fn pop_is_a_cli_subcommand_with_an_optional_count() {
-    let cli = parse_args(["miyu", "pop"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "pop"].map(OsString::from).to_vec()).unwrap();
     assert!(matches!(
         cli.command,
         Some(Command::Pop(PopArgs { count: None, .. }))
     ));
 
-    let cli = parse_args(["miyu", "pop", "3"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "pop", "3"].map(OsString::from).to_vec()).unwrap();
     assert!(matches!(
         cli.command,
         Some(Command::Pop(PopArgs { count: Some(3), .. }))
     ));
-    assert!(parse_args(["miyu", "pop", "0"].map(OsString::from).to_vec()).is_err());
-    assert!(parse_args(["miyu", "pop", "nope"].map(OsString::from).to_vec()).is_err());
+    assert!(parse_args(["yunxi", "pop", "0"].map(OsString::from).to_vec()).is_err());
+    assert!(parse_args(["yunxi", "pop", "nope"].map(OsString::from).to_vec()).is_err());
 }
 
 #[test]
 fn debug_is_a_global_cli_option() {
     for args in [
-        &["miyu", "--debug", "models", "1"][..],
-        &["miyu", "models", "--debug", "1"][..],
-        &["miyu", "hello", "--debug"][..],
-        &["miyu", "ask", "hello", "--debug"][..],
+        &["yunxi", "--debug", "models", "1"][..],
+        &["yunxi", "models", "--debug", "1"][..],
+        &["yunxi", "hello", "--debug"][..],
+        &["yunxi", "ask", "hello", "--debug"][..],
     ] {
         let cli = parse_args(args.iter().map(OsString::from).collect()).unwrap();
         assert!(cli.debug);
     }
 
-    let cli = parse_args(["miyu", "hello", "--debug"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "hello", "--debug"].map(OsString::from).to_vec()).unwrap();
     assert_eq!(cli.message, ["hello"]);
 
-    let cli = parse_args(["miyu", "--", "--debug"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "--", "--debug"].map(OsString::from).to_vec()).unwrap();
     assert!(!cli.debug);
     assert_eq!(cli.message, ["--debug"]);
 }
 
-/// `miyu session sandbox <会话> <目录> --allow-read`:开关解析得出来,且与
+/// `yunxi session sandbox <会话> <目录> --allow-read`:开关解析得出来,且与
 /// `--clear` 互斥、离开目录就不成立(clap 的 requires/conflicts 接的是字段名,
 /// 写错在 release 档是静默失效,所以这里钉一遍)。
 #[test]
@@ -369,7 +369,7 @@ fn session_sandbox_parses_the_allow_read_switch() {
         })
     };
     let command = parse(&[
-        "miyu",
+        "yunxi",
         "session",
         "sandbox",
         "work",
@@ -391,7 +391,7 @@ fn session_sandbox_parses_the_allow_read_switch() {
         }
         other => panic!("expected sandbox, got {other:?}"),
     }
-    let plain = parse(&["miyu", "session", "sandbox", "work", "/tmp/proj"]).expect("valid");
+    let plain = parse(&["yunxi", "session", "sandbox", "work", "/tmp/proj"]).expect("valid");
     assert!(matches!(
         plain,
         SessionCommand::Sandbox {
@@ -400,7 +400,7 @@ fn session_sandbox_parses_the_allow_read_switch() {
         }
     ));
     assert!(parse(&[
-        "miyu",
+        "yunxi",
         "session",
         "sandbox",
         "work",
@@ -408,7 +408,7 @@ fn session_sandbox_parses_the_allow_read_switch() {
         "--allow-read"
     ])
     .is_err());
-    assert!(parse(&["miyu", "session", "sandbox", "work", "--allow-read"]).is_err());
+    assert!(parse(&["yunxi", "session", "sandbox", "work", "--allow-read"]).is_err());
 }
 
 #[test]
@@ -431,13 +431,13 @@ fn session_selection_defaults_to_the_current_entry() {
     assert_eq!(session_initial_selection(&entries, None), 0);
     assert!(matches!(
         session_ref_from_index(&entries, 2),
-        Some(miyu_core::ipc::SessionRef::Id { id }) if id == "active"
+        Some(yunxi_core::ipc::SessionRef::Id { id }) if id == "active"
     ));
     assert_eq!(session_initial_selection(&[entry("only", false)], None), 0);
 }
 
-/// `pm` 暂不公开:帮助与补全里看不到它,但显式 `miyu pm …` 与 `miyupm …` 一字未改。
-/// 不能靠删解析分支来隐藏——根命令吃 trailing_var_arg,删了 `miyu pm list` 会被
+/// `pm` 暂不公开:帮助与补全里看不到它,但显式 `yunxi pm …` 与 `yunxipm …` 一字未改。
+/// 不能靠删解析分支来隐藏——根命令吃 trailing_var_arg,删了 `yunxi pm list` 会被
 /// 当成一句聊天发出去。
 #[test]
 fn pm_is_hidden_from_help_but_still_dispatches() {
@@ -454,16 +454,16 @@ fn pm_is_hidden_from_help_but_still_dispatches() {
     let help = localized_command().render_long_help().to_string();
     assert!(!help.contains("\n  pm "), "根帮助里还列着 pm:\n{help}");
 
-    let cli = parse_args(["miyu", "pm", "list"].map(OsString::from).to_vec()).unwrap();
+    let cli = parse_args(["yunxi", "pm", "list"].map(OsString::from).to_vec()).unwrap();
     assert!(
         matches!(cli.command, Some(Command::Pm(_))),
-        "显式 miyu pm 应照旧进包管理"
+        "显式 yunxi pm 应照旧进包管理"
     );
 
-    let shimmed = apply_pm_shim(["/usr/bin/miyupm", "list"].map(OsString::from).to_vec());
+    let shimmed = apply_pm_shim(["/usr/bin/yunxipm", "list"].map(OsString::from).to_vec());
     let cli = parse_args(shimmed).unwrap();
     assert!(
         matches!(cli.command, Some(Command::Pm(_))),
-        "miyupm shim 应照旧进包管理"
+        "yunxipm shim 应照旧进包管理"
     );
 }

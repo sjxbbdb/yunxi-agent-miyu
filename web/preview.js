@@ -9,13 +9,13 @@
  *
  * 能预览什么按 MIME 分：文本类（含 markdown / json / csv）取回正文按等宽排
  * 版；PDF 塞 iframe（后端要带 `?inline=1`，否则 Content-Disposition 会把
- * iframe 变成一次下载）；音视频直接给播放器；图片走 MiyuLightbox，和会话里
+ * iframe 变成一次下载）；音视频直接给播放器；图片走 YunXiLightbox，和会话里
  * 的图一个观感；其余二进制没有可看的形态，直接落回下载。
  *
  * 单独成文件的理由同 lightbox.js：app.js 已经将近一万行。
  * 依赖由 app.js 注入：makeIconSlot（图标）、formatFileSize（体积文案）。
  */
-window.MiyuPreview = (() => {
+window.YunXiPreview = (() => {
   let makeIconSlot = null;
   let formatFileSize = null;
   let root = null;
@@ -197,7 +197,7 @@ window.MiyuPreview = (() => {
     if (kind === "binary") return false;
     if (kind === "image") {
       // 图片交给会话内图片同一套放大预览，观感统一。
-      window.MiyuLightbox?.open({ url, name: attachment.name || "" });
+      window.YunXiLightbox?.open({ url, name: attachment.name || "" });
       return true;
     }
     if (!root) build();

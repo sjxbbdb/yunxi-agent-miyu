@@ -2,7 +2,7 @@
 """成员工具走查(09-11):隔离 daemon + 会叫工具的桩模型,成员(私有人格,勾了脚本
 e2e_hello)跑一轮,把脚本工具、read、glob、edit、run_command、print_image 全叫一遍,看:
 - 时间线里每个工具的 display_name(用户反馈「显示名没生效」)
-- 沙盒:读/写工作区之外(~/.miyu/config、/etc)必须被拒,工作区内正常
+- 沙盒:读/写工作区之外(~/.yunxi/config、/etc)必须被拒,工作区内正常
 - print_image 的图片资源成员自己能取到(用户反馈「图片加载失败」)
 管理员同一套再跑一遍作对照(不套沙盒)。
 
@@ -15,7 +15,7 @@ e2e_hello)跑一轮,把脚本工具、read、glob、edit、run_command、print_i
 `config/secret`、glob 得到家目录)、写侧与读写都锁时逐条相同,环境块 `readable="everything
 (read-only)"`;不带这个开关重绑一次必须归零。
 
-    BIN=<miyu> python3 testkit/multi-user/member_tools_probe.py
+    BIN=<yunxi> python3 testkit/multi-user/member_tools_probe.py
 """
 import json
 import os
@@ -24,7 +24,7 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -39,8 +39,8 @@ STUB_PORT = int(os.environ.get("STUB_PORT", "18556"))
 # 日志、截图、桩模型记录放 /tmp。沙箱家目录不能放：沙盒永远放行 /tmp 读写（/var、/run
 # 放行只读），家放在那儿「读 secret 被拒」这类检查会整片误报——只好放在家目录下，跑完
 # 就删（用户 09-24 定）。
-OUT = Path(os.environ.get("OUT", "/tmp/miyu-member-tools"))
-SANDBOX_HOME = Path(os.environ.get("MIYU_MEMBER_TOOLS_HOME", "~/.cache/miyu-member-tools-home")).expanduser()
+OUT = Path(os.environ.get("OUT", "/tmp/yunxi-member-tools"))
+SANDBOX_HOME = Path(os.environ.get("YUNXI_MEMBER_TOOLS_HOME", "~/.cache/yunxi-member-tools-home")).expanduser()
 PNG = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc000000301010018dd8db00000000049454e44ae426082")
 results = []
 
@@ -119,7 +119,7 @@ def run_actor(client, sid, label, home, workspace, sandboxed, read_all=False):
             check(f"{label}: glob config 目录被拒", globs and not globs[0]["ok"], globs[0]["output"][:80] if globs else "")
             denied = "Permission denied" in out or "权限不够" in out
             check(f"{label}: run_command 读 secret 被拒", denied and "TOP-SECRET" not in out, out[:120].replace("\n", " "))
-        # 系统目录(/etc /usr …)只读放行:跑程序离不开;私人的家与 ~/.miyu 才是要挡的
+        # 系统目录(/etc /usr …)只读放行:跑程序离不开;私人的家与 ~/.yunxi 才是要挡的
         check(f"{label}: 读 /etc/hostname 放行(系统目录只读)", len(reads) > 2 and reads[2]["ok"], reads[2]["output"][:80] if len(reads) > 2 else "")
         # 写侧两档一模一样:`--allow-read` 只碰读。
         edits = names.get("edit", [])
@@ -183,8 +183,8 @@ def main():
     e2e.OUT = OUT
     e2e.HOME = SANDBOX_HOME
     e2e.RUNTIME = OUT / "runtime"
-    e2e.ENV = dict(os.environ, MIYU_HOME=str(e2e.HOME), XDG_RUNTIME_DIR=str(e2e.RUNTIME),
-                   MIYU_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), MIYU_ADMIN_USER="admin")
+    e2e.ENV = dict(os.environ, YUNXI_HOME=str(e2e.HOME), XDG_RUNTIME_DIR=str(e2e.RUNTIME),
+                   YUNXI_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), YUNXI_ADMIN_USER="admin")
     HOME = e2e.HOME
     HOME.mkdir(parents=True)
     e2e.RUNTIME.mkdir(parents=True)

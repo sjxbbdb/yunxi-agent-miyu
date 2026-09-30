@@ -4,7 +4,7 @@
 use super::tui_blocks::with_blocks;
 use crate::cli::history_replay::ReplayScreenPage;
 use crate::cli::repl::tail::screen::{OlderPages, Screen};
-use miyu_hosts::render::blocks;
+use yunxi_hosts::render::blocks;
 
 fn turn(id: u64, prompt: &str, reply: &str) -> String {
     format!(

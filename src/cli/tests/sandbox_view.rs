@@ -27,12 +27,12 @@ fn state(sandbox: Option<&str>, default: bool, readonly: bool) -> ipc::SessionSt
 #[test]
 fn sandbox_table_speaks_the_ui_language_and_keeps_paths() {
     let table = strip_terminal_control_sequences(&sandbox_state_table(&state(
-        Some("/home/me/.miyu/home/me/workspace"),
+        Some("/home/me/.yunxi/home/me/workspace"),
         true,
         false,
     )));
     assert!(
-        table.contains("/home/me/.miyu/home/me/workspace"),
+        table.contains("/home/me/.yunxi/home/me/workspace"),
         "{table}"
     );
     assert!(
@@ -71,7 +71,7 @@ fn sandbox_table_speaks_the_ui_language_and_keeps_paths() {
 /// 「只读」是金色(用户 09-23),跟空会话提示按键的那个金同源、按同一个色深降级。
 #[test]
 fn read_only_label_is_gold() {
-    use miyu_base::terminal::palette::{Depth, Theme, GOLD};
+    use yunxi_base::terminal::palette::{Depth, Theme, GOLD};
     let config = AppConfig::default();
     let footer = ReplFooterStatus::from_config(&config, 0, TurnTokens::default());
     let line = repl_footer_left(PersonaLane::Active, true, &footer, 120);

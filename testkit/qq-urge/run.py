@@ -7,7 +7,7 @@
   C  A、B、A 交错：他问 TKQ3，第 3 秒另一个人插一句（TKB），第 10 秒他催「??」——「??」并进 TKQ3 那一轮，
      另一个人照常排队、另起一轮。
 
-    BIN=<miyu> python3 testkit/qq-urge/run.py
+    BIN=<yunxi> python3 testkit/qq-urge/run.py
 
 判定：
   urge_merged / urge_one_reply            A 段：「??」并进了那一轮，整段只回一条
@@ -34,8 +34,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "testkit"))
 import sandbox_dir  # noqa: E402
 
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
-SANDBOX = sandbox_dir.make("miyu-qq-urge-")
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
+SANDBOX = sandbox_dir.make("yunxi-qq-urge-")
 print("沙箱", SANDBOX, flush=True)
 HOME = SANDBOX / "home"
 RUNTIME = SANDBOX / "runtime"
@@ -126,7 +126,7 @@ def pump(ws):
 
 def logs():
     text = (SANDBOX / "daemon.log").read_text(errors="replace")
-    for path in (HOME / "cache" / "logs").glob("miyu.*.log"):
+    for path in (HOME / "cache" / "logs").glob("yunxi.*.log"):
         text += path.read_text(errors="replace")
     return text
 
@@ -163,7 +163,7 @@ def main():
     write_config()
     stub = subprocess.Popen([sys.executable, str(Path(__file__).with_name("stub.py"))],
                             env=dict(os.environ, STUB_PORT=str(STUB_PORT), STUB_LOG=str(STUB_LOG)))
-    env = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), MIYU_LOG="info")
+    env = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), YUNXI_LOG="info")
     log_path = SANDBOX / "daemon.log"
     daemon = subprocess.Popen([str(BIN), "__daemon", "--port", str(PORT)], env=env, cwd=str(HOME),
                               stdin=subprocess.DEVNULL, stdout=log_path.open("w"), stderr=subprocess.STDOUT)

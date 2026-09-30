@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """「那 3.4MB 值不值」的对比实验:同一张流程图,ECharts 版 vs Mermaid 版,各截一张图。
 
-    BIN=<miyu 二进制> MERMAID=/path/to/mermaid.min.js python3 testkit/webui-artifact/compare_mermaid.py
+    BIN=<yunxi 二进制> MERMAID=/path/to/mermaid.min.js python3 testkit/webui-artifact/compare_mermaid.py
 
 Mermaid **没有**进仓库——这里由 Playwright 在路由层临时喂进去(带上 vendor 那组
 放行头),所以不用为一次比较去改后端、重编译。要是最后决定加,再照 ECharts 那套
 落进 web/vendor/ 即可。
 
-产出:~/.cache/miyu-mermaid-compare/{10-echarts-flow.png,11-mermaid-flow.png,12-mermaid-seq.png}
+产出:~/.cache/yunxi-mermaid-compare/{10-echarts-flow.png,11-mermaid-flow.png,12-mermaid-seq.png}
 """
 import json
 import os
@@ -20,7 +20,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -29,13 +29,13 @@ HERE = Path(__file__).resolve().parent
 BIN = Path(os.environ["BIN"]).expanduser()
 WEB = Path(os.environ.get("WEB", HERE.parent.parent / "web")).resolve()
 MERMAID = Path(os.environ.get("MERMAID", "/tmp/mermaid-try/mermaid.min.js")).expanduser()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-mermaid-compare")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-mermaid-compare")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18487"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18494"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 
 
 def write_config():

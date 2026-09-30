@@ -13,8 +13,8 @@ daemon 那边这是设计内的：会话上有活跃轮时，后台完成的报�
     cargo build
     python3 testkit/tui/bg_followup.py
 
-产物在 ~/.cache/miyu-tui-smoke/bgfollow-*.txt。这些 TUI 走查只能一个一个跑
-（共用 MIYU_HOME 与桩模型端口）。
+产物在 ~/.cache/yunxi-tui-smoke/bgfollow-*.txt。这些 TUI 走查只能一个一个跑
+（共用 YUNXI_HOME 与桩模型端口）。
 """
 
 import os
@@ -96,7 +96,7 @@ def sample(master, sink, seconds, shots):
 def main():
     report = {}
     # daemon 默认只记 error，那条「follow-up 走了哪条路」是 info。
-    h.ENV["MIYU_LOG"] = "info"
+    h.ENV["YUNXI_LOG"] = "info"
     # 后台命令 6 秒跑完；主线要跑得更久（8 轮 × 2 秒），它完成时回合还在跑。
     stub, daemon, tui, master, sink = r.start({
         "STUB_REASONING": "1",
@@ -207,7 +207,7 @@ def main():
         r.stop(tui, daemon, stub)
 
     # daemon 的详细日志在沙箱家目录里（启动输出那份只有 WebUI 地址）。
-    logs = sorted((h.HOME / "cache" / "logs").glob("miyu.*.log"))
+    logs = sorted((h.HOME / "cache" / "logs").glob("yunxi.*.log"))
     log = "".join(
         path.read_text(encoding="utf-8", errors="replace") for path in logs
     )

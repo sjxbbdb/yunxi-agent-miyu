@@ -14,7 +14,7 @@ OneBot 的那份 payload 里有没有 `{"type":"reply"}` 段。
 
     python3 testkit/qq/quote_target.py
 
-产物在 ~/.cache/miyu-qq-quote/。
+产物在 ~/.cache/yunxi-qq-quote/。
 """
 
 import json
@@ -27,7 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "fake-onebot"))
 import run as ob  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-qq-quote"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-qq-quote"))
 # 她想多久算多久：真模型 + 真判官，慢的时候半分钟。
 REPLY_TIMEOUT = 120.0
 # 插话之间隔多久。太快的话她那一轮可能还没开始，位置就对不上了。
@@ -72,7 +72,7 @@ def scenario(ws, title, text, fillers):
     print(f"\n=== {title} ===")
     before = len(ob.REPLIES)
     trigger = ob.group_msg(ws, text, at_self=True)
-    print(f"  → @Miyu {text}   (message_id={trigger})")
+    print(f"  → @YunXi {text}   (message_id={trigger})")
     for index in range(fillers):
         time.sleep(FILLER_GAP)
         if len(ob.REPLIES) > before:
@@ -107,13 +107,13 @@ def busy_scenario(ws, keep=REPLY_TIMEOUT):
     print("\n=== 忙的时候被 @（她正在回别人）===")
     before = len(ob.REPLIES)
     first = ob.group_msg(ws, "三加三等于几，只说数字", at_self=True)
-    print(f"  → A @Miyu 三加三…   (message_id={first})")
+    print(f"  → A @YunXi 三加三…   (message_id={first})")
     time.sleep(1.0)
     second = ob.group_msg(
         ws, "四加四等于几，只说数字", at_self=True,
         sender=ob.OTHER, name="另一个群友",
     )
-    print(f"  → B @Miyu 四加四…   (message_id={second})")
+    print(f"  → B @YunXi 四加四…   (message_id={second})")
     for index in range(4):
         time.sleep(FILLER_GAP)
         ob.group_msg(ws, f"（插话 {index + 1}）", sender=800000077, name="第三个人")
@@ -137,7 +137,7 @@ def busy_scenario(ws, keep=REPLY_TIMEOUT):
 
 
 def dropped_scenario(ws):
-    """对端把引用段悄悄扔了——Miyu 这边事后核对该抓得到。
+    """对端把引用段悄悄扔了——YunXi 这边事后核对该抓得到。
 
     NapCat 真的会这么干：引用段里的短号在它进程内那张表里查不到时，它 `return`
     掉这一段，消息照发、也照样回一个"成功"。这里让假 NapCat 演一遍，看那条
@@ -149,7 +149,7 @@ def dropped_scenario(ws):
         before_log = log_size()
         before = len(ob.REPLIES)
         trigger = ob.group_msg(ws, "五加五等于几，只说数字", at_self=True)
-        print(f"  → @Miyu 五加五…   (message_id={trigger})")
+        print(f"  → @YunXi 五加五…   (message_id={trigger})")
         for index in range(3):
             time.sleep(FILLER_GAP)
             ob.group_msg(ws, f"（插话 {index + 1}）", sender=ob.OTHER, name="另一个群友")
@@ -167,7 +167,7 @@ def dropped_scenario(ws):
         ob.DROP_QUOTE = None
 
 
-LOG = Path.home() / ".miyu" / "cache" / "logs" / f"miyu.{time.strftime('%Y-%m-%d')}.log"
+LOG = Path.home() / ".yunxi" / "cache" / "logs" / f"yunxi.{time.strftime('%Y-%m-%d')}.log"
 
 
 def log_size():
@@ -185,7 +185,7 @@ def new_log(since):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     ws = ob.WS.connect(ob.access_token())
-    print(f"已连接 Miyu (self_id={ob.SELF_ID}, group={ob.GROUP_ID})")
+    print(f"已连接 YunXi (self_id={ob.SELF_ID}, group={ob.GROUP_ID})")
     threading.Thread(target=ob.pump, args=(ws,), daemon=True).start()
     ws.send({
         "post_type": "meta_event", "meta_event_type": "lifecycle",

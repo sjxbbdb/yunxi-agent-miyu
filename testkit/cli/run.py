@@ -8,11 +8,11 @@
     --model / --system-prompt / --append-system-prompt / --tools / --no-tools /
     --context-window / --no-memory(memory.db 的 episodes 行数不变)
     --session X --create / 历史延续 / session list|show|clear|rename|delete / 会话不存在退出码 3
-    miyu compact:缺省当前会话 / --session / 压缩后上下文实际变小 / 不存在退出码 3 /
+    yunxi compact:缺省当前会话 / --session / 压缩后上下文实际变小 / 不存在退出码 3 /
                  摘要流式出正文(管道不上色、真 TTY 下暗色)
     --stdin 长输入不截断
     --timeout → 退出码 124;模型返回 500 → 退出码 1
-    miyu stdio:ready / 并发两回合事件归属 / question→answer 往返 / cancel / session op / ping / EOF 退出
+    yunxi stdio:ready / 并发两回合事件归属 / question→answer 往返 / cancel / session op / ping / EOF 退出
 
 用法:先 `cargo build`,再 `python3 testkit/cli/run.py`。绝不触碰线上 8300 daemon。
 产物:testkit/cli/out/(daemon.log、stub.jsonl、verdict.json)。
@@ -30,18 +30,18 @@ import time
 from queue import Empty, Queue
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-MIYU = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
+YUNXI = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
 BASE = Path(__file__).resolve().parent
 OUT = BASE / "out"
 HOME = BASE / "home"
 # unix socket 有 SUN_LEN(108B)上限,worktree 路径太深,运行目录放短路径。
-RUN = Path.home() / ".cache" / "miyu-cli-tk-run"
+RUN = Path.home() / ".cache" / "yunxi-cli-tk-run"
 PORT = 18395
 STUB_PORT = 18494
 
@@ -74,7 +74,7 @@ def build_home():
     cfg.setdefault("cache", {})["request_log"] = False
     cfg.setdefault("display", {})["show_token_usage"] = False
     (HOME / "config" / "config.jsonc").write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
-    real_cache = Path.home() / ".miyu" / "cache" / "models_cache.json"
+    real_cache = Path.home() / ".yunxi" / "cache" / "models_cache.json"
     if real_cache.exists():
         (HOME / "cache").mkdir(parents=True, exist_ok=True)
         shutil.copy(real_cache, HOME / "cache" / "models_cache.json")
@@ -82,9 +82,9 @@ def build_home():
 
 def env(extra=None):
     e = dict(os.environ)
-    e["MIYU_HOME"] = str(HOME)
+    e["YUNXI_HOME"] = str(HOME)
     e["XDG_RUNTIME_DIR"] = str(RUN)
-    for key in ("MIYU_DIRECT", "MIYU_SESSION", "MIYU_TURN_MODE", "XDG_CACHE_HOME", "XDG_CONFIG_HOME",
+    for key in ("YUNXI_DIRECT", "YUNXI_SESSION", "YUNXI_TURN_MODE", "XDG_CACHE_HOME", "XDG_CONFIG_HOME",
                 "XDG_DATA_HOME", "XDG_STATE_HOME"):
         e.pop(key, None)
     e["LANG"] = "zh_CN.UTF-8"
@@ -100,13 +100,13 @@ def find_socket():
 
 
 def cli(args, stdin=None, timeout=60):
-    proc = subprocess.run([str(MIYU), *args], env=env(), input=stdin, capture_output=True, text=True, timeout=timeout)
+    proc = subprocess.run([str(YUNXI), *args], env=env(), input=stdin, capture_output=True, text=True, timeout=timeout)
     return proc.returncode, proc.stdout, proc.stderr
 
 
 def cli_tty(args, timeout=180):
     """在伪终端里跑。管道里我们**故意**不上色,所以暗色流式只能在 TTY 下验。"""
-    quoted = " ".join(shlex.quote(str(a)) for a in [MIYU, *args])
+    quoted = " ".join(shlex.quote(str(a)) for a in [YUNXI, *args])
     proc = subprocess.run(["script", "-qec", quoted, "/dev/null"], env=env(),
                           capture_output=True, text=True, timeout=timeout)
     return proc.returncode, proc.stdout, proc.stderr
@@ -251,7 +251,7 @@ def one_shot_scenarios():
     # 那轮才受逐字尾巴预算 min(16384, window/4)=16384 约束。所以要 4 轮、每轮
     # 约 1 万 token——少于 3 轮或每轮太小,压缩正确地什么都不做。总量 ~4 万
     # token 也远低于 0.8×168000 的自动压缩线,免得自动档先动手。
-    filler = "miyu compact fixture line with several ordinary words\n" * 800
+    filler = "yunxi compact fixture line with several ordinary words\n" * 800
     cli(["ask", "--output-format", "json", "--session", "compactme", "--create", "--stdin", "TK big1"], stdin=filler)
     for index in range(2, 5):
         cli(["ask", "--output-format", "json", "--session", "compactme", "--stdin", f"TK big{index}"], stdin=filler)
@@ -327,7 +327,7 @@ def one_shot_scenarios():
 
 
 def stdio_scenarios():
-    proc = subprocess.Popen([str(MIYU), "stdio"], env=env(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+    proc = subprocess.Popen([str(YUNXI), "stdio"], env=env(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=open(OUT / "stdio.stderr", "w"), text=True, bufsize=1)
     events = []
     queue = Queue()
@@ -446,12 +446,12 @@ def stdio_scenarios():
 
 
 def main():
-    assert MIYU.exists(), f"missing binary {MIYU}; run cargo build"
+    assert YUNXI.exists(), f"missing binary {YUNXI}; run cargo build"
     build_home()
     stub = subprocess.Popen([sys.executable, str(BASE / "stub_llm.py")],
                             env=dict(os.environ, STUB_PORT=str(STUB_PORT), STUB_LOG=str(OUT / "stub.jsonl")),
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    daemon = subprocess.Popen([str(MIYU), "daemon", "--port", str(PORT)], env=env(),
+    daemon = subprocess.Popen([str(YUNXI), "daemon", "--port", str(PORT)], env=env(),
                               stdout=(OUT / "daemon.log").open("w"), stderr=subprocess.STDOUT)
     try:
         for _ in range(60):
@@ -463,7 +463,7 @@ def main():
         one_shot_scenarios()
         stdio_scenarios()
     finally:
-        subprocess.run([str(MIYU), "daemon", "stop"], env=env(), capture_output=True, timeout=30)
+        subprocess.run([str(YUNXI), "daemon", "stop"], env=env(), capture_output=True, timeout=30)
         try:
             daemon.wait(timeout=10)
         except subprocess.TimeoutExpired:

@@ -1,4 +1,4 @@
-//! 对外的 JSON 事件 schema(`--output-format json|stream-json` 与 `miyu stdio`)。
+//! 对外的 JSON 事件 schema(`--output-format json|stream-json` 与 `yunxi stdio`)。
 //!
 //! 内部 AgentEvent / IPC 事件是给自家渲染器用的,字段随时会改;这里是**契约**:
 //! 每行一个对象,`v` 版本号只增不减,类型只加不删、字段只加不改。纯 UI 事件
@@ -59,7 +59,7 @@ pub enum PublicEvent {
         #[serde(skip_serializing_if = "Option::is_none")]
         message: Option<String>,
     },
-    /// 工具产出的图片;`asset_id` 可用 `miyu tool-call` 或状态库取回。
+    /// 工具产出的图片;`asset_id` 可用 `yunxi tool-call` 或状态库取回。
     Image {
         call_id: String,
         name: String,

@@ -23,7 +23,7 @@
     cargo build
     python3 testkit/tui/bg_latency.py
 
-产物：~/.cache/miyu-bg-latency/report.json
+产物：~/.cache/yunxi-bg-latency/report.json
 """
 
 import json
@@ -38,7 +38,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 
-OUT = Path.home() / ".cache" / "miyu-bg-latency"
+OUT = Path.home() / ".cache" / "yunxi-bg-latency"
 
 # 一段不带空行的思考：`accumulate_stream` 只有攒够 600 字符才肯落一条。
 # 真实模型想一大段时就是这个样子（分析、权衡、列条件，中间不空行）。

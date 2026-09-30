@@ -124,7 +124,7 @@
         {
           path: "tools.sandbox.default_enabled",
           label: t("默认开启沙盒模式"),
-          hint: t("没绑定沙盒的会话能读全盘,只能写 Miyu 家里的 workspace;某个会话不要就 /sandbox clear"),
+          hint: t("没绑定沙盒的会话能读全盘,只能写 YunXi 家里的 workspace;某个会话不要就 /sandbox clear"),
           kind: "toggle",
           default: true,
         },
@@ -269,7 +269,7 @@
         {
           path: "tui_start_session",
           label: t("打开终端界面时进入"),
-          hint: t("敲 miyu 打开终端界面时，开一条新会话，还是接着这种模式上次用的那条会话"),
+          hint: t("敲 yunxi 打开终端界面时，开一条新会话，还是接着这种模式上次用的那条会话"),
           kind: "select",
           choices: [
             { value: "new", label: t("新会话") },
@@ -628,13 +628,13 @@
       id: "voice",
       title: t("语音功能"),
       description:
-        t("麦克风常开的唤醒词对话与听写。识别在本机独立的 miyu-voice 进程里跑,关着时零占用;") +
+        t("麦克风常开的唤醒词对话与听写。识别在本机独立的 yunxi-voice 进程里跑,关着时零占用;") +
         t("首次启用会下载约 190MB 识别模型。改动需重载配置生效。"),
       fields: [
         {
           path: "voice.enabled",
           label: t("语音唤醒"),
-          hint: t("麦克风常开、唤醒词、听写。需要安装 miyu-voice;与文本转语音独立"),
+          hint: t("麦克风常开、唤醒词、听写。需要安装 yunxi-voice;与文本转语音独立"),
           kind: "toggle",
           default: false,
         },
@@ -734,7 +734,7 @@
         {
           path: "voice.tts.enabled",
           label: t("文本转语音"),
-          hint: t("唤醒对话的回复合成成语音播出;也给模型提供 speak 工具主动说话。与语音唤醒独立,任一开启都会运行 miyu-voice"),
+          hint: t("唤醒对话的回复合成成语音播出;也给模型提供 speak 工具主动说话。与语音唤醒独立,任一开启都会运行 yunxi-voice"),
           kind: "toggle",
           default: false,
         },
@@ -977,7 +977,7 @@
         {
           path: "notifications.sound_file",
           label: t("提示音文件"),
-          hint: t("换成自己的音频文件,wav/ogg/flac(留空=Miyu 内置的那一声);~/ 会展开,文件不存在就退回内置音"),
+          hint: t("换成自己的音频文件,wav/ogg/flac(留空=YunXi 内置的那一声);~/ 会展开,文件不存在就退回内置音"),
           kind: "text",
           default: "",
         },
@@ -1151,7 +1151,7 @@
         {
           path: "accounts.member_personas",
           label: t("成员可以创建自己的人格"),
-          hint: t("关掉后成员只能用共享的 Miyu"),
+          hint: t("关掉后成员只能用共享的 YunXi"),
           kind: "toggle",
           default: true,
         },
@@ -1404,7 +1404,7 @@
           key: "output_dir",
           label: t("输出目录"),
           kind: "text",
-          default: "~/.miyu/data/pictures/generated-images",
+          default: "~/.yunxi/data/pictures/generated-images",
         },
         { key: "auto_print", label: t("完成后打印"), kind: "toggle", hidden: true, default: true },
         {
@@ -1708,8 +1708,8 @@
           default: "all",
         },
         {
-          key: "miyu_tools",
-          label: t("Miyu 工具挂给 claude 的作用域"),
+          key: "yunxi_tools",
+          label: t("YunXi 工具挂给 claude 的作用域"),
           hint: t("经 MCP 桥挂载;与原生重复的剔除"),
           kind: "select",
           choices: TOOL_SCOPE_CHOICES,
@@ -1768,14 +1768,14 @@
           default: "all",
         },
         {
-          key: "miyu_tools",
-          label: t("Miyu 工具挂给 agy 的作用域"),
+          key: "yunxi_tools",
+          label: t("YunXi 工具挂给 agy 的作用域"),
           kind: "select",
           choices: TOOL_SCOPE_CHOICES,
           default: "all",
         },
         {
-          key: "miyu_tools_eager",
+          key: "yunxi_tools_eager",
           label: t("桥工具 eager 注册"),
           hint: t("原生名直调;关掉走懒加载省 token 但多一跳"),
           kind: "toggle",
@@ -1839,8 +1839,8 @@
           default: "all",
         },
         {
-          key: "miyu_tools",
-          label: t("Miyu 工具挂给 codex 的作用域"),
+          key: "yunxi_tools",
+          label: t("YunXi 工具挂给 codex 的作用域"),
           kind: "select",
           choices: TOOL_SCOPE_CHOICES,
           default: "all",
@@ -2142,7 +2142,7 @@
           kind: "select",
           choices: [
             { value: "inherit", label: t("继承当前人格") },
-            { value: "miyu", label: t("内置 Miyu") },
+            { value: "yunxi", label: t("内置 YunXi") },
             { value: "custom", label: t("指定人格文件") },
           ],
           default: "inherit",
@@ -3497,5 +3497,5 @@
     },
   };
 
-  window.MiyuSettingsSchema = { general, toolPlugins, qq, qqPlugins };
+  window.YunXiSettingsSchema = { general, toolPlugins, qq, qqPlugins };
 })();

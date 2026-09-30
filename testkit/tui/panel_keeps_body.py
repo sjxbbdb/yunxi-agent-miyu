@@ -13,8 +13,8 @@
 好几行「Worked for … 1 thought」（面板寄宿在回合循环里，不分离），`/models` 选完
 就地落地，`/session` 挑了别的会话真的切过去。
 
-    MIYU_HOME=/tmp/miyu-panelbody/home MIYU_TUI_PORT=18495 STUB_PORT=18496 \\
-      MIYU_TUI_RUNTIME=/tmp/mx-panelbody OUT=~/.cache/miyu-panelbody \\
+    YUNXI_HOME=/tmp/yunxi-panelbody/home YUNXI_TUI_PORT=18495 STUB_PORT=18496 \\
+      YUNXI_TUI_RUNTIME=/tmp/mx-panelbody OUT=~/.cache/yunxi-panelbody \\
       python3 testkit/tui/panel_keeps_body.py
 """
 

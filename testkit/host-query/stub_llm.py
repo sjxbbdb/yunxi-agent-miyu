@@ -29,7 +29,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(length) or b"{}")
         messages = body.get("messages", [])
         tools = [t.get("function", {}).get("name") for t in body.get("tools", []) if isinstance(t, dict)]
-        # Miyu 在用户消息后面还会追加运行时戳等 system 消息:从后往前找第一条非 system。
+        # YunXi 在用户消息后面还会追加运行时戳等 system 消息:从后往前找第一条非 system。
         last = next((m for m in reversed(messages) if m.get("role") != "system"), {})
         log = os.environ.get("STUB_LOG")
         if log:

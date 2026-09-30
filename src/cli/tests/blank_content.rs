@@ -5,8 +5,8 @@
 
 use crate::cli::repl::tail::screen::term::Term;
 use crate::cli::tests::tui_blocks::with_blocks;
-use miyu_core::llm::{ChatStreamChunk, ChatStreamKind};
-use miyu_hosts::render::{
+use yunxi_core::llm::{ChatStreamChunk, ChatStreamKind};
+use yunxi_hosts::render::{
     set_cols_override, ReasoningDisplayMode, StreamRenderer, ToolCallDisplayMode,
 };
 

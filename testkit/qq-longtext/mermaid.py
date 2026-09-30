@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """长图里的 mermaid 图（用户 09-24）：字够大、一栏装得下、铺在纸面上。
 
-    BIN=<miyu> python3 testkit/qq-longtext/mermaid.py
+    BIN=<yunxi> python3 testkit/qq-longtext/mermaid.py
 
 驱动方式同 `columns.py`（真二进制的渲染子进程）。导图取自用户截图那篇（四层）。
 每次只渲一张图，量它在页面上占的范围：

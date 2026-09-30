@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """开发模式提示词默认为空(09-24)的黑盒:沙箱 home + 独立端口 daemon + 记系统提示词的桩。
 
-    BIN=<miyu> python3 testkit/dev-prompt/run.py
+    BIN=<yunxi> python3 testkit/dev-prompt/run.py
 
 判定:
   新家目录初始化后没有 dev-prompt.md
@@ -24,13 +24,13 @@ for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 BIN = Path(os.environ["BIN"])
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-dev-prompt")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-dev-prompt")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18551"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18552"))
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), LANG="zh_CN.UTF-8")
-for key in ("MIYU_DIRECT", "MIYU_SESSION", "MIYU_TURN_MODE", "XDG_CACHE_HOME", "XDG_CONFIG_HOME",
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), LANG="zh_CN.UTF-8")
+for key in ("YUNXI_DIRECT", "YUNXI_SESSION", "YUNXI_TURN_MODE", "XDG_CACHE_HOME", "XDG_CONFIG_HOME",
             "XDG_DATA_HOME", "XDG_STATE_HOME"):
     ENV.pop(key, None)
 LEGACY = "You are a helpful software engineer assistant."

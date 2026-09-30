@@ -15,7 +15,7 @@ from lib.manifest import read_manifest
 from lib.release_bundle import verify_bundle
 
 REPO=Path(__file__).resolve().parents[2]
-REMOTE='SHORiN-KiWATA/miyu-agent'
+REMOTE='sjxbbdb/yunxi-agent-miyu'
 
 
 def render_pkgbuild(template,version,revision,sha256):
@@ -39,7 +39,7 @@ def render_homebrew(manifest, record, out, apply):
         url=homebrew.release_url(manifest['tag'],record['filename']),sha256=record['sha256'])
     tap=out/'homebrew'
     (tap/'Formula').mkdir(parents=True)
-    (tap/'Formula/miyu.rb').write_text(rendered)
+    (tap/'Formula/yunxi.rb').write_text(rendered)
     shutil.copyfile(REPO/relative.parent.parent/'README.md',tap/'README.md')
     if apply:
         (REPO/relative).write_text(rendered)
@@ -53,7 +53,7 @@ def main():
     parser.add_argument('--release-output',required=True,type=Path)
     parser.add_argument('--out',required=True,type=Path)
     parser.add_argument('--published-url',help='Require read-back verification of this formal GitHub release.')
-    parser.add_argument('--builder-image',default='miyu-distribution-arch:2026-09-14')
+    parser.add_argument('--builder-image',default='yunxi-distribution-arch:2026-09-14')
     parser.add_argument('--apply',action='store_true',help='Also update the repository channel truth sources. No git operation.')
     args=parser.parse_args()
     try:
@@ -82,14 +82,14 @@ def main():
                     raise ValueError(f'Remote channel source asset differs from the verified release: {key}')
         out=fresh_directory(args.out)
         patch=[]
-        for package,asset_id in (('miyu','arch-core'),('miyu-voice','arch-voice')):
+        for package,asset_id in (('yunxi','arch-core'),('yunxi-voice','arch-voice')):
             relative=Path('packaging/arch')/package/'PKGBUILD'
             original=(REPO/relative).read_text()
             rendered=render_pkgbuild(original,manifest['version'],manifest['package_revision'],packages[asset_id]['sha256'])
             folder=out/package;folder.mkdir()
             (folder/'PKGBUILD').write_text(rendered)
             srcinfo=subprocess.run(['docker','run','--rm','--network','none','--user','65534:65534',
-                '--label','io.miyu.distribution.owner=distribution-2026-09-14',
+                '--label','io.yunxi.distribution.owner=distribution-2026-09-14',
                 '--env','HOME=/tmp','--env','BUILDDIR=/tmp','--env','PKGDEST=/tmp',
                 '--env','SRCDEST=/tmp','--env','SRCPKGDEST=/tmp','--env','LOGDEST=/tmp',
                 '--mount',f'type=bind,src={folder.resolve()},dst=/package,readonly',
@@ -101,10 +101,10 @@ def main():
             if args.apply:
                 (REPO/relative).write_text(rendered)
                 (REPO/relative.parent/'.SRCINFO').write_text(srcinfo)
-        channels=['aur-miyu','aur-miyu-voice']
+        channels=['aur-yunxi','aur-yunxi-voice']
         if homebrew.ASSET_ID in channel_assets:
             patch.extend(render_homebrew(manifest,packages[homebrew.ASSET_ID],out,args.apply))
-            channels.append('homebrew-miyu')
+            channels.append('homebrew-yunxi')
         (out/'channels.patch').write_text(''.join(patch))
         write_json(out/'channel-update.json',{'schema_version':1,'version':manifest['version'],
             'revision':manifest['package_revision'],'published_url':args.published_url,

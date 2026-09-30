@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""真宿主 demo:一个「以 Miyu 为 AI 后端的翻译软件」长什么样,并用真实供应商跑一遍。
+"""真宿主 demo:一个「以 YunXi 为 AI 后端的翻译软件」长什么样,并用真实供应商跑一遍。
 
-视角是宿主开发者:起一个 `miyu stdio` 常驻,建一个专用会话,每次请求带同一段
+视角是宿主开发者:起一个 `yunxi stdio` 常驻,建一个专用会话,每次请求带同一段
 追加指令、不写记忆、不给工具、指定模型;流式收正文,收 usage 看缓存。
 
 隔离 home(拷真实 config,去掉平台/web/语音/闹钟)+ 独立端口 daemon,不碰线上
@@ -22,17 +22,17 @@ import time
 from pathlib import Path
 from queue import Empty, Queue
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-MIYU = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
+YUNXI = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
 BASE = Path(__file__).resolve().parent
 OUT = BASE / "out-demo"
 HOME = BASE / "home-demo"
-RUN = Path.home() / ".cache" / "miyu-cli-demo-run"
+RUN = Path.home() / ".cache" / "yunxi-cli-demo-run"
 PORT = 18396
 
 spec = importlib.util.spec_from_file_location("persona_ab", REPO / "testkit" / "persona-ab" / "run.py")
@@ -52,7 +52,7 @@ def build_home():
         cfg.pop(key, None)
     cfg.setdefault("cache", {})["request_log"] = False
     (HOME / "config" / "config.jsonc").write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
-    real_cache = Path.home() / ".miyu" / "cache" / "models_cache.json"
+    real_cache = Path.home() / ".yunxi" / "cache" / "models_cache.json"
     if real_cache.exists():
         (HOME / "cache").mkdir(parents=True, exist_ok=True)
         shutil.copy(real_cache, HOME / "cache" / "models_cache.json")
@@ -60,9 +60,9 @@ def build_home():
 
 def env():
     e = dict(os.environ)
-    e["MIYU_HOME"] = str(HOME)
+    e["YUNXI_HOME"] = str(HOME)
     e["XDG_RUNTIME_DIR"] = str(RUN)
-    for key in ("MIYU_DIRECT", "MIYU_SESSION", "MIYU_TURN_MODE"):
+    for key in ("YUNXI_DIRECT", "YUNXI_SESSION", "YUNXI_TURN_MODE"):
         e.pop(key, None)
     return e
 
@@ -73,11 +73,11 @@ def find_socket():
     return None
 
 
-class MiyuBackend:
-    """宿主软件里的「Miyu 后端」封装:一个 stdio 进程,按 id 分发事件。"""
+class YunXiBackend:
+    """宿主软件里的「YunXi 后端」封装:一个 stdio 进程,按 id 分发事件。"""
 
     def __init__(self):
-        self.proc = subprocess.Popen([str(MIYU), "stdio"], env=env(), stdin=subprocess.PIPE,
+        self.proc = subprocess.Popen([str(YUNXI), "stdio"], env=env(), stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, stderr=open(OUT / "stdio.stderr", "w"),
                                      text=True, bufsize=1)
         self.queue = Queue()
@@ -156,9 +156,9 @@ def main():
     parser.add_argument("--model", default="deepseek/deepseek-v4-flash")
     parser.add_argument("--skip-default-pool", action="store_true")
     args = parser.parse_args()
-    assert MIYU.exists(), f"missing binary {MIYU}"
+    assert YUNXI.exists(), f"missing binary {YUNXI}"
     build_home()
-    daemon = subprocess.Popen([str(MIYU), "daemon", "--port", str(PORT)], env=env(),
+    daemon = subprocess.Popen([str(YUNXI), "daemon", "--port", str(PORT)], env=env(),
                               stdout=(OUT / "daemon.log").open("w"), stderr=subprocess.STDOUT)
     verdict = {"model": args.model, "turns": []}
     backend = None
@@ -169,7 +169,7 @@ def main():
             time.sleep(0.5)
         assert find_socket(), "daemon socket never appeared"
         time.sleep(1.5)
-        backend = MiyuBackend()
+        backend = YunXiBackend()
         print("backend ready:", backend.events[0])
 
         # 翻译软件的固定配置:同一段追加指令、不写记忆、不给工具、指定模型。
@@ -215,7 +215,7 @@ def main():
                 backend.close()
             except Exception:
                 backend.proc.kill()
-        subprocess.run([str(MIYU), "daemon", "stop"], env=env(), capture_output=True, timeout=30)
+        subprocess.run([str(YUNXI), "daemon", "stop"], env=env(), capture_output=True, timeout=30)
         try:
             daemon.wait(timeout=10)
         except subprocess.TimeoutExpired:

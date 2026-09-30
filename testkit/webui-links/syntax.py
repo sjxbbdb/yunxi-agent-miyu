@@ -10,13 +10,13 @@
     语法色是从 MD3 token 派生的,不是抄某套 vendor 主题:抄一套暗色的话,晨光
     下就是白纸上一片看不见的浅字。这一节守的就是这条。
 
-截图落在 MIYU_SYNTAX_SHOTS(默认 ~/.cache/miyu-syntax)。
+截图落在 YUNXI_SYNTAX_SHOTS(默认 ~/.cache/yunxi-syntax)。
 """
 
 import os
 from pathlib import Path
 
-SHOTS = Path(os.environ.get("MIYU_SYNTAX_SHOTS", Path.home() / ".cache" / "miyu-syntax"))
+SHOTS = Path(os.environ.get("YUNXI_SYNTAX_SHOTS", Path.home() / ".cache" / "yunxi-syntax"))
 
 # 九个上色角色 + diff 的增删行。和 web/styles.css 里的 --tok-* 一一对应。
 ROLES = ["c", "p", "o", "k", "s", "n", "f", "t", "y", "ins", "del"]
@@ -105,7 +105,7 @@ SURFACE_JS = """
 }
 """
 
-# 语言样品墙:直接调 MiyuHighlight,一次看全所有语言在当前色板下的样子。
+# 语言样品墙:直接调 YunXiHighlight,一次看全所有语言在当前色板下的样子。
 # 用 createElement 搭,不用 innerHTML——被测的东西本身就是「不产生 HTML 字符串」。
 GALLERY_JS = """
 (samples) => {
@@ -130,7 +130,7 @@ GALLERY_JS = """
     const element = document.createElement("code");
     element.className = "language-" + language;
     element.textContent = code;
-    window.MiyuHighlight.paint(element, language, code, true);
+    window.YunXiHighlight.paint(element, language, code, true);
     pre.appendChild(element);
     wrapper.append(toolbar, pre);
     host.appendChild(wrapper);
@@ -150,17 +150,17 @@ SAMPLES = [
     ("python", 'import os\nfrom typing import Optional\n\n\nclass Store:\n    """文档字符串"""\n\n    def get(self, key: str, fallback: Optional[int] = 3) -> str:\n        # 注释\n        return f"{key}={os.environ.get(key, fallback)}"'),
     ("javascript", 'const load = async (id) => {\n  // 注释\n  const res = await fetch(`/api/turns/${id}`, { credentials: "same-origin" });\n  if (!res.ok) throw new Error("boom");\n  return res.json();\n};\nexport default { load, retries: 3, debug: false };'),
     ("typescript", 'interface Turn<T> {\n  id: number;\n  payload?: T;\n}\n\nenum Kind { User = 1, Model }\n\nexport const pick = <T,>(t: Turn<T>): T | null => t.payload ?? null;'),
-    ("bash", '#!/usr/bin/env bash\n# 注释\nset -euo pipefail\nexport MIYU_HOME="/tmp/mx"\nfor file in web/*.js; do\n  node --check "$file" || exit 1\ndone\necho "done $?"'),
+    ("bash", '#!/usr/bin/env bash\n# 注释\nset -euo pipefail\nexport YUNXI_HOME="/tmp/mx"\nfor file in web/*.js; do\n  node --check "$file" || exit 1\ndone\necho "done $?"'),
     ("json", '{\n  "active_provider": "stub",\n  "providers": [{ "id": "stub", "models": ["stub-model"] }],\n  "memory": { "enabled": false, "top_k": 8 }\n}'),
-    ("toml", '# 注释\n[package]\nname = "miyu"\nversion = "0.5.0"\nedition = "2021"\n\n[profile.release]\ncodegen-units = 1\nlto = true'),
-    ("yaml", '# 注释\nname: miyu\njobs:\n  build:\n    steps:\n      - run: cargo check\n        env: { RUST_LOG: "info" }\nanchor: &base 1\nuse: *base'),
+    ("toml", '# 注释\n[package]\nname = "yunxi"\nversion = "0.5.0"\nedition = "2021"\n\n[profile.release]\ncodegen-units = 1\nlto = true'),
+    ("yaml", '# 注释\nname: yunxi\njobs:\n  build:\n    steps:\n      - run: cargo check\n        env: { RUST_LOG: "info" }\nanchor: &base 1\nuse: *base'),
     ("sql", "-- 注释\nSELECT id, role, created_at\nFROM turns\nWHERE session_id = 'abc' AND created_at > 1700000000\nORDER BY id DESC\nLIMIT 20;"),
-    ("c", '#include <stdio.h>\n\n/* 注释 */\nint main(void) {\n    const char *name = "miyu";\n    printf("hello %s %d\\n", name, 42);\n    return 0;\n}'),
+    ("c", '#include <stdio.h>\n\n/* 注释 */\nint main(void) {\n    const char *name = "yunxi";\n    printf("hello %s %d\\n", name, 42);\n    return 0;\n}'),
     ("cpp", '#include <vector>\n#include <string>\n\ntemplate <class T>\nstruct Bag {\n    std::vector<T> items;\n    void add(const T &v) { items.push_back(v); }\n};'),
-    ("go", 'package main\n\nimport "fmt"\n\n// 注释\nfunc main() {\n\tcounts := map[string]int{"miyu": 1}\n\tfor k, v := range counts {\n\t\tfmt.Printf("%s=%d\\n", k, v)\n\t}\n}'),
+    ("go", 'package main\n\nimport "fmt"\n\n// 注释\nfunc main() {\n\tcounts := map[string]int{"yunxi": 1}\n\tfor k, v := range counts {\n\t\tfmt.Printf("%s=%d\\n", k, v)\n\t}\n}'),
     ("lua", '-- 注释\nlocal store = { count = 0 }\n\nfunction store:bump(step)\n  self.count = self.count + (step or 1)\n  return "count=" .. self.count\nend'),
     ("markdown", "# 标题\n\n正文里有 **加粗**、_斜体_ 和 `行内代码`。\n\n- 列表项\n- [链接](https://example.com)\n\n> 引用\n"),
-    ("diff", "--- a/web/app.js\n+++ b/web/app.js\n@@ -3545,7 +3545,9 @@\n-    code.textContent = codeText;\n+    code.textContent = codeText;\n+    window.MiyuHighlight?.paint(code, language, codeText, settled);\n     pre.appendChild(code);"),
+    ("diff", "--- a/web/app.js\n+++ b/web/app.js\n@@ -3545,7 +3545,9 @@\n-    code.textContent = codeText;\n+    code.textContent = codeText;\n+    window.YunXiHighlight?.paint(code, language, codeText, settled);\n     pre.appendChild(code);"),
     ("html", '<!doctype html>\n<div class="card" data-id="1">\n  <!-- 注释 -->\n  <span>文字</span>\n  <script>var ready = true;</script>\n</div>'),
     ("css", '/* 注释 */\n.code-block pre {\n  color: var(--code-ink);\n  font-size: 12.5px !important;\n}\n\n@media (max-width: 720px) {\n  .code-block { margin: 0; }\n}'),
     ("zzunknownlang", 'unknown language <b>stays</b> & "plain"'),
@@ -302,7 +302,7 @@ def run(page, check, user_code):
         check_surfaces(page, name, check)
 
     # ── 语言样品墙:一屏放不下,单独换个大视口拍 ───────────────
-    check("高亮模块挂上了", page.evaluate("() => Boolean(window.MiyuHighlight)"))
+    check("高亮模块挂上了", page.evaluate("() => Boolean(window.YunXiHighlight)"))
     page.set_viewport_size({"width": 1560, "height": 2100})
     for name, theme, matugen in available:
         page.evaluate(THEME_JS, {"theme": theme, "matugen": matugen})

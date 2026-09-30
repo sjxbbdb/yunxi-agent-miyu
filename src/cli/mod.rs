@@ -1,13 +1,13 @@
-use miyu_base::config::{ActiveProviderModelConfig, AppConfig};
-use miyu_base::i18n::{is_zh, text as t};
-use miyu_base::paths::MiyuPaths;
-use miyu_core::ipc::{self, Command as IpcCommand, Frame as IpcFrame, Request as IpcRequest};
-use miyu_core::llm::{
+use yunxi_base::config::{ActiveProviderModelConfig, AppConfig};
+use yunxi_base::i18n::{is_zh, text as t};
+use yunxi_base::paths::YunXiPaths;
+use yunxi_core::ipc::{self, Command as IpcCommand, Frame as IpcFrame, Request as IpcRequest};
+use yunxi_core::llm::{
     ChatResult, ChatStreamChunk, GenerationSpeed, OpenAiCompatibleClient, ThinkingVariantOptions,
     TurnTokens, Usage,
 };
-use miyu_core::memory::{MemoryOrganizer, MemoryStore};
-use miyu_engine::agent::{
+use yunxi_core::memory::{MemoryOrganizer, MemoryStore};
+use yunxi_engine::agent::{
     archive_and_delete_visible_turns, Agent, AgentEvent, AgentTurnControl, PersonaLane,
 };
 mod args;
@@ -87,7 +87,6 @@ pub(in crate::cli) use repl::{
     sandbox_view::*, session::*,
 };
 // 命令表已上提到 crate 级与 WebUI 共用；这里再导出一次，cli 内的调用点不变。
-pub(in crate::cli) use miyu_core::slash_commands::*;
 use repl::direct::{run_chat_with_images, run_chat_with_options, run_direct_repl, AfterTurn};
 use repl::editor::{load_repl_input_history, repl_input_lines};
 pub(in crate::cli) use repl::herdr;
@@ -106,9 +105,10 @@ use repl_history::{
     legacy_repl_history_file, load_persistent_repl_history, persist_repl_history_entry,
     read_repl_history_file,
 };
+pub(in crate::cli) use yunxi_core::slash_commands::*;
 
-use miyu_engine::tools::build_tool_registry;
-use miyu_hosts::render;
+use yunxi_engine::tools::build_tool_registry;
+use yunxi_hosts::render;
 
 // 参数类型已下沉到基础层；这里 re-export，外部按 `cli::WebArgs` 引用不断。
 use anyhow::{bail, Context, Result};
@@ -125,10 +125,6 @@ use crossterm::terminal::{self, Clear, ClearType};
 use crossterm::{execute, queue};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
-use miyu_base::shell;
-pub use miyu_core::args::WebArgs;
-use miyu_core::state::{QueuedPrompt, QueuedPromptAttachment, StateStore, Turn, TurnStatus};
-use miyu_engine::tools;
 use std::ffi::OsString;
 use std::io::Cursor;
 use std::io::{self, IsTerminal, Read, Seek, SeekFrom, Write};
@@ -137,6 +133,10 @@ use std::time::{Duration, Instant};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 use vte::{Params as VteParams, Parser as VteParser, Perform as VtePerform};
+use yunxi_base::shell;
+pub use yunxi_core::args::WebArgs;
+use yunxi_core::state::{QueuedPrompt, QueuedPromptAttachment, StateStore, Turn, TurnStatus};
+use yunxi_engine::tools;
 
 mod keyboard_enhancement;
 
@@ -147,14 +147,14 @@ pub fn parse() -> Cli {
     parse_args(args).unwrap_or_else(|err| err.exit())
 }
 
-/// `miyupm …` 是 `miyu pm …` 的 shim:按 argv[0] 的文件名识别(打包时做个符号链接
+/// `yunxipm …` 是 `yunxi pm …` 的 shim:按 argv[0] 的文件名识别(打包时做个符号链接
 /// 即可,不用第二个二进制)。`pm` 在帮助里已隐藏,这条显式入口照旧。
 pub(in crate::cli) fn apply_pm_shim(mut args: Vec<std::ffi::OsString>) -> Vec<std::ffi::OsString> {
     let invoked_as_pm = args
         .first()
         .map(std::path::PathBuf::from)
         .and_then(|path| path.file_name().map(|name| name.to_os_string()))
-        .is_some_and(|name| name == "miyupm");
+        .is_some_and(|name| name == "yunxipm");
     if invoked_as_pm {
         args.insert(1, std::ffi::OsString::from("pm"));
     }
@@ -172,15 +172,15 @@ pub(in crate::cli) fn apply_pm_shim(mut args: Vec<std::ffi::OsString>) -> Vec<st
 /// 「已更新 hook」只会碍事（shellhook 那条路上还会糊进正文）。
 ///
 /// **隔离家目录下不做**：fish 的 hook 在 `~/.config/fish/conf.d/` 下，
-/// 不跟着 `MIYU_HOME` 走，沙箱/测具一跑就会把用户真正在用的那份改掉。
+/// 不跟着 `YUNXI_HOME` 走，沙箱/测具一跑就会把用户真正在用的那份改掉。
 /// 走查要验这条路的话，把 `XDG_CONFIG_HOME` 也指进沙箱，再用
-/// `MIYU_SHELL_HOOK_SYNC=1` 强制打开。
-fn refresh_shell_hooks(paths: &MiyuPaths) {
-    let forced = std::env::var_os("MIYU_SHELL_HOOK_SYNC").is_some_and(|value| value == "1");
-    if !forced && std::env::var_os("MIYU_HOME").is_some() {
+/// `YUNXI_SHELL_HOOK_SYNC=1` 强制打开。
+fn refresh_shell_hooks(paths: &YunXiPaths) {
+    let forced = std::env::var_os("YUNXI_SHELL_HOOK_SYNC").is_some_and(|value| value == "1");
+    if !forced && std::env::var_os("YUNXI_HOME").is_some() {
         return;
     }
-    let updated = miyu_base::shell::sync_installed_hooks(paths);
+    let updated = yunxi_base::shell::sync_installed_hooks(paths);
     if !updated.is_empty() {
         tracing::info!(
             shells = updated.join(", "),
@@ -190,7 +190,7 @@ fn refresh_shell_hooks(paths: &MiyuPaths) {
     }
 }
 
-pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
+pub async fn run(cli: Cli, paths: YunXiPaths) -> Result<()> {
     if cli.shell_classify {
         let shell_name = cli.shell.as_deref().unwrap_or("fish");
         let message = shell_message_from_input(cli.stdin, cli.message)?;
@@ -213,7 +213,7 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
     let _logging_guard = if skip_diagnostic_logging {
         None
     } else {
-        match miyu_base::logging::init(&paths, cli.debug) {
+        match yunxi_base::logging::init(&paths, cli.debug) {
             Ok(guard) => Some(guard),
             Err(err) => {
                 eprintln!(
@@ -285,20 +285,20 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
         Some(Command::DaemonWorker(args)) => {
             // 谁起的谁死就跟着死（真 daemon 除外，它带着 detached 标记）。
             // 放在最前面：越早捆上，能漏掉的窗口越小。
-            miyu_base::orphan_guard::tie_lifetime_to_launcher();
-            let _logging_guard = miyu_base::logging::init(&paths, cli.debug).ok();
+            yunxi_base::orphan_guard::tie_lifetime_to_launcher();
+            let _logging_guard = yunxi_base::logging::init(&paths, cli.debug).ok();
             // daemon 的 stdout/stderr 被重定向进 daemon.log，而 tracing 写的是
             // 另一个按天滚动的文件。出了事翻错文件是常态——排查一次长回复不转
             // 图片，我在 daemon.log 里绕了很久，真正的 warning 一直躺在
-            // miyu.YYYY-MM-DD.log 里。所以在这条日志的开头指一次路。
+            // yunxi.YYYY-MM-DD.log 里。所以在这条日志的开头指一次路。
             println!(
                 "{}",
-                miyu_base::i18n::text(
-                    "Detailed logs (warnings, tool failures) go to miyu.YYYY-MM-DD.log in the same directory; this file only carries startup output.",
-                    "详细日志（警告、工具失败）在同目录的 miyu.YYYY-MM-DD.log；本文件只有启动输出。"
+                yunxi_base::i18n::text(
+                    "Detailed logs (warnings, tool failures) go to yunxi.YYYY-MM-DD.log in the same directory; this file only carries startup output.",
+                    "详细日志（警告、工具失败）在同目录的 yunxi.YYYY-MM-DD.log；本文件只有启动输出。"
                 )
             );
-            miyu_hosts::daemon::run(paths, args).await
+            yunxi_hosts::daemon::run(paths, args).await
         }
         Some(Command::Tool(args)) => run_tool(&paths, mode, args).await,
         Some(Command::Ask(args)) => {
@@ -339,8 +339,8 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
                         println!(
                             "{}",
                             t(
-                                "Tencent QQ is enabled; run `miyu daemon start` to begin listening.",
-                                "腾讯 QQ 已启用；执行 `miyu daemon start` 后开始监听。",
+                                "Tencent QQ is enabled; run `yunxi daemon start` to begin listening.",
+                                "腾讯 QQ 已启用；执行 `yunxi daemon start` 后开始监听。",
                             )
                         );
                     }
@@ -399,7 +399,7 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
                 let name = entry.name.clone();
                 session_cmds::compact_session(
                     &paths,
-                    miyu_core::ipc::SessionRef::Id { id: entry.id },
+                    yunxi_core::ipc::SessionRef::Id { id: entry.id },
                     Some(&name),
                     plain,
                 )
@@ -408,7 +408,7 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
             None => {
                 session_cmds::compact_session(
                     &paths,
-                    miyu_core::ipc::SessionRef::Current,
+                    yunxi_core::ipc::SessionRef::Current,
                     None,
                     plain,
                 )
@@ -428,7 +428,7 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
                 send_ipc_admin(
                     &paths,
                     IpcCommand::ResetConversation {
-                        target: miyu_core::ipc::SessionRef::Id { id: entry.id },
+                        target: yunxi_core::ipc::SessionRef::Id { id: entry.id },
                     },
                 )
                 .await?;
@@ -436,7 +436,7 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
                 send_ipc_admin(
                     &paths,
                     IpcCommand::ResetConversation {
-                        target: miyu_core::ipc::SessionRef::Current,
+                        target: yunxi_core::ipc::SessionRef::Current,
                     },
                 )
                 .await?;
@@ -458,7 +458,7 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
             if run_oobe_flow(&paths).await? {
                 let result = run_repl(&paths, PersonaLane::Active).await;
                 // REPL 没能接过备用屏(启动失败)就自己退回主屏,别把终端留在备用屏上。
-                miyu_base::terminal::release_alt_screen_if_held();
+                yunxi_base::terminal::release_alt_screen_if_held();
                 result
             } else {
                 Ok(())
@@ -478,14 +478,14 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
                         )
                     );
                 }
-                // 裸 miyu = 普通 REPL(`miyu dev` 才是开发预设)。第一次先走
+                // 裸 yunxi = 普通 REPL(`yunxi dev` 才是开发预设)。第一次先走
                 // 新手引导;老配置在 migrate 里已标成做过,不会被拦。
                 let config = AppConfig::load_or_default(&paths)?;
                 if crate::oobe::needed(&config) && !run_oobe_flow(&paths).await? {
                     return Ok(());
                 }
                 let result = run_repl(&paths, PersonaLane::Active).await;
-                miyu_base::terminal::release_alt_screen_if_held();
+                yunxi_base::terminal::release_alt_screen_if_held();
                 result
             } else {
                 run_one_shot(&paths, root_turn, message, root_stdin, plain, mode).await
@@ -495,14 +495,14 @@ pub async fn run(cli: Cli, paths: MiyuPaths) -> Result<()> {
 }
 
 /// 「终端集成会话默认模式」：单次 / shellhook 那条路的模式。
-fn terminal_lane_mode(paths: &MiyuPaths) -> PersonaLane {
+fn terminal_lane_mode(paths: &YunXiPaths) -> PersonaLane {
     match AppConfig::load_or_default(paths) {
         Ok(config) if config.terminal_session_is_dev() => PersonaLane::Dev,
         _ => PersonaLane::Active,
     }
 }
 
-async fn run_repl(paths: &MiyuPaths, initial_mode: PersonaLane) -> Result<()> {
+async fn run_repl(paths: &YunXiPaths, initial_mode: PersonaLane) -> Result<()> {
     if direct_mode_requested() {
         run_direct_repl(paths, initial_mode).await
     } else {
@@ -511,11 +511,11 @@ async fn run_repl(paths: &MiyuPaths, initial_mode: PersonaLane) -> Result<()> {
 }
 
 fn direct_mode_requested() -> bool {
-    std::env::var_os("MIYU_DIRECT").is_some_and(|value| value != "0")
+    std::env::var_os("YUNXI_DIRECT").is_some_and(|value| value != "0")
 }
 
 fn reload_repl_config(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     state: &StateStore,
     config: &mut AppConfig,
     client: &mut OpenAiCompatibleClient,
@@ -540,7 +540,7 @@ fn push_history_capped(history: &mut Vec<ReplHistoryEntry>, entry: ReplHistoryEn
 struct LiveSubmission {
     content: String,
     display_content: String,
-    images: Vec<Option<miyu_base::clipboard::PastedImage>>,
+    images: Vec<Option<yunxi_base::clipboard::PastedImage>>,
     /// 提交时输入框里的粘贴载荷(按占位符序号),给上键历史留着。
     pasted_texts: Vec<Option<PastedText>>,
 }
@@ -572,7 +572,7 @@ fn merge_history_entry(history: &mut Vec<ReplHistoryEntry>, entry: ReplHistoryEn
 
 struct LiveAgentInput<'a> {
     content: &'a str,
-    images: &'a [Option<miyu_base::clipboard::PastedImage>],
+    images: &'a [Option<yunxi_base::clipboard::PastedImage>],
 }
 
 fn queued_prompt_lines(prompts: &[QueuedPrompt], mode: PersonaLane, cols: usize) -> Vec<String> {
@@ -665,18 +665,18 @@ fn committed_user_messages_text(
 }
 
 fn queued_prompt_attachments(
-    images: &[Option<miyu_base::clipboard::PastedImage>],
+    images: &[Option<yunxi_base::clipboard::PastedImage>],
 ) -> Vec<QueuedPromptAttachment> {
     images
         .iter()
         .filter_map(|image| match image {
-            Some(miyu_base::clipboard::PastedImage::Binary(image)) => {
+            Some(yunxi_base::clipboard::PastedImage::Binary(image)) => {
                 Some(QueuedPromptAttachment::Binary {
                     mime: image.mime.clone(),
                     data_base64: base64::engine::general_purpose::STANDARD.encode(&image.data),
                 })
             }
-            Some(miyu_base::clipboard::PastedImage::Path(path)) => {
+            Some(yunxi_base::clipboard::PastedImage::Path(path)) => {
                 Some(QueuedPromptAttachment::Path { path: path.clone() })
             }
             None => None,
@@ -709,7 +709,7 @@ enum LiveReplOutcome {
     Submit(
         PersonaLane,
         String,
-        Vec<Option<miyu_base::clipboard::PastedImage>>,
+        Vec<Option<yunxi_base::clipboard::PastedImage>>,
         /// 进上键历史的样子(占位符+载荷),不是展开后的全文。
         ReplHistoryEntry,
     ),
@@ -757,7 +757,7 @@ fn repl_should_browse_history(
     input.is_empty() || repl_history_is_clean(input, history, history_clean_index)
 }
 
-fn run_history(paths: &MiyuPaths, args: HistoryArgs) -> Result<()> {
+fn run_history(paths: &YunXiPaths, args: HistoryArgs) -> Result<()> {
     let state = StateStore::new(paths)?;
     run_history_with_state(&state, args)
 }
@@ -768,7 +768,7 @@ mod default_kb_progress_tests {
 
     #[test]
     fn progress_is_emitted_as_a_complete_line() {
-        let stage = miyu_engine::default_kb::UpdateStage::FetchingRepository;
+        let stage = yunxi_engine::default_kb::UpdateStage::FetchingRepository;
         let mut output = Vec::new();
 
         write_default_kb_update_progress(&mut output, stage).unwrap();

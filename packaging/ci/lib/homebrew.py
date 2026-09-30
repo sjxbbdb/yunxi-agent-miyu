@@ -7,9 +7,9 @@ import re
 
 from .manifest import digest
 
-FORMULA = 'packaging/homebrew/Formula/miyu.rb'
-REPOSITORY = 'SHORiN-KiWATA/miyu-agent'
-TAP = 'SHORiN-KiWATA/homebrew-miyu'
+FORMULA = 'packaging/homebrew/Formula/yunxi.rb'
+REPOSITORY = 'sjxbbdb/yunxi-agent-miyu'
+TAP = 'sjxbbdb/homebrew-yunxi'
 ASSET_ID = 'macos-core'
 
 

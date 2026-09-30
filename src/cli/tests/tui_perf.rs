@@ -4,14 +4,14 @@
 //! 对比。走的是 `paint` 同一条路（`prepare_frame` + 每一可见行 `frame_line`），只是
 //! 不写终端。
 //!
-//!     cargo test -p miyu --lib -- cli::tests::tui_perf --ignored --nocapture
+//!     cargo test -p yunxi --lib -- cli::tests::tui_perf --ignored --nocapture
 //!
 //! 用户跑的是 debug 二进制，所以按 debug 量才是他手上的感觉。
 
 use super::tui_blocks::with_blocks;
 use crate::cli::repl::tail::screen::Screen;
-use miyu_hosts::render::blocks;
 use std::time::Instant;
+use yunxi_hosts::render::blocks;
 
 /// 一段过程 = 一个思考块（`open` 决定它出来是不是展开态）+ 一个工具块 + 一段正文。
 fn long_session(screen: &mut Screen, segments: usize, thought_open: bool) {

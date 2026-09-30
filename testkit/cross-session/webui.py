@@ -15,9 +15,9 @@
     list_step_titled_after_reload  刷新之后回看还是这样
     settings_has_preview_lines   设置页有「跨会话AI消息预览行数」这一项
 
-截图落在 OUT(默认 /tmp/miyu-xs-webui),看完手动删。
+截图落在 OUT(默认 /tmp/yunxi-xs-webui),看完手动删。
 
-    python3 testkit/cross-session/webui.py <miyu 二进制>
+    python3 testkit/cross-session/webui.py <yunxi 二进制>
 """
 import json
 import os
@@ -36,7 +36,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "webui-fixes"))
 import authlib  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", "/tmp/miyu-xs-webui"))
+OUT = Path(os.environ.get("OUT", "/tmp/yunxi-xs-webui"))
 # 前端从工作树读(改 js/css 不必重编二进制);首页仍由服务端出——界面语言是它注入的。
 WEB = Path(os.environ.get("WEB", HERE.parent.parent / "web")).resolve()
 LOCAL_ASSETS = ("app.js", "styles.css", "crosssession.js", "settings-schema.js", "i18n-en.js")
@@ -84,7 +84,7 @@ BASE = f"http://127.0.0.1:{PORT}"
 def clean_env(**extra):
     env = {k: v for k, v in os.environ.items()
            if not k.startswith("HERDR_")
-           and k not in ("MIYU_SESSION", "MIYU_DIRECT", "MIYU_TURN_MODE", "MIYU_HOME")}
+           and k not in ("YUNXI_SESSION", "YUNXI_DIRECT", "YUNXI_TURN_MODE", "YUNXI_HOME")}
     env.update(extra)
     return env
 
@@ -156,7 +156,7 @@ def main():
     try:
         assert wait_http(f"http://127.0.0.1:{STUB_PORT}/v1/models"), "stub not up"
         daemon = subprocess.Popen([str(binary), "__daemon", "--port", str(PORT)],
-                                  env=clean_env(MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), LANG="zh_CN.UTF-8"),
+                                  env=clean_env(YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), LANG="zh_CN.UTF-8"),
                                   cwd=str(HOME), stdout=(OUT / "daemon.log").open("w"), stderr=subprocess.STDOUT)
         assert wait_http(f"{BASE}/api/health"), "daemon not up"
         authlib.bootstrap(BASE)
@@ -376,7 +376,7 @@ def main():
             check("list_step_titled_after_reload", len(replay_cards) >= 2 and list_step_ok(replay_cards),
                   replay_cards)
 
-            schema = page.evaluate("""() => JSON.stringify(window.MiyuSettingsSchema || {})""")
+            schema = page.evaluate("""() => JSON.stringify(window.YunXiSettingsSchema || {})""")
             check("settings_has_preview_lines",
                   "display.cross_session_preview_lines" in schema and "跨会话AI消息预览行数" in schema, "")
             browser.close()

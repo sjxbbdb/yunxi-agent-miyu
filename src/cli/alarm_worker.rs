@@ -1,6 +1,6 @@
 //! 闹钟工作进程。
 //!
-//! 闹钟要在 Miyu 退出之后依然响，所以它是一个 detach 出去的独立进程，只带
+//! 闹钟要在 YunXi 退出之后依然响，所以它是一个 detach 出去的独立进程，只带
 //! 最小状态：响什么、什么时候响、响完往哪写日志。
 
 use crate::cli::*;
@@ -11,7 +11,7 @@ pub struct AlarmWorkerArgs {
     pub id: String,
     #[arg(long)]
     pub time: String,
-    #[arg(long, default_value = "Miyu alarm")]
+    #[arg(long, default_value = "YunXi alarm")]
     pub label: String,
     #[arg(long)]
     pub state_dir: PathBuf,
@@ -23,7 +23,7 @@ pub struct AlarmWorkerArgs {
 
 pub(in crate::cli) fn run_alarm_worker(args: AlarmWorkerArgs) -> Result<()> {
     let paths = alarm_worker_paths(args.state_dir, args.cache_dir);
-    let seconds = miyu_core::alarm::parse_alarm_seconds(&args.time)?;
+    let seconds = yunxi_core::alarm::parse_alarm_seconds(&args.time)?;
     let source = args
         .audio_file
         .as_ref()
@@ -35,7 +35,7 @@ pub(in crate::cli) fn run_alarm_worker(args: AlarmWorkerArgs) -> Result<()> {
     );
     std::thread::sleep(Duration::from_secs(seconds));
     let _ =
-        miyu_core::alarm::update_status(&paths, &args.id, miyu_core::alarm::AlarmStatus::Ringing);
+        yunxi_core::alarm::update_status(&paths, &args.id, yunxi_core::alarm::AlarmStatus::Ringing);
     let _ = append_alarm_log(&paths, &format!("{}: playback starting\n", args.id));
     let result = play_alarm_once(args.audio_file.as_deref()).or_else(|err| {
         append_alarm_log(
@@ -48,7 +48,7 @@ pub(in crate::cli) fn run_alarm_worker(args: AlarmWorkerArgs) -> Result<()> {
     if result.is_ok() {
         let _ = append_alarm_log(&paths, &format!("{}: playback finished\n", args.id));
     }
-    let _ = miyu_core::alarm::remove(&paths, &args.id);
+    let _ = yunxi_core::alarm::remove(&paths, &args.id);
     result
 }
 
@@ -67,18 +67,18 @@ pub(in crate::cli) fn play_alarm_once(audio_file: Option<&std::path::Path>) -> R
     Ok(())
 }
 
-pub(in crate::cli) fn append_alarm_log(paths: &MiyuPaths, line: &str) -> Result<()> {
+pub(in crate::cli) fn append_alarm_log(paths: &YunXiPaths, line: &str) -> Result<()> {
     std::fs::create_dir_all(paths.logs_dir())?;
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(miyu_core::alarm::alarm_log_file(paths))?;
+        .open(yunxi_core::alarm::alarm_log_file(paths))?;
     file.write_all(line.as_bytes())?;
     Ok(())
 }
 
-pub(in crate::cli) fn alarm_worker_paths(state_dir: PathBuf, cache_dir: PathBuf) -> MiyuPaths {
-    MiyuPaths {
+pub(in crate::cli) fn alarm_worker_paths(state_dir: PathBuf, cache_dir: PathBuf) -> YunXiPaths {
+    YunXiPaths {
         root_dir: PathBuf::new(),
         config_dir: PathBuf::new(),
         config_file: PathBuf::new(),

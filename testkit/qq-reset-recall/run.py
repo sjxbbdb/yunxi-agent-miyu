@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """/reset 一族和 /stop 的回执 3 秒后自己撤回（用户 09-24）：沙箱 daemon + 假 NapCat（反向 WS）。
 
-    BIN=<miyu> python3 testkit/qq-reset-recall/run.py
+    BIN=<yunxi> python3 testkit/qq-reset-recall/run.py
 
 管理员在群里、私聊里发命令，看假 NapCat 收到的 API 调用：回执发出去（send_*）之后，
 同一个消息号上有没有 delete_msg、隔了多久。假 NapCat 收到群消息的 delete_msg 后照真
@@ -33,7 +33,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里：HERDR_* 漏给被测的 miyu，它就会往那个 pane
+# 跑测具的进程多半坐在某个 herdr pane 里：HERDR_* 漏给被测的 yunxi，它就会往那个 pane
 # 报状态（09-23）。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -43,7 +43,7 @@ sys.path.insert(0, str(REPO / "testkit"))
 import sandbox_dir  # noqa: E402
 
 BIN = Path(os.environ["BIN"])
-SANDBOX = sandbox_dir.make("miyu-qq-reset-recall-")
+SANDBOX = sandbox_dir.make("yunxi-qq-reset-recall-")
 HOME = SANDBOX / "home"
 RUNTIME = SANDBOX / "runtime"
 HISTORY_DB = HOME / "data" / "platforms" / "onebot" / "message_history" / "history.sqlite3"
@@ -153,7 +153,7 @@ def command(send, wait=6.0):
 def main():
     RUNTIME.mkdir(parents=True, exist_ok=True)
     write_config()
-    env = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), MIYU_LOG="info")
+    env = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), YUNXI_LOG="info")
     log_path = SANDBOX / "daemon.log"
     daemon = subprocess.Popen([str(BIN), "__daemon", "--port", str(PORT)], env=env, cwd=str(HOME),
                               stdin=subprocess.DEVNULL, stdout=log_path.open("w"), stderr=subprocess.STDOUT)

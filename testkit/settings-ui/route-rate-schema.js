@@ -5,7 +5,7 @@
 const fs = require("fs");
 global.window = {};
 new Function(fs.readFileSync(process.argv[2], "utf8"))();
-const fields = window.MiyuSettingsSchema.qq.routes.fields;
+const fields = window.YunXiSettingsSchema.qq.routes.fields;
 const results = [];
 const check = (name, ok, detail = "") => { results.push(ok); console.log((ok ? "✅" : "❌") + " " + name + (detail ? "  " + detail : "")); };
 
@@ -22,7 +22,7 @@ check("默认不覆盖(default null)", rate && rate.default === null);
 check("排在开关下面一行", fields.indexOf(rate) === fields.indexOf(toggle) + 1);
 
 // 插件侧那个被覆盖的值仍在,单位一致(0–1)
-const plugin = window.MiyuSettingsSchema.qqPlugins.real_context.groups.flatMap((g) => g.fields || []).find((f) => f.key === "active_judge_probability");
+const plugin = window.YunXiSettingsSchema.qqPlugins.real_context.groups.flatMap((g) => g.fields || []).find((f) => f.key === "active_judge_probability");
 check("插件侧的概率还在且同为 0–1", plugin && plugin.min === 0 && plugin.max === 1, plugin && plugin.label);
 
 const passed = results.filter(Boolean).length;

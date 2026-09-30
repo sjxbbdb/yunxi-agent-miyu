@@ -19,7 +19,7 @@ pub(in crate::config_tui) use select::*;
 pub(in crate::config_tui) use ui::*;
 
 use crate::config_tui::*;
-use miyu_base::terminal::palette::CORAL;
+use yunxi_base::terminal::palette::CORAL;
 
 /// 子界面出错时的兜底提示:错误只作废当次表单输入,绝不让它穿透主循环
 /// 把 TUI 崩出(崩出会连带丢掉本次全部未保存修改)。
@@ -30,15 +30,15 @@ pub(in crate::config_tui) fn show_tui_error(ui: &mut Ui, error: &anyhow::Error) 
     wait_for_key(ui, move |ui| {
         let mut body: Vec<ratatui::text::Line<'static>> =
             vec![cx.txt(t("Something went wrong", "出错了"), theme.fg(CORAL))];
-        body.push(miyu_base::terminal::chrome::nil());
+        body.push(yunxi_base::terminal::chrome::nil());
         body.extend(
-            miyu_base::terminal::chrome::wrap(&text, miyu_base::terminal::chrome::body_w())
+            yunxi_base::terminal::chrome::wrap(&text, yunxi_base::terminal::chrome::body_w())
                 .into_iter()
                 .map(|line| cx.txt(line, ratatui::style::Style::new())),
         );
         ui.show(
             "",
-            miyu_base::terminal::chrome::View {
+            yunxi_base::terminal::chrome::View {
                 body,
                 keys: vec![(
                     t("any key", "任意键").to_string(),

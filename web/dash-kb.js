@@ -7,7 +7,7 @@
  * 轮询状态。数据来自 /api/dash/kb/*。
  */
 (() => {
-  const D = window.MiyuDash;
+  const D = window.YunXiDash;
   if (!D) return;
 
   const state = {
@@ -570,7 +570,7 @@
           const response = await fetch(`/api/dash/kb/files?name=${encodeURIComponent(name)}`, { method: "POST", body: buffer, headers: { "content-type": "application/octet-stream" } });
           const payload = await response.json().catch(() => null);
           const message = payload?.error?.message || "";
-          // 400 是服务端那三道闸(路径 / 类型 / 「这是 Miyu 自己的东西」)判的,理由原样给人看。
+          // 400 是服务端那三道闸(路径 / 类型 / 「这是 YunXi 自己的东西」)判的,理由原样给人看。
           if (response.status === 400) { rejected += 1; row.update(t("被拒:{message}", { message: message || t("服务端不收这个文件") }), "is-danger"); continue; }
           if (!response.ok) { failed += 1; row.update(t("失败:HTTP {status}{message}", { status: response.status, message: message ? ` ${message}` : "" }), "is-danger"); continue; }
           const saved = payload?.name || name;

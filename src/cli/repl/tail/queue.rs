@@ -91,7 +91,7 @@ impl LiveReplTail {
                 usize::from(cols),
             );
             // 这一轮从这儿开始：`/undo` 截回到这个标记处。
-            let frame = format!("{}{frame}", miyu_hosts::render::blocks::TURN_START_MARKER);
+            let frame = format!("{}{frame}", yunxi_hosts::render::blocks::TURN_START_MARKER);
             return self.apply_output_frame(frame.as_bytes());
         }
         self.suspend()?;
@@ -149,13 +149,13 @@ impl LiveReplTail {
         } else {
             "⚙"
         };
-        let mut text = match miyu_core::state::parse_cross_session_message(&report.headline) {
+        let mut text = match yunxi_core::state::parse_cross_session_message(&report.headline) {
             // 另一个会话里的 AI 发来的那条（09-23）：先画它那一块，再接这边的回话。
             Some(message) => {
                 let mut block = Vec::new();
                 render::timeline::write_cross_session_message(
                     &mut block,
-                    &miyu_core::state::cross_session_headline(
+                    &yunxi_core::state::cross_session_headline(
                         &message.from_name,
                         &message.from_session,
                     ),
@@ -172,7 +172,7 @@ impl LiveReplTail {
                 }
             }
             // daemon 重启后接着跑的那一轮（09-24）：一行转圈箭头的提示，再接回话。
-            None => match miyu_core::state::service_restart_attempt(&report.headline) {
+            None => match yunxi_core::state::service_restart_attempt(&report.headline) {
                 Some(attempt) => format!(
                     "\x1b[2m{} {}\x1b[0m\r\n\r\n",
                     if fullscreen {
@@ -180,7 +180,7 @@ impl LiveReplTail {
                     } else {
                         "↻"
                     },
-                    miyu_core::state::service_restart_headline(attempt)
+                    yunxi_core::state::service_restart_headline(attempt)
                 ),
                 // 后台任务报告：全屏下铃铛那一行点得开，看唤醒附的结果段（09-26）。
                 None if fullscreen => {
@@ -242,7 +242,7 @@ impl LiveReplTail {
     pub(in crate::cli) fn show_job_wake_notice(
         &mut self,
         headline: &str,
-        report: Option<&miyu_core::state::JobReportResult>,
+        report: Option<&yunxi_core::state::JobReportResult>,
     ) -> Result<()> {
         if !render::blocks::enabled() {
             return self.show_notice_line("⚙", headline);
@@ -261,7 +261,7 @@ impl LiveReplTail {
         } else {
             "↻"
         };
-        self.show_notice_line(glyph, &miyu_core::state::service_restart_headline(attempt))
+        self.show_notice_line(glyph, &yunxi_core::state::service_restart_headline(attempt))
     }
 
     fn show_notice_line(&mut self, glyph: &str, headline: &str) -> Result<()> {
@@ -317,11 +317,11 @@ impl LiveReplTail {
                 return true;
             }
             let display = &prompt.display_content;
-            if let Some(message) = miyu_core::state::parse_cross_session_message(display) {
+            if let Some(message) = yunxi_core::state::parse_cross_session_message(display) {
                 notices.push(QueuedNotice::CrossSession(message));
                 return false;
             }
-            if let Some(attempt) = miyu_core::state::service_restart_attempt(display) {
+            if let Some(attempt) = yunxi_core::state::service_restart_attempt(display) {
                 notices.push(QueuedNotice::Restart(attempt));
                 return false;
             }
@@ -331,7 +331,7 @@ impl LiveReplTail {
                 notices.push(QueuedNotice::JobReport {
                     prompt_id: prompt.prompt_id.clone(),
                     headline: job_wake_headline(display),
-                    report: miyu_core::state::job_report_result(&prompt.content),
+                    report: yunxi_core::state::job_report_result(&prompt.content),
                 });
                 return false;
             }
@@ -361,13 +361,13 @@ impl LiveReplTail {
     /// 竖线串着正文，先露 `preview_lines` 行，全屏下点开看全文。
     pub(in crate::cli) fn show_cross_session_message(
         &mut self,
-        message: &miyu_core::state::CrossSessionMessage,
+        message: &yunxi_core::state::CrossSessionMessage,
         preview_lines: usize,
     ) -> Result<()> {
         let mut frame = Vec::new();
         render::timeline::write_cross_session_message(
             &mut frame,
-            &miyu_core::state::cross_session_headline(&message.from_name, &message.from_session),
+            &yunxi_core::state::cross_session_headline(&message.from_name, &message.from_session),
             &message.body,
             preview_lines,
         )?;
@@ -473,17 +473,17 @@ pub(in crate::cli) enum QueuedNotice {
     JobReport {
         prompt_id: String,
         headline: String,
-        report: Option<miyu_core::state::JobReportResult>,
+        report: Option<yunxi_core::state::JobReportResult>,
     },
     /// 另一个会话里的 AI 发来的跨会话消息（09-23）。
-    CrossSession(miyu_core::state::CrossSessionMessage),
+    CrossSession(yunxi_core::state::CrossSessionMessage),
     /// daemon 重启后的续跑消息（09-24），带第几次。
     Restart(u32),
 }
 
 /// 事件送来的后台任务报告只有给人看的那一行：结果段按 `prompt_id` 去库里补。补不上（库打不开、
 /// 老 daemon）就还是点不开的那一行。
-pub(in crate::cli) fn fill_job_reports(paths: &MiyuPaths, notices: &mut [QueuedNotice]) {
+pub(in crate::cli) fn fill_job_reports(paths: &YunXiPaths, notices: &mut [QueuedNotice]) {
     let missing = notices
         .iter()
         .any(|notice| matches!(notice, QueuedNotice::JobReport { report: None, .. }));

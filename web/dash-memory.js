@@ -7,7 +7,7 @@
  * 清空归档、清空人格的全部记忆。数据全部来自 /api/dash/memory/*。
  */
 (() => {
-  const D = window.MiyuDash;
+  const D = window.YunXiDash;
   if (!D) return;
 
   const state = {

@@ -4,7 +4,7 @@
 → 任务完成的唤醒回合再长回复)+ Playwright(Chromium,python 版)。
 
 ```sh
-BIN=target/release/miyu TAG=new python3 testkit/webui-fixes/webui_verify.py
+BIN=target/release/yunxi TAG=new python3 testkit/webui-fixes/webui_verify.py
 FLAKY_SSE=0 ...   # 不模拟两秒断网
 ```
 
@@ -22,4 +22,4 @@ FLAKY_SSE=0 ...   # 不模拟两秒断网
 再回来)在无头 Chromium 上都没复现出原始现象,修复按代码推断(`renderConversation`
 重建时的滚动写入加程序滚动守卫),真机效果待用户验证。
 
-产物:`~/.cache/miyu-arch-fixes/webui-<TAG>/{report.json,daemon.log,*.png}`。
+产物:`~/.cache/yunxi-arch-fixes/webui-<TAG>/{report.json,daemon.log,*.png}`。

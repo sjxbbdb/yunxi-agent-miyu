@@ -10,8 +10,8 @@
 
 use crate::cli::repl::tail::screen::term::Term;
 use crate::cli::tests::tui_blocks::with_blocks;
-use miyu_hosts::render::set_cols_override;
-use miyu_hosts::render::wait_spinner::{SpinnerStyle, WaitSpinner, BLOCK_MARKER};
+use yunxi_hosts::render::set_cols_override;
+use yunxi_hosts::render::wait_spinner::{SpinnerStyle, WaitSpinner, BLOCK_MARKER};
 
 fn text(term: &Term) -> Vec<String> {
     (0..term.line_count())

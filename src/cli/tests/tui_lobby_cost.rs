@@ -5,12 +5,12 @@
 //! 不是断言，是尺子。用户跑的是 debug 二进制，按 debug 量才是他手上的感觉。渐变与
 //! 扫光只在真彩下画，要带上 `COLORTERM`：
 //!
-//!     COLORTERM=truecolor cargo test -p miyu --lib -- cli::tests::tui_lobby_cost --ignored --nocapture
+//!     COLORTERM=truecolor cargo test -p yunxi --lib -- cli::tests::tui_lobby_cost --ignored --nocapture
 
 use crate::cli::repl::banner::BannerScene;
 use crate::cli::repl::tail::screen::cells::patch_row;
-use miyu_base::config::PersonaLane;
 use std::time::{Duration, Instant};
+use yunxi_base::config::PersonaLane;
 
 #[test]
 #[ignore]

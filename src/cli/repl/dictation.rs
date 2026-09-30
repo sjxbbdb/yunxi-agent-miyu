@@ -29,7 +29,7 @@ pub(in crate::cli) fn is_active() -> bool {
 }
 
 /// 开始听写。已在听写则无操作(返回 false)。
-pub fn start(paths: &MiyuPaths, auto_submit: bool) -> bool {
+pub fn start(paths: &YunXiPaths, auto_submit: bool) -> bool {
     let mut active = ACTIVE.lock().unwrap();
     if active.is_some() {
         return false;
@@ -38,7 +38,7 @@ pub fn start(paths: &MiyuPaths, auto_submit: bool) -> bool {
     let (stop_tx, stop_rx) = oneshot::channel();
     let socket = paths.ipc_socket();
     let spawned = std::thread::Builder::new()
-        .name("miyu-repl-dictation".into())
+        .name("yunxi-repl-dictation".into())
         .spawn(move || {
             if let Err(error) = relay(&socket, &tx, stop_rx) {
                 let _ = tx.send(DictationEvent::Error(format!("{error:#}")));
@@ -101,7 +101,7 @@ fn relay(
     runtime.block_on(async move {
         let mut stream = ipc::connect(socket)
             .await
-            .context(t("Miyu daemon is not running", "Miyu daemon 未运行"))?;
+            .context(t("YunXi daemon is not running", "YunXi daemon 未运行"))?;
         ipc::send(&mut stream, &IpcRequest::new(IpcCommand::StartDictation)).await?;
         match ipc::receive::<IpcFrame>(&mut stream).await? {
             Some(IpcFrame::Ack) => {}

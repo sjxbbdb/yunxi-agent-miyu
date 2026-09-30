@@ -16,7 +16,7 @@
 
 本探针在同一个窗口里连做两轮:
 
-    A. 受限区滚动(Miyu 现状)  → 预期留残影
+    A. 受限区滚动(YunXi 现状)  → 预期留残影
     B. 推入历史仍用受限区,之后改整屏滚 + 插入行把活动区推回原位 → 预期不再新增
     C. 全程整屏滚 + 插入行(候选修法落地后的样子) → 预期全程干净
 
@@ -32,8 +32,8 @@ A 里"滚之前"就会有一条残影:kitty 默认 pixel_scroll=yes,每帧会多
 `run_headless.sh` 会在无头 cage 里把这一切包好。
 
 用法(每个变体单独一个 kitty 进程,残影引用留下后没人清,会污染下一轮):
-    OUT=~/.cache/miyu-kitty-probe run_headless.sh python3 ghost_probe.py A
-    OUT=~/.cache/miyu-kitty-probe run_headless.sh python3 ghost_probe.py B
+    OUT=~/.cache/yunxi-kitty-probe run_headless.sh python3 ghost_probe.py A
+    OUT=~/.cache/yunxi-kitty-probe run_headless.sh python3 ghost_probe.py B
 产物:$OUT/{A,B}-{before,after}.png 和 $OUT/verdict-{A,B}.json
 """
 import base64
@@ -53,7 +53,7 @@ IMAGE_COLS = 12
 TAIL_ROWS = 6
 SCROLL_BY = 6
 BLUE = (0x1E, 0x64, 0xC8)
-OUT = os.environ.get("OUT") or os.path.expanduser("~/.cache/miyu-kitty-probe")
+OUT = os.environ.get("OUT") or os.path.expanduser("~/.cache/yunxi-kitty-probe")
 
 
 def out(text):
@@ -103,7 +103,7 @@ def draw_tail(rows):
 
 
 def scroll_region_once(region_bottom_1based):
-    """Miyu 现状:DECSTBM 受限区 + 在区底换行。"""
+    """YunXi 现状:DECSTBM 受限区 + 在区底换行。"""
     out(f"\x1b[1;{region_bottom_1based}r\x1b[{region_bottom_1based};1H\n\x1b[r")
 
 

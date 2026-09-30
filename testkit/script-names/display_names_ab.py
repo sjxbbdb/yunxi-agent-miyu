@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""工具与脚本显示名的中英 A/B(真二进制,隔离 MIYU_HOME,不起 daemon)。
+"""工具与脚本显示名的中英 A/B(真二进制,隔离 YUNXI_HOME,不起 daemon)。
 
-BIN=target/debug/miyu python3 testkit/script-names/display_names_ab.py
+BIN=target/debug/yunxi python3 testkit/script-names/display_names_ab.py
 
-同一套工具分别用 `MIYU_LANG=zh` 和 `MIYU_LANG=en` 跑 `miyu tool-call --list`,
+同一套工具分别用 `YUNXI_LANG=zh` 和 `YUNXI_LANG=en` 跑 `yunxi tool-call --list`,
 对比每个工具的显示名。样本各验一条规则：
 
   1. 脚本只写了中文名        → 中文界面出中文名、英文界面按 id 兜底,**不回退中文**
@@ -18,7 +18,7 @@ BIN=target/debug/miyu python3 testkit/script-names/display_names_ab.py
 只在 QQ 等场景注册的平台工具进不了 `--list`,只能这么锁。
 
 对照组(改动前的二进制与脚本树)：
-  BIN=/usr/bin/miyu SYS=<旧 src/scripts> MODE=before OUT=~/.cache/x python3 ...
+  BIN=/usr/bin/yunxi SYS=<旧 src/scripts> MODE=before OUT=~/.cache/x python3 ...
 """
 import os
 import re
@@ -29,8 +29,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
-BIN = Path(os.environ.get("BIN", REPO / "target/debug/miyu")).expanduser().resolve()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-script-names")).expanduser()
+BIN = Path(os.environ.get("BIN", REPO / "target/debug/yunxi")).expanduser().resolve()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-script-names")).expanduser()
 # 对照组用改动前的二进制与脚本树时传 SYS=<旧 src/scripts> MODE=before(只打表不断言)。
 SYS = Path(os.environ.get("SYS", REPO / "src/scripts")).expanduser()
 MODE = os.environ.get("MODE", "after")
@@ -66,11 +66,11 @@ def catalog(lang):
     """`tool-call --list` 的 `id\tdisplay` 表。"""
     env = dict(
         os.environ,
-        MIYU_HOME=str(HOME),
+        YUNXI_HOME=str(HOME),
         XDG_RUNTIME_DIR=str(RUNTIME),
-        MIYU_SYSTEM_SCRIPTS_DIR=str(SYS),
-        MIYU_ADMIN_USER="admin",
-        MIYU_LANG=lang,
+        YUNXI_SYSTEM_SCRIPTS_DIR=str(SYS),
+        YUNXI_ADMIN_USER="admin",
+        YUNXI_LANG=lang,
     )
     proc = subprocess.run(
         [str(BIN), "tool-call", "--list"],
@@ -110,7 +110,7 @@ def scan_source():
 
 def main():
     if not BIN.is_file():
-        sys.exit(f"二进制不存在: {BIN}(先 cargo build --bin miyu)")
+        sys.exit(f"二进制不存在: {BIN}(先 cargo build --bin yunxi)")
     if OUT.exists():
         shutil.rmtree(OUT)
     user_scripts = HOME / "data/scripts"

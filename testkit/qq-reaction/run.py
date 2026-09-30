@@ -4,7 +4,7 @@
 沙箱 daemon + 进程内判官桩(OpenAI SSE)+ 假 NapCat(反向 WS)。走的是真路径:
 群消息 → 触发条件 → 判官模型放行 → 主回合 → 投递 → 摘表情/记账。
 
-    BIN=<miyu> python3 testkit/qq-reaction/run.py
+    BIN=<yunxi> python3 testkit/qq-reaction/run.py
 
 场景(抽样概率开到 1.0,判官桩永远给高分):
   1 群友 A 不 @ 说话      → 抽样触发       → 回了,不贴表情
@@ -28,20 +28,20 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里:HERDR_* 漏给被测的 miyu 会去认领那个 pane(09-23)。
+# 跑测具的进程多半坐在某个 herdr pane 里:HERDR_* 漏给被测的 yunxi 会去认领那个 pane(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
 BIN = Path(os.environ["BIN"])
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-qq-reaction")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-qq-reaction")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18531"))
 QQ_PORT = int(os.environ.get("QQ_PORT", "18532"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18533"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), MIYU_LOG="info")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), YUNXI_LOG="info")
 
 spec = importlib.util.spec_from_file_location("fake", REPO / "testkit" / "fake-onebot" / "run.py")
 fake = importlib.util.module_from_spec(spec)
@@ -84,9 +84,9 @@ class Stub(BaseHTTPRequestHandler):
             text += (content or "") + "\n"
         if JUDGE_MARK in text:
             JUDGE_PROMPTS.append(text)
-            # 桩判官:当前消息里叫了 miyu 就算冲她来(to_bot),否则算插嘴。
+            # 桩判官:当前消息里叫了 yunxi 就算冲她来(to_bot),否则算插嘴。
             current = text.split("Current message content", 1)[-1].lower()
-            answer = json.dumps(dict(VERDICT, to_bot="miyu" in current))
+            answer = json.dumps(dict(VERDICT, to_bot="yunxi" in current))
         else:
             answer = "嗯嗯"
         self.send_response(200)
@@ -222,7 +222,7 @@ def main():
         m1, r1 = say(ws, "今天晚饭吃什么好呢", A)
         m2, r2 = say(ws, "我也是", B)
         m3, r3 = say(ws, "你觉得呢", C, at=True)
-        m4, r4 = say(ws, "miyu 你说说看嘛", C)
+        m4, r4 = say(ws, "yunxi 你说说看嘛", C)
         m5, r5 = say(ws, "这周末干啥好呢", A)
         time.sleep(1.0)
 
@@ -239,7 +239,7 @@ def main():
 
         # 判断块写在 daemon 自己的日志文件里,stdout 只有启动那几行。
         log_text = "".join(p.read_text("utf-8", errors="replace")
-                           for p in sorted((HOME / "cache" / "logs").glob("miyu.*.log")))
+                           for p in sorted((HOME / "cache" / "logs").glob("yunxi.*.log")))
         blocks = [b for b in decision_blocks(log_text) if b[0]]
         triggers = [t for t, _ in blocks]
         check("判断日志触发顺序", triggers[:5] == ["probability", "after_speaking", "direct", "continuation", "after_speaking"], str(triggers))

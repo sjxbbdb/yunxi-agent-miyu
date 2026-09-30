@@ -16,10 +16,10 @@
   4. 收尾断言:未索引归零、没有失败
 
 `--shoot` 再用 playwright 走一遍浏览器侧(拖放 → 进度条 → 完成),截图落在
-`/tmp/miyu-kb-reindex/shots/`。
+`/tmp/yunxi-kb-reindex/shots/`。
 
 前置:`cargo build`(web 静态资源编进二进制)、本机装了 onnxruntime 与内置
-bge-small-zh 模型(`miyu embed status` 能探通)。端口默认 18436,别碰 8300。
+bge-small-zh 模型(`yunxi embed status` 能探通)。端口默认 18436,别碰 8300。
 """
 
 import argparse
@@ -35,7 +35,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -43,11 +43,11 @@ for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "testkit" / "webui-fixes"))
 import authlib  # noqa: E402  09-11 起 WebUI 的接口都要登录
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-kb-reindex/home"))
-LIBRARY = Path(os.environ.get("MIYU_KBR_LIB", "/tmp/miyu-kb-reindex/library"))
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-kb-reindex/home"))
+LIBRARY = Path(os.environ.get("YUNXI_KBR_LIB", "/tmp/yunxi-kb-reindex/library"))
 RUNTIME = "/tmp/mx-kbr"
-SHOTS = Path(os.environ.get("MIYU_KBR_SHOTS", "/tmp/miyu-kb-reindex/shots"))
+SHOTS = Path(os.environ.get("YUNXI_KBR_SHOTS", "/tmp/yunxi-kb-reindex/shots"))
 
 
 def api(base, path, body=None, method="GET", timeout=120):
@@ -132,15 +132,15 @@ def line(elapsed, overview, status):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--files", type=int, default=400)
-    parser.add_argument("--port", type=int, default=int(os.environ.get("MIYU_KBR_PORT", "18436")))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("YUNXI_KBR_PORT", "18436")))
     parser.add_argument("--budget", type=float, default=900.0, help="重建等待上限(秒)")
-    parser.add_argument("--keep-home", action="store_true", help="复用上次的 MIYU_HOME")
+    parser.add_argument("--keep-home", action="store_true", help="复用上次的 YUNXI_HOME")
     parser.add_argument("--second-batch", type=int, default=100,
                         help="第一趟重建跑着的时候再传这么多个(根因就在这里)")
     parser.add_argument("--shoot", action="store_true", help="跑 playwright 截图")
     args = parser.parse_args()
     base = f"http://127.0.0.1:{args.port}"
-    env = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
+    env = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
 
     if not BIN.exists():
         print(f"! 先 cargo build:{BIN} 不存在", file=sys.stderr)

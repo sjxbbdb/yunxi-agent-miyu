@@ -7,9 +7,9 @@ use crate::cli::repl::jobs::{format_job_duration, JOB_SPINNER_FRAMES};
 use crate::cli::repl::strip::*;
 use crate::cli::repl::strip_tree::{home_scroll, strip_items, StripScope};
 use crate::cli::*;
-use miyu_base::i18n::text;
-use miyu_engine::tools::jobs::JobOverview;
 use std::collections::HashMap;
+use yunxi_base::i18n::text;
+use yunxi_engine::tools::jobs::JobOverview;
 
 fn job_in(id: &str, kind: &str, session: &str, metric: Option<&str>) -> JobOverview {
     JobOverview {
@@ -91,7 +91,7 @@ fn home(items: &[StripItem]) -> StripView {
 }
 
 fn plus(n: u64) -> String {
-    if miyu_base::i18n::is_zh() {
+    if yunxi_base::i18n::is_zh() {
         format!("（+{n}）")
     } else {
         format!(" (+{n})")
@@ -630,7 +630,7 @@ fn the_footer_says_how_deep_into_subagent_sessions_we_are() {
 #[test]
 fn a_replayed_parent_task_is_not_drawn_as_a_user_prompt() {
     let config = AppConfig::default();
-    let task = miyu_core::state::TurnReplay {
+    let task = yunxi_core::state::TurnReplay {
         display_content: "去查一下日志".to_string(),
         assistant_content: "查完了。".to_string(),
         from_parent: true,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""中转线压缩真机验收(09-10):隔离 MIYU_HOME + 真 claude-code,dev 会话用原生
-Read/Edit/Write 碰文件,再 `miyu compact`,查三处:
+"""中转线压缩真机验收(09-10):隔离 YUNXI_HOME + 真 claude-code,dev 会话用原生
+Read/Edit/Write 碰文件,再 `yunxi compact`,查三处:
 
   1. turns.tool_footprint —— 文件轮应有 read/modified
   2. 摘要行尾部 —— 应带 <read-files> / <modified-files>
@@ -10,10 +10,10 @@ Read/Edit/Write 碰文件,再 `miyu compact`,查三处:
 footprint 与回灌候选都看不见它。
 
 用法:
-  BIN=target/release/miyu MODEL=haiku python3 testkit/relay-compact/relay_probe.py
+  BIN=target/release/yunxi MODEL=haiku python3 testkit/relay-compact/relay_probe.py
 
 会消耗真实 claude-code 额度(haiku 四轮 + 一次压缩,每轮 prompt 1.5–5 万 tok,
-其中九成以上是缓存读)。需要 ~/.miyu/config/config.jsonc 里有 claude-code 供应商。
+其中九成以上是缓存读)。需要 ~/.yunxi/config/config.jsonc 里有 claude-code 供应商。
 """
 import json
 import os
@@ -26,19 +26,19 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
 # 子进程 cwd 是工作目录,BIN 给相对路径也要先解析成绝对路径。
-MIYU = Path(os.environ.get("BIN") or REPO / "target" / "release" / "miyu").resolve()
-BASE = Path(os.environ.get("PROBE_DIR") or sandbox_dir.make("miyu-relay-probe-"))
+YUNXI = Path(os.environ.get("BIN") or REPO / "target" / "release" / "yunxi").resolve()
+BASE = Path(os.environ.get("PROBE_DIR") or sandbox_dir.make("yunxi-relay-probe-"))
 HOME = BASE / "home"
 RUN = BASE / "run"
 WORK = BASE / "work"
-REAL_CONFIG = Path.home() / ".miyu" / "config" / "config.jsonc"
+REAL_CONFIG = Path.home() / ".yunxi" / "config" / "config.jsonc"
 MODEL = os.environ.get("MODEL", "haiku")
 
 
@@ -103,7 +103,7 @@ def build_home():
     real_dev = REAL_CONFIG.parent / "dev-prompt.md"
     if real_dev.exists():
         shutil.copy(real_dev, HOME / "config" / "dev-prompt.md")
-    real_cache = Path.home() / ".miyu" / "cache" / "models_cache.json"
+    real_cache = Path.home() / ".yunxi" / "cache" / "models_cache.json"
     if real_cache.exists():
         (HOME / "cache").mkdir(parents=True, exist_ok=True)
         shutil.copy(real_cache, HOME / "cache" / "models_cache.json")
@@ -111,9 +111,9 @@ def build_home():
 
 def env():
     e = dict(os.environ)
-    e["MIYU_HOME"] = str(HOME)
+    e["YUNXI_HOME"] = str(HOME)
     e["XDG_RUNTIME_DIR"] = str(RUN)
-    for key in ("MIYU_DIRECT", "MIYU_SESSION", "MIYU_TURN_MODE",
+    for key in ("YUNXI_DIRECT", "YUNXI_SESSION", "YUNXI_TURN_MODE",
                 "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME"):
         e.pop(key, None)
     e["LANG"] = "zh_CN.UTF-8"
@@ -121,9 +121,9 @@ def env():
 
 
 def cli(args, timeout=600):
-    proc = subprocess.run([str(MIYU), *args], env=env(), cwd=WORK, capture_output=True,
+    proc = subprocess.run([str(YUNXI), *args], env=env(), cwd=WORK, capture_output=True,
                           text=True, timeout=timeout)
-    print(f"$ miyu {' '.join(args)[:100]}\n  code={proc.returncode} out={proc.stdout.strip()[:200]!r}")
+    print(f"$ yunxi {' '.join(args)[:100]}\n  code={proc.returncode} out={proc.stdout.strip()[:200]!r}")
     if proc.stderr.strip():
         print(f"  err={proc.stderr.strip()[-300:]!r}")
     return proc
@@ -176,7 +176,7 @@ def main():
             ok = ok and has_read and has_mod and any(p.endswith("notes.txt") for p in restored)
     finally:
         cli(["daemon", "stop"], timeout=60)
-    print("PASS" if ok else "FAIL", "| probe dir:", BASE, "（没设 PROBE_DIR 时跑完即删；要留着看设 MIYU_KEEP_SANDBOX=1）")
+    print("PASS" if ok else "FAIL", "| probe dir:", BASE, "（没设 PROBE_DIR 时跑完即删；要留着看设 YUNXI_KEEP_SANDBOX=1）")
     sys.exit(0 if ok else 1)
 
 

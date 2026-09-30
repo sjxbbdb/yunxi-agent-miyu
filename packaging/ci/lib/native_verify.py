@@ -20,7 +20,7 @@ from . import homebrew
 from .isolation import mock_config
 
 PROBE = Path(__file__).resolve().parents[1]/'probes/installed.py'
-TAP = 'miyu-verify/local'
+TAP = 'yunxi-verify/local'
 BREW_ENV = {'HOMEBREW_NO_AUTO_UPDATE': '1', 'HOMEBREW_NO_INSTALL_CLEANUP': '1',
             'HOMEBREW_NO_ANALYTICS': '1', 'HOMEBREW_NO_ENV_HINTS': '1',
             'HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK': '1'}
@@ -67,14 +67,14 @@ class Session:
 
 def extract_and_probe(session, box, manifest, asset_id, record, package, config, live):
     """Stage 1: the relocated prefix. Returns the probe's final JSON line."""
-    prefix = box.root/'Miyu Tar Test'  # 空格是故意的:Cellar 路径没有,别人的前缀会有
+    prefix = box.root/'YunXi Tar Test'  # 空格是故意的:Cellar 路径没有,别人的前缀会有
     prefix.mkdir()
     session.run(['tar', '-xzf', package, '-C', prefix], asset_id+'-extract.txt', 120)
     home = box.root/'probes'/asset_id
-    for child in ('home', 'miyu/config', 'runtime', 'config', 'data', 'cache', 'state'):
+    for child in ('home', 'yunxi/config', 'runtime', 'config', 'data', 'cache', 'state'):
         (home/child).mkdir(parents=True, mode=0o700, exist_ok=True)
-    write_json(home/'miyu/config/config.jsonc', config)
-    (home/'miyu/config/config.jsonc').chmod(0o600)
+    write_json(home/'yunxi/config/config.jsonc', config)
+    (home/'yunxi/config/config.jsonc').chmod(0o600)
     argv = [sys.executable, PROBE, '--record', package.parent/'package-record.json',
             '--prefix', prefix, '--version', manifest['version'],
             '--revision', manifest['package_revision'], '--fedora-version', manifest['fedora_version'],
@@ -99,28 +99,28 @@ def homebrew_install(session, manifest, source, record, package, box, allowed):
     try:
         tap_dir = Path(session.run([brew, '--repository', TAP], 'brew-repository.txt', 60, env).strip())
         (tap_dir/'Formula').mkdir(exist_ok=True)
-        (tap_dir/'Formula/miyu.rb').write_text(formula)
-        session.run([brew, 'install', f'{TAP}/miyu'], 'brew-install.txt', 2400, env)
-        session.run([brew, 'test', f'{TAP}/miyu'], 'brew-test.txt', 600, env)
-        keg = Path(session.run([brew, '--prefix', f'{TAP}/miyu'], 'brew-keg.txt', 60, env).strip())
-        linked = Path(session.run([brew, '--prefix'], 'brew-prefix.txt', 60, env).strip())/'bin/miyu'
+        (tap_dir/'Formula/yunxi.rb').write_text(formula)
+        session.run([brew, 'install', f'{TAP}/yunxi'], 'brew-install.txt', 2400, env)
+        session.run([brew, 'test', f'{TAP}/yunxi'], 'brew-test.txt', 600, env)
+        keg = Path(session.run([brew, '--prefix', f'{TAP}/yunxi'], 'brew-keg.txt', 60, env).strip())
+        linked = Path(session.run([brew, '--prefix'], 'brew-prefix.txt', 60, env).strip())/'bin/yunxi'
         probe_env = box.environment()
-        # 用户敲的就是 brew 链出来的那个入口,资源要顺着它找到 Cellar 里的 share/miyu。
-        version = session.run([linked, '--version'], 'brew-miyu-version.txt', 60, probe_env).strip()
-        paths = session.run([linked, 'paths'], 'brew-miyu-paths.txt', 60, probe_env)
+        # 用户敲的就是 brew 链出来的那个入口,资源要顺着它找到 Cellar 里的 share/yunxi。
+        version = session.run([linked, '--version'], 'brew-yunxi-version.txt', 60, probe_env).strip()
+        paths = session.run([linked, 'paths'], 'brew-yunxi-paths.txt', 60, probe_env)
         personas = next((line.split(': ', 1)[1] for line in paths.splitlines()
                          if line.startswith('system persona resources: ')), '')
-        if version != f'miyu {manifest["version"]}':
+        if version != f'yunxi {manifest["version"]}':
             raise ValueError(f'Homebrew-installed binary reports {version!r}.')
-        if not personas or Path(personas).resolve() != (keg/'share/miyu/personas').resolve():
+        if not personas or Path(personas).resolve() != (keg/'share/yunxi/personas').resolve():
             raise ValueError(f'Homebrew install resolves persona resources to {personas!r}.')
         return {'keg': str(keg.resolve()), 'version': version, 'persona_resources': personas}
     finally:
-        session.run([brew, 'uninstall', '--formula', f'{TAP}/miyu'], 'brew-uninstall.txt', 300, env,
+        session.run([brew, 'uninstall', '--formula', f'{TAP}/yunxi'], 'brew-uninstall.txt', 300, env,
                     check=False)
         session.run([brew, 'untap', TAP], 'brew-untap.txt', 120, env, check=False)
         # 全名安装会自动记一条信任(Homebrew 6),tap 删了它也还在。
-        session.run([brew, 'untrust', '--formula', f'{TAP}/miyu'], 'brew-untrust.txt', 60, env,
+        session.run([brew, 'untrust', '--formula', f'{TAP}/yunxi'], 'brew-untrust.txt', 60, env,
                     check=False)
 
 

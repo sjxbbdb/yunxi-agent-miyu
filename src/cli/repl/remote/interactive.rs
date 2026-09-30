@@ -14,15 +14,15 @@ use crate::cli::repl::input::*;
 use crate::cli::repl::tail::*;
 use crate::cli::*;
 
-pub(in crate::cli) async fn run_remote_repl(paths: &MiyuPaths, mode: PersonaLane) -> Result<()> {
+pub(in crate::cli) async fn run_remote_repl(paths: &YunXiPaths, mode: PersonaLane) -> Result<()> {
     let _cursor_restore = ReplCursorRestore;
     ipc::ensure_daemon(paths, None).await?;
-    let refreshed = MiyuPaths::new()?;
+    let refreshed = YunXiPaths::new()?;
     let paths = &refreshed;
     initialize_models_cache(paths);
     let config = AppConfig::load_or_default(paths)?;
     // REPL 走的是自己的车道(不是 shellhook 那条终端会话)。**启动**默认开新会话:
-    // 用户 09-20 拍板,敲 `miyu` 要的是一张白纸,指针那条本来就空就原地复用(见
+    // 用户 09-20 拍板,敲 `yunxi` 要的是一张白纸,指针那条本来就空就原地复用(见
     // `fresh_repl_session`);09-26 起可在设置里改成接着这条车道上次那条
     // (`tui_start_session = "last"`)。
     let (daemon_state, repl_session_data) = send_ipc_admin(
@@ -36,7 +36,7 @@ pub(in crate::cli) async fn run_remote_repl(paths: &MiyuPaths, mode: PersonaLane
     let active_session_id = daemon_state.session_id.clone();
     // 上键历史是**按会话**存的。启动开新会话后这条会话还什么都没有,历史得从
     // 被换掉的那条 REPL 会话接着来(daemon 在 `previous_repl_session` 里带回),
-    // 否则每次敲 `miyu` 上键都调不出昨天说过的话。
+    // 否则每次敲 `yunxi` 上键都调不出昨天说过的话。
     let history_source = repl_session_data
         .get("previous_repl_session")
         .and_then(serde_json::Value::as_str)
@@ -66,7 +66,7 @@ pub(in crate::cli) async fn run_remote_repl(paths: &MiyuPaths, mode: PersonaLane
     live_repl.set_session_empty(&config, paths, session_is_empty(paths, &active_session_id));
     let jobs_shared = spawn_jobs_poll_thread(paths.clone(), &active_session_id);
     let jobs_feed = JobsFeed::Shared(jobs_shared.clone());
-    // 在 herdr 的 pane 里跑的话，侧栏这就多一行 `miyu`（不在就是 no-op）。
+    // 在 herdr 的 pane 里跑的话，侧栏这就多一行 `yunxi`（不在就是 no-op）。
     // 带上会话 id：`herdr agent list` 会显示它，将来做「重启后恢复」也靠它指回来。
     herdr::report(herdr::HerdrState::Idle, None, Some(&active_session_id));
     herdr::set_terminal_title_for_session(paths, &active_session_id);
@@ -136,7 +136,7 @@ pub(in crate::cli) async fn run_remote_repl(paths: &MiyuPaths, mode: PersonaLane
 /// 一个远端 REPL 会话跑着时的全部状态:配置、车道、当前会话、输入历史、footer 读数、
 /// 活动区与后台任务源。斜杠命令与发回合都是它的方法。
 pub(super) struct RemoteRepl {
-    pub(super) paths: MiyuPaths,
+    pub(super) paths: YunXiPaths,
     pub(super) config: AppConfig,
     pub(super) mode: PersonaLane,
     pub(super) active_session_id: String,

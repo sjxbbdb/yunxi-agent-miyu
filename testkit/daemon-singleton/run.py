@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """一个家目录只能有一个 daemon —— 端到端验收。
 
-复现的是 09-21 本机那个现场：同一个 `~/.miyu`，一个 daemon 从设了
-`MIYU_HOME` 的 shell 起（runtime_dir 是 `miyu-<hash>`），另一个从没设的
-shell 起（runtime_dir 是字面量 `miyu`），两把运行时锁互相看不见，于是两个
-daemon 同时跑在同一份数据上，还各自拉起一个 miyu-voice 抢同一个麦克风。
+复现的是 09-21 本机那个现场：同一个 `~/.yunxi`，一个 daemon 从设了
+`YUNXI_HOME` 的 shell 起（runtime_dir 是 `yunxi-<hash>`），另一个从没设的
+shell 起（runtime_dir 是字面量 `yunxi`），两把运行时锁互相看不见，于是两个
+daemon 同时跑在同一份数据上，还各自拉起一个 yunxi-voice 抢同一个麦克风。
 
 用法：
     python3 testkit/daemon-singleton/run.py [--binary <path>]
@@ -44,7 +44,7 @@ def clean_env(home, runtime):
     不该有机会摸到开发机上的任何登录态（中转线那几家的凭据是 CLI 子进程自己
     从 `XDG_*` 底下读的，只改 `HOME` 拦不住）。
 
-    抹干净之后 `miyu ask` 仍会发一次真请求并撞上 HTTP 429——那是**开箱默认**
+    抹干净之后 `yunxi ask` 仍会发一次真请求并撞上 HTTP 429——那是**开箱默认**
     的 opencode Zen 匿名桶（`default_opencodezen()` 的 `api_key` 本来就是
     `None`），不花用户的额度。场景 6 要断的是「有没有被单例锁挡下」，模型这步
     因为什么停下都不影响判定，所以留着它,不再为躲一次网络请求加配置桩。
@@ -61,19 +61,19 @@ def clean_env(home, runtime):
     env["XDG_DATA_HOME"] = str(home / ".local/share")
     env["XDG_CACHE_HOME"] = str(home / ".cache")
     env["XDG_STATE_HOME"] = str(home / ".local/state")
-    env.pop("MIYU_HOME", None)
+    env.pop("YUNXI_HOME", None)
     return env
 
 
 class Daemon:
-    """一个 daemon 进程。`explicit_home` 决定走不走 MIYU_HOME 那条路。"""
+    """一个 daemon 进程。`explicit_home` 决定走不走 YUNXI_HOME 那条路。"""
 
     def __init__(self, binary, home_root, runtime_root, explicit_home, port):
-        # HOME 决定「没设 MIYU_HOME 时」算出来的默认家目录，必须一起隔离，
-        # 否则测试会打到开发机真正的 ~/.miyu 上。
+        # HOME 决定「没设 YUNXI_HOME 时」算出来的默认家目录，必须一起隔离，
+        # 否则测试会打到开发机真正的 ~/.yunxi 上。
         env = clean_env(home_root, runtime_root)
         if explicit_home:
-            env["MIYU_HOME"] = str(home_root / ".miyu")
+            env["YUNXI_HOME"] = str(home_root / ".yunxi")
         self.explicit = explicit_home
         self.log = home_root / f"daemon-{'explicit' if explicit_home else 'default'}.log"
         handle = open(self.log, "wb")
@@ -110,10 +110,10 @@ class Daemon:
 
 
 def scenario_same_home(binary, workdir):
-    """设了 MIYU_HOME 和没设,指的是同一个家目录 —— 第二个必须让位。"""
-    print("\n[1] 同一个家目录,两种 MIYU_HOME 写法")
+    """设了 YUNXI_HOME 和没设,指的是同一个家目录 —— 第二个必须让位。"""
+    print("\n[1] 同一个家目录,两种 YUNXI_HOME 写法")
     home = workdir / "case1"
-    (home / ".miyu").mkdir(parents=True)
+    (home / ".yunxi").mkdir(parents=True)
     runtime = workdir / "run1"
     runtime.mkdir()
 
@@ -134,7 +134,7 @@ def scenario_same_home(binary, workdir):
     check("先起的那个没被影响", first.alive())
 
     # 让位要赶在占资源之前:第二个 daemon 连自己那个 runtime_dir 都不该建
-    # 出来,更别说开库、抢端口、拉起 miyu-voice。
+    # 出来,更别说开库、抢端口、拉起 yunxi-voice。
     names = sorted(p.name for p in runtime.iterdir() if p.is_dir())
     check(
         "让位赶在建运行时目录之前",
@@ -142,7 +142,7 @@ def scenario_same_home(binary, workdir):
         f"runtime 目录: {names}",
     )
 
-    lock = home / ".miyu" / "daemon.lock"
+    lock = home / ".yunxi" / "daemon.lock"
     ok = False
     if lock.exists():
         try:
@@ -164,7 +164,7 @@ def scenario_separate_homes(binary, workdir):
     homes = []
     for index in (1, 2):
         home = workdir / f"case2-{index}"
-        (home / ".miyu").mkdir(parents=True)
+        (home / ".yunxi").mkdir(parents=True)
         homes.append(Daemon(binary, home, runtime, explicit_home=True, port=free_port()))
     time.sleep(8)
     check("第一个家目录的 daemon 活着", homes[0].alive())
@@ -177,7 +177,7 @@ def scenario_lock_released(binary, workdir):
     """在位的 daemon 走了,锁要能交给下一个。"""
     print("\n[3] 让位后锁能再被拿到")
     home = workdir / "case3"
-    (home / ".miyu").mkdir(parents=True)
+    (home / ".yunxi").mkdir(parents=True)
     runtime = workdir / "run3"
     runtime.mkdir()
 
@@ -198,7 +198,7 @@ def scenario_cli_is_told_why(binary, workdir):
     让位的进程、然后让用户对着「启动超时」发呆。"""
     print("\n[4] CLI 撞上跑在别处的 daemon")
     home = workdir / "case4"
-    (home / ".miyu").mkdir(parents=True)
+    (home / ".yunxi").mkdir(parents=True)
     runtime = workdir / "run4"
     runtime.mkdir()
 
@@ -206,7 +206,7 @@ def scenario_cli_is_told_why(binary, workdir):
     time.sleep(6)
     check("占位的 daemon 起来了", holder.alive())
 
-    env = clean_env(home, runtime)  # 不设 MIYU_HOME —— 就是分叉的来源
+    env = clean_env(home, runtime)  # 不设 YUNXI_HOME —— 就是分叉的来源
     done = subprocess.run(
         [str(binary), "daemon", "start"],
         env=env,
@@ -223,20 +223,20 @@ def scenario_cli_is_told_why(binary, workdir):
     )
     check(
         "给了可照做的出路",
-        ("daemon restart" in output) or ("MIYU_HOME" in output),
+        ("daemon restart" in output) or ("YUNXI_HOME" in output),
     )
     check("占位的 daemon 没被顶掉", holder.alive())
     holder.kill()
 
 
 def scenario_direct_mode_is_excluded(binary, workdir):
-    """直连模式(`MIYU_DIRECT=1`)与 daemon 互斥 —— 哪怕两边算出的
+    """直连模式(`YUNXI_DIRECT=1`)与 daemon 互斥 —— 哪怕两边算出的
     runtime_dir 不是同一个。直连的 `core.lock` 住在 runtime_dir 底下,单靠
-    它的话,没设 MIYU_HOME 的 shell 起的直连 REPL 会跟设了环境变量起来的
+    它的话,没设 YUNXI_HOME 的 shell 起的直连 REPL 会跟设了环境变量起来的
     daemon 各锁各的,同时开着同一份数据。"""
     print("\n[5] 直连模式撞上 daemon")
     home = workdir / "case5"
-    (home / ".miyu").mkdir(parents=True)
+    (home / ".yunxi").mkdir(parents=True)
     runtime = workdir / "run5"
     runtime.mkdir()
 
@@ -244,8 +244,8 @@ def scenario_direct_mode_is_excluded(binary, workdir):
     time.sleep(6)
     check("daemon 占着这个家目录", holder.alive())
 
-    env = clean_env(home, runtime)  # 不设 MIYU_HOME —— 正是两边分叉的那条路
-    env["MIYU_DIRECT"] = "1"
+    env = clean_env(home, runtime)  # 不设 YUNXI_HOME —— 正是两边分叉的那条路
+    env["YUNXI_DIRECT"] = "1"
     done = subprocess.run(
         [str(binary), "ask", "ping"],
         env=env,
@@ -256,8 +256,8 @@ def scenario_direct_mode_is_excluded(binary, workdir):
     output = (done.stdout or "") + (done.stderr or "")
     check("直连没有被放行", done.returncode != 0, f"exit={done.returncode}")
     check(
-        "说清了是被另一个 Miyu 核心占着",
-        ("另一个 Miyu 核心" in output) or ("another Miyu core" in output),
+        "说清了是被另一个 YunXi 核心占着",
+        ("另一个 YunXi 核心" in output) or ("another YunXi core" in output),
         output.strip().splitlines()[-1][:110] if output.strip() else "(无输出)",
     )
     check(
@@ -272,12 +272,12 @@ def scenario_direct_mode_alone_is_fine(binary, workdir):
     """没有 daemon 时直连照常能起 —— 别把闸修成谁都进不去。"""
     print("\n[6] 没有 daemon 时直连不受影响")
     home = workdir / "case6"
-    (home / ".miyu").mkdir(parents=True)
+    (home / ".yunxi").mkdir(parents=True)
     runtime = workdir / "run6"
     runtime.mkdir()
 
     env = clean_env(home, runtime)
-    env["MIYU_DIRECT"] = "1"
+    env["YUNXI_DIRECT"] = "1"
     done = subprocess.run(
         [str(binary), "ask", "ping"],
         env=env,
@@ -287,10 +287,10 @@ def scenario_direct_mode_alone_is_fine(binary, workdir):
     )
     output = (done.stdout or "") + (done.stderr or "")
     # 没配模型多半会因为别的原因失败,但**不该**是被单例锁挡下。
-    blocked = ("另一个 Miyu 核心" in output) or ("another Miyu core" in output)
+    blocked = ("另一个 YunXi 核心" in output) or ("another YunXi core" in output)
     check("没有被单例锁误挡", not blocked,
           output.strip().splitlines()[-1][:110] if output.strip() else "(无输出)")
-    lock = home / ".miyu" / "daemon.lock"
+    lock = home / ".yunxi" / "daemon.lock"
     check("直连退出后没留下占着的锁", not _lock_is_held(lock))
 
 
@@ -316,17 +316,17 @@ def main():
     parser.add_argument("--binary", default=None)
     args = parser.parse_args()
 
-    binary = args.binary or os.environ.get("MIYU_BINARY")
+    binary = args.binary or os.environ.get("YUNXI_BINARY")
     if not binary:
         target = os.environ.get("CARGO_TARGET_DIR", "target")
-        binary = str(Path(target) / "debug" / "miyu")
+        binary = str(Path(target) / "debug" / "yunxi")
     binary = Path(binary).resolve()
     if not binary.exists():
         print(f"找不到二进制：{binary}")
         return 2
     print(f"二进制：{binary}")
 
-    workdir = sandbox_dir.make("miyu-singleton-", delete_at_exit=False)
+    workdir = sandbox_dir.make("yunxi-singleton-", delete_at_exit=False)
     try:
         scenario_same_home(binary, workdir)
         scenario_separate_homes(binary, workdir)

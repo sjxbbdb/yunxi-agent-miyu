@@ -41,7 +41,7 @@ def bundle_fixture(test, profile):
         folder=test.packages/asset['id'];folder.mkdir(parents=True)
         binary=folder/asset['filename'];binary.write_bytes(('test fixture '+asset['id']).encode())
         hashes[asset['id']]=sha256_file(binary)
-        license_root='share/licenses/miyu-voice/' if asset['component']=='voice' else 'share/licenses/miyu/'
+        license_root='share/licenses/yunxi-voice/' if asset['component']=='voice' else 'share/licenses/yunxi/'
         build_id,component=asset['build_id'],asset['component']
         binaries[asset['id']]=hashlib.sha256((build_id+component).encode()).hexdigest()
         native=build_id=='macos-arm64'
@@ -54,7 +54,7 @@ def bundle_fixture(test, profile):
             'rustc':'rustc '+manifest['toolchain']['rust']+' (fixture)\n', 'offline':True,
             'command':['cargo','build','--release','--frozen','--target',
                 manifest['builds'][build_id]['target'],'--bin',
-                'miyu-voice' if component=='voice' else 'miyu',
+                'yunxi-voice' if component=='voice' else 'yunxi',
                 '--config','source.crates-io.replace-with="vendored-sources"',
                 '--config','source.vendored-sources.directory="'+
                 ('../inputs/vendor' if native else '/inputs/vendor')+'"']}
@@ -71,7 +71,7 @@ def bundle_fixture(test, profile):
             'source_snapshot_sha256':manifest['source_snapshot_sha256'],
             'files':[{'path':license_root+'LICENSE','type':'file','size':7,
                       'sha256':hashlib.sha256(b'license').hexdigest()},
-                {'path':'bin/'+('miyu-voice' if component=='voice' else 'miyu'),
+                {'path':'bin/'+('yunxi-voice' if component=='voice' else 'yunxi'),
                  'type':'file','size':42,'sha256':binaries[asset['id']]}]})
     for target in manifest['targets']:
         folder=test.reports/target;folder.mkdir(parents=True)
@@ -81,7 +81,7 @@ def bundle_fixture(test, profile):
         for asset_id in {c['asset_id'] for c in checks}:
             component=next(a['component'] for a in manifest['assets'] if a['id']==asset_id)
             results[asset_id]={'asset_id':asset_id,'binary_sha256':binaries[asset_id],
-                'version':('miyu-voice' if component=='voice' else 'miyu')+' 0.6.0',
+                'version':('yunxi-voice' if component=='voice' else 'yunxi')+' 0.6.0',
                 'files_verified':2,'host_path':'/private/test/home', 'api_key':'fixture-secret'}
             if component=='core':results[asset_id]['provider_live']={
                 'type':'done','text':'Hello from the test fixture.', 'provider_id':'opencodego',
@@ -313,7 +313,7 @@ class SmokeBundleTests(unittest.TestCase):
         backend=FakeGitHub(self.manifest['source_commit'])
         publish_verified(self.manifest,self.root/'publish',self.path,backend)
         macos=next(a['filename'] for a in self.manifest['assets'] if a['id']=='macos-core')
-        self.assertEqual(macos,'miyu-0.6.0-1-aarch64-apple-darwin.tar.gz')
+        self.assertEqual(macos,'yunxi-0.6.0-1-aarch64-apple-darwin.tar.gz')
         self.assertEqual(len(backend.bytes),7)
         self.assertIn(macos,backend.bytes)
         gnu={a['filename'] for a in self.manifest['assets'] if a['build_id']=='gnu-x86_64'
@@ -349,7 +349,7 @@ class SmokeBundleTests(unittest.TestCase):
             (report_path,report,lambda r:r['host'].update(architecture='x86_64')),
             (report_path,report,lambda r:r.update(image='ubuntu:24.04')),
             (report_path,report,lambda r:r.pop('host')),
-            (cleanup_path,cleanup,lambda c:c.update(remaining='miyu-verify/local/miyu')),
+            (cleanup_path,cleanup,lambda c:c.update(remaining='yunxi-verify/local/yunxi')),
             (record_path,record,lambda r:r['build_evidence']['builder_host'].update(xcode='16.2')),
             (record_path,record,lambda r:r['build_evidence']['builder_host'].update(home='/Users/someone')),
             (record_path,record,lambda r:r['build_evidence'].update(builder_image='sha256:'+'a'*64)

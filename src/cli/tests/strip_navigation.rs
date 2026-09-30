@@ -6,7 +6,7 @@ use crate::cli::repl::strip::*;
 use crate::cli::repl::tail::Navigated;
 use crate::cli::*;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-use miyu_engine::tools::jobs::JobOverview;
+use yunxi_engine::tools::jobs::JobOverview;
 
 fn key(code: KeyCode) -> Event {
     Event::Key(KeyEvent::new(code, KeyModifiers::NONE))
@@ -157,7 +157,7 @@ fn arrows_pick_from_the_command_list() {
     live.set_jobs(jobs(1));
     live.editor.input = "/s".into();
     live.editor.cursor = 2;
-    let names = miyu_core::slash_commands::repl_command_suggestions("/s");
+    let names = yunxi_core::slash_commands::repl_command_suggestions("/s");
     assert!(names.len() >= 2, "{names:?}");
 
     assert!(press(&mut live, KeyCode::Down));
@@ -192,7 +192,7 @@ fn arrows_pick_from_the_command_list() {
 /// 挑着往下走时候选面板跟着滚，挑中的那条一直露着、画成选中的样子。
 #[test]
 fn the_command_list_follows_the_pick() {
-    let names = miyu_core::slash_commands::repl_command_suggestions("/");
+    let names = yunxi_core::slash_commands::repl_command_suggestions("/");
     assert!(names.len() > crate::cli::repl::commands::COMMAND_HINT_ROWS);
     let last = names.len() - 1;
     let lines = command_hint_lines("/", 120, Some(last));

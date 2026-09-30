@@ -1051,14 +1051,14 @@ impl Perform for Term {
                 .get(1)
                 .map(|value| String::from_utf8_lossy(value).into_owned())
                 .unwrap_or_default();
-            match miyu_hosts::render::blocks::parse_marker(&payload) {
-                Some(miyu_hosts::render::blocks::BlockMarker::Begin { id, open }) => {
+            match yunxi_hosts::render::blocks::parse_marker(&payload) {
+                Some(yunxi_hosts::render::blocks::BlockMarker::Begin { id, open }) => {
                     self.pending_block = Some((id, open));
                 }
-                Some(miyu_hosts::render::blocks::BlockMarker::End) => self.close_block(),
+                Some(yunxi_hosts::render::blocks::BlockMarker::End) => self.close_block(),
                 // 这一轮从光标所在行开始；光标停在半行上（上一段正文没换行）就算
                 // 下一行——截回去的时候那半行是上一轮的，得留着。
-                Some(miyu_hosts::render::blocks::BlockMarker::TurnStart) => {
+                Some(yunxi_hosts::render::blocks::BlockMarker::TurnStart) => {
                     let start = if self.col == 0 {
                         self.cursor_row()
                     } else {
@@ -1067,14 +1067,14 @@ impl Perform for Term {
                     self.turn_starts.push(start);
                 }
                 // 渲染器自己折的那一下：下一个换行按「折出来的」记。
-                Some(miyu_hosts::render::blocks::BlockMarker::SoftWrap) => {
+                Some(yunxi_hosts::render::blocks::BlockMarker::SoftWrap) => {
                     self.pending_soft_wrap = true;
                 }
-                Some(miyu_hosts::render::blocks::BlockMarker::LiveRewind { from }) => {
+                Some(yunxi_hosts::render::blocks::BlockMarker::LiveRewind { from }) => {
                     self.live_rewind(from)
                 }
-                Some(miyu_hosts::render::blocks::BlockMarker::LiveEnd) => self.live_end(),
-                Some(miyu_hosts::render::blocks::BlockMarker::CompactStart) => {
+                Some(yunxi_hosts::render::blocks::BlockMarker::LiveEnd) => self.live_end(),
+                Some(yunxi_hosts::render::blocks::BlockMarker::CompactStart) => {
                     let start = if self.col == 0 {
                         self.cursor_row()
                     } else {

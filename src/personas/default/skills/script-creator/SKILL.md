@@ -1,14 +1,14 @@
 ---
 name: script-creator
 display_name: 脚本创作
-summary: 写一个命令行脚本并注册成 Miyu 的工具
-description: Write and register a Miyu script tool. Use when the user wants a new command-line script Miyu can call as a tool, or when a script fails to register or run — 写脚本、加个工具、注册脚本、脚本跑不起来。
-compatibility: Miyu built-in script authoring workflow
+summary: 写一个命令行脚本并注册成 YunXi 的工具
+description: Write and register a YunXi script tool. Use when the user wants a new command-line script YunXi can call as a tool, or when a script fails to register or run — 写脚本、加个工具、注册脚本、脚本跑不起来。
+compatibility: YunXi built-in script authoring workflow
 ---
 
 # Script Creator
 
-A script tool is one executable file. Miyu reads the tool contract from comment lines at the top of the file, runs the file with JSON arguments, and hands stdout back to the model.
+A script tool is one executable file. YunXi reads the tool contract from comment lines at the top of the file, runs the file with JSON arguments, and hands stdout back to the model.
 
 ## Calling manage_script
 
@@ -17,12 +17,12 @@ once-in-a-while action, so it lives behind this skill. Call it through the tool
 bridge with `run_command`:
 
 ```bash
-miyu tool-call manage_script --stdin <<'JSON'
+yunxi tool-call manage_script --stdin <<'JSON'
 {"action": "register", "path": "/abs/path/to/my-script"}
 JSON
 ```
 
-`miyu tool-call manage_script --describe` prints the full parameter contract.
+`yunxi tool-call manage_script --describe` prints the full parameter contract.
 Everything below that says "call `manage_script`" means this.
 
 ## Workflow
@@ -35,14 +35,14 @@ Everything below that says "call `manage_script`" means this.
 
 ## Runtime contract
 
-- The first line must be a shebang such as `#!/usr/bin/env python3` or `#!/bin/bash`. Miyu executes the file directly.
-- Arguments arrive as one JSON object on stdin. The same JSON is also in the environment variable `MIYU_ARGS_JSON` when it is under 64 KB.
+- The first line must be a shebang such as `#!/usr/bin/env python3` or `#!/bin/bash`. YunXi executes the file directly.
+- Arguments arrive as one JSON object on stdin. The same JSON is also in the environment variable `YUNXI_ARGS_JSON` when it is under 64 KB.
 - Nothing is passed on argv unless the header says `# Argv: flags`. That mode additionally expands `{"query":"x","limit":5,"json":true,"dry":false}` to `--query=x --limit=5 --json`. Keys are sorted, false and null are omitted, arrays and objects become JSON strings.
 - Without a `Parameters` header the tool accepts any JSON object. The special key `stdin` then replaces the JSON on stdin with raw text.
-- Print the result to stdout and exit 0. On failure exit non-zero and print a JSON object with `ok:false`, `error` and, when the user must act, `fix`. Miyu reports the exit code and the model reads your JSON.
+- Print the result to stdout and exit 0. On failure exit non-zero and print a JSON object with `ok:false`, `error` and, when the user must act, `fix`. YunXi reports the exit code and the model reads your JSON.
 - Default timeout is 120 seconds, maximum 300. Output beyond 20000 characters is cut before the model sees it, so cap lists and offer a `limit` parameter.
-- `MIYU_SCRIPT_CACHE_DIR` points at Miyu's cache directory. Keep login profiles, cookies and caches under it. Fall back to XDG defaults when the variable is missing so the script also works from a terminal.
-- Host queries (only when the header declares `Capabilities:`): Miyu injects `MIYU_HOST_TOKEN`, `MIYU_HOST_CAPABILITIES` and `MIYU_HOST_BIN`. Run `$MIYU_HOST_BIN host <method> [json]` — methods `host.info`, `providers.list`, `providers.get`, `subsystems.enabled`; stdout is one JSON line `{"ok":true,"data":…}` or `{"ok":false,"error":{"code","message"}}`. Provider data never includes API keys or endpoints. Treat a missing variable as "host unavailable" and keep working.
+- `YUNXI_SCRIPT_CACHE_DIR` points at YunXi's cache directory. Keep login profiles, cookies and caches under it. Fall back to XDG defaults when the variable is missing so the script also works from a terminal.
+- Host queries (only when the header declares `Capabilities:`): YunXi injects `YUNXI_HOST_TOKEN`, `YUNXI_HOST_CAPABILITIES` and `YUNXI_HOST_BIN`. Run `$YUNXI_HOST_BIN host <method> [json]` — methods `host.info`, `providers.list`, `providers.get`, `subsystems.enabled`; stdout is one JSON line `{"ok":true,"data":…}` or `{"ok":false,"error":{"code","message"}}`. Provider data never includes API keys or endpoints. Treat a missing variable as "host unavailable" and keep working.
 - Default to compact human-readable output and offer `format=json` for field-by-field processing.
 
 ## Header
@@ -93,7 +93,7 @@ def fail(error, fix=None, code=2):
 
 
 def main():
-    raw = os.environ.get("MIYU_ARGS_JSON") or sys.stdin.read() or "{}"
+    raw = os.environ.get("YUNXI_ARGS_JSON") or sys.stdin.read() or "{}"
     args = json.loads(raw)
     query = args.get("query")
     if not query:
@@ -126,7 +126,7 @@ echo "result for $query"
 
 ## Rules
 
-- Never ask the user to copy files into `~/.miyu`. Register does that.
+- Never ask the user to copy files into `~/.yunxi`. Register does that.
 - Never put secrets in the header or the description.
 - Do not report the tool as working until you have called it once.
 - Keep the script self-contained. Name third-party dependencies in a comment and fail with a `fix` message when they are missing.

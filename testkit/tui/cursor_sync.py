@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check streaming redraw transactions in a sandbox PTY.
 
-Usage: python3 testkit/tui/cursor_sync.py [--binary /absolute/path/to/miyu]
+Usage: python3 testkit/tui/cursor_sync.py [--binary /absolute/path/to/yunxi]
        Add --direct to exercise the in-process event loop.
 
 The terminal may render between any two writes. Hiding its cursor does not
@@ -25,7 +25,7 @@ import round26 as harness
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -75,19 +75,19 @@ def main():
     parser.add_argument("--direct", action="store_true")
     args = parser.parse_args()
     h = harness.h
-    base = sandbox_dir.make("miyu-cursor-sync-")
+    base = sandbox_dir.make("yunxi-cursor-sync-")
     h.HOME, h.RUNTIME = base / "home", str(base / "run")
-    h.OUT = Path(os.environ.get("OUT") or Path.home() / ".cache" / "miyu-cursor-sync")
+    h.OUT = Path(os.environ.get("OUT") or Path.home() / ".cache" / "yunxi-cursor-sync")
     h.EDIT_FILE = base / "unused-edit.txt"
     h.PORT, h.STUB_PORT = free_port(), free_port()
     h.BASE = f"http://127.0.0.1:{h.PORT}"
     if args.binary:
         h.BIN = args.binary.resolve()
     h.COLS, h.ROWS = 120, 40
-    h.ENV.update(MIYU_HOME=str(h.HOME), XDG_RUNTIME_DIR=h.RUNTIME, MIYU_TUI="1")
-    h.ENV.pop("MIYU_DIRECT", None)
+    h.ENV.update(YUNXI_HOME=str(h.HOME), XDG_RUNTIME_DIR=h.RUNTIME, YUNXI_TUI="1")
+    h.ENV.pop("YUNXI_DIRECT", None)
     if args.direct:
-        h.ENV["MIYU_DIRECT"] = "1"
+        h.ENV["YUNXI_DIRECT"] = "1"
     # These ports belong to this run. Never stop an unrelated daemon.
     h.kill_stale_daemon = lambda: None
     print(f"Artifacts: {h.OUT}", flush=True)

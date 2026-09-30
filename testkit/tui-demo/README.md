@@ -8,8 +8,8 @@ wait_spinner.rs / stream / terminal/kitty.rs），全屏模型只负责让「分
 
 ```sh
 cd testkit/tui-demo
-CARGO_TARGET_DIR=$HOME/.cache/miyu-tui-demo-target cargo build --release
-$HOME/.cache/miyu-tui-demo-target/release/miyu-tui-demo
+CARGO_TARGET_DIR=$HOME/.cache/yunxi-tui-demo-target cargo build --release
+$HOME/.cache/yunxi-tui-demo-target/release/yunxi-tui-demo
 ```
 
 - 启动时重放历史（对应真 REPL 恢复会话的回放）
@@ -24,18 +24,18 @@ $HOME/.cache/miyu-tui-demo-target/release/miyu-tui-demo
 
 ```sh
 # pyte 模拟终端：逐状态抓屏，注入 SGR 鼠标序列做拖选，截获 OSC 52 剪贴板内容，末尾量 RSS
-python3 drive.py $HOME/.cache/miyu-tui-demo-target/release/miyu-tui-demo 110 30 --styles
+python3 drive.py $HOME/.cache/yunxi-tui-demo-target/release/yunxi-tui-demo 110 30 --styles
 # 空闲 / 回合中 CPU 与输出字节
-python3 cpu_probe.py $HOME/.cache/miyu-tui-demo-target/release/miyu-tui-demo
-# 真 kitty（无头 cage）截图：命令列表 / 拖选 / 图片 / 选择器 / 覆盖层；kitty_probe_jobs.py 只测任务行点击（MIYU_DEMO_LOG=文件 记鼠标事件）
-OUT=~/.cache/miyu-tui-probe ../kitty-image/run_headless.sh python3 kitty_probe.py $HOME/.cache/miyu-tui-demo-target/release/miyu-tui-demo
+python3 cpu_probe.py $HOME/.cache/yunxi-tui-demo-target/release/yunxi-tui-demo
+# 真 kitty（无头 cage）截图：命令列表 / 拖选 / 图片 / 选择器 / 覆盖层；kitty_probe_jobs.py 只测任务行点击（YUNXI_DEMO_LOG=文件 记鼠标事件）
+OUT=~/.cache/yunxi-tui-probe ../kitty-image/run_headless.sh python3 kitty_probe.py $HOME/.cache/yunxi-tui-demo-target/release/yunxi-tui-demo
 ```
 
 ## 2026-09-10 实测（v4）
 
 - 110×30：RSS 4.0 MB / 匿名 0.6 MB
 - 拖选 `┃` 装饰列起、跨三行到 URL 中段，剪贴板得到 `\n\nhttps://www.bilibili.`，不含竖条；输入框内拖选得到 `选中我这`
-- 真 kitty 截图 ~/.cache/miyu-tui-probe/tui-*.png
+- 真 kitty 截图 ~/.cache/yunxi-tui-probe/tui-*.png
 
 ## 版本记录
 

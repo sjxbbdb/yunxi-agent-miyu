@@ -6,7 +6,7 @@
 TUI 就会变得超级卡，几乎没法交互」——修前（转轮每一拍整段重折）30k 词元时 97% CPU、
 回显 2–4 秒；修后（`timeline::ThoughtRows` 只往后补）46k 词元时约 5%、10ms 上下。
 
-只报数、不设通过线：耗时跟机器走。对比修前修后用 `MIYU_BIN` 换二进制。
+只报数、不设通过线：耗时跟机器走。对比修前修后用 `YUNXI_BIN` 换二进制。
 
     cargo build
     python3 testkit/tui/thinking_lag.py [总字节 150000] [吐完用几秒 60] [--one-paragraph]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""人格、Miyu 附加、用户身份的编辑等「保存并退出」才落盘（用户 09-26）。
+"""人格、YunXi 附加、用户身份的编辑等「保存并退出」才落盘（用户 09-26）。
 
-真二进制 + PTY + pyte（驱动照搬 config_visual.py），隔离的 MIYU_HOME，不起 daemon。多行字段
+真二进制 + PTY + pyte（驱动照搬 config_visual.py），隔离的 YUNXI_HOME，不起 daemon。多行字段
 走 `$EDITOR`：换成一个假编辑器，把 FAKE_EDITOR_SOURCE 那个文件的内容抄进去。
 
 第一趟（改完选「不保存」）：
@@ -11,10 +11,10 @@
     discard_keeps_disk           退出选「不保存」：还是老名字、老正文
 第二趟（改完「保存并退出」）：
     persona_renamed_on_save      盘上换成新名字、正文是改过的，老名字没了
-    miyu_hint_written_on_save    Miyu 的防失忆提示写下了（保存前没写）
+    yunxi_hint_written_on_save    YunXi 的防失忆提示写下了（保存前没写）
     identity_renamed_on_save     用户身份换成新名字、老名字没了（保存前没动）
 
-Run: python3 testkit/tui/config_personas.py --binary /absolute/path/to/miyu
+Run: python3 testkit/tui/config_personas.py --binary /absolute/path/to/yunxi
 """
 
 import argparse
@@ -72,7 +72,7 @@ class Walk:
 
     def persona_list(self):
         self.persona_menu()
-        return self.send(b"\r", "Miyu", "Miyu")
+        return self.send(b"\r", "YunXi", "YunXi")
 
     def back_to_main(self):
         """一层层 Esc 回主菜单（人格列表 → 人格和功能 → 主菜单）。"""
@@ -112,7 +112,7 @@ def main():
     parser.add_argument("--binary", type=Path, required=True)
     args = parser.parse_args()
     binary = args.binary.resolve()
-    sandbox = sandbox_dir.make("miyu-config-personas-")
+    sandbox = sandbox_dir.make("yunxi-config-personas-")
     home = sandbox / "home"
     (home / "config").mkdir(parents=True)
     runtime = Path(tempfile.mkdtemp(prefix="mx-cp-", dir="/tmp"))
@@ -139,7 +139,7 @@ def main():
         rename_in_form(walk, "角色甲")
         walk.editor_writes("原来的正文")
         os.write(walk.driver.master, b"j\r")  # 内容：多行字段，改完表单当场收下
-        text = walk.send(b"", "角色甲", "Miyu") or walk.driver.text()
+        text = walk.send(b"", "角色甲", "YunXi") or walk.driver.text()
         created = walk.find("角色甲.md")
         check(created and created[0].read_text(encoding="utf-8").strip() == "原来的正文",
               "新建人格当场写了盘", created)
@@ -148,13 +148,13 @@ def main():
         check(not has_action_rows(text) and "导航中" not in text, "edit_form_has_no_buttons",
               has_action_rows(text) or "还写着导航中")
         rename_in_form(walk, "角色乙")
-        text = walk.send(b"\x1b", "角色乙", "Miyu")
+        text = walk.send(b"\x1b", "角色乙", "YunXi")
         check(text is not None and "角色甲" not in (text or ""), "rename_shows_new_name",
               walk.driver.text()[-300:])
         walk.editor_writes("改过的正文")
         walk.send(b"\r", "编辑人格", "名称")
         os.write(walk.driver.master, b"j\r")
-        walk.send(b"", "角色乙", "Miyu")
+        walk.send(b"", "角色乙", "YunXi")
         on_disk = walk.find("角色甲.md")
         check(on_disk and on_disk[0].read_text(encoding="utf-8").strip() == "原来的正文"
               and not walk.find("角色乙.md"), "nothing_written_before_save",
@@ -167,25 +167,25 @@ def main():
     finally:
         walk.driver.close()
 
-    # ── 第二趟：改名改正文、Miyu 附加、新建再改名一个用户身份，「保存并退出」 ──
+    # ── 第二趟：改名改正文、YunXi 附加、新建再改名一个用户身份，「保存并退出」 ──
     walk = Walk(binary, home, runtime, source)
     try:
         walk.driver.wait("供应商和模型", "保存并退出")
         walk.persona_list()
         walk.send(b"j\r", "编辑人格", "名称")
         rename_in_form(walk, "角色乙")
-        walk.send(b"\x1b", "角色乙", "Miyu")
+        walk.send(b"\x1b", "角色乙", "YunXi")
         walk.editor_writes("改过的正文")
         walk.send(b"\r", "编辑人格", "名称")
         os.write(walk.driver.master, b"j\r")
-        walk.send(b"", "角色乙", "Miyu")
+        walk.send(b"", "角色乙", "YunXi")
 
-        # Miyu 那一行：防失忆提示（多行字段）。
-        walk.editor_writes("Miyu 改过的提示")
-        walk.send(b"k\r", "Miyu 人格附加")
+        # YunXi 那一行：防失忆提示（多行字段）。
+        walk.editor_writes("YunXi 改过的提示")
+        walk.send(b"k\r", "YunXi 人格附加")
         os.write(walk.driver.master, b"\r")
-        walk.send(b"", "角色乙", "Miyu")
-        miyu_hint_before = [p for p in walk.find("default.md") if p.parent.name == "hints"]
+        walk.send(b"", "角色乙", "YunXi")
+        yunxi_hint_before = [p for p in walk.find("default.md") if p.parent.name == "hints"]
 
         # 用户身份：新建一个（当场写），再改名（等保存）。
         os.write(walk.driver.master, b"\x1b")
@@ -208,9 +208,9 @@ def main():
               and not walk.find("角色甲.md"), "persona_renamed_on_save",
               "没退出" if not exited else [str(p) for p in walk.find("角色*.md")])
         hints = [p for p in walk.find("default.md") if p.parent.name == "hints"]
-        check(not miyu_hint_before and hints
-              and hints[0].read_text(encoding="utf-8").strip() == "Miyu 改过的提示",
-              "miyu_hint_written_on_save", {"before": miyu_hint_before, "after": hints})
+        check(not yunxi_hint_before and hints
+              and hints[0].read_text(encoding="utf-8").strip() == "YunXi 改过的提示",
+              "yunxi_hint_written_on_save", {"before": yunxi_hint_before, "after": hints})
         identity = walk.find("身份乙.md")
         check(identity_before == (True, False) and identity
               and identity[0].read_text(encoding="utf-8").strip() == "身份正文"

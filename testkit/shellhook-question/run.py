@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """shellhook 形态的 ask_question 走查:面板会不会自己消失/回合会不会被取消。
 
-复现的是「fish hook 把命令行管道喂给 miyu」那一刻:stdin 是管道、stdout 是
+复现的是「fish hook 把命令行管道喂给 yunxi」那一刻:stdin 是管道、stdout 是
 终端、进程有控制终端(/dev/tty)。桩模型立刻提一个问题,脚本什么都不按,
 几秒后再敲两下方向键,记录面板活了多久、回合有没有被取消。
 
@@ -9,7 +9,7 @@
     KEYS=arrows python3 testkit/shellhook-question/run.py    # 3 秒后敲 ↑ ↓
     KEYS=answer python3 testkit/shellhook-question/run.py    # ↑ 之后回车提交
 
-产物在 ~/.cache/miyu-shellhook-question/:raw.bin(终端原始输出)、report.json。
+产物在 ~/.cache/yunxi-shellhook-question/:raw.bin(终端原始输出)、report.json。
 """
 
 import json
@@ -26,22 +26,22 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-shellhook-question/home"))
-RUNTIME = os.environ.get("MIYU_SHQ_RUNTIME", "/tmp/mx-shq")
-PORT = int(os.environ.get("MIYU_SHQ_PORT", "18422"))
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-shellhook-question/home"))
+RUNTIME = os.environ.get("YUNXI_SHQ_RUNTIME", "/tmp/mx-shq")
+PORT = int(os.environ.get("YUNXI_SHQ_PORT", "18422"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18497"))
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-shellhook-question"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-shellhook-question"))
 OBSERVE_SECONDS = float(os.environ.get("OBSERVE_SECONDS", "12"))
 KEYS = os.environ.get("KEYS", "")
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
 
 PANEL_MARKERS = ("这是一条走查用的问题", "确认")
 CANCEL_MARKERS = ("已取消", "cancelled")

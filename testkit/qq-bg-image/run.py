@@ -4,7 +4,7 @@
 沙箱 daemon + 假 NapCat（反向 WS）+ 桩模型（stub.py）。管理员 @ 她说 TKIMG，桩让她调
 send_message_to_user 发一张图；假 NapCat 收到带图的那条先憋 5 秒，再回「上传失败」。
 
-    BIN=<miyu> python3 testkit/qq-bg-image/run.py
+    BIN=<yunxi> python3 testkit/qq-bg-image/run.py
 
 判定：
   tool_returned_at_once   工具结果写着在后台传（uploading），不是等到失败才回
@@ -31,8 +31,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "testkit"))
 import sandbox_dir  # noqa: E402
 
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
-SANDBOX = sandbox_dir.make("miyu-qq-bg-image-")
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
+SANDBOX = sandbox_dir.make("yunxi-qq-bg-image-")
 print("沙箱", SANDBOX, flush=True)
 HOME = SANDBOX / "home"
 RUNTIME = SANDBOX / "runtime"
@@ -163,7 +163,7 @@ def main():
     stub = subprocess.Popen([sys.executable, str(Path(__file__).with_name("stub.py"))],
                             env=dict(os.environ, STUB_PORT=str(STUB_PORT), STUB_LOG=str(STUB_LOG),
                                      STUB_IMAGE=str(IMAGE)))
-    env = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), MIYU_LOG="info")
+    env = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), YUNXI_LOG="info")
     log_path = SANDBOX / "daemon.log"
     daemon = subprocess.Popen([str(BIN), "__daemon", "--port", str(PORT)], env=env, cwd=str(HOME),
                               stdin=subprocess.DEVNULL, stdout=log_path.open("w"), stderr=subprocess.STDOUT)

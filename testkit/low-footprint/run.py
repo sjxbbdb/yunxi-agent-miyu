@@ -2,10 +2,10 @@
 """低占用专项 A/B 测量:对指定二进制量 daemon/REPL 的内存与 CPU 足迹。
 
 用法:
-    BIN=/usr/bin/miyu python3 run.py baseline
-    BIN=../../target/release/miyu python3 run.py round2
+    BIN=/usr/bin/yunxi python3 run.py baseline
+    BIN=../../target/release/yunxi python3 run.py round2
 
-隔离手法(见 memory/miyu-live-testing-notes):独立 MIYU_HOME + 独立
+隔离手法(见 memory/yunxi-live-testing-notes):独立 YUNXI_HOME + 独立
 XDG_RUNTIME_DIR + daemon 显式 `__daemon --port 18490`,与线上 8300 完全
 不相交;provider 只有本地桩,无真实出网(models.dev 后台刷新除外,两组
 同样发生,A/B 公平)。
@@ -30,14 +30,14 @@ import termios
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 BASE = Path(__file__).resolve().parent
 REPO = BASE.parents[1]
-BIN = Path(os.environ.get("BIN", REPO / "target" / "release" / "miyu")).resolve()
+BIN = Path(os.environ.get("BIN", REPO / "target" / "release" / "yunxi")).resolve()
 TAG = sys.argv[1] if len(sys.argv) > 1 else "run"
 HOME = BASE / "homes" / TAG
 RUN_DIR = BASE / "xdg-run" / TAG
@@ -50,8 +50,8 @@ IDLE_SECONDS = float(os.environ.get("IDLE_SECONDS", "30"))
 sys.path.insert(0, str(REPO / "testkit" / "persona-ab"))
 from run import strip_jsonc  # noqa: E402
 
-REAL_CONFIG = Path.home() / ".miyu" / "config" / "config.jsonc"
-REAL_MODELS_CACHE = Path.home() / ".miyu" / "cache" / "models_cache.json"
+REAL_CONFIG = Path.home() / ".yunxi" / "config" / "config.jsonc"
+REAL_MODELS_CACHE = Path.home() / ".yunxi" / "cache" / "models_cache.json"
 
 
 def build_home():
@@ -87,9 +87,9 @@ def build_home():
 
 def env_for(extra=None):
     env = dict(os.environ)
-    for k in ("XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "MIYU_DIRECT"):
+    for k in ("XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "YUNXI_DIRECT"):
         env.pop(k, None)
-    env["MIYU_HOME"] = str(HOME)
+    env["YUNXI_HOME"] = str(HOME)
     env["XDG_RUNTIME_DIR"] = str(RUN_DIR)
     env["TERM"] = "xterm-256color"
     if extra:

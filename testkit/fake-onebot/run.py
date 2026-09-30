@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""最小 OneBot(NapCat) 假客户端,用来真实驱动 Miyu 的 QQ 群聊回合。
+"""最小 OneBot(NapCat) 假客户端,用来真实驱动 YunXi 的 QQ 群聊回合。
 
 为什么要它:群聊那条路(`qq_turn_system_context` / `active_target_prompt`)
 只有 OneBot 连接能走通,REPL 和单元测试都碰不到。而真群里有几十号人,不能
@@ -24,7 +24,7 @@ OTHER     = 800000002          # 另一个假群友
 
 
 def access_token() -> str:
-    raw = open(os.path.expanduser("~/.miyu/config/config.jsonc"), encoding="utf-8").read()
+    raw = open(os.path.expanduser("~/.yunxi/config/config.jsonc"), encoding="utf-8").read()
     raw = re.sub(r"^\s*//.*", "", raw, flags=re.M)
     return json.loads(raw)["platforms"]["qq"].get("access_token", "") or ""
 
@@ -106,16 +106,16 @@ SENT_MESSAGES = {}
 
 
 # 置 FAKE_DROP_QUOTE=1:把自己发出去的消息里的引用段悄悄扔掉,模仿 NapCat
-# 「短号反查不到就静默丢引用、消息照发」那个行为。用来验 Miyu 那侧的事后核对
+# 「短号反查不到就静默丢引用、消息照发」那个行为。用来验 YunXi 那侧的事后核对
 # 抓不抓得到。
 DROP_QUOTE = os.environ.get("FAKE_DROP_QUOTE")
 
 
 def api_data(action, params):
-    """按 action 给出合理的返回体。返回 None 表示"不支持",让 Miyu 走降级。"""
+    """按 action 给出合理的返回体。返回 None 表示"不支持",让 YunXi 走降级。"""
     if action in ("send_group_msg", "send_msg", "send_private_msg"):
         mid = int(time.time() * 1000) % 2**31
-        # 存下来:Miyu 发完会回头 get_msg 核对引用段还在不在,不存的话它每条
+        # 存下来:YunXi 发完会回头 get_msg 核对引用段还在不在,不存的话它每条
         # 都会报"对端把引用段丢掉了"。
         stored = [
             seg for seg in (params.get("message") or [])
@@ -124,7 +124,7 @@ def api_data(action, params):
         SENT_MESSAGES[mid] = {
             "message_type": "group" if action != "send_private_msg" else "private",
             "user_id": SELF_ID, "group_id": params.get("group_id"),
-            "message": stored, "raw_message": "", "nickname": "Miyu",
+            "message": stored, "raw_message": "", "nickname": "YunXi",
             "time": int(time.time()),
         }
         return {"message_id": mid}
@@ -132,7 +132,7 @@ def api_data(action, params):
         return {"group_id": GROUP_ID, "group_name": "假群(测具)",
                 "member_count": 3, "max_member_count": 200}
     if action == "get_login_info":
-        return {"user_id": SELF_ID, "nickname": "Miyu"}
+        return {"user_id": SELF_ID, "nickname": "YunXi"}
     if action == "get_group_member_info":
         uid = int(params.get("user_id") or SENDER)
         return {"group_id": GROUP_ID, "user_id": uid, "nickname": "测试群友",
@@ -169,7 +169,7 @@ def api_data(action, params):
 
 
 def pump(ws):
-    """后台收:Miyu 发过来的都是 API 调用,逐一应答。异常必须可见——第一版
+    """后台收:YunXi 发过来的都是 API 调用,逐一应答。异常必须可见——第一版
     悄悄死掉,表现成"所有 API 都超时",查了半天。"""
     import traceback
     while True:
@@ -187,7 +187,7 @@ def pump(ws):
             action, params = frame["action"], frame.get("params", {})
             if action in ("send_group_msg", "send_msg"):
                 REPLIES.append(params.get("message"))
-                print(f"\n  ← Miyu 回复: {render(params.get('message'))}")
+                print(f"\n  ← YunXi 回复: {render(params.get('message'))}")
             else:
                 print(f"  [api] {action}")
             ws.send({"status": "ok", "retcode": 0,
@@ -369,7 +369,7 @@ def main():
     if "--keep" in sys.argv:
         keep = int(sys.argv[sys.argv.index("--keep") + 1])
     ws = WS.connect(access_token())
-    print(f"已连接 Miyu (self_id={SELF_ID}, group={GROUP_ID})")
+    print(f"已连接 YunXi (self_id={SELF_ID}, group={GROUP_ID})")
     threading.Thread(target=pump, args=(ws,), daemon=True).start()
     ws.send({"post_type": "meta_event", "meta_event_type": "lifecycle",
              "sub_type": "connect", "self_id": SELF_ID, "time": int(time.time())})

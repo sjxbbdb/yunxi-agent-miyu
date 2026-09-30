@@ -1,19 +1,19 @@
 //! 程序驱动形态的回合客户端:一条 IPC 连接跑一个回合,把事件翻成对外事件。
 //!
 //! 与 `one_shot.rs`(终端渲染那条)并列而不共用——那条路的循环里揉着
-//! 终端光标、raw mode、footer 转轮;这里只有帧进、JSON 出。`miyu ask
-//! --output-format json|stream-json` 与 `miyu stdio` 都走这里。
+//! 终端光标、raw mode、footer 转轮;这里只有帧进、JSON 出。`yunxi ask
+//! --output-format json|stream-json` 与 `yunxi stdio` 都走这里。
 //!
 //! daemon 侧是「一连接一回合」:取消、答问都得另开连接发,这里照办。
 
 use crate::cli::output::event::{ErrorKind, PublicEvent};
 use crate::cli::repl::session::send_ipc_command;
 use anyhow::{bail, Result};
-use miyu_base::paths::MiyuPaths;
-use miyu_core::ipc::{self, Command as IpcCommand, Frame as IpcFrame, Request as IpcRequest};
 use serde_json::Value;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
+use yunxi_base::paths::YunXiPaths;
+use yunxi_core::ipc::{self, Command as IpcCommand, Frame as IpcFrame, Request as IpcRequest};
 
 pub struct TurnRequest {
     pub content: String,
@@ -87,7 +87,7 @@ fn image_attachments(images: &[PathBuf]) -> Result<Vec<Option<ipc::ImageAttachme
             let absolute = std::fs::canonicalize(path).map_err(|error| {
                 crate::cli::exit_code::usage_error(format!(
                     "{}: {} ({error})",
-                    miyu_base::i18n::text("image not found", "找不到图片"),
+                    yunxi_base::i18n::text("image not found", "找不到图片"),
                     path.display()
                 ))
             })?;
@@ -101,7 +101,7 @@ fn image_attachments(images: &[PathBuf]) -> Result<Vec<Option<ipc::ImageAttachme
 /// 跑一个回合。事件按到达顺序交给 `emit`;返回终态。连接层错误(daemon
 /// 没了)走 Err,回合层失败走 `TurnOutcome::Failed`。
 pub async fn run_turn(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     request: TurnRequest,
     policy: QuestionPolicy,
     cancel: Option<CancelSignal>,
@@ -124,7 +124,7 @@ pub async fn run_turn(
     )
     .await?;
     let Some(first) = ipc::receive::<IpcFrame>(&mut stream).await? else {
-        bail!("Miyu core closed the connection before accepting the turn");
+        bail!("YunXi core closed the connection before accepting the turn");
     };
     let run_id = match first {
         IpcFrame::Accepted { run_id, .. } => run_id,
@@ -140,7 +140,7 @@ pub async fn run_turn(
                 request.session_id,
             )));
         }
-        other => bail!("Miyu core returned an unexpected response: {other:?}"),
+        other => bail!("YunXi core returned an unexpected response: {other:?}"),
     };
     let run = RunContext {
         paths,
@@ -158,7 +158,7 @@ pub async fn run_turn(
 /// 这一轮开头补。`deadline` 是整条命令的，不是这一轮的。
 #[allow(clippy::too_many_arguments)]
 pub async fn follow_run(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     run_id: &str,
     session_id: &str,
     after: Option<u64>,
@@ -179,7 +179,7 @@ pub async fn follow_run(
     )
     .await?;
     let Some(first) = ipc::receive::<IpcFrame>(&mut stream).await? else {
-        bail!("Miyu core closed the connection before attaching to the turn");
+        bail!("YunXi core closed the connection before attaching to the turn");
     };
     let run_id = match first {
         IpcFrame::Accepted { run_id, .. } => run_id,
@@ -190,7 +190,7 @@ pub async fn follow_run(
                 Some(session_id.to_string()),
             )));
         }
-        other => bail!("Miyu core returned an unexpected response: {other:?}"),
+        other => bail!("YunXi core returned an unexpected response: {other:?}"),
     };
     let run = RunContext {
         paths,
@@ -205,7 +205,7 @@ pub async fn follow_run(
 
 /// 收帧那一段里不随帧变的东西。
 struct RunContext<'a> {
-    paths: &'a MiyuPaths,
+    paths: &'a YunXiPaths,
     run_id: String,
     session_id: Option<String>,
     started_at: Instant,
@@ -285,7 +285,7 @@ async fn drive_frames(
         let Some(frame) = frame else {
             return Ok(TurnOutcome::failed(
                 ErrorKind::Disconnected,
-                "Miyu core disconnected during the turn",
+                "YunXi core disconnected during the turn",
                 session_id,
             ));
         };
@@ -382,9 +382,9 @@ async fn drive_frames(
 
 /// 另开连接回答一个问题(stdio 的 `answer`)。
 pub async fn answer_question(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     question_id: String,
-    answers: miyu_base::question::QuestionAnswers,
+    answers: yunxi_base::question::QuestionAnswers,
 ) -> Result<()> {
     send_ipc_command(
         paths,

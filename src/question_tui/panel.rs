@@ -145,7 +145,7 @@ impl QuestionPanel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use miyu_base::question::QuestionOption;
+    use yunxi_base::question::QuestionOption;
 
     fn request(custom: bool) -> QuestionRequest {
         QuestionRequest {

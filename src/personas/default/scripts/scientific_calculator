@@ -37,7 +37,7 @@ Arithmetic follows IEEE-754 like the Rust f64 code: division by zero gives
 inf/nan instead of raising, invalid domains give nan, and non-finite results
 are emitted as JSON null (what serde_json does with NaN/inf).
 
-Arguments arrive as one JSON object on stdin (also MIYU_ARGS_JSON):
+Arguments arrive as one JSON object on stdin (also YUNXI_ARGS_JSON):
     {"expression":"2^10 + sqrt(16)"}
 """
 
@@ -368,7 +368,7 @@ def render(operation, expression, value):
 
 
 def read_args():
-    raw = os.environ.get("MIYU_ARGS_JSON")
+    raw = os.environ.get("YUNXI_ARGS_JSON")
     if not raw:
         raw = "" if sys.stdin is None or sys.stdin.isatty() else sys.stdin.read()
     raw = (raw or "").strip() or "{}"

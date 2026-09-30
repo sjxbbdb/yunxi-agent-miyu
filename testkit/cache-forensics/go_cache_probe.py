@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""OpenCode Go(deepseek-v4.1-flash)供应商侧缓存直连探针(09-25)。不经过 Miyu,直接打 chat/completions,
-头照 crates/miyu-core/src/llm/openai_compatible/zen_headers.rs 的形状。每个试次一个新 nonce、新会话头,
+"""OpenCode Go(deepseek-v4.1-flash)供应商侧缓存直连探针(09-25)。不经过 YunXi,直接打 chat/completions,
+头照 crates/yunxi-core/src/llm/openai_compatible/zen_headers.rs 的形状。每个试次一个新 nonce、新会话头,
 前缀谁都没发过,试次之间不串缓存。
 
 子命令(每项默认重复 3 次,看倍率别看单次):
-    header      x-opencode-request 每请求换(A,Miyu 现状)vs 一轮一个(B,opencode CLI);一轮 6 步,交替跑
+    header      x-opencode-request 每请求换(A,YunXi 现状)vs 一轮一个(B,opencode CLI);一轮 6 步,交替跑
     readiness   请求 1 结束后隔 0/1/3/10 秒发请求 2(追加一小段),请求 1 的 prompt 盖住了多少
     concurrency 同一前缀 4 个请求同时发(同一会话头)→ 再各追加一段同时发;另测 4 个不同会话头能否吃到 s0 暖好的前缀
     ttl         请求 1 之后空闲 60/180/300/600 秒再发请求 2,缓存还在不在(各试次并行跑)
-    reasoning   带工具调用的上一轮:思考原样回传(Miyu 现状)/ 下一轮去掉 / 从不回传,下一轮首请求在哪断
+    reasoning   带工具调用的上一轮:思考原样回传(YunXi 现状)/ 下一轮去掉 / 从不回传,下一轮首请求在哪断
     granularity 汇总所有结果里 cached 对 64/128/256 取模
 
     go_cache_probe.py <子命令> [--reps 3] [--prefix-words 16000]
     go_cache_probe.py all          依次跑除 ttl 以外的全部
-key 从 ~/.miyu/config/config.jsonc 只读取、不打印。每条请求一行 JSON 写进 ~/.cache/miyu-cache-live/probe/。
+key 从 ~/.yunxi/config/config.jsonc 只读取、不打印。每条请求一行 JSON 写进 ~/.cache/yunxi-cache-live/probe/。
 """
 
 import argparse
@@ -32,8 +32,8 @@ from pathlib import Path
 import requests
 
 USER_AGENT = "opencode/1.18.29 ai-sdk/provider-utils/4.0.46 runtime/bun/1.4.0"
-CONFIG = Path.home() / ".miyu/config/config.jsonc"
-OUT = Path.home() / ".cache/miyu-cache-live/probe"
+CONFIG = Path.home() / ".yunxi/config/config.jsonc"
+OUT = Path.home() / ".cache/yunxi-cache-live/probe"
 PROVIDER = "opencodego"
 MODEL = "deepseek-v4.1-flash"
 GRANULE = 128

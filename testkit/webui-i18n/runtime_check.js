@@ -14,7 +14,7 @@ const ROOT = path.resolve(__dirname, "../..");
 function load(lang) {
   const sandbox = {
     console,
-    window: { MIYU_LANG: lang },
+    window: { YUNXI_LANG: lang },
     document: {
       readyState: "complete",
       documentElement: {},
@@ -27,7 +27,7 @@ function load(lang) {
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(path.join(ROOT, "web/i18n-en.js"), "utf8"), sandbox);
   vm.runInContext(fs.readFileSync(path.join(ROOT, "web/i18n.js"), "utf8"), sandbox);
-  return { api: sandbox.window.MiyuI18n, win: sandbox.window };
+  return { api: sandbox.window.YunXiI18n, win: sandbox.window };
 }
 
 const failures = [];
@@ -48,7 +48,7 @@ check("placeholder_zh", zh.api.t("已选 {count} {noun}", { count: 3, noun: "项
 check("missing_falls_back", en.api.t("这条没有词条") === "这条没有词条");
 check("missing_keeps_placeholder", en.api.t("没有 {x} 词条", { x: 1 }) === "没有 1 词条");
 check("global_t_alias", typeof en.win.t === "function" && en.win.t("新对话") === "New chat");
-check("dict_is_frozen", Object.isFrozen(en.win.MIYU_I18N_EN));
+check("dict_is_frozen", Object.isFrozen(en.win.YUNXI_I18N_EN));
 
 const passed = 10 - failures.length;
 console.log(`\n${passed}/10 passed`);

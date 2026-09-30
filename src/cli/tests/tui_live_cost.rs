@@ -3,14 +3,14 @@
 //!
 //! 不是断言，是尺子。用户跑的是 debug 二进制，按 debug 量才是他手上的感觉：
 //!
-//!     cargo test -p miyu --lib -- cli::tests::tui_live_cost --ignored --nocapture
+//!     cargo test -p yunxi --lib -- cli::tests::tui_live_cost --ignored --nocapture
 
 use super::tui_blocks::with_blocks;
 use crate::cli::repl::tail::screen::term::Term;
-use miyu_hosts::render::{
+use std::time::{Duration, Instant};
+use yunxi_hosts::render::{
     set_cols_override, ReasoningDisplayMode, StreamRenderer, ToolCallDisplayMode,
 };
-use std::time::{Duration, Instant};
 
 #[test]
 #[ignore]

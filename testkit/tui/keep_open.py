@@ -14,9 +14,9 @@
     cargo build
     python3 testkit/tui/keep_open.py
 
-产物在 ~/.cache/miyu-keep-open/。
+产物在 ~/.cache/yunxi-keep-open/。
 
-**这些 TUI 走查只能一个一个跑**：共用同一个 `MIYU_HOME` 和桩模型端口。
+**这些 TUI 走查只能一个一个跑**：共用同一个 `YUNXI_HOME` 和桩模型端口。
 """
 
 import json
@@ -30,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-keep-open"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-keep-open"))
 LINES = [f"第 {i} 行思考：这一行是为了把滚动窗喂满而写的占位内容。" for i in range(1, 25)]
 REASONING = "\n".join(LINES)
 SCROLL_WINDOW = 10

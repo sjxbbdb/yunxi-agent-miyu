@@ -3,7 +3,7 @@
 
 用户 09-19 两条：
 
-1. **shellhook（单次 `miyu "…"`）里每发一次表情包就多两行报错** `✗ 表情包 ·
+1. **shellhook（单次 `yunxi "…"`）里每发一次表情包就多两行报错** `✗ 表情包 ·
    已中断`——而那一次其实是成功的；
 2. **全屏 TUI 里图和后面的正文之间少一个空行**。
 
@@ -24,7 +24,7 @@
 
     python3 testkit/meme/run.py
 
-产物在 ~/.cache/miyu-meme-rows/。
+产物在 ~/.cache/yunxi-meme-rows/。
 """
 
 import json
@@ -46,7 +46,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fold_summary import is_fold_summary  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -58,17 +58,17 @@ except ImportError:
     raise SystemExit(2)
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", ROOT / "target" / "debug" / "miyu"))
+BIN = Path(os.environ.get("YUNXI_BIN", ROOT / "target" / "debug" / "yunxi"))
 SMOKE = ROOT / "testkit" / "repl-smoke"
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-meme-rows/home"))
-RUNTIME = os.environ.get("MIYU_MEME_RUNTIME", "/tmp/mx-meme")
-PORT = int(os.environ.get("MIYU_MEME_PORT", "18455"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-meme-rows/home"))
+RUNTIME = os.environ.get("YUNXI_MEME_RUNTIME", "/tmp/mx-meme")
+PORT = int(os.environ.get("YUNXI_MEME_PORT", "18455"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18497"))
 BASE = f"http://127.0.0.1:{PORT}"
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-meme-rows"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-meme-rows"))
 COLS, ROWS = 100, 46
 MEME_ID = "probe-meme-0001"
-# 库名显式给：省略的话走的是**人格库**（沙箱配置没写人格 → "miyu"），
+# 库名显式给：省略的话走的是**人格库**（沙箱配置没写人格 → "yunxi"），
 # 种在 default 里的这张图根本不会被找到，工具直接报「meme not found」。
 LIBRARY = "probe"
 REPLY = "发出去了，能看到吗"
@@ -204,8 +204,8 @@ def run_pty(argv, env, quiet=1.2, timeout=90):
 
 
 def shellhook_case(env, report):
-    """一、shellhook 那条路：单次 `miyu "…"`。"""
-    raw = run_pty([str(BIN), "发个表情包"], dict(env, MIYU_TUI="0"))
+    """一、shellhook 那条路：单次 `yunxi "…"`。"""
+    raw = run_pty([str(BIN), "发个表情包"], dict(env, YUNXI_TUI="0"))
     (OUT / "raw-shellhook.bin").write_bytes(raw)
     screen = render(raw)
     (OUT / "screen-shellhook.txt").write_text("\n".join(screen), encoding="utf-8")
@@ -265,7 +265,7 @@ def tui_case(env, report, term="xterm-256color", tag="TUI", fresh=False):
     （用户那台就是这条）。两条路进缓冲的形状不同，空行的账却是同一本。
     """
     tui = tui_module()
-    tui.ENV = dict(env, MIYU_TUI="1", TERM=term)
+    tui.ENV = dict(env, YUNXI_TUI="1", TERM=term)
     process, master = tui.spawn_tui()
     sink = bytearray()
     try:
@@ -360,11 +360,11 @@ def main():
         ),
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
-    env = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
+    env = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
     # chafa 默认会**探测终端能力**（往 /dev/tty 发查询等回答）。测具这个 PTY
     # 没人答，它要干等五秒才退回字符画——那一步的耗时于是显示成 `5.0s`，看着
     # 像打图很慢。真终端会立刻回答，所以这是测具的事，不是产品的事。
-    env["MIYU_CHAFA_ARGS"] = "--probe off --polite on"
+    env["YUNXI_CHAFA_ARGS"] = "--probe off --polite on"
     # chafa 认 `KITTY_*` 认得比 TERM 还早：留着的话它吐的是 kitty 图形协议
     # （APC），pyte 不认，整屏会被 base64 糊满，图那几行也就数不出来了。
     for stale in ("KITTY_WINDOW_ID", "KITTY_PID", "KITTY_LISTEN_ON",

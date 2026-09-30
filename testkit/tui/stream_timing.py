@@ -21,15 +21,15 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", ROOT / "target" / "debug" / "miyu"))
+BIN = Path(os.environ.get("YUNXI_BIN", ROOT / "target" / "debug" / "yunxi"))
 SMOKE = ROOT / "testkit" / "repl-smoke"
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-stream-timing/home"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-stream-timing/home"))
 RUNTIME = os.environ.get("RUNTIME", "/tmp/mx-stream-timing")
 PORT = int(os.environ.get("PORT", "18463"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18487"))
@@ -115,7 +115,7 @@ def main():
 
     tui.HOME, tui.PORT, tui.STUB_PORT, tui.BIN = HOME, PORT, STUB_PORT, BIN
     tui.COLS, tui.ROWS = COLS, ROWS
-    tui.ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, MIYU_TUI="1")
+    tui.ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, YUNXI_TUI="1")
     tui.write_config()
 
     stub = subprocess.Popen(
@@ -197,7 +197,7 @@ def main():
                 break
         with lock:
             dump = "\n".join(line.rstrip() for line in screen.display)
-        out = Path("/tmp/miyu-stream-timing/screen.txt")
+        out = Path("/tmp/yunxi-stream-timing/screen.txt")
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(dump, encoding="utf-8")
         print("屏幕 dump:", out)

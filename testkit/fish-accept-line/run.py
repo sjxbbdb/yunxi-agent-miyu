@@ -25,9 +25,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 SOURCE = REPO / "src" / "shell" / "fish.rs"
-FUNCTIONS = ["__miyu_first_token_raw", "__miyu_head_is_plain_word"]
+FUNCTIONS = ["__yunxi_first_token_raw", "__yunxi_head_is_plain_word"]
 
-# (输入, 期望去向)。SHELL = 照旧交给 fish 执行;AI = 交给 Miyu。
+# (输入, 期望去向)。SHELL = 照旧交给 fish 执行;AI = 交给 YunXi。
 CASES = [
     # 用户现场:自然语言 + 没匹配上的通配符。修之前这一行连 hook 都到不了。
     ("输出这段命令sudo rm -f /var/lib/systemd/coredump/core.gamescope-wl.1000.efc4a04b18a6469fb58058eaa835d7ff.*.zst", "AI"),
@@ -74,8 +74,8 @@ def main():
             + """
 
 function decide
-    set -l head (__miyu_first_token_raw "$argv[1]")
-    if not __miyu_head_is_plain_word "$head"; or type -q -- "$head"
+    set -l head (__yunxi_first_token_raw "$argv[1]")
+    if not __yunxi_head_is_plain_word "$head"; or type -q -- "$head"
         printf 'SHELL\\t%s\\n' "$head"
     else
         printf 'AI\\t%s\\n' "$head"

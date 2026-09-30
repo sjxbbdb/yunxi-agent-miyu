@@ -6,7 +6,7 @@
 //   2. 设置页在宽屏下整块居中（之前 .settings-layout 贴左铺满，右边留白）。
 //
 // 用法：node console-hash-shoot.js <baseUrl> [outDir]
-// 前置：daemon 起在 baseUrl（沙箱 MIYU_HOME，见 console-hash-run.py），
+// 前置：daemon 起在 baseUrl（沙箱 YUNXI_HOME，见 console-hash-run.py），
 //       且 `cargo build` 过——web/*.js 与 styles.css 编进二进制。
 const { chromium } = require("playwright");
 const path = require("path");

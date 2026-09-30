@@ -67,12 +67,12 @@ impl super::super::LiveReplTail {
             if matches!(mouse.kind, crossterm::event::MouseEventKind::Moved) {
                 self.last_mouse_move = Some(((column, row), std::time::Instant::now()));
             }
-            if std::env::var_os("MIYU_SCREEN_TRACE").is_some() {
+            if std::env::var_os("YUNXI_SCREEN_TRACE").is_some() {
                 use std::io::Write as _;
                 if let Ok(mut f) = std::fs::OpenOptions::new()
                     .create(true)
                     .append(true)
-                    .open("/tmp/miyu-screen-trace.log")
+                    .open("/tmp/yunxi-screen-trace.log")
                 {
                     let _ = writeln!(
                         f,
@@ -250,7 +250,8 @@ impl super::super::LiveReplTail {
                         {
                             super::super::screen::select::open_url(&url);
                             if let Some(screen) = &mut self.screen {
-                                screen.toast(miyu_base::i18n::text("opening link", "正在打开链接"));
+                                screen
+                                    .toast(yunxi_base::i18n::text("opening link", "正在打开链接"));
                             }
                             self.repaint_screen()?;
                             return Ok(true);
@@ -262,7 +263,7 @@ impl super::super::LiveReplTail {
                             .map(|(id, _)| id);
                         // 子代理是一条会话（09-18）：点它那一行就切进去看、接着聊
                         // （会话项目第 3 段）。别的块就地展开。
-                        let linked = block.and_then(miyu_hosts::render::blocks::linked_session);
+                        let linked = block.and_then(yunxi_hosts::render::blocks::linked_session);
                         if let Some(session) = linked {
                             self.pending_strip_action =
                                 Some(crate::cli::repl::strip::StripAction::Visit(session));
@@ -372,12 +373,12 @@ impl super::super::LiveReplTail {
     /// 点在任务条上就交给那一行（见 `activate_strip_row`）。返回真表示这一下被任务条
     /// 吃掉了。
     fn activate_strip_row_at(&mut self, row: u16) -> Result<bool> {
-        if std::env::var_os("MIYU_SCREEN_TRACE").is_some() {
+        if std::env::var_os("YUNXI_SCREEN_TRACE").is_some() {
             use std::io::Write as _;
             if let Ok(mut f) = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open("/tmp/miyu-screen-trace.log")
+                .open("/tmp/yunxi-screen-trace.log")
             {
                 let _ = writeln!(
                     f,

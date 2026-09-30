@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """agy 进程复用黑盒(09-18):沙箱 daemon + 假 agy(stream-json,一个进程连打多轮)。
 
-    BIN=<miyu> python3 testkit/agy-reuse/run.py
+    BIN=<yunxi> python3 testkit/agy-reuse/run.py
 
 假 agy 每轮把 pid / 轮次 / stdin 长度记进日志;daemon 侧配 antigravity 供应商指向它。
 
@@ -9,7 +9,7 @@
   same_process        同一会话连发三轮,三轮同一个 pid,轮次 1/2/3
   delta_only          第二轮起 stdin 只发增量(第一轮那句不再出现)
   idle_reaped         闲置超过 reuse_idle_seconds 后下一轮换新进程、旧进程收掉,新进程带 --conversation 续传
-  reload_retires      miyu reload 后池里的进程收掉
+  reload_retires      yunxi reload 后池里的进程收掉
   delete_retires      删除会话后它名下的进程收掉
   reuse_off           关掉复用后每轮一个新进程,且轮结束就退出
   no_orphans          daemon 停掉后没有假 agy 残留
@@ -24,24 +24,24 @@ import time
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-agy-reuse")).expanduser()
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-agy-reuse")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 AGY_CONFIG = OUT / "agy-config"
 FAKE = OUT / "fake-agy"
 LOG = OUT / "fake-agy.jsonl"
 PORT = int(os.environ.get("PORT", "18543"))
-# daemon 日志开到 info:池的借/还/收(miyu::relay)都在 info,出问题能看出为什么。
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME),
-           MIYU_AGY_CONFIG_DIR=str(AGY_CONFIG), FAKE_AGY_LOG=str(LOG),
-           MIYU_LOG=os.environ.get("MIYU_LOG", "info"))
+# daemon 日志开到 info:池的借/还/收(yunxi::relay)都在 info,出问题能看出为什么。
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME),
+           YUNXI_AGY_CONFIG_DIR=str(AGY_CONFIG), FAKE_AGY_LOG=str(LOG),
+           YUNXI_LOG=os.environ.get("YUNXI_LOG", "info"))
 
 FAKE_AGY = r'''#!/usr/bin/env python3
 import json, os, sys, time
@@ -87,7 +87,7 @@ def write_config(reuse=True, idle=3):
         }],
         "memory": {"enabled": False},
         "plugins": {"antigravity": {
-            "binary": str(FAKE), "native_tools": "off", "miyu_tools": "off",
+            "binary": str(FAKE), "native_tools": "off", "yunxi_tools": "off",
             "reuse_process": reuse, "reuse_idle_seconds": idle,
         }},
     }
@@ -238,9 +238,9 @@ def main():
         print("ask seconds:", ASK_SECONDS)
         if not all(results.values()):
             print("--- relay log lines")
-            for log in sorted((HOME / "cache" / "logs").glob("miyu.*.log")):
+            for log in sorted((HOME / "cache" / "logs").glob("yunxi.*.log")):
                 for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
-                    if "miyu::relay" in line or "agy" in line:
+                    if "yunxi::relay" in line or "agy" in line:
                         print("  ", line[:240])
             print("--- fake agy records")
             for r in records():

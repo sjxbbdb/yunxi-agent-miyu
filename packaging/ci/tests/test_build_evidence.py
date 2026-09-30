@@ -14,7 +14,7 @@ from test_metadata import fixture
 
 class BuildEvidenceTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='miyu-build-evidence-')
+        self.temp = tempfile.TemporaryDirectory(prefix='yunxi-build-evidence-')
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.manifest = fixture('linux-smoke')
@@ -26,14 +26,14 @@ class BuildEvidenceTests(unittest.TestCase):
         catalog.parent.mkdir(parents=True)
         write_json(catalog, {'schema_version': 1, 'assets': [{
             'id': 'license', 'component': 'core', 'source_root': 'source',
-            'source': 'LICENSE', 'destination': 'share/licenses/miyu/LICENSE',
+            'source': 'LICENSE', 'destination': 'share/licenses/yunxi/LICENSE',
             'type': 'file', 'mode': '0644'}]})
         self.manifest['locks']['assets'] = sha256_file(catalog)
         self.path = self.root/'manifest.json'
         write_json(self.path, self.manifest)
         self.build = self.root/'build'
         (self.build/'core').mkdir(parents=True)
-        binary = self.build/'core/miyu'
+        binary = self.build/'core/yunxi'
         binary.write_bytes(b'fixture binary')
         self.evidence = {'build_id': 'gnu-x86_64', 'component': 'core',
             'build_identity': build_identity(self.manifest, 'gnu-x86_64', 'core'),
@@ -43,7 +43,7 @@ class BuildEvidenceTests(unittest.TestCase):
             'release_input_sha256': sha256_file(self.path), 'offline': True,
             'rustc': 'rustc '+self.manifest['toolchain']['rust']+' (fixture)\n',
             'command': ['cargo', 'build', '--release', '--frozen', '--target',
-                'x86_64-unknown-linux-gnu', '--bin', 'miyu',
+                'x86_64-unknown-linux-gnu', '--bin', 'yunxi',
                 '--config', 'source.crates-io.replace-with="vendored-sources"',
                 '--config', 'source.vendored-sources.directory="/inputs/vendor"']}
         write_json(self.build/'core/build-record.json', dict(self.evidence,

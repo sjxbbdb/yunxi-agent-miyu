@@ -5,7 +5,7 @@
       "id": "core-license",
       "source_root": "source",
       "source": "LICENSE",
-      "destination": "share/licenses/miyu/LICENSE",
+      "destination": "share/licenses/yunxi/LICENSE",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -14,7 +14,7 @@
       "id": "voice-license",
       "source_root": "source",
       "source": "LICENSE",
-      "destination": "share/licenses/miyu-voice/LICENSE",
+      "destination": "share/licenses/yunxi-voice/LICENSE",
       "mode": "0644",
       "component": "voice",
       "type": "file"
@@ -23,7 +23,7 @@
       "id": "font-noto-cjk",
       "source_root": "source",
       "source": "assets/fonts/NotoSansCJK-Regular.ttc",
-      "destination": "share/miyu/fonts/NotoSansCJK-Regular.ttc",
+      "destination": "share/yunxi/fonts/NotoSansCJK-Regular.ttc",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -32,7 +32,7 @@
       "id": "license-noto-cjk",
       "source_root": "source",
       "source": "assets/fonts/NotoSansCJK.LICENSE",
-      "destination": "share/licenses/miyu/NotoSansCJK.LICENSE",
+      "destination": "share/licenses/yunxi/NotoSansCJK.LICENSE",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -41,7 +41,7 @@
       "id": "font-noto-emoji",
       "source_root": "source",
       "source": "assets/fonts/NotoColorEmoji.ttf",
-      "destination": "share/miyu/fonts/NotoColorEmoji.ttf",
+      "destination": "share/yunxi/fonts/NotoColorEmoji.ttf",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -50,7 +50,7 @@
       "id": "license-noto-emoji",
       "source_root": "source",
       "source": "assets/fonts/NotoColorEmoji.LICENSE",
-      "destination": "share/licenses/miyu/NotoColorEmoji.LICENSE",
+      "destination": "share/licenses/yunxi/NotoColorEmoji.LICENSE",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -59,7 +59,7 @@
       "id": "font-jetbrains-mono",
       "source_root": "source",
       "source": "assets/fonts/JetBrainsMono-Regular.ttf",
-      "destination": "share/miyu/fonts/JetBrainsMono-Regular.ttf",
+      "destination": "share/yunxi/fonts/JetBrainsMono-Regular.ttf",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -68,7 +68,7 @@
       "id": "license-jetbrains-mono",
       "source_root": "source",
       "source": "assets/fonts/JetBrainsMono.LICENSE",
-      "destination": "share/licenses/miyu/JetBrainsMono.LICENSE",
+      "destination": "share/licenses/yunxi/JetBrainsMono.LICENSE",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -77,7 +77,7 @@
       "id": "embedding-model",
       "source_root": "source",
       "source": "assets/models/bge-small-zh-v1.5-int8",
-      "destination": "share/miyu/models/bge-small-zh-v1.5-int8",
+      "destination": "share/yunxi/models/bge-small-zh-v1.5-int8",
       "mode": "0644",
       "component": "core",
       "type": "tree",
@@ -99,7 +99,7 @@
       "id": "embedding-license",
       "source_root": "source",
       "source": "assets/models/bge-small-zh-v1.5-int8/LICENSE",
-      "destination": "share/licenses/miyu/bge-small-zh-v1.5.LICENSE",
+      "destination": "share/licenses/yunxi/bge-small-zh-v1.5.LICENSE",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -108,7 +108,7 @@
       "id": "memes",
       "source_root": "source",
       "source": "src/memes",
-      "destination": "share/miyu/memes",
+      "destination": "share/yunxi/memes",
       "mode": "0644",
       "component": "core",
       "type": "tree",
@@ -122,17 +122,17 @@
       ],
       "exclude": [],
       "required_files": [
-        "miyu/index.json"
+        "yunxi/index.json"
       ],
       "indexes": [
-        "miyu/index.json"
+        "yunxi/index.json"
       ]
     },
     {
       "id": "personas",
       "source_root": "source",
       "source": "src/personas",
-      "destination": "share/miyu/personas",
+      "destination": "share/yunxi/personas",
       "mode": "0755",
       "component": "core",
       "type": "tree",
@@ -145,7 +145,7 @@
       "id": "default-kb",
       "source_root": "source",
       "source": "kb",
-      "destination": "share/miyu/default-kb/kb",
+      "destination": "share/yunxi/default-kb/kb",
       "mode": "0644",
       "component": "core",
       "type": "tree",
@@ -166,7 +166,7 @@
       "id": "shorinwiki",
       "source_root": "wiki",
       "source": "wiki",
-      "destination": "share/miyu/default-kb/shorinwiki",
+      "destination": "share/yunxi/default-kb/shorinwiki",
       "mode": "0644",
       "component": "core",
       "type": "tree",
@@ -187,7 +187,7 @@
       "id": "default-kb-manifest",
       "source_root": "runtime",
       "source": "default-kb/manifest/manifest.json",
-      "destination": "share/miyu/default-kb/manifest/manifest.json",
+      "destination": "share/yunxi/default-kb/manifest/manifest.json",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -196,7 +196,7 @@
       "id": "wiki-commit",
       "source_root": "runtime",
       "source": "default-kb/manifest/shorinwiki.commit",
-      "destination": "share/miyu/default-kb/manifest/shorinwiki.commit",
+      "destination": "share/yunxi/default-kb/manifest/shorinwiki.commit",
       "mode": "0644",
       "component": "core",
       "type": "file"
@@ -205,7 +205,7 @@
       "id": "gnu-onnxruntime",
       "source_root": "runtime",
       "source": "onnxruntime/lib",
-      "destination": "lib/miyu",
+      "destination": "lib/yunxi",
       "mode": "0644",
       "component": "core",
       "type": "tree",
@@ -227,7 +227,7 @@
       "id": "gnu-onnxruntime-license",
       "source_root": "runtime",
       "source": "onnxruntime/LICENSE",
-      "destination": "share/licenses/miyu/onnxruntime.LICENSE",
+      "destination": "share/licenses/yunxi/onnxruntime.LICENSE",
       "mode": "0644",
       "component": "core",
       "type": "file",
@@ -239,7 +239,7 @@
       "id": "gnu-onnxruntime-notices",
       "source_root": "runtime",
       "source": "onnxruntime/ThirdPartyNotices.txt",
-      "destination": "share/licenses/miyu/onnxruntime.ThirdPartyNotices.txt",
+      "destination": "share/licenses/yunxi/onnxruntime.ThirdPartyNotices.txt",
       "mode": "0644",
       "component": "core",
       "type": "file",
@@ -251,7 +251,7 @@
       "id": "voice-sherpa-license",
       "source_root": "runtime",
       "source": "licenses/sherpa-onnx-LICENSE",
-      "destination": "share/licenses/miyu-voice/sherpa-onnx.LICENSE",
+      "destination": "share/licenses/yunxi-voice/sherpa-onnx.LICENSE",
       "mode": "0644",
       "component": "voice",
       "type": "file"
@@ -260,7 +260,7 @@
       "id": "shorinwiki-license",
       "source_root": "wiki",
       "source": "LICENSE",
-      "destination": "share/licenses/miyu/ShorinWiki.LICENSE",
+      "destination": "share/licenses/yunxi/ShorinWiki.LICENSE",
       "mode": "0644",
       "component": "core",
       "type": "file"

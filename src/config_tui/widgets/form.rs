@@ -4,9 +4,9 @@
 //! （`field_display_value`）——密钥要显示成掩码，布尔要显示成「开/关」。
 
 use crate::config_tui::*;
-use miyu_base::terminal::chrome::{ln, nil, View};
-use miyu_base::terminal::palette::{BLUE, DIM};
 use ratatui::text::{Line, Span};
+use yunxi_base::terminal::chrome::{ln, nil, View};
+use yunxi_base::terminal::palette::{BLUE, DIM};
 
 pub(in crate::config_tui) fn edit_u16_value(
     ui: &mut Ui,
@@ -404,7 +404,7 @@ pub(in crate::config_tui) fn run_form_without_buttons(
 /// [a] 新增、[d] 删除;退出时把列表写回 `user:`/`assistant:` 行格式,
 /// 与手写 dialogs 文件同构,存量文件无需迁移。
 pub(in crate::config_tui) fn edit_dialog_list(ui: &mut Ui, value: &mut String) -> Result<()> {
-    let mut pairs = miyu_core::persona_hint::parse_dialogs(value);
+    let mut pairs = yunxi_core::persona_hint::parse_dialogs(value);
     let mut selected = 0usize;
     loop {
         let mut options: Vec<String> = pairs
@@ -433,7 +433,7 @@ pub(in crate::config_tui) fn edit_dialog_list(ui: &mut Ui, value: &mut String) -
         )?;
         match read_key(ui)? {
             KeyCode::Esc | KeyCode::Char('q') => {
-                *value = miyu_core::persona_hint::format_dialogs(&pairs);
+                *value = yunxi_core::persona_hint::format_dialogs(&pairs);
                 return Ok(());
             }
             KeyCode::Up | KeyCode::Char('k') => selected = selected.saturating_sub(1),
@@ -471,7 +471,7 @@ pub(in crate::config_tui) fn edit_string_list(
     title: &'static str,
     value: &mut String,
 ) -> Result<()> {
-    let mut items: Vec<String> = miyu_base::config::split_wake_keywords(value);
+    let mut items: Vec<String> = yunxi_base::config::split_wake_keywords(value);
     let mut selected = 0usize;
     loop {
         let mut options: Vec<String> = items.clone();
@@ -697,7 +697,7 @@ pub(in crate::config_tui) fn draw_form(
 pub(in crate::config_tui) fn field_display_value(field: &Field, reveal_sensitive: bool) -> String {
     if field.dialog_list {
         // 列表式字段没有 $EDITOR;摘要成对数,原始序列化文本不上屏。
-        let pairs = miyu_core::persona_hint::parse_dialogs(&field.value).len();
+        let pairs = yunxi_core::persona_hint::parse_dialogs(&field.value).len();
         return if pairs == 0 {
             t("(empty; Enter opens the list)", "(空,回车进列表)").to_string()
         } else if is_zh() {

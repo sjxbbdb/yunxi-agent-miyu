@@ -1,4 +1,4 @@
-//! `miyu session …`:程序驱动的会话管理面。
+//! `yunxi session …`:程序驱动的会话管理面。
 //!
 //! 每个子命令都是对 daemon 一条会话 IPC 的薄壳;`--json` 直出 daemon 的
 //! 数据形状,不二次加工——宿主和 WebUI 看到的是同一份。目标参数认编号
@@ -15,12 +15,12 @@ use crate::cli::turn_request::{
     create_named_session, list_managed_sessions, resolve_managed_session,
 };
 use anyhow::Result;
-use miyu_base::i18n::text as t;
-use miyu_base::paths::MiyuPaths;
-use miyu_core::ipc::{Command as IpcCommand, SessionRef, SessionState};
-use miyu_core::state::StateStore;
 use serde_json::{json, Value};
 use std::io::{self, IsTerminal, Write};
+use yunxi_base::i18n::text as t;
+use yunxi_base::paths::YunXiPaths;
+use yunxi_core::ipc::{Command as IpcCommand, SessionRef, SessionState};
+use yunxi_core::state::StateStore;
 
 fn print_json(value: &Value) -> Result<()> {
     let mut out = io::stdout().lock();
@@ -55,7 +55,7 @@ fn print_session_table(entries: &[SessionListEntry]) {
 }
 
 /// 详情 = 列表行 + `GetSessionState` 的上下文计量 + 模型覆盖快照。
-async fn session_detail(paths: &MiyuPaths, entry: &SessionListEntry) -> Result<Value> {
+async fn session_detail(paths: &YunXiPaths, entry: &SessionListEntry) -> Result<Value> {
     let (state, _) = session_admin(
         paths,
         IpcCommand::GetSessionState {
@@ -154,8 +154,8 @@ fn print_session_detail(detail: &Value) {
 }
 
 /// `session pop` 的候选在客户端按会话挑(只读),写走 IPC,daemon 仍是唯一
-/// 写者——与 `miyu pop` 同款分工。
-async fn pop_session(paths: &MiyuPaths, entry: &SessionListEntry, count: usize) -> Result<()> {
+/// 写者——与 `yunxi pop` 同款分工。
+async fn pop_session(paths: &YunXiPaths, entry: &SessionListEntry, count: usize) -> Result<()> {
     let state = StateStore::new(paths)?.pinned(&entry.id);
     let turn_ids: Vec<String> = state
         .oldest_evictable_visible_turns(count)?
@@ -182,7 +182,7 @@ async fn pop_session(paths: &MiyuPaths, entry: &SessionListEntry, count: usize) 
 }
 
 pub(in crate::cli) async fn run_session_command(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     command: SessionCommand,
     plain: bool,
 ) -> Result<()> {
@@ -371,8 +371,8 @@ pub(in crate::cli) async fn run_session_command(
     }
 }
 
-/// 压缩一个会话的上下文。`miyu compact`(缺省当前会话)与
-/// `miyu session compact <目标>` 共用这一条;`name` 只用于回显。
+/// 压缩一个会话的上下文。`yunxi compact`(缺省当前会话)与
+/// `yunxi session compact <目标>` 共用这一条;`name` 只用于回显。
 ///
 /// 走 `session_admin` 而不是裸 IPC:daemon 没起就先拉起来——压缩要过 actor,
 /// 没有进程内直连的等价路径。目标会话有回合在跑时 daemon 会拒(admin busy),
@@ -382,7 +382,7 @@ pub(in crate::cli) async fn run_session_command(
 /// 这是一次几十秒的模型调用,不流式的话终端在整段时间里一个字都没有。
 /// `plain` 或非 TTY 时不上色,但正文照出——管道里也该看得见它在干活。
 pub(in crate::cli) async fn compact_session(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     target: SessionRef,
     name: Option<&str>,
     plain: bool,
@@ -432,9 +432,9 @@ pub(in crate::cli) async fn compact_session(
 }
 
 /// stdio 模式的会话操作:同一套 IPC,结果以 JSON 返回给分发器,不打印。
-/// `op` 与 `miyu session` 子命令同名;`args` 是宿主传的对象。
+/// `op` 与 `yunxi session` 子命令同名;`args` 是宿主传的对象。
 pub(in crate::cli) async fn session_op_json(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     op: &str,
     args: &Value,
 ) -> Result<Value> {

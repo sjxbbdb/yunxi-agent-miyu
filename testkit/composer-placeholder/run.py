@@ -18,19 +18,19 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-cph/home"))
-WORK = Path(os.environ.get("MIYU_CPH_WORK", "/tmp/miyu-cph/work"))
-PORT = int(os.environ.get("MIYU_CPH_PORT", "18396"))
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-cph/home"))
+WORK = Path(os.environ.get("YUNXI_CPH_WORK", "/tmp/yunxi-cph/work"))
+PORT = int(os.environ.get("YUNXI_CPH_PORT", "18396"))
 RUNTIME = "/tmp/mx-cph"
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
 
 
 def daemon(*args: str) -> subprocess.CompletedProcess:
@@ -71,8 +71,8 @@ def main() -> int:
         # ① 没有激活人格时的出厂默认。
         placeholder = snapshot["persona"]["composer_placeholder"]
         print(f"① 出厂默认: {placeholder!r}")
-        if placeholder != "给 Miyu 发消息":
-            failures.append(f"① 期望「给 Miyu 发消息」，实得 {placeholder!r}")
+        if placeholder != "给 YunXi 发消息":
+            failures.append(f"① 期望「给 YunXi 发消息」，实得 {placeholder!r}")
 
         # ② 建一个自定义人格、不配提示 → 默认跟着人格名走。
         prompts["personas"] = [{"name": "小美.md", "content": "她叫小美。"}]

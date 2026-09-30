@@ -26,13 +26,13 @@ import sys
 from pathlib import Path
 
 
-def miyu_home():
-    return Path(os.environ.get("MIYU_HOME") or (Path.home() / ".miyu"))
+def yunxi_home():
+    return Path(os.environ.get("YUNXI_HOME") or (Path.home() / ".yunxi"))
 
 
 def load_config_keywords():
     """配置里自定义过就用那份，否则读代码里的默认表。"""
-    config = miyu_home() / "config" / "config.jsonc"
+    config = yunxi_home() / "config" / "config.jsonc"
     if config.exists():
         raw = re.sub(r"^\s*//.*$", "", config.read_text(encoding="utf-8"), flags=re.M)
         found = []
@@ -55,7 +55,7 @@ def load_config_keywords():
             return found[0], "配置文件"
     source = (
         Path(__file__).resolve().parents[2]
-        / "crates/miyu-base/src/config/platform_plugins/real_context.rs"
+        / "crates/yunxi-base/src/config/platform_plugins/real_context.rs"
     )
     text = source.read_text(encoding="utf-8")
     start = text.index("const KEYWORDS: &[&str] = &[")
@@ -64,9 +64,9 @@ def load_config_keywords():
 
 
 def history_db():
-    path = miyu_home() / "data/platforms/onebot/message_history/history.sqlite3"
+    path = yunxi_home() / "data/platforms/onebot/message_history/history.sqlite3"
     if not path.exists():
-        path = miyu_home() / "data/platforms/onebot/real_context/history.sqlite3"
+        path = yunxi_home() / "data/platforms/onebot/real_context/history.sqlite3"
     return path
 
 

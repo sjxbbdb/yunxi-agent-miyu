@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """人格提示第二轮 A/B 测具。
 
-驱动方式:PTY 里跑 `MIYU_DIRECT=1 miyu` 直连 REPL(不碰 daemon,绝不会连
+驱动方式:PTY 里跑 `YUNXI_DIRECT=1 yunxi` 直连 REPL(不碰 daemon,绝不会连
 QQ);回合完成不靠解析渲染输出,轮询该 home 的 conversation.db。**每个对话
-一个独立 MIYU_HOME + 独立 REPL 进程**——默认会话即对话,零串扰,也绕开直连
+一个独立 YUNXI_HOME + 独立 REPL 进程**——默认会话即对话,零串扰,也绕开直连
 REPL 不支持 /new 的限制(cli.rs 双 dispatch 分裂,见任务#14)。
 
 测试配置从用户真实 config.jsonc 派生,但剥掉 platforms/web/voice 键、关
-tools 与 memory,人格固定为内置默认 Miyu。
+tools 与 memory,人格固定为内置默认 YunXi。
 
 用法:
   python3 run.py smoke   # 冒烟:单对话两轮,验证全链路
@@ -30,15 +30,15 @@ import threading
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-MIYU_BIN = REPO / "target" / "debug" / "miyu"
+YUNXI_BIN = REPO / "target" / "debug" / "yunxi"
 BASE = Path(__file__).resolve().parent
-REAL_CONFIG = Path.home() / ".miyu" / "config" / "config.jsonc"
+REAL_CONFIG = Path.home() / ".yunxi" / "config" / "config.jsonc"
 RESULTS = BASE / "results"
 
 # ---------------------------------------------------------------- 配置派生
@@ -86,7 +86,7 @@ def load_real_config() -> dict:
 
 
 def build_home(tag: str, hint: bool, dialogs: bool, tools: bool = False) -> Path:
-    """为一个对话准备干净的 MIYU_HOME。"""
+    """为一个对话准备干净的 YUNXI_HOME。"""
     home = BASE / "homes" / tag
     if home.exists():
         shutil.rmtree(home)
@@ -121,17 +121,17 @@ class Repl:
         log.parent.mkdir(parents=True, exist_ok=True)
         self.log = open(log, "wb")
         env = dict(os.environ)
-        env["MIYU_HOME"] = str(home)
+        env["YUNXI_HOME"] = str(home)
         for key, value in (extra_env or {}).items():
             env[key] = value
-        env["MIYU_DIRECT"] = "1"
+        env["YUNXI_DIRECT"] = "1"
         env["TERM"] = "xterm-256color"
         env.setdefault("LANG", "zh_CN.UTF-8")
         self.master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 140, 0, 0))
-        # 裸 miyu 自②批起打印模式帮助退出;测具显式进普通模式。
+        # 裸 yunxi 自②批起打印模式帮助退出;测具显式进普通模式。
         self.proc = subprocess.Popen(
-            [str(MIYU_BIN)],
+            [str(YUNXI_BIN)],
             stdin=slave,
             stdout=slave,
             stderr=slave,
@@ -330,10 +330,10 @@ TOOL_TRIGGERS = [
 TOOL_FILLERS = FILLERS[:2]
 
 TOOL_ARMS = {
-    # A:无风格锁(MIYU_STYLE_LOCK=0);B:有风格锁(默认)。
+    # A:无风格锁(YUNXI_STYLE_LOCK=0);B:有风格锁(默认)。
     # 08-23 定稿:B 胜出(全过 5/12→8/12,无换行 6/12→10/12),style-lock 已硬
     # 编码进 prompt.rs 并拆除实验闸——现在重跑 tA 量到的和 tB 是同一件事,
-    # 要复现对照需临时在 prompt.rs 恢复 MIYU_STYLE_LOCK 判断。
+    # 要复现对照需临时在 prompt.rs 恢复 YUNXI_STYLE_LOCK 判断。
     "tA": {"style_lock": False},
     "tB": {"style_lock": True},
 }
@@ -363,7 +363,7 @@ def run_tool_matrix():
     print(f"工具体制计划 {len(plan)} 个对话(已完成 {len(done)})", flush=True)
     for index, (tag, acfg, probe) in enumerate(plan, 1):
         turns = TOOL_FILLERS + TOOL_TRIGGERS + [probe]
-        env = {"MIYU_STYLE_LOCK": "1" if acfg["style_lock"] else "0"}
+        env = {"YUNXI_STYLE_LOCK": "1" if acfg["style_lock"] else "0"}
         try:
             record = run_conversation(
                 tag, hint=True, dialogs=True, turns=turns, tools=True, extra_env=env
@@ -461,7 +461,7 @@ EMOJI = re.compile(
 
 
 def score_chat(reply: str) -> dict:
-    """默认 Miyu 人格显式规则的机械化子集(与 08-14 判据同源):
+    """默认 YunXi 人格显式规则的机械化子集(与 08-14 判据同源):
     ≤100 字、不换行、无表情符号、不用括号写动作(代理:无任何括号)。"""
     return {
         "len_le_100": len(reply) <= 100,

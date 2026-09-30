@@ -64,5 +64,5 @@ for when, direction, data in merged:
 
 print()
 print("读法：sixel 那一行之后，如果紧跟着「清屏/清行/跳到某行」，图就是被它擦的。")
-print("      CPR 问了却没有应答行，说明 crossterm 等超时了 —— Miyu 会退回旧光标位置，")
+print("      CPR 问了却没有应答行，说明 crossterm 等超时了 —— YunXi 会退回旧光标位置，")
 print("      于是把输入框画回图所在的地方。")

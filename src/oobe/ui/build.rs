@@ -3,12 +3,12 @@
 use super::widgets::{body_w, clip, ln, nil, pad, Cx, View, NAME_COL};
 use super::{pfocus, App, Prov, Screen, HINT_AT};
 use crate::oobe::providers::PROTOCOLS;
-use miyu_base::config::feature_catalog::FeatureKind;
-use miyu_base::terminal::palette::{BLUE, DIM, FAINT, GOLD, GREEN, INK};
-use miyu_base::terminal::starfield::fade;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use unicode_width::UnicodeWidthStr;
+use yunxi_base::config::feature_catalog::FeatureKind;
+use yunxi_base::terminal::palette::{BLUE, DIM, FAINT, GOLD, GREEN, INK};
+use yunxi_base::terminal::starfield::fade;
 
 pub(super) fn build(app: &App, cx: &Cx) -> View {
     let theme = app.theme;
@@ -24,9 +24,9 @@ pub(super) fn build(app: &App, cx: &Cx) -> View {
     match app.screen {
         // ── 00 欢迎 ────────────────────────────────────────────
         // 自检照跑（后面几屏要用探到的东西），但**不显示**——开场只留
-        // 一片星空、一个 MIYU、一句话。`MIYU_OOBE_VERBOSE=1` 能调出来看。
+        // 一片星空、一个 YUNXI、一句话。`YUNXI_OOBE_VERBOSE=1` 能调出来看。
         Screen::Welcome => {
-            if std::env::var_os("MIYU_OOBE_VERBOSE").is_some() {
+            if std::env::var_os("YUNXI_OOBE_VERBOSE").is_some() {
                 for row in &app.loader.rows {
                     let elapsed = if row.micros >= 1000 {
                         format!("{:.1} ms", row.micros as f64 / 1000.0)
@@ -71,7 +71,7 @@ pub(super) fn build(app: &App, cx: &Cx) -> View {
             body.push(cx.radio(
                 app.focus == pfocus::BUILTIN,
                 !app.persona_custom,
-                "用内置的 Miyu",
+                "用内置的 YunXi",
                 "开箱即用",
                 30,
             ));
@@ -266,7 +266,7 @@ pub(super) fn build(app: &App, cx: &Cx) -> View {
             sticky.push(cx.bold("终端集成"));
             sticky.push(nil());
             body.push(cx.txt(
-                "装上之后在终端直接打字就能问，不用敲 miyu。",
+                "装上之后在终端直接打字就能问，不用敲 yunxi。",
                 theme.dim(DIM),
             ));
             body.push(nil());
@@ -309,8 +309,8 @@ pub(super) fn build(app: &App, cx: &Cx) -> View {
             sticky.push(nil());
             // 每行控制在 80 列内：这一屏不折行，长句在窄终端上会被截掉。
             for line in [
-                "开着的话，AI 能读你电脑上的文件，但只能写你打开 Miyu 的那个项目目录；",
-                "在家目录里打开（或从网页、QQ 来）时，只能写 Miyu 家里的 workspace。",
+                "开着的话，AI 能读你电脑上的文件，但只能写你打开 YunXi 的那个项目目录；",
+                "在家目录里打开（或从网页、QQ 来）时，只能写 YunXi 家里的 workspace。",
                 "目的是防误改、误删：AI 听岔了话，或者被网页、群聊里的内容骗去动文件，",
                 "都碰不到这个目录以外。",
                 "要换地方，在会话里用 /sandbox <路径> 绑。",
@@ -319,7 +319,7 @@ pub(super) fn build(app: &App, cx: &Cx) -> View {
             ] {
                 body.push(cx.txt(line, theme.dim(DIM)));
             }
-            if miyu_base::sandbox::probe().is_none() {
+            if yunxi_base::sandbox::probe().is_none() {
                 body.push(nil());
                 body.push(cx.txt(
                     "这台机器没有沙盒后端（需要 Linux 5.13+ 或 macOS），开了也暂时不生效。",
@@ -671,10 +671,10 @@ pub(super) fn build(app: &App, cx: &Cx) -> View {
     if let Some(notice) = &app.notice {
         body.push(nil());
         body.push(ln(vec![
-            Span::styled("! ", theme.fg(miyu_base::terminal::palette::CORAL)),
+            Span::styled("! ", theme.fg(yunxi_base::terminal::palette::CORAL)),
             Span::styled(
                 clip(notice, body_w().saturating_sub(2)),
-                theme.fg(miyu_base::terminal::palette::CORAL),
+                theme.fg(yunxi_base::terminal::palette::CORAL),
             ),
         ]));
     }

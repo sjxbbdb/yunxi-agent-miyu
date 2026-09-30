@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Question panels must keep the assistant's last row visible and scrollable.
 
-Uses a disposable MIYU_HOME and a local stub, without touching the production daemon.
-Run: python3 testkit/tui/question_body.py --binary /absolute/path/to/miyu
+Uses a disposable YUNXI_HOME and a local stub, without touching the production daemon.
+Run: python3 testkit/tui/question_body.py --binary /absolute/path/to/yunxi
 """
 
 import argparse
@@ -29,20 +29,20 @@ def main():
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--direct", action="store_true", help="Exercise the direct REPL event handler")
     args = parser.parse_args()
-    os.environ.pop("MIYU_DIRECT", None)
+    os.environ.pop("YUNXI_DIRECT", None)
     if args.direct:
-        os.environ["MIYU_DIRECT"] = "1"
-    sandbox = sandbox_dir.make("miyu-question-body-")
+        os.environ["YUNXI_DIRECT"] = "1"
+    sandbox = sandbox_dir.make("yunxi-question-body-")
     os.environ.update(
-        MIYU_HOME=str(sandbox / "home"),
-        MIYU_TUI_RUNTIME=str(sandbox / "run"),
-        MIYU_TUI_PORT=str(free_port()),
+        YUNXI_HOME=str(sandbox / "home"),
+        YUNXI_TUI_RUNTIME=str(sandbox / "run"),
+        YUNXI_TUI_PORT=str(free_port()),
         STUB_PORT=str(free_port()),
-        OUT=os.environ.get("OUT") or str(Path.home() / ".cache" / "miyu-question-body"),
+        OUT=os.environ.get("OUT") or str(Path.home() / ".cache" / "yunxi-question-body"),
         # The checks below read the English tab labels ("Review", not 「确认」). Pin the
         # interface language so a Chinese shell locale does not flip them. It must be
         # set before `import round26`: the harness copies the environment on import.
-        MIYU_LANG="en",
+        YUNXI_LANG="en",
     )
     import round26 as q
 

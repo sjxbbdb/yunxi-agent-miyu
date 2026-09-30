@@ -7,8 +7,8 @@
 用法:
     python3 tool_stream_timing.py [供应商 id] [模型]     # 默认 opencodego deepseek-v4.1-flash
 
-从 `$MIYU_HOME/config/config.jsonc`(默认 ~/.miyu)取 key 与地址。opencode 那两条
-(Zen / Go)带上 Miyu 发的那几个头(见 zen_headers.rs),工具面里也照 zen_tools.rs
+从 `$YUNXI_HOME/config/config.jsonc`(默认 ~/.yunxi)取 key 与地址。opencode 那两条
+(Zen / Go)带上 YunXi 发的那几个头(见 zen_headers.rs),工具面里也照 zen_tools.rs
 补上 shell + read。只读、不落盘,key 不打印。
 """
 
@@ -26,7 +26,7 @@ UA = "opencode/1.18.29 ai-sdk/provider-utils/4.0.46 runtime/bun/1.4.0"
 
 
 def load_provider():
-    home = pathlib.Path(os.environ.get("MIYU_HOME", pathlib.Path.home() / ".miyu"))
+    home = pathlib.Path(os.environ.get("YUNXI_HOME", pathlib.Path.home() / ".yunxi"))
     raw = (home / "config" / "config.jsonc").read_text(encoding="utf-8")
     config = json.loads(re.sub(r"^\s*//.*$", "", raw, flags=re.M))
     for provider in config.get("providers", []):

@@ -1,4 +1,4 @@
-//! `miyu pm`:装 / 卸 / 升 / 搜 / 列 / tap。`miyupm` 是同一套(argv[0] 识别)。
+//! `yunxi pm`:装 / 卸 / 升 / 搜 / 列 / tap。`yunxipm` 是同一套(argv[0] 识别)。
 
 use crate::cli::*;
 use crate::pm::{self, PackageSource};
@@ -75,7 +75,7 @@ fn confirm(question: &str, yes: bool) -> Result<bool> {
 }
 
 async fn resolve_source(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     spec: &str,
     reference: Option<&str>,
 ) -> Result<PackageSource> {
@@ -85,7 +85,7 @@ async fn resolve_source(
     }
 }
 
-async fn notify_daemon(paths: &MiyuPaths) {
+async fn notify_daemon(paths: &YunXiPaths) {
     // 脚本目录一变下一回合自动重扫;通知 daemon 重载配置顺带刷新技能目录指纹。
     if let Err(error) = reload_daemon_if_running(paths).await {
         eprintln!(
@@ -100,7 +100,7 @@ async fn notify_daemon(paths: &MiyuPaths) {
     }
 }
 
-pub(in crate::cli) async fn run_pm(paths: &MiyuPaths, args: PmArgs) -> Result<()> {
+pub(in crate::cli) async fn run_pm(paths: &YunXiPaths, args: PmArgs) -> Result<()> {
     let config = AppConfig::load_or_default(paths)?;
     match args.command {
         PmCommand::Install(install) => {

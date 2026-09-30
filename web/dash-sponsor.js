@@ -10,7 +10,7 @@
  * 见 toMinor(),纯整数解析,不经过浮点。
  */
 (() => {
-  const D = window.MiyuDash;
+  const D = window.YunXiDash;
   if (!D) return;
 
   const PAGE_SIZE = 50;

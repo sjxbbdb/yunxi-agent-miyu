@@ -11,9 +11,9 @@
    「输出结尾：」和命令输出的最后几行；重开回放照样点得开。
 4. 回合跑着时后台命令跑完：报告排进这一轮，被吃进去时落成的那行铃铛同样点得开。
 
-    MIYU_BIN=~/.cache/miyu-accept-2026-09-26c/miyu MIYU_HOME=~/.cache/miyu-turn-end/home \\
-      MIYU_TUI_PORT=18985 STUB_PORT=18986 MIYU_TUI_RUNTIME=~/.cache/miyu-turn-end/rt \\
-      OUT=~/.cache/miyu-turn-end/out python3 testkit/tui/turn_end_notice.py
+    YUNXI_BIN=~/.cache/yunxi-accept-2026-09-26c/yunxi YUNXI_HOME=~/.cache/yunxi-turn-end/home \\
+      YUNXI_TUI_PORT=18985 STUB_PORT=18986 YUNXI_TUI_RUNTIME=~/.cache/yunxi-turn-end/rt \\
+      OUT=~/.cache/yunxi-turn-end/out python3 testkit/tui/turn_end_notice.py
 
 产物（每段的屏幕文本）在 OUT 下。这些 TUI 走查只能一个一个跑（共用沙箱与端口）。
 """

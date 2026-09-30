@@ -4,9 +4,9 @@
 同一个直连 REPL 会话里连发两轮,断言第二轮请求带 --conversation(前缀链命中,
 只发增量)。会花两次真实 agy 调用(gemini flash),不进 CI;验收手跑:
 
-    MIYU_HOME=/tmp/miyu-agy/home python3 testkit/antigravity/run.py
+    YUNXI_HOME=/tmp/yunxi-agy/home python3 testkit/antigravity/run.py
 
-前提:MIYU_HOME 下 config.jsonc 的 active_provider 是 antigravity 协议供应商,本机 agy 已登录,daemon 未运行(直连互斥)。
+前提:YUNXI_HOME 下 config.jsonc 的 active_provider 是 antigravity 协议供应商,本机 agy 已登录,daemon 未运行(直连互斥)。
 
 """
 
@@ -24,14 +24,14 @@ import threading
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-MIYU_BIN = REPO / "target" / "debug" / "miyu"
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-agy/home"))
+YUNXI_BIN = REPO / "target" / "debug" / "yunxi"
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-agy/home"))
 
 
 class Repl:
@@ -41,15 +41,15 @@ class Repl:
         log.parent.mkdir(parents=True, exist_ok=True)
         self.log = open(log, "wb")
         env = dict(os.environ)
-        env["MIYU_HOME"] = str(home)
-        env["MIYU_DIRECT"] = "1"
-        env["MIYU_LOG_REQUESTS"] = "1"
+        env["YUNXI_HOME"] = str(home)
+        env["YUNXI_DIRECT"] = "1"
+        env["YUNXI_LOG_REQUESTS"] = "1"
         env["TERM"] = "xterm-256color"
         env.setdefault("LANG", "zh_CN.UTF-8")
         self.master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 140, 0, 0))
         self.proc = subprocess.Popen(
-            [str(MIYU_BIN)],
+            [str(YUNXI_BIN)],
             stdin=slave,
             stdout=slave,
             stderr=slave,

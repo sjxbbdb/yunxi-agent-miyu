@@ -10,7 +10,7 @@
 #   A 组：tool_result_prune_chars = 8192（现状默认）
 #   B 组：tool_result_prune_chars = 0    （关掉剪枝）
 #
-# 两组各起一个独立 MIYU_HOME 的沙盒 daemon（只搬供应商与模型档位，不带账号、
+# 两组各起一个独立 YUNXI_HOME 的沙盒 daemon（只搬供应商与模型档位，不带账号、
 # 不接平台、不挂 MCP），跑同一串会产生大工具输出的提示词，再比 cache-usage
 # 里的命中率与 same/prev 指纹。
 #
@@ -18,19 +18,19 @@
 #   bash testkit/cache-forensics/prune_ab.sh report
 #   bash testkit/cache-forensics/prune_ab.sh stop
 set -euo pipefail
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for __herdr_var in $(env | sed -n 's/^\(HERDR_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$__herdr_var"; done
 
-BIN=${MIYU_BIN:-$(cd "$(dirname "$0")/../.." && pwd)/target/debug/miyu}
-MODEL=${MIYU_AB_MODEL:-opencodego/mimo-v2.6-flash}
-REAL=$HOME/.miyu/config/config.jsonc
+BIN=${YUNXI_BIN:-$(cd "$(dirname "$0")/../.." && pwd)/target/debug/yunxi}
+MODEL=${YUNXI_AB_MODEL:-opencodego/mimo-v2.6-flash}
+REAL=$HOME/.yunxi/config/config.jsonc
 ROUNDS=${2:-6}
 
 declare -A PORTS=([a]=8391 [b]=8392)
 declare -A PRUNE=([a]=8192 [b]=0)
 
-home_for() { echo "$HOME/.cache/miyu-prune-ab-$1"; }
+home_for() { echo "$HOME/.cache/yunxi-prune-ab-$1"; }
 
 seed() {
   local arm=$1 dir
@@ -71,7 +71,7 @@ PY
 start() {
   local arm=$1 dir
   dir=$(home_for "$arm")
-  MIYU_HOME="$dir" "$BIN" daemon --port "${PORTS[$arm]}" start >/dev/null
+  YUNXI_HOME="$dir" "$BIN" daemon --port "${PORTS[$arm]}" start >/dev/null
   echo "  [$arm] daemon :${PORTS[$arm]}  home=$dir"
 }
 
@@ -79,7 +79,7 @@ stop_all() {
   for arm in a b; do
     local dir
     dir=$(home_for "$arm")
-    MIYU_HOME="$dir" "$BIN" daemon stop >/dev/null 2>&1 || true
+    YUNXI_HOME="$dir" "$BIN" daemon stop >/dev/null 2>&1 || true
   done
   echo "两组 daemon 已停"
 }
@@ -107,7 +107,7 @@ run() {
     for arm in a b; do
       local dir
       dir=$(home_for "$arm")
-      MIYU_HOME="$dir" timeout 600 "$BIN" --session ab --create \
+      YUNXI_HOME="$dir" timeout 600 "$BIN" --session ab --create \
         --model "$MODEL" "$(prompt_for "$i")" >/dev/null 2>&1 || echo "    [$arm] 第 $i 轮失败"
     done
     echo "    第 $i 轮完成（两组）"

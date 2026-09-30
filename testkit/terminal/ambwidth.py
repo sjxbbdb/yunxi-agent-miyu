@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """量一下：这个终端把「歧义宽度」字符画成几列。
 
-Miyu 量宽用 unicode-width，歧义字符一律算 1 列。但 East Asian Ambiguous 这类
+YunXi 量宽用 unicode-width，歧义字符一律算 1 列。但 East Asian Ambiguous 这类
 （`┃` `·` `▄` `█` `●`…）在 CJK locale 下不少终端按 2 列画——输入框左边那根竖线、
 footer 的分隔点、声波、logo 的方块全在这一类里，一旦按 2 列画，整行就会错位。
 
@@ -74,10 +74,10 @@ def main():
         print(f"  {ch}   {eaw:<5}{str(width):<10}{note}{mark}")
     print()
     if ambiguous_wide:
-        print("结论：这个终端把歧义字符按 2 列画——Miyu 按 1 列算，所以会错位。")
-        print("      临时规避：MIYU_ASCII=1 miyu")
+        print("结论：这个终端把歧义字符按 2 列画——YunXi 按 1 列算，所以会错位。")
+        print("      临时规避：YUNXI_ASCII=1 yunxi")
     else:
-        print("结论：这个终端把歧义字符按 1 列画，和 Miyu 的假定一致，不是这个原因。")
+        print("结论：这个终端把歧义字符按 1 列画，和 YunXi 的假定一致，不是这个原因。")
     return 0
 
 

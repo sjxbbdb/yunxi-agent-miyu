@@ -15,7 +15,7 @@
   4. 大厅里 Ctrl+C 的「要退出请按 Ctrl+D」在输入框底下，不在左下角；
   5. reset 之后再发一句，仍在屏顶（旧对话与「已清空」提示都不该垫在上面）；
   6. `/config` 进设置再 Esc 出来：第一次亮光标发生在同步块里，光标落在输入框。
-产物在 ~/.cache/miyu-oobe/top/。
+产物在 ~/.cache/yunxi-oobe/top/。
 """
 import os
 import signal
@@ -24,16 +24,16 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
-os.environ.setdefault("MIYU_HOME", "/tmp/miyu-oobe-top/home")
-os.environ.setdefault("MIYU_TUI_RUNTIME", "/tmp/mx-oobe-top")
-os.environ.setdefault("MIYU_TUI_PORT", "18435")
+os.environ.setdefault("YUNXI_HOME", "/tmp/yunxi-oobe-top/home")
+os.environ.setdefault("YUNXI_TUI_RUNTIME", "/tmp/mx-oobe-top")
+os.environ.setdefault("YUNXI_TUI_PORT", "18435")
 os.environ.setdefault("STUB_PORT", "18498")
-os.environ.setdefault("OUT", str(Path.home() / ".cache" / "miyu-oobe" / "top"))
+os.environ.setdefault("OUT", str(Path.home() / ".cache" / "yunxi-oobe" / "top"))
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tui"))
 import run as h  # noqa: E402

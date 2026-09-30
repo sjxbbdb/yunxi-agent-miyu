@@ -4,10 +4,10 @@
 09-23 用户反馈：主页有 embedding 模型（用内置 bge），知识库设置里却说没配置。
 那一行绑的是运行时不读的旧字段 `plugins.knowledge_base.embedding_*`。
 
-     BIN=<miyu 二进制> python3 testkit/settings-ui/kb_embedding_link.py
+     BIN=<yunxi 二进制> python3 testkit/settings-ui/kb_embedding_link.py
 
 判定项(每条一行 ✅/❌,最后 n/m passed):沙箱 daemon(自己的端口,不碰 8300)
-+ Playwright(Chromium)。产物:~/.cache/miyu-kb-embedding-link/{daemon.log,*.png}
++ Playwright(Chromium)。产物:~/.cache/yunxi-kb-embedding-link/{daemon.log,*.png}
 """
 import json
 import os
@@ -20,7 +20,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -30,12 +30,12 @@ sys.path.insert(0, str(HERE.parent / "webui-fixes"))
 import authlib  # noqa: E402
 
 BIN = Path(os.environ["BIN"])
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-kb-embedding-link")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-kb-embedding-link")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18497"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), MIYU_LOG="info")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), YUNXI_LOG="info")
 LOCAL = "本地 · bge-small-zh-v1.5-int8"
 REMOTE = "emb/emb-model"
 

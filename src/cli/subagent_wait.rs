@@ -1,7 +1,7 @@
 //! 一次性命令等子代理（09-26 起子代理只在后台跑）。
 //!
 //! 子代理派出去，派它的那一轮当场就收尾了；结论在子代理跑完、报告叫醒这条会话再起的
-//! 那几轮里。一次性命令（`miyu "…"`、`miyu ask`、JSON 输出、`miyu stdio` 的一条消息）
+//! 那几轮里。一次性命令（`yunxi "…"`、`yunxi ask`、JSON 输出、`yunxi stdio` 的一条消息）
 //! 要带着结论退出，所以主回合收尾后留在前台：隔一会儿看一眼任务总览，这条会话起了唤醒
 //! 轮就跟上去（终端画出来 / JSON 往外吐），整棵子树（孙代理也算）的任务都收了尾再走。
 //!
@@ -16,8 +16,8 @@
 
 use crate::cli::repl::jobs::{fetch_wake_overview, WakeRun};
 use crate::cli::*;
-use miyu_engine::tools::jobs::JobOverview;
 use std::collections::HashSet;
+use yunxi_engine::tools::jobs::JobOverview;
 
 /// 两次看任务总览之间隔多久。唤醒轮要先发一次模型请求，比这长得多。
 const POLL_INTERVAL: Duration = Duration::from_millis(250);
@@ -67,7 +67,7 @@ impl SubagentWait {
     }
 
     /// 等下一步。随时可以丢掉这个 future（Ctrl+C、宿主取消、超时），不留半截状态。
-    pub(in crate::cli) async fn next(&mut self, paths: &MiyuPaths) -> Result<WaitStep> {
+    pub(in crate::cli) async fn next(&mut self, paths: &YunXiPaths) -> Result<WaitStep> {
         loop {
             let (jobs, wake_runs) = fetch_wake_overview(paths).await?;
             if let Some(step) = self.step(&jobs, wake_runs) {
@@ -121,7 +121,7 @@ fn is_subagent_job(job: &JobOverview) -> bool {
 
 /// 停下这条会话名下的各层子代理和它们的轮（Ctrl+C、宿主取消、超时）。尽力而为：
 /// daemon 没了也就没什么可停的。
-pub(in crate::cli) async fn stop_subagents(paths: &MiyuPaths, session_id: &str) {
+pub(in crate::cli) async fn stop_subagents(paths: &YunXiPaths, session_id: &str) {
     let _ = send_ipc_admin(
         paths,
         IpcCommand::StopSessionJobs {
@@ -135,10 +135,10 @@ pub(in crate::cli) async fn stop_subagents(paths: &MiyuPaths, session_id: &str) 
 /// 对一遍跟的时候漏掉的（两次看之间就跑完的唤醒轮、事件环已经补不回来的）。主回合在库里
 /// 找不到（被隐藏了之类）就一轮都不给，免得把老轮当新轮。
 pub(in crate::cli) fn turns_after_main(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: &str,
     main_turn: &str,
-) -> Result<Vec<miyu_core::state::TurnReplay>> {
+) -> Result<Vec<yunxi_core::state::TurnReplay>> {
     let turns = StateStore::new(paths)?
         .pinned(session_id)
         .session_replay(MISSED_TURNS_LOOKBACK)?;
@@ -146,9 +146,9 @@ pub(in crate::cli) fn turns_after_main(
 }
 
 fn after_main(
-    turns: Vec<miyu_core::state::TurnReplay>,
+    turns: Vec<yunxi_core::state::TurnReplay>,
     main_turn: &str,
-) -> Vec<miyu_core::state::TurnReplay> {
+) -> Vec<yunxi_core::state::TurnReplay> {
     let Some(main_index) = turns.iter().position(|turn| turn.turn_id == main_turn) else {
         return Vec::new();
     };
@@ -242,8 +242,8 @@ mod tests {
         );
     }
 
-    fn replay(turn_id: &str) -> miyu_core::state::TurnReplay {
-        miyu_core::state::TurnReplay {
+    fn replay(turn_id: &str) -> yunxi_core::state::TurnReplay {
+        yunxi_core::state::TurnReplay {
             turn_id: turn_id.to_string(),
             ..Default::default()
         }

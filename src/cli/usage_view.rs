@@ -20,7 +20,7 @@ pub(in crate::cli) fn state_cumulative(state: &ipc::SessionState) -> TurnTokens 
 pub(in crate::cli) fn compact_watermark_text(
     context_tokens: usize,
     window: usize,
-    context: &miyu_base::config::ContextConfig,
+    context: &yunxi_base::config::ContextConfig,
 ) -> String {
     let tier = |label: &str, ratio: f32| -> String {
         let threshold = (window as f32 * ratio).max(1.0) as usize;
@@ -44,7 +44,7 @@ pub(in crate::cli) fn compact_watermark_text(
 }
 
 pub(in crate::cli) fn usage_overview_text(
-    snapshot: &miyu_core::state::UsageSnapshot,
+    snapshot: &yunxi_core::state::UsageSnapshot,
     context: Option<(u64, Option<usize>)>,
 ) -> String {
     let compact = render::format_compact_count;
@@ -153,7 +153,7 @@ pub(in crate::cli) fn readable_bytes(bytes: u64) -> String {
 
 /// `t` for messages built at runtime — the static version cannot take a `format!`.
 pub(in crate::cli) fn owned(en: String, zh: String) -> String {
-    if miyu_base::i18n::is_zh() {
+    if yunxi_base::i18n::is_zh() {
         zh
     } else {
         en
@@ -161,7 +161,7 @@ pub(in crate::cli) fn owned(en: String, zh: String) -> String {
 }
 
 pub(in crate::cli) fn print_chat_token_usage(
-    result: &miyu_core::llm::ChatResult,
+    result: &yunxi_core::llm::ChatResult,
     enabled: bool,
     session_token_total: u64,
     context_window: Option<usize>,
@@ -183,7 +183,7 @@ pub(in crate::cli) fn print_chat_token_usage(
 /// 同上，但不打 stdout——把那一行用量做成字符串（全屏下要写进缓冲）。关着
 /// 或没有用量时是 None。
 pub(in crate::cli) fn chat_token_usage_text(
-    result: &miyu_core::llm::ChatResult,
+    result: &yunxi_core::llm::ChatResult,
     enabled: bool,
     session_token_total: u64,
     context_window: Option<usize>,
@@ -206,7 +206,7 @@ pub(in crate::cli) fn chat_token_usage_text(
 
 pub(in crate::cli) fn result_context_window(
     config: &AppConfig,
-    result: &miyu_core::llm::ChatResult,
+    result: &yunxi_core::llm::ChatResult,
 ) -> Option<usize> {
     if config.active_provider_model_choices().len() > 1 {
         return None;
@@ -225,7 +225,7 @@ pub(in crate::cli) async fn handle_post_turn_overflow(
     context_tokens: u64,
     show_token_usage: bool,
     cumulative_tokens: Option<&mut TurnTokens>,
-) -> Result<Option<miyu_core::llm::ChatResult>> {
+) -> Result<Option<yunxi_core::llm::ChatResult>> {
     let compact_result = agent
         .handle_overflow_after_turn(context_tokens, |event| handle_agent_event(renderer, event))
         .await?;
@@ -254,14 +254,14 @@ pub(in crate::cli) async fn handle_post_turn_overflow(
 /// 每一次什么时候、重算了多少、为什么。没断过就是空串，不占地方。
 pub(in crate::cli) fn cache_breaks_text(
     total: u64,
-    recent: &[miyu_core::state::CacheBreakRecord],
+    recent: &[yunxi_core::state::CacheBreakRecord],
 ) -> String {
     if total == 0 {
         return String::new();
     }
     let mut lines = vec![format!(
         "\x1b[1m{}\x1b[0m \x1b[2m{}\x1b[0m",
-        if miyu_base::i18n::is_zh() {
+        if yunxi_base::i18n::is_zh() {
             format!("断缓存 {total} 次")
         } else {
             format!("Cache breaks: {total}")
@@ -289,9 +289,9 @@ pub(in crate::cli) fn cache_breaks_text(
     lines.join("\n")
 }
 
-fn cache_break_cause_text(cause: &miyu_core::llm::CacheBreakCause, idle_secs: u64) -> String {
-    use miyu_core::llm::CacheBreakCause;
-    let zh = miyu_base::i18n::is_zh();
+fn cache_break_cause_text(cause: &yunxi_core::llm::CacheBreakCause, idle_secs: u64) -> String {
+    use yunxi_core::llm::CacheBreakCause;
+    let zh = yunxi_base::i18n::is_zh();
     match cause {
         CacheBreakCause::SystemPrompt => t("system prompt changed", "系统提示词变了").to_string(),
         CacheBreakCause::Tools { changes } if zh => format!("工具表变了（{changes}）"),

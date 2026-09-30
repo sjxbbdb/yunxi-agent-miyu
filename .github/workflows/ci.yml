@@ -78,8 +78,8 @@ jobs:
       # 界面文案按 locale 走，没有 zh 就退英文（i18n.rs 的 system_with 兜底是 En），
       # 而一批用例断言的正是中文那份（「限流」「已思考」这些）。runner 上 LANG 通常
       # 是 C.UTF-8，不钉住这一位的话它们会整批红——2026-09-20 本机在 systemd 的
-      # en_US.UTF-8 环境下实测 12 条。MIYU_LANG 不依赖系统装没装 zh_CN 语言包。
-      MIYU_LANG: zh
+      # en_US.UTF-8 环境下实测 12 条。YUNXI_LANG 不依赖系统装没装 zh_CN 语言包。
+      YUNXI_LANG: zh
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -133,7 +133,7 @@ jobs:
       RUSTUP_TOOLCHAIN: '1.96.1'
       CARGO_BUILD_JOBS: '3'
       # 和 Linux 侧同一个理由：一批用例断言的是中文那份文案。
-      MIYU_LANG: zh
+      YUNXI_LANG: zh
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

@@ -2,8 +2,8 @@
 """/effort、/persona、/models 三个菜单在全屏 TUI 里的位置：大厅里贴在提示下方、与输入框
 左对齐、不擦星空；会话里贴在正文底部。缩放、取消、确认之后版面都要还原。
 
-和 session_picker.py 同一套骨架：一次性 MIYU_HOME、桩模型、带光标应答的 PTY。
-Run: python3 testkit/tui/effort_menu.py --binary /absolute/path/to/miyu [--command /persona] [--observe]
+和 session_picker.py 同一套骨架：一次性 YUNXI_HOME、桩模型、带光标应答的 PTY。
+Run: python3 testkit/tui/effort_menu.py --binary /absolute/path/to/yunxi [--command /persona] [--observe]
 --observe 只截屏打印不断言（复现用）。
 """
 
@@ -34,14 +34,14 @@ def main():
     parser.add_argument("--observe", action="store_true", help="只截屏打印，不断言")
     parser.add_argument("--command", default="/effort", help="大厅里敲的命令（复现别的菜单用）")
     args = parser.parse_args()
-    os.environ.pop("MIYU_DIRECT", None)
-    sandbox = sandbox_dir.make("miyu-effort-menu-")
+    os.environ.pop("YUNXI_DIRECT", None)
+    sandbox = sandbox_dir.make("yunxi-effort-menu-")
     os.environ.update(
-        MIYU_HOME=str(sandbox / "home"),
-        MIYU_TUI_RUNTIME=str(sandbox / "run"),
-        MIYU_TUI_PORT=str(free_port()),
+        YUNXI_HOME=str(sandbox / "home"),
+        YUNXI_TUI_RUNTIME=str(sandbox / "run"),
+        YUNXI_TUI_PORT=str(free_port()),
         STUB_PORT=str(free_port()),
-        OUT=os.environ.get("OUT") or str(Path.home() / ".cache" / "miyu-effort-menu"),
+        OUT=os.environ.get("OUT") or str(Path.home() / ".cache" / "yunxi-effort-menu"),
     )
     import round26 as q
     import pyte

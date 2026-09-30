@@ -1,6 +1,6 @@
 //! 挂断看门狗盯的是哪个 fd。
 //!
-//! 09-10 报：shellhook（`printf '%s' "$buffer" | miyu --shell-intercept
+//! 09-10 报：shellhook（`printf '%s' "$buffer" | yunxi --shell-intercept
 //! --stdin`）里 ask_question 的面板一打开，什么都不做、几秒后整个回合被取消。
 //! 根因是看门狗裸 poll stdin——管道写端退出后 stdin 常驻 POLLHUP，被当成
 //! 「终端没了」，5 秒后 `exit(1)`，daemon 又把一次性客户端的断线当取消。
@@ -49,7 +49,7 @@ fn a_pipe_with_a_closed_writer_reports_hangup() {
 /// 09-23：对端关掉的伪终端要认得出来。
 ///
 /// 这时 `isatty` 返回假（tcgetattr 报 EIO），老判据把它当管道、改盯控制终端；进程
-/// 的控制终端不是它的话就永远不退——一个 `miyu config` 这样全速空转了 8 小时。
+/// 的控制终端不是它的话就永远不退——一个 `yunxi config` 这样全速空转了 8 小时。
 #[cfg(target_os = "linux")]
 #[test]
 fn a_pty_whose_master_closed_is_a_dead_terminal() {

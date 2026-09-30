@@ -6,9 +6,9 @@
 
 use crate::cli::repl::banner::BannerScene;
 use crate::cli::repl::tail::screen::cells::patch_row;
-use miyu_base::config::PersonaLane;
 use std::ops::Range;
 use unicode_width::UnicodeWidthChar;
+use yunxi_base::config::PersonaLane;
 
 /// 一段补丁落在屏上的哪些格子：写了字的（行, 列），擦行尾的（行, 起始列）。都是 0 基。
 #[derive(Default)]

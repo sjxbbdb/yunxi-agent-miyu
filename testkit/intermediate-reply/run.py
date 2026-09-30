@@ -20,19 +20,19 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-imr/home"))
-WORK = Path(os.environ.get("MIYU_IMR_WORK", "/tmp/miyu-imr/work"))
-PORT = int(os.environ.get("MIYU_IMR_PORT", "18391"))
-WS_PORT = int(os.environ.get("MIYU_IMR_WS_PORT", "18392"))
-DELAY = float(os.environ.get("MIYU_FAKE_TOOL_DELAY", "6"))
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-imr/home"))
+WORK = Path(os.environ.get("YUNXI_IMR_WORK", "/tmp/yunxi-imr/work"))
+PORT = int(os.environ.get("YUNXI_IMR_PORT", "18391"))
+WS_PORT = int(os.environ.get("YUNXI_IMR_WS_PORT", "18392"))
+DELAY = float(os.environ.get("YUNXI_FAKE_TOOL_DELAY", "6"))
 RUNTIME = "/tmp/mx-imr"
 
 ENV = dict(
     os.environ,
-    MIYU_HOME=str(HOME),
+    YUNXI_HOME=str(HOME),
     XDG_RUNTIME_DIR=RUNTIME,
-    MIYU_FAKE_TOOL_DELAY=str(DELAY),
+    YUNXI_FAKE_TOOL_DELAY=str(DELAY),
 )
 
 sys.path.insert(0, str(REPO / "testkit" / "fake-onebot"))
@@ -66,7 +66,7 @@ def build_home() -> None:
     config.setdefault("plugins", {})["claude_code"] = {
         "binary": str(fake),
         "native_tools": "off",
-        "miyu_tools": "off",
+        "yunxi_tools": "off",
         "permission_mode": "bypassPermissions",
         "idle_timeout_seconds": 120,
         "prefer_subscription": True,

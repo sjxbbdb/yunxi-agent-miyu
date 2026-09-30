@@ -28,7 +28,7 @@ def is_native(build):
 
 
 def binary_name(component):
-    return 'miyu-voice' if component == 'voice' else 'miyu'
+    return 'yunxi-voice' if component == 'voice' else 'yunxi'
 
 
 def cargo_command(target, component, features, vendor):
@@ -94,9 +94,9 @@ def compile_native(manifest, build_id, component, source, inputs, out, target_di
         raise ValueError('Native builds need prepared inputs beside the frozen source (../inputs).')
     require_outside_home(source, inputs, out, target_dir)
     env = {key: value for key, value in os.environ.items()
-           if not key.startswith(('CARGO_', 'MIYU_')) and key not in BUILD_ALTERING}
+           if not key.startswith(('CARGO_', 'YUNXI_')) and key not in BUILD_ALTERING}
     env.update(CARGO_HOME=str(out/'cargo-home'), CARGO_TARGET_DIR=str(target_dir),
-               CARGO_NET_OFFLINE='true', MIYU_BUILD_ID=identity,
+               CARGO_NET_OFFLINE='true', YUNXI_BUILD_ID=identity,
                SOURCE_DATE_EPOCH=str(manifest['source_date_epoch']),
                MACOSX_DEPLOYMENT_TARGET=builder['deployment_target'],
                RUSTUP_TOOLCHAIN=manifest['toolchain']['rust'],
@@ -117,7 +117,7 @@ def compile_native(manifest, build_id, component, source, inputs, out, target_di
     require_no_home_path(binary)
     # 套接字路径受 SUN_LEN(104) 限制，探测用的家目录放短路径。
     with tempfile.TemporaryDirectory(prefix='mv-', dir='/tmp') as home:
-        probe = dict(env, HOME=home, MIYU_HOME=home, XDG_RUNTIME_DIR=home)
+        probe = dict(env, HOME=home, YUNXI_HOME=home, XDG_RUNTIME_DIR=home)
         version = subprocess.run([str(binary), '--version'], env=probe, check=True,
                                  capture_output=True, text=True, timeout=30).stdout.strip()
     rustc = subprocess.run(['rustc', '-Vv'], env=env, check=True, capture_output=True,

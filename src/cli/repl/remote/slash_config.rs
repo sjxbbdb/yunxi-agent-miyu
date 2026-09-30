@@ -286,7 +286,7 @@ impl RemoteRepl {
     }
 
     pub(super) async fn cmd_effort(&mut self, command_args: &str) -> Result<LoopStep> {
-        if !miyu_base::models_cache::is_loaded() {
+        if !yunxi_base::models_cache::is_loaded() {
             repl_note(
                 &mut self.live_repl,
                 &format!(
@@ -317,7 +317,7 @@ impl RemoteRepl {
             (!selected.is_empty()).then_some(selected),
             "/effort",
             // 只改这个会话（用户 09-24：「effort 做成会话级」）。daemon 每一轮开始时按
-            // 会话回读，不用重载配置，别的会话跑着也改得了。全局默认档在 `miyu config`。
+            // 会话回读，不用重载配置，别的会话跑着也改得了。全局默认档在 `yunxi config`。
             VariantScope::Session(&self.active_session_id),
             |menu| {
                 if fullscreen {

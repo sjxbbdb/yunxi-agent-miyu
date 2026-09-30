@@ -1,10 +1,10 @@
 {
   "about": "走查红绿账（09-25）。testkit/fleet.py 按这份清单一项一项跑、和 known_red 对账；只收离线、能自动判绿的走查。要真模型、真 kitty、PipeWire、真人的不收（清单在 fleet.py 文件头）。known_red 只减不增：CI 和上一个提交比。",
   "env": {
-    "MIYU_TUI_PORT": 18691,
+    "YUNXI_TUI_PORT": 18691,
     "STUB_PORT": 18692,
-    "MIYU_TV_PORT": 18693,
-    "MIYU_ST_PORT": 18694,
+    "YUNXI_TV_PORT": 18693,
+    "YUNXI_ST_PORT": 18694,
     "PORT": 18695
   },
   "walkthroughs": [
@@ -1348,7 +1348,7 @@
     },
     {
       "name": "two_views",
-      "reason": "09-20 起 miyu 启动就开一条新会话（05e57350），第二个终端不再接进第一个的会话，走查还按 09-19 的口径（main 8c18c5d5 上同样红，6/13）",
+      "reason": "09-20 起 yunxi 启动就开一条新会话（05e57350），第二个终端不再接进第一个的会话，走查还按 09-19 的口径（main 8c18c5d5 上同样红，6/13）",
       "since": "2026-09-25"
     },
     {

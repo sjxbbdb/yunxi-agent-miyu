@@ -13,7 +13,7 @@
 
 use crate::cli::repl::jobs::{format_job_duration, JOB_SPINNER_FRAMES};
 use crate::cli::*;
-use miyu_engine::tools::jobs::JobOverview;
+use yunxi_engine::tools::jobs::JobOverview;
 
 /// 任务条上一条子代理会话（`ListSubagentSessions` 的一行）。
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -203,14 +203,14 @@ impl StripItem {
             // 开发模式的子代理单列一类：那一条是去写代码的，「开发中」比「子代理」
             // 更说明它在干嘛。
             Self::Job { job, .. } => match job.kind.as_str() {
-                "dev" => miyu_base::i18n::text("dev", "开发中"),
-                "subagent" if job.dev => miyu_base::i18n::text("dev", "开发中"),
-                "subagent" => miyu_base::i18n::text("agent", "子代理"),
-                _ => miyu_base::i18n::text("cmd", "命令"),
+                "dev" => yunxi_base::i18n::text("dev", "开发中"),
+                "subagent" if job.dev => yunxi_base::i18n::text("dev", "开发中"),
+                "subagent" => yunxi_base::i18n::text("agent", "子代理"),
+                _ => yunxi_base::i18n::text("cmd", "命令"),
             },
-            Self::Agent { row, .. } if row.dev => miyu_base::i18n::text("dev", "开发中"),
-            Self::Agent { .. } => miyu_base::i18n::text("agent", "子代理"),
-            Self::Root { .. } => miyu_base::i18n::text("main", "主会话"),
+            Self::Agent { row, .. } if row.dev => yunxi_base::i18n::text("dev", "开发中"),
+            Self::Agent { .. } => yunxi_base::i18n::text("agent", "子代理"),
+            Self::Root { .. } => yunxi_base::i18n::text("main", "主会话"),
         }
     }
 
@@ -222,7 +222,7 @@ impl StripItem {
             Self::Agent { row, place, .. }
                 if *place == Place::Other && row.running_descendants > 0 =>
             {
-                if miyu_base::i18n::is_zh() {
+                if yunxi_base::i18n::is_zh() {
                     format!("{word}（+{}）", row.running_descendants)
                 } else {
                     format!("{word} (+{})", row.running_descendants)
@@ -266,7 +266,7 @@ impl StripItem {
                 "waiting" => format!(
                     "{} · {}",
                     row.title,
-                    miyu_base::i18n::text("waiting on background work", "等待后台")
+                    yunxi_base::i18n::text("waiting on background work", "等待后台")
                 ),
                 _ => row.title.clone(),
             },
@@ -452,7 +452,7 @@ pub(in crate::cli) fn strip_lines(
         let hidden = rows.len().saturating_sub(shown_to);
         let more = match hidden {
             0 => String::new(),
-            _ if miyu_base::i18n::is_zh() => format!("↓ 还有 {hidden} 个"),
+            _ if yunxi_base::i18n::is_zh() => format!("↓ 还有 {hidden} 个"),
             _ => format!("↓ {hidden} more"),
         };
         let pad = " ".repeat(cols.saturating_sub(visible_width(&more)));
@@ -463,7 +463,7 @@ pub(in crate::cli) fn strip_lines(
 
 /// `session_id` 名下的子代理会话，什么状态都要（任务条上挑哪些由 `strip_tree` 定）。
 pub(in crate::cli) async fn fetch_subagent_rows(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: &str,
 ) -> Result<Vec<SubagentRow>> {
     let mut stream = ipc::connect(&paths.ipc_socket()).await?;

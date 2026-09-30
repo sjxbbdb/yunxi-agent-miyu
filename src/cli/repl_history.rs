@@ -11,7 +11,7 @@ use crate::cli::*;
 
 /// 分会话之前的那个全局文件。**只读不写**：老记录都在里面，直接丢掉，用户会
 /// 觉得「历史没了」。
-pub(super) fn legacy_repl_history_file(paths: &MiyuPaths) -> PathBuf {
+pub(super) fn legacy_repl_history_file(paths: &YunXiPaths) -> PathBuf {
     paths.state_dir.join("repl-history.jsonl")
 }
 
@@ -30,7 +30,7 @@ pub(super) fn read_repl_history_file(path: &std::path::Path) -> Vec<ReplHistoryE
 /// delete turns, so this is the durable source; the turns-derived list only
 /// seeds sessions that predate it.
 pub(super) fn load_persistent_repl_history(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: &str,
 ) -> Vec<ReplHistoryEntry> {
     let lines = StateStore::new(paths).and_then(|store| store.repl_history(session_id));
@@ -48,7 +48,7 @@ pub(super) fn load_persistent_repl_history(
 }
 
 pub(super) fn persist_repl_history_entry(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: &str,
     entry: &ReplHistoryEntry,
 ) {

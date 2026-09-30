@@ -2,7 +2,7 @@
 """在一个会应答能力查询的假终端里跑 chafa，看它选了什么输出格式。
 
 复刻 src/tools/vision/print.rs 的调用形态：stdout/stderr 继承到 PTY，
-stdin 可选 /dev/null（Miyu 现状）或 PTY 本身（控制终端）。
+stdin 可选 /dev/null（YunXi 现状）或 PTY 本身（控制终端）。
 父进程扮演终端：收到查询就按「xterm + sixel」的身份应答。
 """
 import os, pty, sys, select, subprocess, fcntl, termios, struct, time, re, zlib

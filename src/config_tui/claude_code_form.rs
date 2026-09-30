@@ -14,7 +14,7 @@ const TOOL_SCOPES: &[&str] = &["off", "dev", "normal", "all"];
 pub(in crate::config_tui) fn edit_claude_code_provider_form(
     ui: &mut Ui,
     provider: ProviderConfig,
-    plugin: &mut miyu_base::config::ClaudeCodePluginConfig,
+    plugin: &mut yunxi_base::config::ClaudeCodePluginConfig,
 ) -> Result<Option<ProviderConfig>> {
     let mut fields = vec![
         Field::new(
@@ -34,10 +34,10 @@ pub(in crate::config_tui) fn edit_claude_code_provider_form(
         .choices(TOOL_SCOPES),
         Field::new(
             t(
-                "Miyu tools via MCP bridge scope",
-                "Miyu 工具挂给 claude 的作用域",
+                "YunXi tools via MCP bridge scope",
+                "YunXi 工具挂给 claude 的作用域",
             ),
-            plugin.miyu_tools.clone(),
+            plugin.yunxi_tools.clone(),
         )
         .choices(TOOL_SCOPES),
         Field::new(
@@ -73,7 +73,7 @@ pub(in crate::config_tui) fn edit_claude_code_provider_form(
         };
         plugin.binary = fields[2].value.trim().to_string();
         plugin.native_tools = normalize_tool_scope(&fields[3].value);
-        plugin.miyu_tools = normalize_tool_scope(&fields[4].value);
+        plugin.yunxi_tools = normalize_tool_scope(&fields[4].value);
         plugin.permission_mode = fields[5].value.trim().to_string();
         plugin.idle_timeout_seconds = fields[6].value.trim().parse().unwrap_or(300);
         let mut updated = provider.clone();

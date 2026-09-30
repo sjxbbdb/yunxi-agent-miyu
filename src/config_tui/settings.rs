@@ -130,7 +130,7 @@ pub(in crate::config_tui) fn edit_settings(ui: &mut Ui, config: &mut AppConfig) 
             ),
             config.display.cross_session_preview_lines.to_string(),
         ),
-        // 09-26:敲 `miyu` 打开终端界面时进新会话,还是这条车道上次用的那条。
+        // 09-26:敲 `yunxi` 打开终端界面时进新会话,还是这条车道上次用的那条。
         Field::new(
             t("TUI startup session", "打开终端界面时进入"),
             if config.tui_resumes_last_session() {

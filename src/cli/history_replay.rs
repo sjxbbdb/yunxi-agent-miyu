@@ -57,13 +57,13 @@ impl ReplHistoryEntry {
     }
 
     /// 只接回还在的缓存文件:清理掉的图片留 None,占位符就成了普通文字。
-    pub(super) fn pasted_images(&self) -> Vec<Option<miyu_base::clipboard::PastedImage>> {
+    pub(super) fn pasted_images(&self) -> Vec<Option<yunxi_base::clipboard::PastedImage>> {
         self.images
             .iter()
             .map(|path| {
                 path.as_ref()
                     .filter(|path| std::path::Path::new(path).is_file())
-                    .map(|path| miyu_base::clipboard::PastedImage::Path(path.clone()))
+                    .map(|path| yunxi_base::clipboard::PastedImage::Path(path.clone()))
             })
             .collect()
     }
@@ -114,13 +114,13 @@ pub(super) fn write_parent_task(frame: &mut Vec<u8>, body: &str, preview: usize)
 }
 
 pub(super) fn session_replay_frame(
-    replays: &[miyu_core::state::TurnReplay],
+    replays: &[yunxi_core::state::TurnReplay],
     mode: PersonaLane,
     config: &AppConfig,
     cols: usize,
     endpoint_line: bool,
 ) -> Result<Vec<u8>> {
-    use miyu_core::state::ReplayEntry;
+    use yunxi_core::state::ReplayEntry;
     let mut frame = Vec::new();
     for replay in replays {
         // 每一轮开头埋一个标记，重开之后 `/undo` 也知道该截到哪儿。
@@ -137,14 +137,14 @@ pub(super) fn session_replay_frame(
                 config.display.cross_session_preview_lines,
             )?;
         } else if let Some(message) =
-            miyu_core::state::parse_cross_session_message(&replay.display_content)
+            yunxi_core::state::parse_cross_session_message(&replay.display_content)
         {
             // 另一个会话里的 AI 发来的那条（09-23）：和实时渲染同一块，整段外壳
             // 当一行提示印出来就是一屏标签。
             frame.push(b'\n');
             render::timeline::write_cross_session_message(
                 &mut frame,
-                &miyu_core::state::cross_session_headline(
+                &yunxi_core::state::cross_session_headline(
                     &message.from_name,
                     &message.from_session,
                 ),
@@ -152,7 +152,7 @@ pub(super) fn session_replay_frame(
                 config.display.cross_session_preview_lines,
             )?;
         } else if let Some(attempt) =
-            miyu_core::state::service_restart_attempt(&replay.display_content)
+            yunxi_core::state::service_restart_attempt(&replay.display_content)
         {
             // daemon 重启后接着跑的那一轮（09-24）：和实时渲染同一行提示。
             let notice = format!(
@@ -162,7 +162,7 @@ pub(super) fn session_replay_frame(
                 } else {
                     "↻"
                 },
-                miyu_core::state::service_restart_headline(attempt)
+                yunxi_core::state::service_restart_headline(attempt)
             );
             let notice = if render::blocks::enabled() {
                 render::timeline::indent_body(&notice)
@@ -219,7 +219,7 @@ pub(super) fn session_replay_frame(
                 .filter(|text| !text.trim().is_empty())
             {
                 renderer.write_chunk(ChatStreamChunk {
-                    kind: miyu_core::llm::ChatStreamKind::Reasoning,
+                    kind: yunxi_core::llm::ChatStreamKind::Reasoning,
                     text: reasoning.to_string(),
                 })?;
             }
@@ -228,26 +228,26 @@ pub(super) fn session_replay_frame(
             // 被中断的轮：正文尾巴上那段 `<system-reminder>` 是写给模型的，
             // 不给人看。
             let content = if replay.interrupted {
-                miyu_core::state::interrupted_prefix(&replay.assistant_content)
+                yunxi_core::state::interrupted_prefix(&replay.assistant_content)
             } else {
                 replay.assistant_content.clone()
             };
             renderer.write_chunk(ChatStreamChunk {
-                kind: miyu_core::llm::ChatStreamKind::Content,
+                kind: yunxi_core::llm::ChatStreamKind::Content,
                 text: content,
             })?;
         } else {
             // 提问那一步的题目：结果到了，照它和答案把一问一答画出来（和实时那一轮同一条路）。
-            let mut asked: Option<miyu_base::question::QuestionRequest> = None;
+            let mut asked: Option<yunxi_base::question::QuestionRequest> = None;
             for entry in &replay.entries {
                 match entry {
                     ReplayEntry::Text { text } => renderer.write_chunk(ChatStreamChunk {
-                        kind: miyu_core::llm::ChatStreamKind::Content,
+                        kind: yunxi_core::llm::ChatStreamKind::Content,
                         text: text.clone(),
                     })?,
                     ReplayEntry::Reasoning { text, elapsed_ms } => {
                         renderer.write_chunk(ChatStreamChunk {
-                            kind: miyu_core::llm::ChatStreamKind::Reasoning,
+                            kind: yunxi_core::llm::ChatStreamKind::Reasoning,
                             text: text.clone(),
                         })?;
                         renderer.replay_reasoning_elapsed(std::time::Duration::from_millis(
@@ -256,7 +256,7 @@ pub(super) fn session_replay_frame(
                     }
                     ReplayEntry::ToolCall { name, arguments } => {
                         if name == "ask_question" {
-                            asked = miyu_base::question::QuestionRequest::parse(arguments).ok();
+                            asked = yunxi_base::question::QuestionRequest::parse(arguments).ok();
                         }
                         renderer.write_tool_call(name, arguments)?;
                         renderer.replay_patch_detail(name, arguments);
@@ -268,7 +268,7 @@ pub(super) fn session_replay_frame(
                         elapsed_ms,
                     } => {
                         if name == "ask_question" {
-                            let response = miyu_base::question::response_from_tool_output(output);
+                            let response = yunxi_base::question::response_from_tool_output(output);
                             if let (Some(request), Some(response)) = (asked.take(), response) {
                                 crate::cli::repl::question_flow::record_exchange(
                                     &mut renderer,
@@ -432,7 +432,7 @@ pub(super) fn replay_viewport() -> (usize, usize) {
 /// Queues a submission for the turn currently running in the daemon, using
 /// the cross-process queue target so the daemon consumes it mid-turn.
 pub(super) async fn persist_remote_queued_submission(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     run_id: &str,
     turn_id: &str,
     submission: &LiveSubmission,
@@ -466,8 +466,8 @@ pub(super) async fn persist_remote_queued_submission(
             submitted_at,
         }),
         Some(IpcFrame::Error { message, .. }) => bail!("{message}"),
-        Some(_) => bail!("Miyu core returned an invalid queue response"),
-        None => bail!("Miyu core closed the queue connection"),
+        Some(_) => bail!("YunXi core returned an invalid queue response"),
+        None => bail!("YunXi core closed the queue connection"),
     }
 }
 
@@ -484,7 +484,7 @@ pub(super) fn run_history_with_state(state: &StateStore, args: HistoryArgs) -> R
         };
         println!("{} {display_role}", entry.timestamp);
         if entry.role.starts_with("assistant") {
-            let response = miyu_core::llm::ChatResult {
+            let response = yunxi_core::llm::ChatResult {
                 content: entry.content,
                 reasoning: if args.no_thinking {
                     None

@@ -352,7 +352,7 @@ impl Screen {
         let cols = self.cols;
         let spinner = format!(
             "\x1b[36m{}\x1b[39m",
-            miyu_hosts::render::wait_spinner::braille_frame(self.overlay_spinner_frame())
+            yunxi_hosts::render::wait_spinner::braille_frame(self.overlay_spinner_frame())
         );
         let Some(panel) = &mut self.overlay else {
             return Ok(false);
@@ -417,8 +417,8 @@ impl Screen {
                     None => spans,
                 };
                 // 「正在进行」那一行左边距上的占位格换成当帧的点阵字形。
-                miyu_hosts::render::clip_to_display_width(&spans_to_ansi(&spans), inner)
-                    .replace(miyu_hosts::render::timeline::LIVE_SPINNER_CELL, &spinner)
+                yunxi_hosts::render::clip_to_display_width(&spans_to_ansi(&spans), inner)
+                    .replace(yunxi_hosts::render::timeline::LIVE_SPINNER_CELL, &spinner)
             })
             .collect();
 

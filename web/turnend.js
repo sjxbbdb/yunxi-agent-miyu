@@ -2,7 +2,7 @@
 
 /*
  * 回复末尾那行 ✻(09-26,用户照 Claude Code 定)。和终端
- * `crates/miyu-hosts/src/render/stream/timeline/turn_end.rs` 同一套词表、同一个哈希、同一种写法:
+ * `crates/yunxi-hosts/src/render/stream/timeline/turn_end.rs` 同一套词表、同一个哈希、同一种写法:
  *
  *   ✻ deepseek-v4.1-flash · 处理了 3 分 14 秒 · 1:53 完成
  *
@@ -13,7 +13,7 @@
  *
  * 单独成文件:app.js 已经一万四千行。
  */
-window.MiyuTurnEnd = (() => {
+window.YunXiTurnEnd = (() => {
   // 顺序和 turn_end.rs 的 VERBS_ZH / VERBS_EN 一一对应(英文在 i18n-en.js)。
   const VERBS = [t("处理了"), t("忙活了"), t("琢磨了"), t("推敲了"), t("折腾了"), t("消耗了")];
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

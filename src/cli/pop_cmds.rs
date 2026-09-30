@@ -17,7 +17,7 @@ pub(in crate::cli) struct PopOutcome {
     pub(in crate::cli) archived: bool,
 }
 
-pub(in crate::cli) fn run_pop(paths: &MiyuPaths, args: PopArgs) -> Result<()> {
+pub(in crate::cli) fn run_pop(paths: &YunXiPaths, args: PopArgs) -> Result<()> {
     let config = AppConfig::load_or_default(paths)?;
     let state = StateStore::new(paths)?;
     state.recover_stale_turns()?;
@@ -30,7 +30,7 @@ pub(in crate::cli) fn run_pop(paths: &MiyuPaths, args: PopArgs) -> Result<()> {
 /// Pop while the daemon owns the core: candidates are selected locally
 /// (read-only), but the mutation goes through IPC so the daemon stays the
 /// single writer.
-pub(in crate::cli) async fn run_pop_via_daemon(paths: &MiyuPaths, args: PopArgs) -> Result<()> {
+pub(in crate::cli) async fn run_pop_via_daemon(paths: &YunXiPaths, args: PopArgs) -> Result<()> {
     let state = StateStore::new(paths)?;
     let turn_ids: Vec<String> = match args.count {
         Some(count) => {
@@ -46,8 +46,8 @@ pub(in crate::cli) async fn run_pop_via_daemon(paths: &MiyuPaths, args: PopArgs)
                 bail!(
                     "{}",
                     t(
-                        "interactive pop requires a terminal; use `miyu pop <count>`",
-                        "交互 pop 需要终端；请使用 `miyu pop <数量>`",
+                        "interactive pop requires a terminal; use `yunxi pop <count>`",
+                        "交互 pop 需要终端；请使用 `yunxi pop <数量>`",
                     )
                 );
             }
@@ -74,7 +74,7 @@ pub(in crate::cli) async fn run_pop_via_daemon(paths: &MiyuPaths, args: PopArgs)
     let (_, data) = send_ipc_admin(
         paths,
         IpcCommand::Pop {
-            target: miyu_core::ipc::SessionRef::Current,
+            target: yunxi_core::ipc::SessionRef::Current,
             turn_ids,
         },
     )
@@ -98,7 +98,7 @@ pub(in crate::cli) async fn run_pop_via_daemon(paths: &MiyuPaths, args: PopArgs)
 }
 
 pub(in crate::cli) fn execute_pop(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     state: &StateStore,
     count: Option<usize>,
@@ -113,8 +113,8 @@ pub(in crate::cli) fn execute_pop(
                 bail!(
                     "{}",
                     t(
-                        "interactive pop requires a terminal; use `miyu pop <count>`",
-                        "交互 pop 需要终端；请使用 `miyu pop <数量>`",
+                        "interactive pop requires a terminal; use `yunxi pop <count>`",
+                        "交互 pop 需要终端；请使用 `yunxi pop <数量>`",
                     )
                 );
             }
@@ -512,7 +512,7 @@ pub(in crate::cli) fn inline_pop_lines(item_count: usize) -> u16 {
 }
 
 /// Remote-REPL text equivalent of `print_pop_outcome` (which stays
-/// println-based for the direct REPL and one-shot `miyu pop`).
+/// println-based for the direct REPL and one-shot `yunxi pop`).
 pub(in crate::cli) fn repl_pop_outcome_text(outcome: PopOutcome) -> String {
     let message = if is_zh() {
         if outcome.archived {
@@ -548,31 +548,31 @@ pub(in crate::cli) fn repl_nothing_to_pop_text() -> String {
     )
 }
 
-pub(in crate::cli) async fn run_reset(paths: &MiyuPaths) -> Result<()> {
+pub(in crate::cli) async fn run_reset(paths: &YunXiPaths) -> Result<()> {
     let config = AppConfig::load_or_default(paths)?;
     let state = StateStore::new(paths)?;
     let memory = MemoryStore::new(&config, paths);
     state.reset_conversation()?;
-    miyu_core::llm::forget_relay_sessions(&state.session_id());
+    yunxi_core::llm::forget_relay_sessions(&state.session_id());
     memory.clear_evicted_context()?;
     memory.clear_pending_events()?;
     tools::clear_aur_review_state(paths)?;
     Ok(())
 }
 
-/// `miyu reset-all-memory`:清空当前人格的全部长期记忆。daemon 在跑走 IPC,
+/// `yunxi reset-all-memory`:清空当前人格的全部长期记忆。daemon 在跑走 IPC,
 /// 否则本地直清。
 ///
 /// 不二次确认:清的只是长期记忆(事实/日记/经历),会话历史、技能和知识库都
 /// 不动,和 `/wipe` 那种不可逆的整体抹除不是一个量级。确认弹窗还顺带把这条
 /// 命令钉死在终端上——非交互调用只能拿到"需要在终端确认"的报错。
-pub(in crate::cli) async fn run_reset_all_memory_command(paths: &MiyuPaths) -> Result<()> {
+pub(in crate::cli) async fn run_reset_all_memory_command(paths: &YunXiPaths) -> Result<()> {
     if ipc::daemon_info(paths).await.is_some() {
         send_ipc_admin(
             paths,
             IpcCommand::ResetMemory {
                 mode: None,
-                scope: miyu_core::ipc::MemoryResetScope::All,
+                scope: yunxi_core::ipc::MemoryResetScope::All,
                 session: None,
             },
         )
@@ -585,17 +585,17 @@ pub(in crate::cli) async fn run_reset_all_memory_command(paths: &MiyuPaths) -> R
     Ok(())
 }
 
-/// `miyu reset-memory`:只清终端会话这一次对话记下的长期记忆。
+/// `yunxi reset-memory`:只清终端会话这一次对话记下的长期记忆。
 ///
 /// daemon 不在时本地直清同一个会话指针指向的会话——终端集成的"当前会话"
 /// 就存在 StateStore 里,两条路指的是同一个。
-pub(in crate::cli) async fn run_reset_memory_command(paths: &MiyuPaths) -> Result<()> {
+pub(in crate::cli) async fn run_reset_memory_command(paths: &YunXiPaths) -> Result<()> {
     let text = if ipc::daemon_info(paths).await.is_some() {
         let (_, data) = send_ipc_admin(
             paths,
             IpcCommand::ResetMemory {
                 mode: None,
-                scope: miyu_core::ipc::MemoryResetScope::Session,
+                scope: yunxi_core::ipc::MemoryResetScope::Session,
                 session: None,
             },
         )
@@ -614,12 +614,12 @@ pub(in crate::cli) async fn run_reset_memory_command(paths: &MiyuPaths) -> Resul
 
 pub(in crate::cli) fn wipe_summary() -> &'static str {
     t(
-        "This erases everything Miyu has accumulated: memory, every conversation's contents, and group-chat contexts. Skills and scripts stay on disk. It cannot be undone.",
-        "这会抹掉 Miyu 积累的一切：记忆、所有会话的内容、群聊上下文。技能和脚本文件保留。不可撤销。",
+        "This erases everything YunXi has accumulated: memory, every conversation's contents, and group-chat contexts. Skills and scripts stay on disk. It cannot be undone.",
+        "这会抹掉 YunXi 积累的一切：记忆、所有会话的内容、群聊上下文。技能和脚本文件保留。不可撤销。",
     )
 }
 
-pub(in crate::cli) async fn run_wipe(paths: &MiyuPaths, assume_yes: bool) -> Result<()> {
+pub(in crate::cli) async fn run_wipe(paths: &YunXiPaths, assume_yes: bool) -> Result<()> {
     if !assume_yes {
         if !io::stdin().is_terminal() {
             bail!(
@@ -643,10 +643,10 @@ pub(in crate::cli) async fn run_wipe(paths: &MiyuPaths, assume_yes: bool) -> Res
         let state = StateStore::new(paths)?;
         let persona = config.active_persona_scope();
         let bindings = state.platform_session_bindings(&persona, "onebot")?;
-        let plugins = miyu_hosts::platforms::plugins::PlatformPluginRegistry::built_in()?;
+        let plugins = yunxi_hosts::platforms::plugins::PlatformPluginRegistry::built_in()?;
         plugins
             .after_persona_reset(
-                &miyu_hosts::platforms::plugins::PlatformPersonaResetContext {
+                &yunxi_hosts::platforms::plugins::PlatformPersonaResetContext {
                     config: &config,
                     paths,
                     bindings: &bindings,
@@ -655,11 +655,11 @@ pub(in crate::cli) async fn run_wipe(paths: &MiyuPaths, assume_yes: bool) -> Res
             .await?;
         let cleared_sessions = state.reset_persona_contexts(&persona, "onebot")?;
         for session_id in &cleared_sessions {
-            miyu_core::llm::forget_relay_sessions(session_id);
+            yunxi_core::llm::forget_relay_sessions(session_id);
         }
         state.reset_conversation_usage()?;
         // 技能与脚本是文件,不是记忆:wipe 只清她记住的东西。要连自动生成的
-        // 技能一起删,用 `miyu memory reset --include-skills` 明确要。
+        // 技能一起删,用 `yunxi memory reset --include-skills` 明确要。
         MemoryStore::new(&config, paths).reset_all()?;
         tools::clear_aur_review_state(paths)?;
     }

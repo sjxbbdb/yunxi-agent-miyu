@@ -17,11 +17,11 @@ class IsolationTests(unittest.TestCase):
         original = dict(os.environ)
         with Sandbox() as first, Sandbox() as second:
             self.assertNotEqual(first.root, second.root)
-            env = first.environment(dict(original, MIYU_HOME='/production',
-                MIYU_ONNXRUNTIME_LIB='/secret/lib', OPENAI_API_KEY='secret',
+            env = first.environment(dict(original, YUNXI_HOME='/production',
+                YUNXI_ONNXRUNTIME_LIB='/secret/lib', OPENAI_API_KEY='secret',
                 ANTHROPIC_BASE_URL='https://production', XDG_CONFIG_HOME='/production'))
-            self.assertEqual(env['MIYU_HOME'], str(first.root / 'miyu'))
-            self.assertNotIn('MIYU_ONNXRUNTIME_LIB', env)
+            self.assertEqual(env['YUNXI_HOME'], str(first.root / 'yunxi'))
+            self.assertNotIn('YUNXI_ONNXRUNTIME_LIB', env)
             self.assertNotIn('OPENAI_API_KEY', env)
             self.assertNotIn('ANTHROPIC_BASE_URL', env)
             self.assertTrue(env['XDG_CONFIG_HOME'].startswith(str(first.root)))
@@ -96,7 +96,7 @@ class IsolationTests(unittest.TestCase):
                 '--report-dir', str(Path(tmp)/'unknown')], capture_output=True, timeout=10)
             self.assertEqual(unknown.returncode, 2)
             relative = subprocess.run([sys.executable, str(runner), '--suite', 'installed-core',
-                '--binary', 'miyu', '--report-dir', str(Path(tmp)/'relative')],
+                '--binary', 'yunxi', '--report-dir', str(Path(tmp)/'relative')],
                 capture_output=True, timeout=10)
             self.assertEqual(relative.returncode, 2)
 

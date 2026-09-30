@@ -8,7 +8,7 @@
  * 抽屉)。原来这四块全塞在一个「管理」抽屉里,谁都找不到自己要的东西。
  */
 (() => {
-  const D = window.MiyuDash;
+  const D = window.YunXiDash;
   if (!D) return;
 
   const ACCOUNT_KIND_LABEL = {
@@ -351,7 +351,7 @@
     return root;
   }
 
-  window.MiyuLedgerViews = {
+  window.YunXiLedgerViews = {
     accounts: accountsView,
     categories: categoriesView,
     budgets: budgetsView,

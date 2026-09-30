@@ -11,7 +11,7 @@
  * 要占一把全局的管理锁,并发发出去除了第一个都是 409。这里只管「选了哪些」和那条
  * 操作栏。单独成文件:app.js 已经一万三千多行。
  */
-window.MiyuSessionSelect = (() => {
+window.YunXiSessionSelect = (() => {
   let selected = null; // Set<string>;null = 不在选择模式
   let ctx = null;
 

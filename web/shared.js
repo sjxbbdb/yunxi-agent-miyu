@@ -8,7 +8,7 @@
  * 凭 WebUI 登录态访问;视频/音频/图片行内预览,其余只给下载。
  * 单独成文件:app.js 已经九千多行。
  */
-window.MiyuShared = (() => {
+window.YunXiShared = (() => {
   const SVG_NS = "http://www.w3.org/2000/svg";
   /*
    * lucide 图标子集。shared.js 先于 app.js 加载,拿不到那边的 createIcon,
@@ -324,7 +324,7 @@ window.MiyuShared = (() => {
         </header>
         <div class="shared-files-list"></div>
       </div>`;
-    MiyuI18n.applyDom(panel);
+    YunXiI18n.applyDom(panel);
     panel.addEventListener("click", (event) => {
       if (event.target === panel) hide();
     });
@@ -427,7 +427,7 @@ window.MiyuShared = (() => {
           method: "POST",
           headers: {
             "content-type": "application/octet-stream",
-            "x-miyu-filename": encodeURIComponent(file.name)
+            "x-yunxi-filename": encodeURIComponent(file.name)
           },
           body: file
         });

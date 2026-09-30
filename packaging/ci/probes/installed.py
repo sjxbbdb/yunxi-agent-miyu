@@ -36,7 +36,7 @@ def verify_files(prefix, records):
 def verify_package(record, package, version, revision, fedora):
     asset=record['asset']
     family=asset['format']
-    name='miyu-voice' if asset['component']=='voice' else 'miyu'
+    name='yunxi-voice' if asset['component']=='voice' else 'yunxi'
     def output(argv):
         return subprocess.run(argv,check=True,capture_output=True,text=True,timeout=60).stdout
     if family=='deb':
@@ -92,10 +92,10 @@ def verify_functional(run, binary, prefix, files):
     listed=run([str(binary),'paths']).stdout
     personas=next((line.split(': ',1)[1] for line in listed.splitlines()
                    if line.startswith('system persona resources: ')),'')
-    if not personas or Path(personas).resolve()!=(prefix/'share/miyu/personas').resolve():
+    if not personas or Path(personas).resolve()!=(prefix/'share/yunxi/personas').resolve():
         raise ValueError(f'Persona resources resolve outside the install prefix: {personas!r}')
     skills=sorted({m.group(1) for f in files
-                   for m in [re.fullmatch(r'share/miyu/personas/[^/]+/skills/([^/]+)/SKILL\.md',f['path'])] if m})
+                   for m in [re.fullmatch(r'share/yunxi/personas/[^/]+/skills/([^/]+)/SKILL\.md',f['path'])] if m})
     loaded=[]
     for name in skills:
         result=run([str(binary),'tool-call','load_skill',json.dumps({'name':name})])
@@ -128,9 +128,9 @@ def main():
     verify_package(record,package,args.version,args.revision,args.fedora_version)
     verify_files(args.prefix,record['files'])
     component=record['asset']['component']
-    binary=args.prefix/'bin'/('miyu-voice' if component=='voice' else 'miyu')
+    binary=args.prefix/'bin'/('yunxi-voice' if component=='voice' else 'yunxi')
     env={'PATH':f'{args.prefix}/bin:/usr/bin:/bin','HOME':str(args.test_home/'home'),
-         'MIYU_HOME':str(args.test_home/'miyu'),'XDG_RUNTIME_DIR':str(args.test_home/'runtime'),
+         'YUNXI_HOME':str(args.test_home/'yunxi'),'XDG_RUNTIME_DIR':str(args.test_home/'runtime'),
          'XDG_CONFIG_HOME':str(args.test_home/'config'),'XDG_DATA_HOME':str(args.test_home/'data'),
          'XDG_CACHE_HOME':str(args.test_home/'cache'),'XDG_STATE_HOME':str(args.test_home/'state'),
          'LANG':'C.UTF-8','TERM':'dumb','RUST_LOG':'error'}
@@ -163,7 +163,7 @@ def main():
         try:
             done=json.loads(response.stdout.strip().splitlines()[-1])
         except (ValueError,IndexError) as error:
-            raise ValueError('Miyu did not return final JSON: '+response.stdout+response.stderr) from error
+            raise ValueError('YunXi did not return final JSON: '+response.stdout+response.stderr) from error
         if (response.returncode or done.get('type')!='done' or not done.get('text','').strip()
                 or done.get('provider_id')!='opencodego'
                 or done.get('model')!='deepseek-v4.1-flash'):

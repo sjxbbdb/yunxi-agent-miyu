@@ -15,7 +15,7 @@ use crate::config_tui::*;
 /// 每一行的回车上，不再单占一个菜单项。
 pub(in crate::config_tui) fn edit_persona_menu(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     pending: &mut PendingWrites,
 ) -> Result<()> {
@@ -36,7 +36,7 @@ pub(in crate::config_tui) fn edit_persona_menu(
                 "{} ({})",
                 t("Prompt and preset dialogs", "提示词与预设对话"),
                 if config.prompt.active_persona.trim().is_empty() {
-                    t("built-in Miyu", "内置 Miyu")
+                    t("built-in YunXi", "内置 YunXi")
                 } else {
                     t("custom", "自定义")
                 }
@@ -120,7 +120,7 @@ pub(in crate::config_tui) fn active_persona_label(config: &AppConfig) -> String 
 
 fn persona_display_name_for(config: &AppConfig) -> String {
     if config.prompt.active_persona.trim().is_empty() {
-        "Miyu".to_string()
+        "YunXi".to_string()
     } else {
         persona_display_name(&config.prompt.active_persona).to_string()
     }
@@ -129,32 +129,32 @@ fn persona_display_name_for(config: &AppConfig) -> String {
 /// 当前人格挂着几件、一共几件。
 fn feature_counts(
     config: &AppConfig,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     pending: &PendingWrites,
 ) -> (usize, usize) {
     let scope = config.active_persona_scope();
     let manifest = pending.manifest(config, paths, &scope);
     let sources = crate::feature_sources::collect(config, paths);
-    let items = miyu_base::config::feature_catalog::catalog(
+    let items = yunxi_base::config::feature_catalog::catalog(
         &manifest,
         &sources,
-        miyu_core::skills::is_default_persona(config),
-        miyu_base::config::feature_catalog::CatalogScope::Settings,
+        yunxi_core::skills::is_default_persona(config),
+        yunxi_base::config::feature_catalog::CatalogScope::Settings,
         Some(config),
     );
     (items.iter().filter(|item| item.on).count(), items.len())
 }
 
-/// 当前人格的提示词与预设对话。内置 Miyu 只有附加件可改（本体只读）。
+/// 当前人格的提示词与预设对话。内置 YunXi 只有附加件可改（本体只读）。
 fn edit_active_persona_prompt(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     pending: &mut PendingWrites,
 ) -> Result<()> {
     let name = config.prompt.active_persona.trim().to_string();
     if name.is_empty() {
-        return edit_miyu_persona_extras(ui, paths, config, pending);
+        return edit_yunxi_persona_extras(ui, paths, config, pending);
     }
     stage_persona_edit(
         ui,
@@ -171,13 +171,13 @@ fn edit_active_persona_prompt(
 /// 内容完全解耦——怎么改都不会切库。
 pub(in crate::config_tui) fn edit_dev_prompt(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     pending: &mut PendingWrites,
 ) -> Result<()> {
     // 老版本自动写进去的那行默认,运行时当没写,这里也显示成空(同一个口径)。
     let current = pending.dev_prompt(paths);
     let current = match current.trim() {
-        miyu_base::config::LEGACY_DEV_SYSTEM_PROMPT => "",
+        yunxi_base::config::LEGACY_DEV_SYSTEM_PROMPT => "",
         other => other,
     }
     .to_string();
@@ -200,7 +200,7 @@ pub(in crate::config_tui) fn edit_dev_prompt(
 
 pub(in crate::config_tui) fn edit_personas(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     pending: &mut PendingWrites,
 ) -> Result<()> {
@@ -221,10 +221,10 @@ impl PersonaMenuTarget {
         }
     }
 
-    pub(in crate::config_tui) fn is_miyu(&self, config: &AppConfig) -> bool {
+    pub(in crate::config_tui) fn is_yunxi(&self, config: &AppConfig) -> bool {
         match self {
             Self::Global => config.prompt.active_persona.trim().is_empty(),
-            Self::Platform(persona) => matches!(persona, PlatformPersonaOverride::Miyu),
+            Self::Platform(persona) => matches!(persona, PlatformPersonaOverride::YunXi),
         }
     }
 
@@ -245,10 +245,10 @@ impl PersonaMenuTarget {
         }
     }
 
-    pub(in crate::config_tui) fn activate_miyu(&mut self, config: &mut AppConfig) {
+    pub(in crate::config_tui) fn activate_yunxi(&mut self, config: &mut AppConfig) {
         match self {
             Self::Global => config.prompt.active_persona.clear(),
-            Self::Platform(persona) => *persona = PlatformPersonaOverride::Miyu,
+            Self::Platform(persona) => *persona = PlatformPersonaOverride::YunXi,
         }
     }
 
@@ -286,7 +286,7 @@ impl PersonaMenuTarget {
 
 pub(in crate::config_tui) fn manage_personas(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     mut target: PersonaMenuTarget,
     pending: &mut PendingWrites,
@@ -306,8 +306,8 @@ pub(in crate::config_tui) fn manage_personas(
             ));
         }
         options.push(format!(
-            "{}Miyu",
-            if target.is_miyu(config) { "* " } else { "  " }
+            "{}YunXi",
+            if target.is_yunxi(config) { "* " } else { "  " }
         ));
         options.extend(personas.iter().map(|name| {
             let display = persona_display_name(name);
@@ -341,7 +341,7 @@ pub(in crate::config_tui) fn manage_personas(
                 if matches!(&target, PersonaMenuTarget::Platform(_)) && selected == 0 {
                     target.activate_inherit();
                 } else if selected + 1 == custom_offset {
-                    target.activate_miyu(config);
+                    target.activate_yunxi(config);
                 } else if let Some(name) = personas.get(selected.saturating_sub(custom_offset)) {
                     target.activate_custom(config, name.clone());
                 }
@@ -356,10 +356,10 @@ pub(in crate::config_tui) fn manage_personas(
                     stage_persona_edit(ui, paths, config, pending, name, &mut target)?;
                 }
             }
-            // 默认 Miyu 人格本体只读,但防失忆提示与预设对话是独立文件
+            // 默认 YunXi 人格本体只读,但防失忆提示与预设对话是独立文件
             // (hints/default.md、dialogs/default.md),回车打开精简表单。
             KeyCode::Enter if selected + 1 == custom_offset => {
-                edit_miyu_persona_extras(ui, paths, config, pending)?;
+                edit_yunxi_persona_extras(ui, paths, config, pending)?;
             }
             KeyCode::Char('d') if selected >= custom_offset => {
                 if let Some(name) = personas.get(selected - custom_offset) {
@@ -401,7 +401,7 @@ pub(in crate::config_tui) fn manage_personas(
 }
 
 pub(in crate::config_tui) fn apply_persona_edit(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     old_name: &str,
     new_name: &str,
@@ -416,15 +416,15 @@ pub(in crate::config_tui) fn apply_persona_edit(
     let new_path = config.persona_path(paths, new_name);
     let old_content = std::fs::read(&old_path)?;
     let mut persisted = AppConfig::load_or_default(paths)?;
-    let state = miyu_core::state::StateStore::new(paths)?;
+    let state = yunxi_core::state::StateStore::new(paths)?;
     write_persona(paths, config, new_name, content)?;
     if let Err(error) = move_persona_scope(paths, config, old_name, new_name) {
         let _ = std::fs::remove_file(&new_path);
         return Err(error);
     }
 
-    let old_scope = miyu_base::config::persona_scope_name(old_name);
-    let new_scope = miyu_base::config::persona_scope_name(new_name);
+    let old_scope = yunxi_base::config::persona_scope_name(old_name);
+    let new_scope = yunxi_base::config::persona_scope_name(new_name);
     if let Err(error) = state.rename_persona_scope(&old_scope, &new_scope) {
         let _ = move_persona_scope(paths, config, new_name, old_name);
         let _ = std::fs::remove_file(&new_path);
@@ -461,7 +461,7 @@ pub(in crate::config_tui) fn apply_persona_edit(
 }
 
 pub(in crate::config_tui) fn apply_persona_delete(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     mut persisted: AppConfig,
     name: &str,
@@ -470,8 +470,8 @@ pub(in crate::config_tui) fn apply_persona_delete(
         persisted.prompt.active_persona.clear();
         persisted.save(paths)?;
     }
-    let scope = miyu_base::config::persona_scope_name(name);
-    miyu_core::state::StateStore::new(paths)?.delete_persona_scope(&scope)?;
+    let scope = yunxi_base::config::persona_scope_name(name);
+    yunxi_core::state::StateStore::new(paths)?.delete_persona_scope(&scope)?;
     let path = config.persona_path(paths, name);
     if path.exists() {
         std::fs::remove_file(path)?;
@@ -493,23 +493,23 @@ pub(in crate::config_tui) struct PersonaFormValues {
 /// 人格附属文件现值:防失忆提示(hints/<scope>.md)与预设对话
 /// (dialogs/<scope>.md)。
 pub(in crate::config_tui) fn persona_aux_values(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     scope: &str,
 ) -> (String, String) {
-    let hint = std::fs::read_to_string(miyu_core::persona_hint::manual_hint_path(
+    let hint = std::fs::read_to_string(yunxi_core::persona_hint::manual_hint_path(
         config, paths, scope,
     ))
     .map(|text| text.trim().to_string())
     .unwrap_or_default();
-    let dialogs = miyu_core::persona_hint::dialogs_raw(config, paths, scope);
+    let dialogs = yunxi_core::persona_hint::dialogs_raw(config, paths, scope);
     (hint, dialogs)
 }
 
 /// 附属文件落盘:非空写入,空则删除(清空提示=回到自动蒸馏,清空
 /// 对话=不注入)。
 pub(in crate::config_tui) fn write_persona_aux(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     scope: &str,
     hint: &str,
@@ -517,11 +517,11 @@ pub(in crate::config_tui) fn write_persona_aux(
 ) -> Result<()> {
     let targets = [
         (
-            miyu_core::persona_hint::manual_hint_path(config, paths, scope),
+            yunxi_core::persona_hint::manual_hint_path(config, paths, scope),
             hint,
         ),
         (
-            miyu_core::persona_hint::dialogs_path(config, paths, scope),
+            yunxi_core::persona_hint::dialogs_path(config, paths, scope),
             dialogs,
         ),
     ];
@@ -544,9 +544,9 @@ pub(in crate::config_tui) fn write_persona_aux(
 pub(in crate::config_tui) fn persona_aux_fields(
     hint: String,
     dialogs: String,
-    miyu: bool,
+    yunxi: bool,
 ) -> Vec<Field> {
-    let (hint_label, dialogs_label) = if miyu {
+    let (hint_label, dialogs_label) = if yunxi {
         (
             t(
                 "Anti-amnesia reminder (empty = built-in default)",
@@ -577,7 +577,7 @@ pub(in crate::config_tui) fn persona_aux_fields(
 
 pub(in crate::config_tui) fn new_persona(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     drafts: &PersonaDrafts,
 ) -> Result<Option<String>> {
@@ -595,7 +595,7 @@ pub(in crate::config_tui) fn new_persona(
     write_persona_aux(
         paths,
         config,
-        &miyu_base::config::persona_scope_name(&name),
+        &yunxi_base::config::persona_scope_name(&name),
         &fields[2].value,
         &fields[3].value,
     )?;
@@ -605,7 +605,7 @@ pub(in crate::config_tui) fn new_persona(
 /// 编辑人格的表单：先看这一轮攒着的样子，没攒过才读盘。没改过就交回 `None`。
 pub(in crate::config_tui) fn edit_persona(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     drafts: &PersonaDrafts,
     current_name: &str,
@@ -621,7 +621,7 @@ pub(in crate::config_tui) fn edit_persona(
             let (hint, dialogs) = persona_aux_values(
                 paths,
                 config,
-                &miyu_base::config::persona_scope_name(current_name),
+                &yunxi_base::config::persona_scope_name(current_name),
             );
             (content, hint, dialogs)
         }
@@ -646,25 +646,25 @@ pub(in crate::config_tui) fn edit_persona(
     }))
 }
 
-/// 默认 Miyu 人格:本体只读,回车只编辑附属的防失忆提示与预设对话
+/// 默认 YunXi 人格:本体只读,回车只编辑附属的防失忆提示与预设对话
 /// (scope 固定为 default)。改完攒着，「保存并退出」才写（用户 09-26）。
-pub(in crate::config_tui) fn edit_miyu_persona_extras(
+pub(in crate::config_tui) fn edit_yunxi_persona_extras(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     pending: &mut PendingWrites,
 ) -> Result<()> {
-    let (hint, dialogs) = match pending.drafts.miyu_extras() {
+    let (hint, dialogs) = match pending.drafts.yunxi_extras() {
         Some((hint, dialogs)) => (hint.clone(), dialogs.clone()),
-        None => miyu_core::persona_hint::miyu_aux_prefill(config, paths),
+        None => yunxi_core::persona_hint::yunxi_aux_prefill(config, paths),
     };
     let mut fields = persona_aux_fields(hint, dialogs, true);
-    if !run_edit_form(ui, t(" MIYU EXTRAS ", " Miyu 人格附加 "), &mut fields)? {
+    if !run_edit_form(ui, t(" YUNXI EXTRAS ", " YunXi 人格附加 "), &mut fields)? {
         return Ok(());
     }
     pending
         .drafts
-        .set_miyu_extras(fields[0].value.clone(), fields[1].value.clone());
+        .set_yunxi_extras(fields[0].value.clone(), fields[1].value.clone());
     Ok(())
 }
 
@@ -673,7 +673,7 @@ pub(in crate::config_tui) fn edit_miyu_persona_extras(
 /// 的归属等保存时再由 [`apply_persona_edit`] 一起搬。
 fn stage_persona_edit(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     pending: &mut PendingWrites,
     shown: &str,
@@ -708,7 +708,7 @@ fn stage_persona_edit(
 /// 名字能不能用：界面上别的人格（按攒着的改名换过）不能重名、不能撞 scope；盘上正被改名
 /// 改走的老名字也不能用——落盘前那个文件还在，新建或改名成它会撞上。
 pub(in crate::config_tui) fn ensure_draft_name_available(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     drafts: &PersonaDrafts,
     candidate: &str,
@@ -726,7 +726,7 @@ pub(in crate::config_tui) fn ensure_draft_name_available(
                 .into_iter()
                 .filter(|shown| Some(shown.as_str()) != current),
         );
-    let candidate_scope = miyu_base::config::persona_scope_name(candidate);
+    let candidate_scope = yunxi_base::config::persona_scope_name(candidate);
     for existing in taken {
         if existing == candidate {
             bail!(
@@ -737,7 +737,7 @@ pub(in crate::config_tui) fn ensure_draft_name_available(
                 )
             );
         }
-        if miyu_base::config::persona_scope_name(&existing) == candidate_scope {
+        if yunxi_base::config::persona_scope_name(&existing) == candidate_scope {
             bail!(
                 "{}",
                 t(
@@ -751,12 +751,12 @@ pub(in crate::config_tui) fn ensure_draft_name_available(
 }
 
 pub(in crate::config_tui) fn ensure_persona_name_available(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     candidate: &str,
     current: Option<&str>,
 ) -> Result<()> {
-    let candidate_scope = miyu_base::config::persona_scope_name(candidate);
+    let candidate_scope = yunxi_base::config::persona_scope_name(candidate);
     for existing in list_personas(paths, config)? {
         if current == Some(existing.as_str()) {
             continue;
@@ -770,7 +770,7 @@ pub(in crate::config_tui) fn ensure_persona_name_available(
                 )
             );
         }
-        if miyu_base::config::persona_scope_name(&existing) == candidate_scope {
+        if yunxi_base::config::persona_scope_name(&existing) == candidate_scope {
             bail!(
                 "{}",
                 t(
@@ -784,14 +784,14 @@ pub(in crate::config_tui) fn ensure_persona_name_available(
 }
 
 pub(in crate::config_tui) fn move_persona_scope(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     old_name: &str,
     new_name: &str,
 ) -> Result<()> {
     if old_name == new_name
-        || miyu_base::config::persona_scope_name(old_name)
-            == miyu_base::config::persona_scope_name(new_name)
+        || yunxi_base::config::persona_scope_name(old_name)
+            == yunxi_base::config::persona_scope_name(new_name)
     {
         return Ok(());
     }
@@ -830,16 +830,16 @@ pub(in crate::config_tui) fn move_persona_scope(
             completed.push((source, target));
         }
     }
-    let old_scope = miyu_base::config::persona_scope_name(old_name);
-    let new_scope = miyu_base::config::persona_scope_name(new_name);
+    let old_scope = yunxi_base::config::persona_scope_name(old_name);
+    let new_scope = yunxi_base::config::persona_scope_name(new_name);
     let file_moves = [
         (
-            miyu_core::persona_hint::manual_hint_path(config, paths, &old_scope),
-            miyu_core::persona_hint::manual_hint_path(config, paths, &new_scope),
+            yunxi_core::persona_hint::manual_hint_path(config, paths, &old_scope),
+            yunxi_core::persona_hint::manual_hint_path(config, paths, &new_scope),
         ),
         (
-            miyu_core::persona_hint::dialogs_path(config, paths, &old_scope),
-            miyu_core::persona_hint::dialogs_path(config, paths, &new_scope),
+            yunxi_core::persona_hint::dialogs_path(config, paths, &old_scope),
+            yunxi_core::persona_hint::dialogs_path(config, paths, &new_scope),
         ),
     ];
     for (source, target) in file_moves {
@@ -851,17 +851,17 @@ pub(in crate::config_tui) fn move_persona_scope(
 }
 
 pub(in crate::config_tui) fn remove_persona_scope(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     name: &str,
 ) -> Result<()> {
     remove_dir_if_exists(config.persona_memory_data_dir(paths, name))?;
     remove_dir_if_exists(config.persona_memory_state_dir(paths, name))?;
     remove_dir_if_exists(config.persona_skills_dir(paths, name))?;
-    let scope = miyu_base::config::persona_scope_name(name);
+    let scope = yunxi_base::config::persona_scope_name(name);
     for path in [
-        miyu_core::persona_hint::manual_hint_path(config, paths, &scope),
-        miyu_core::persona_hint::dialogs_path(config, paths, &scope),
+        yunxi_core::persona_hint::manual_hint_path(config, paths, &scope),
+        yunxi_core::persona_hint::dialogs_path(config, paths, &scope),
     ] {
         if path.exists() {
             std::fs::remove_file(path)?;
@@ -890,7 +890,7 @@ pub(in crate::config_tui) fn remove_dir_if_exists(path: PathBuf) -> Result<()> {
 
 pub(in crate::config_tui) fn edit_identities(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     pending: &mut PendingWrites,
 ) -> Result<()> {
@@ -972,7 +972,7 @@ pub(in crate::config_tui) fn edit_identities(
 
 pub(in crate::config_tui) fn new_identity(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     drafts: &PersonaDrafts,
 ) -> Result<Option<String>> {
@@ -994,7 +994,7 @@ pub(in crate::config_tui) fn new_identity(
 /// 界面上的名字、当前用的身份当场换成新名字（用户 09-26）。
 fn stage_identity_edit(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     pending: &mut PendingWrites,
     shown: &str,
@@ -1030,7 +1030,7 @@ fn stage_identity_edit(
 /// 用户身份的名字能不能用：界面上别的身份（按攒着的改名换过）不能重名，盘上正被改名改走的
 /// 老名字也不能用。以前新建同名的会悄悄把那份覆盖掉。
 fn ensure_identity_name_available(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     drafts: &PersonaDrafts,
     candidate: &str,
@@ -1060,14 +1060,14 @@ fn ensure_identity_name_available(
 }
 
 pub(in crate::config_tui) fn list_identities(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
 ) -> Result<Vec<String>> {
     list_markdown_files(&config.identities_dir_path(paths))
 }
 
 pub(in crate::config_tui) fn read_identity(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     name: &str,
 ) -> Result<String> {
@@ -1080,7 +1080,7 @@ pub(in crate::config_tui) fn read_identity(
 }
 
 pub(in crate::config_tui) fn write_identity(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     name: &str,
     content: &str,
@@ -1118,7 +1118,7 @@ pub(in crate::config_tui) fn edit_prompt_file_values(
 }
 
 pub(in crate::config_tui) fn list_personas(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
 ) -> Result<Vec<String>> {
     let mut names = list_markdown_files(&config.prompts_dir_path(paths))?;
@@ -1145,7 +1145,7 @@ pub(in crate::config_tui) fn list_markdown_files(dir: &std::path::Path) -> Resul
 }
 
 pub(in crate::config_tui) fn read_persona(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     name: &str,
 ) -> Result<String> {
@@ -1158,7 +1158,7 @@ pub(in crate::config_tui) fn read_persona(
 }
 
 pub(in crate::config_tui) fn write_persona(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     name: &str,
     content: &str,
@@ -1191,7 +1191,7 @@ pub(in crate::config_tui) fn sanitize_persona_name(value: &str) -> Result<String
     }
     // "dev" 是开发模式的保留人格(记忆/技能命名空间挂其名下);同名
     // 用户人格会与 dev 模式共享记忆库,必须挡在创建入口。
-    if persona_display_name(&name).eq_ignore_ascii_case(miyu_core::state::DEV_PERSONA) {
+    if persona_display_name(&name).eq_ignore_ascii_case(yunxi_core::state::DEV_PERSONA) {
         bail!(
             "{}",
             t(

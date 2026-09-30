@@ -35,9 +35,9 @@ def build(args):
     target = (args.target_cache or out/'target').resolve()
     target.mkdir(parents=True,exist_ok=True)
     identity = build_identity(manifest,args.build_id,args.component)
-    name = 'miyu-build-'+identity[:12]+'-'+args.component
+    name = 'yunxi-build-'+identity[:12]+'-'+args.component
     command = ['docker','run','--rm','--name',name,'--network','none',
-        '--label','io.miyu.distribution.owner=distribution-2026-09-14',
+        '--label','io.yunxi.distribution.owner=distribution-2026-09-14',
         '--user',f'{os.getuid()}:{os.getgid()}',
         '--mount',f'type=bind,src={source},dst=/source,readonly',
         '--mount',f'type=bind,src={inputs},dst=/inputs,readonly',
@@ -67,7 +67,7 @@ def build_native(args, manifest, source, inputs):
 
 
 def record_build(args, manifest, out, compiled, **builder):
-    binary = out/('miyu-voice' if args.component == 'voice' else 'miyu')
+    binary = out/('yunxi-voice' if args.component == 'voice' else 'yunxi')
     if compiled['version_output'] != f'{binary.name} {manifest["version"]}':
         raise ValueError('Built binary reports an unexpected application version.')
     record = dict(compiled, schema_version=1, build_id=args.build_id, component=args.component,

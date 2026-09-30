@@ -8,7 +8,7 @@ use crate::config_tui::*;
 
 pub(in crate::config_tui) fn select_platform_model_routes(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     pending: &mut PendingWrites,
 ) -> Result<()> {
@@ -93,7 +93,7 @@ pub(in crate::config_tui) fn platform_model_route_label(route: &PlatformModelRou
 
 pub(in crate::config_tui) fn edit_platform_model_route(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     route_index: Option<usize>,
     pending: &mut PendingWrites,
@@ -427,14 +427,14 @@ pub(in crate::config_tui) fn platform_persona_summary(persona: &PlatformPersonaO
         PlatformPersonaOverride::Inherit => {
             t("inherit current persona", "继承当前人格").to_string()
         }
-        PlatformPersonaOverride::Miyu => "Miyu".to_string(),
+        PlatformPersonaOverride::YunXi => "YunXi".to_string(),
         PlatformPersonaOverride::Custom { name } => persona_display_name(name).to_string(),
     }
 }
 
 pub(in crate::config_tui) fn edit_platform_personas(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     persona: &mut PlatformPersonaOverride,
     pending: &mut PendingWrites,

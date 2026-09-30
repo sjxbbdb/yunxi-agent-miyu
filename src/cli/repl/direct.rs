@@ -1,6 +1,6 @@
 //! 进程内直连的回合驱动。
 //!
-//! `MIYU_DIRECT=1` 或 daemon 起不来时走这条：agent 直接在本进程跑，事件不过
+//! `YUNXI_DIRECT=1` 或 daemon 起不来时走这条：agent 直接在本进程跑，事件不过
 //! IPC。功能与远端那条等价，但少一层进程边界——调试和排查时用它能把「是不是
 //! IPC 丢了东西」这个变量排除掉。
 
@@ -11,9 +11,9 @@ use crate::cli::repl::tail::*;
 use crate::cli::*;
 
 pub(in crate::cli) async fn run_chat_with_images(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     message: String,
-    pasted_images: Vec<Option<miyu_base::clipboard::PastedImage>>,
+    pasted_images: Vec<Option<yunxi_base::clipboard::PastedImage>>,
 ) -> Result<()> {
     if !direct_mode_requested() {
         match try_run_remote_chat(
@@ -88,7 +88,7 @@ pub(in crate::cli) async fn run_chat_with_images(
     renderer.finish()?;
     let result = match result {
         Ok(result) => result,
-        Err(err) if miyu_base::question::is_question_cancelled(&err) => return Ok(()),
+        Err(err) if yunxi_base::question::is_question_cancelled(&err) => return Ok(()),
         Err(err) => return Err(err),
     };
     print_mixed_model_endpoint(show_mixed_model_endpoint, &result, None);
@@ -126,7 +126,7 @@ pub(in crate::cli) async fn run_chat_with_images(
 /// 只走 daemon(没有 daemon 就报错,不退回进程内直连)。
 /// 阅后即焚会话建在哪个人格名下：车道是开发模式就建成 dev 会话（模式钉在会话
 /// 人格上，daemon 不看客户端传的 mode），否则 None = 普通。「终端集成会话默认模式」
-/// 设成 dev 时裸 `miyu "…"` 也跟着走靠的就是这一下。
+/// 设成 dev 时裸 `yunxi "…"` 也跟着走靠的就是这一下。
 fn ephemeral_mode(mode: PersonaLane) -> Option<&'static str> {
     match mode {
         PersonaLane::Dev => Some("dev"),
@@ -135,13 +135,13 @@ fn ephemeral_mode(mode: PersonaLane) -> Option<&'static str> {
 }
 
 pub(in crate::cli) async fn run_chat_with_images_and_options(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     message: String,
-    images: Vec<Option<miyu_base::clipboard::PastedImage>>,
+    images: Vec<Option<yunxi_base::clipboard::PastedImage>>,
     plain: bool,
     mode: PersonaLane,
     session: TurnSession,
-    overrides: Option<miyu_core::ipc::TurnOverrides>,
+    overrides: Option<yunxi_core::ipc::TurnOverrides>,
 ) -> Result<()> {
     let session_override = match session {
         TurnSession::Current => None,
@@ -167,8 +167,8 @@ pub(in crate::cli) async fn run_chat_with_images_and_options(
     {
         Some(_) => Ok(()),
         None => Err(crate::cli::exit_code::usage_error(t(
-            "this command needs the Miyu daemon (unset MIYU_DIRECT)",
-            "这条命令需要 Miyu daemon(请去掉 MIYU_DIRECT)",
+            "this command needs the YunXi daemon (unset YUNXI_DIRECT)",
+            "这条命令需要 YunXi daemon(请去掉 YUNXI_DIRECT)",
         ))),
     }
 }
@@ -186,7 +186,7 @@ pub(in crate::cli) enum AfterTurn {
 /// 一次性回合走 daemon：起一轮画完；指纹里说了要留下（`stays_to_follow`）就接着等
 /// 子代理的报告。直连模式下 daemon 连不上时是 `None`，由调用方退回进程内。
 async fn run_one_shot_remote(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     source: RemoteTurnSource<'_>,
     show_reasoning: Option<bool>,
     plain: bool,
@@ -208,13 +208,13 @@ async fn run_one_shot_remote(
 
 #[allow(clippy::too_many_arguments)]
 pub(in crate::cli) async fn run_chat_with_options(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     message: String,
     show_reasoning: Option<bool>,
     plain: bool,
     mode: PersonaLane,
     session: TurnSession,
-    overrides: Option<miyu_core::ipc::TurnOverrides>,
+    overrides: Option<yunxi_core::ipc::TurnOverrides>,
     after: AfterTurn,
 ) -> Result<()> {
     let message = append_stdin_if_piped(message).await;
@@ -259,8 +259,8 @@ pub(in crate::cli) async fn run_chat_with_options(
     if overrides.is_some() {
         // 回合级覆盖由 daemon 套用;进程内直连没有那层。
         return Err(crate::cli::exit_code::usage_error(t(
-            "per-turn overrides need the Miyu daemon (unset MIYU_DIRECT)",
-            "回合级覆盖需要 Miyu daemon(请去掉 MIYU_DIRECT)",
+            "per-turn overrides need the YunXi daemon (unset YUNXI_DIRECT)",
+            "回合级覆盖需要 YunXi daemon(请去掉 YUNXI_DIRECT)",
         )));
     }
     let _core_lease = ipc::acquire_direct_core(paths)?;
@@ -275,7 +275,7 @@ pub(in crate::cli) async fn run_chat_with_options(
         let record = state.create_session(
             &config.active_persona_scope(),
             &ephemeral_session_name(),
-            miyu_core::state::ASK_SESSION_KIND,
+            yunxi_core::state::ASK_SESSION_KIND,
             None,
         )?;
         let guard = EphemeralSessionGuard {
@@ -328,7 +328,7 @@ pub(in crate::cli) async fn run_chat_with_options(
     renderer.finish()?;
     let result = match result {
         Ok(result) => result,
-        Err(err) if miyu_base::question::is_question_cancelled(&err) => return Ok(()),
+        Err(err) if yunxi_base::question::is_question_cancelled(&err) => return Ok(()),
         Err(err) => return Err(err),
     };
     print_mixed_model_endpoint(show_mixed_model_endpoint, &result, None);
@@ -363,7 +363,7 @@ pub(in crate::cli) async fn run_chat_with_options(
 }
 
 pub(in crate::cli) async fn run_direct_repl(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     initial_mode: PersonaLane,
 ) -> Result<()> {
     let _core_lease = ipc::acquire_direct_core(paths)?;
@@ -377,7 +377,7 @@ pub(in crate::cli) async fn run_direct_repl(
     // Same lane as the remote REPL: resume where the last REPL was, not where
     // shell-hook happens to be pointing.
     let persona = if initial_mode == PersonaLane::Dev {
-        miyu_core::state::DEV_PERSONA.to_string()
+        yunxi_core::state::DEV_PERSONA.to_string()
     } else {
         config.active_persona_scope()
     };
@@ -408,10 +408,10 @@ pub(in crate::cli) async fn run_direct_repl(
     let mut prefill = None::<String>;
     let mut live_repl = None::<LiveReplTail>;
 
-    miyu_engine::default_kb::check_update_if_due(paths)
+    yunxi_engine::default_kb::check_update_if_due(paths)
         .await
         .ok();
-    if let Ok(Some(message)) = miyu_engine::default_kb::notice_if_update_available(paths) {
+    if let Ok(Some(message)) = yunxi_engine::default_kb::notice_if_update_available(paths) {
         println!("\x1b[2m{message}\x1b[0m");
     }
     let mut cumulative_tokens = state.session_cumulative_token_totals().unwrap_or_default();
@@ -453,9 +453,9 @@ pub(in crate::cli) async fn run_direct_repl(
                     continue;
                 }
                 LiveReplOutcome::StopJobs => {
-                    for job in miyu_engine::tools::jobs::overview() {
+                    for job in yunxi_engine::tools::jobs::overview() {
                         if job.running {
-                            let _ = miyu_engine::tools::jobs::stop_job(&job.job_id).await;
+                            let _ = yunxi_engine::tools::jobs::stop_job(&job.job_id).await;
                         }
                     }
                     continue;
@@ -475,7 +475,7 @@ pub(in crate::cli) async fn run_direct_repl(
                     // 直连模式换车道:与启动时同一条语义——那条车道当前会话
                     // 非空就新开一条,再按新模式重建客户端与工具面。
                     let persona = if next == PersonaLane::Dev {
-                        miyu_core::state::DEV_PERSONA.to_string()
+                        yunxi_core::state::DEV_PERSONA.to_string()
                     } else {
                         config.active_persona_scope()
                     };
@@ -517,9 +517,9 @@ pub(in crate::cli) async fn run_direct_repl(
             };
             // The user moved on: finished background commands count as
             // reported in direct mode (no daemon wake exists here).
-            for job in miyu_engine::tools::jobs::overview() {
+            for job in yunxi_engine::tools::jobs::overview() {
                 if !job.running {
-                    miyu_engine::tools::jobs::acknowledge(&job.job_id);
+                    yunxi_engine::tools::jobs::acknowledge(&job.job_id);
                 }
             }
             input
@@ -586,7 +586,7 @@ pub(in crate::cli) async fn run_direct_repl(
                     // 会话(与启动时 ensure_repl_session 同一条语义),否则 agent
                     // 还挂在旧人格的会话上,人格提示词与历史命名空间错位。
                     let persona = if mode == PersonaLane::Dev {
-                        miyu_core::state::DEV_PERSONA.to_string()
+                        yunxi_core::state::DEV_PERSONA.to_string()
                     } else {
                         config.active_persona_scope()
                     };
@@ -684,18 +684,18 @@ pub(in crate::cli) async fn run_direct_repl(
             || names_repl_command(command, ReplSlashCommand::Normal)
         {
             // 直连 REPL 没有车道指针可去（会话是本地自举的）：换车道只有空会话按
-            // Tab 那一条路，或者重开 `miyu dev`。
+            // Tab 那一条路，或者重开 `yunxi dev`。
             println!(
                 "{}\n",
                 t(
-                    "direct REPL: press Tab in an empty session to switch lanes, or start `miyu dev`",
-                    "直连 REPL：空会话里按 Tab 换车道，或者直接运行 miyu dev"
+                    "direct REPL: press Tab in an empty session to switch lanes, or start `yunxi dev`",
+                    "直连 REPL：空会话里按 Tab 换车道，或者直接运行 yunxi dev"
                 )
             );
             continue;
         }
         if names_repl_command(command, ReplSlashCommand::Effort) {
-            if !miyu_base::models_cache::is_loaded() {
+            if !yunxi_base::models_cache::is_loaded() {
                 println!(
                     "{}\n",
                     t(
@@ -844,9 +844,9 @@ pub(in crate::cli) async fn run_direct_repl(
             println!("{}", t("all long-term memory erased", "全部长期记忆已清空"));
             continue;
         }
-        if miyu_core::slash_commands::names_repl_command(
+        if yunxi_core::slash_commands::names_repl_command(
             command,
-            miyu_core::slash_commands::ReplSlashCommand::Reset,
+            yunxi_core::slash_commands::ReplSlashCommand::Reset,
         ) && command_args.trim().is_empty()
         {
             run_reset(paths).await?;
@@ -886,8 +886,8 @@ pub(in crate::cli) async fn run_direct_repl(
             println!(
                 "{}",
                 t(
-                    "this command needs the full (daemon) REPL; start without MIYU_DIRECT to use it",
-                    "该命令需要完整(daemon)REPL;不带 MIYU_DIRECT 启动即可使用"
+                    "this command needs the full (daemon) REPL; start without YUNXI_DIRECT to use it",
+                    "该命令需要完整(daemon)REPL;不带 YUNXI_DIRECT 启动即可使用"
                 )
             );
             continue;
@@ -1039,7 +1039,7 @@ pub(in crate::cli) async fn run_direct_repl(
                 footer.update_session_tokens(agent.effective_context_tokens()?);
                 footer.update_cumulative_tokens(cumulative_tokens);
             }
-            Err(err) if miyu_base::question::is_question_cancelled(&err) => {
+            Err(err) if yunxi_base::question::is_question_cancelled(&err) => {
                 let _ = state.delete_queued_prompts();
                 if let Some(live) = live_repl.as_mut() {
                     synchronized_terminal_update(CursorAfterUpdate::Shown, || {

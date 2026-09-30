@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """知识库面板「拖放 + 多文件上传」真机走查(09-09)。
 
-隔离 MIYU_HOME 起一个 daemon,用 Python playwright 开控制台 → 知识库面板,
+隔离 YUNXI_HOME 起一个 daemon,用 Python playwright 开控制台 → 知识库面板,
 合成真实的 DataTransfer 投放事件走一遍:拖拽指示层的出现与消失、拖文字不吃事件、
 单文件 / 三文件 / 混合(含 png)/ 超限与非 UTF-8 / 被守卫拒绝 / 目录递归 / 选择器
 多选,逐步截图并把控制台错误与非预期的 4xx-5xx 汇总成退出码。
@@ -11,7 +11,7 @@
 前置:`cargo build`(web 静态资源 include_str! 进二进制,改了 JS/CSS 必须重新构建),
       以及 Python 的 playwright(chromium 在 ~/.cache/ms-playwright)。
 坑:XDG_RUNTIME_DIR 路径太长会撞 SUN_LEN;daemon 一律用隐藏子命令 __daemon 起,
-    别用 `miyu web`(它会去找线上 daemon);端口别碰 8300。
+    别用 `yunxi web`(它会去找线上 daemon);端口别碰 8300。
 """
 
 import json
@@ -25,19 +25,19 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-kb-drop/home"))
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-kb-drop/home"))
 RUNTIME = "/tmp/mx-kbd"
-PORT = int(os.environ.get("MIYU_KBD_PORT", "18477"))
-SHOTS = Path(os.environ.get("MIYU_KBD_SHOTS", "/tmp/miyu-kb-drop/shots"))
+PORT = int(os.environ.get("YUNXI_KBD_PORT", "18477"))
+SHOTS = Path(os.environ.get("YUNXI_KBD_SHOTS", "/tmp/yunxi-kb-drop/shots"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
 
 
 def write_config():

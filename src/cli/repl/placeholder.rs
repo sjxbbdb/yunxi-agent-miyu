@@ -22,19 +22,19 @@ pub(in crate::cli) struct PastedText {
 
 pub(in crate::cli) fn extract_image_placeholders(
     message: &str,
-) -> (String, Vec<Option<miyu_base::clipboard::PastedImage>>) {
+) -> (String, Vec<Option<yunxi_base::clipboard::PastedImage>>) {
     let placeholders = find_image_placeholders(message);
     if placeholders.is_empty() {
         return (message.to_string(), Vec::new());
     }
 
-    let cache_images_dir = MiyuPaths::new()
+    let cache_images_dir = YunXiPaths::new()
         .map(|p| p.cache_dir.join("clipboard_images"))
         .ok();
 
     let chars: Vec<char> = message.chars().collect();
     let mut clean = String::new();
-    let mut images: Vec<Option<miyu_base::clipboard::PastedImage>> = Vec::new();
+    let mut images: Vec<Option<yunxi_base::clipboard::PastedImage>> = Vec::new();
     let mut last_end = 0;
 
     for (start, end) in &placeholders {
@@ -56,7 +56,7 @@ pub(in crate::cli) fn extract_image_placeholders(
             if let Some(dir) = &cache_images_dir {
                 let candidate = dir.join(&name_str);
                 if candidate.exists() {
-                    images.push(Some(miyu_base::clipboard::PastedImage::Path(
+                    images.push(Some(yunxi_base::clipboard::PastedImage::Path(
                         candidate.display().to_string(),
                     )));
                 } else {
@@ -139,15 +139,15 @@ pub(in crate::cli) fn insert_pasted_text_at_cursor(
     }
 }
 
-pub(in crate::cli) use miyu_base::clipboard::{
+pub(in crate::cli) use yunxi_base::clipboard::{
     media_placeholder_prefix, MEDIA_PLACEHOLDER_PREFIXES,
 };
 
 /// 按剪贴板里的文件挑标签。
 pub(in crate::cli) fn media_placeholder_label(path: &str) -> &'static str {
-    if miyu_engine::tools::vision::video_mime(path).is_some() {
+    if yunxi_engine::tools::vision::video_mime(path).is_some() {
         "Video"
-    } else if miyu_engine::tools::vision::pdf_mime(path).is_some() {
+    } else if yunxi_engine::tools::vision::pdf_mime(path).is_some() {
         "PDF"
     } else {
         "Image"
@@ -308,7 +308,7 @@ pub(in crate::cli) fn clear_placeholder_payload(
     input: &str,
     start: usize,
     end: usize,
-    pasted_images: &mut [Option<miyu_base::clipboard::PastedImage>],
+    pasted_images: &mut [Option<yunxi_base::clipboard::PastedImage>],
     pasted_texts: &mut [Option<PastedText>],
 ) {
     if let Some(n) = parse_image_placeholder_index(input, start, end) {
@@ -338,7 +338,7 @@ pub(in crate::cli) fn clear_placeholder_payload(
 pub(in crate::cli) fn remove_word_before_cursor(
     input: &mut String,
     cursor: &mut usize,
-    pasted_images: &mut [Option<miyu_base::clipboard::PastedImage>],
+    pasted_images: &mut [Option<yunxi_base::clipboard::PastedImage>],
     pasted_texts: &mut [Option<PastedText>],
 ) {
     if *cursor == 0 {

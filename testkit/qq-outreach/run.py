@@ -2,7 +2,7 @@
 """BUG-14 黑盒:QQ 里管理员让她「把这个发到 xxx 群」——沙箱 daemon + 会调工具的
 OpenAI 桩 + 假 NapCat(反向 WS)。
 
-    BIN=<miyu> python3 testkit/qq-outreach/run.py
+    BIN=<yunxi> python3 testkit/qq-outreach/run.py
 
 链路:管理员私聊 → daemon 起回合 → 桩 LLM 先调 qq_contacts 查「交流群」→ daemon 问
 假 NapCat get_friend_list / get_group_list → 桩拿到群号后调 send_qq_message(群名)→
@@ -35,21 +35,21 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-qq-outreach")).expanduser()
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-qq-outreach")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18533"))
 QQ_PORT = int(os.environ.get("QQ_PORT", "18534"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18535"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 
 spec = importlib.util.spec_from_file_location("fake", REPO / "testkit" / "fake-onebot" / "run.py")
 fake = importlib.util.module_from_spec(spec)
@@ -64,7 +64,7 @@ FRIENDS = [
     {"user_id": 10004, "nickname": "花花", "remark": "同事花花"},
 ]
 GROUPS = [
-    {"group_id": 20001, "group_name": "Miyu 交流群", "member_count": 42},
+    {"group_id": 20001, "group_name": "YunXi 交流群", "member_count": 42},
     {"group_id": fake.GROUP_ID, "group_name": "假群(测具)", "member_count": 3},
 ]
 EXCHANGE_GROUP = 20001
@@ -144,7 +144,7 @@ class Stub(BaseHTTPRequestHandler):
             if "qq_contacts" not in called:
                 return self._tool_call("qq_contacts", {"query": "交流群"})
             if "send_qq_message" not in called:
-                return self._tool_call("send_qq_message", {"to": "Miyu 交流群", "kind": "group", "text": "开饭了"})
+                return self._tool_call("send_qq_message", {"to": "YunXi 交流群", "kind": "group", "text": "开饭了"})
             return self._say("发好了。")
         if "ambiguous" in user and "send_qq_message" in tools:
             if "send_qq_message" not in called:

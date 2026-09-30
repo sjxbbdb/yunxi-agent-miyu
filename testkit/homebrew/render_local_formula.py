@@ -4,8 +4,8 @@
 用法（在有仓库的机器上跑，产物拷到 Mac）：
 
     python3 testkit/homebrew/render_local_formula.py \\
-        --tarball /tmp/mh/miyu-0.6.2-1-aarch64-apple-darwin.tar.gz \\
-        --sha256 <包的 sha256> --version 0.6.2 --out /tmp/miyu.rb
+        --tarball /tmp/mh/yunxi-0.6.2-1-aarch64-apple-darwin.tar.gz \\
+        --sha256 <包的 sha256> --version 0.6.2 --out /tmp/yunxi.rb
 
 `--tarball` 写的是**包在 Mac 上的路径**，本机不需要有这个文件。渲染走的是发版时
 `channel_update.py` 用的同一个函数，只把下载地址换成本地文件。

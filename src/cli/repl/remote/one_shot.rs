@@ -1,4 +1,4 @@
-//! 单次远端回合（`miyu "问题"` 这种用法）。
+//! 单次远端回合（`yunxi "问题"` 这种用法）。
 //!
 //! 和 [`super::interactive`] 共用同一套 IPC 事件流，但生命周期完全不同：跑完
 //! 就退，不进 REPL 循环，也就不需要活动区与输入编辑那一整套。
@@ -13,9 +13,9 @@ pub(in crate::cli) enum RemoteTurnSource<'a> {
     /// 发一条消息起一轮（这个会话正有一轮在跑，就排进那一轮）。
     Start {
         message: &'a str,
-        images: &'a [Option<miyu_base::clipboard::PastedImage>],
+        images: &'a [Option<yunxi_base::clipboard::PastedImage>],
         session_override: Option<String>,
-        overrides: Option<miyu_core::ipc::TurnOverrides>,
+        overrides: Option<yunxi_core::ipc::TurnOverrides>,
         /// 跑完这一轮还留在前台，把子代理报告叫醒的那几轮接着画（一次性命令，09-26）。
         /// 记进触发终端的指纹：这期间 daemon 不往这个终端回写。
         stays_to_follow: bool,
@@ -38,16 +38,16 @@ pub(in crate::cli) enum RemoteTurnSource<'a> {
 /// 幂等:已经熄过的直接返回,不会重画,也不会在交接之后往屏幕上乱写。
 #[allow(clippy::too_many_arguments)]
 pub(in crate::cli) async fn try_run_remote_chat(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: Option<&mut LiveReplTail>,
     message: &str,
     show_reasoning: Option<bool>,
     plain: bool,
     mode: PersonaLane,
-    images: &[Option<miyu_base::clipboard::PastedImage>],
+    images: &[Option<yunxi_base::clipboard::PastedImage>],
     session_override: Option<String>,
     jobs_feed: Option<&JobsFeed>,
-    overrides: Option<miyu_core::ipc::TurnOverrides>,
+    overrides: Option<yunxi_core::ipc::TurnOverrides>,
 ) -> Result<Option<RemoteTurnSummary>> {
     run_remote_turn(
         paths,
@@ -69,7 +69,7 @@ pub(in crate::cli) async fn try_run_remote_chat(
 
 /// 跑一轮（或跟一轮），画出来。`try_run_remote_chat` 是它「发消息起一轮」的那一面。
 pub(in crate::cli) async fn run_remote_turn(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     mut live: Option<&mut LiveReplTail>,
     source: RemoteTurnSource<'_>,
     show_reasoning: Option<bool>,
@@ -94,7 +94,7 @@ pub(in crate::cli) async fn run_remote_turn(
 }
 
 async fn run_remote_chat_inner(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     mut live: Option<&mut LiveReplTail>,
     source: RemoteTurnSource<'_>,
     show_reasoning: Option<bool>,
@@ -108,7 +108,7 @@ async fn run_remote_chat_inner(
         // ensure_daemon also restarts a daemon left over from an older build.
         // Re-resolve paths because that shutdown may complete legacy layout migration.
         ipc::ensure_daemon(paths, None).await?;
-        Some(MiyuPaths::new()?)
+        Some(YunXiPaths::new()?)
     };
     let paths = refreshed_paths.as_ref().unwrap_or(paths);
     let mut stream = if direct_mode_requested() {
@@ -169,7 +169,7 @@ async fn run_remote_chat_inner(
     // `question_flow`）。
     let mut frames = ipc::FrameReader::new(stream);
     let Some(first) = frames.receive::<IpcFrame>().await? else {
-        bail!("Miyu core closed the connection before accepting the turn");
+        bail!("YunXi core closed the connection before accepting the turn");
     };
     // `TurnUpdateAccepted` = 这个会话已经有一轮在跑（另一个 TUI、另一个终端），
     // daemon 把这条消息**排进了那一轮**而不是并行起一轮。接下来推的是那一轮的
@@ -190,7 +190,7 @@ async fn run_remote_chat_inner(
             run_id
         }
         IpcFrame::Error { message, .. } => bail!("{message}"),
-        _ => bail!("Miyu core returned an invalid response"),
+        _ => bail!("YunXi core returned an invalid response"),
     };
     if queued_into_running && live.is_none() {
         // 一次性/shellhook：没有活动区可以挂排队条，直说一行。REPL 那边
@@ -417,7 +417,7 @@ async fn run_remote_chat_inner(
                         let line = live_tail.editor.input.trim_start().to_string();
                         match parse_repl_input(&line) {
                             ReplInput::Slash(
-                                miyu_core::slash_commands::ReplSlashCommand::Goal,
+                                yunxi_core::slash_commands::ReplSlashCommand::Goal,
                                 args,
                             ) => {
                                 let args = args.trim().to_string();
@@ -442,7 +442,7 @@ async fn run_remote_chat_inner(
                                 let _ = super::super::session::send_ipc_admin(
                                     paths,
                                     IpcCommand::Goal {
-                                        target: miyu_core::ipc::SessionRef::Id {
+                                        target: yunxi_core::ipc::SessionRef::Id {
                                             id: turn_session_id.clone(),
                                         },
                                         input: args,
@@ -462,11 +462,11 @@ async fn run_remote_chat_inner(
                             // 「应该区分能执行和不能执行的命令」）。原来这里
                             // 一律**静默**吞掉，屏幕上一点反应都没有。
                             ReplInput::Slash(command, args) => {
-                                use miyu_core::slash_commands::DuringTurn;
-                                match miyu_core::slash_commands::during_turn(command, args) {
+                                use yunxi_core::slash_commands::DuringTurn;
+                                match yunxi_core::slash_commands::during_turn(command, args) {
                                     DuringTurn::Inline => continue,
                                     DuringTurn::Blocked { .. } => {
-                                        if let Some(reason) = miyu_core::slash_commands::during_turn(
+                                        if let Some(reason) = yunxi_core::slash_commands::during_turn(
                                             command, args,
                                         )
                                         .reason()
@@ -522,7 +522,7 @@ async fn run_remote_chat_inner(
                                         let args = args.trim().to_string();
                                         live_tail.editor.clear();
                                         // 换会话的命令：收尾这一帧和后面的清屏回放攒成一帧（09-25）。
-                                        if miyu_core::slash_commands::switches_session(command, &args) {
+                                        if yunxi_core::slash_commands::switches_session(command, &args) {
                                             crate::cli::repl::tail::begin_frame_hold();
                                         }
                                         // 和 Ctrl+D 那条路同一套收尾：渲染器
@@ -710,7 +710,7 @@ async fn run_remote_chat_inner(
                 live.apply_renderer_frame(&mut renderer)?;
             }
             handoff_raw!();
-            bail!("Miyu core disconnected during the turn");
+            bail!("YunXi core disconnected during the turn");
         };
         if let IpcFrame::Event { id, at_ms, .. } = &frame {
             last_event_id = *id;
@@ -743,7 +743,7 @@ async fn run_remote_chat_inner(
                 handle_agent_event(
                     &mut renderer,
                     AgentEvent::Chunk(ChatStreamChunk {
-                        kind: miyu_core::llm::ChatStreamKind::Content,
+                        kind: yunxi_core::llm::ChatStreamKind::Content,
                         text: delta.to_string(),
                     }),
                 )?;
@@ -754,7 +754,7 @@ async fn run_remote_chat_inner(
                 handle_agent_event(
                     &mut renderer,
                     AgentEvent::Chunk(ChatStreamChunk {
-                        kind: miyu_core::llm::ChatStreamKind::Reasoning,
+                        kind: yunxi_core::llm::ChatStreamKind::Reasoning,
                         text: delta.to_string(),
                     }),
                 )?;
@@ -791,7 +791,7 @@ async fn run_remote_chat_inner(
                 AgentEvent::ReasoningTitle(ipc_text(&data, "title").to_string()),
             )?,
             "tool.preparing" => {
-                miyu_hosts::runtime::learn_tool_display_name(&data);
+                yunxi_hosts::runtime::learn_tool_display_name(&data);
                 handle_agent_event(
                     &mut renderer,
                     AgentEvent::ToolPreparing {
@@ -805,7 +805,7 @@ async fn run_remote_chat_inner(
             }
             "tool.started" => {
                 // 脚本的显示名只有 daemon 知道，事件里带过来，先记下再画。
-                miyu_hosts::runtime::learn_tool_display_name(&data);
+                yunxi_hosts::runtime::learn_tool_display_name(&data);
                 handle_agent_event(
                     &mut renderer,
                     AgentEvent::ToolCall {
@@ -828,7 +828,7 @@ async fn run_remote_chat_inner(
                 AgentEvent::SubagentProgress {
                     call_id: ipc_text(&data, "tool_id").to_string(),
                     name: ipc_text(&data, "name").to_string(),
-                    status: miyu_hosts::runtime::subagent_status_from(&data),
+                    status: yunxi_hosts::runtime::subagent_status_from(&data),
                 },
             )?,
             "tool.output" => handle_agent_event(
@@ -919,7 +919,7 @@ async fn run_remote_chat_inner(
                             // 出上面那行、收段出下面那行。这儿自己再补一个
                             // `\n`，图下面就空两行了（用户 09-19）。
                             renderer.queue_after_timeline(
-                                miyu_hosts::render::timeline::indent_body(&placeholder),
+                                yunxi_hosts::render::timeline::indent_body(&placeholder),
                             );
                             if let Some(live) = live.as_deref_mut() {
                                 live.apply_renderer_frame(&mut renderer)?;
@@ -979,7 +979,7 @@ async fn run_remote_chat_inner(
                     .any(|queued| queued.prompt_id == prompt_id);
                 if !prompt_id.is_empty() && !already {
                     let content = ipc_text(&prompt, "content").to_string();
-                    live.enqueue(miyu_core::state::QueuedPrompt {
+                    live.enqueue(yunxi_core::state::QueuedPrompt {
                         prompt_id,
                         seq: data
                             .get("seq")
@@ -1062,7 +1062,7 @@ async fn run_remote_chat_inner(
             "context.compact_delta" => handle_agent_event(
                 &mut renderer,
                 AgentEvent::CompactChunk(ChatStreamChunk {
-                    kind: miyu_core::llm::ChatStreamKind::Content,
+                    kind: yunxi_core::llm::ChatStreamKind::Content,
                     text: ipc_text(&data, "delta").to_string(),
                 }),
             )?,
@@ -1316,7 +1316,7 @@ async fn run_remote_chat_inner(
     };
     // 会话可能刚被自动命名（首条消息之后），标题跟着刷新一次。
     // **只在常驻 REPL 里设**：一次性 / shellhook 跑完就退出，改了标题没人改回来，
-    // 人的终端标签页会被永久改名成「Miyu · 某某」。
+    // 人的终端标签页会被永久改名成「YunXi · 某某」。
     if interactive_repl {
         herdr::set_terminal_title_for_session(paths, &turn_session_id);
     }
@@ -1337,11 +1337,11 @@ async fn run_remote_chat_inner(
         notify_if_unfocused(
             &config,
             focused,
-            t("Miyu finished replying", "Miyu 回复完成"),
+            t("YunXi finished replying", "YunXi 回复完成"),
             // 正文不往通知里放：桌面通知是给**别人也可能看见的屏幕**发的，
             // 而且回复本身在窗口里就摆着，通知只需要说"该回来看了"。
             t("waiting for you", "正在等待处理"),
-            miyu_base::notify::NotifySound::TurnDone,
+            yunxi_base::notify::NotifySound::TurnDone,
         );
     }
     print_mixed_model_endpoint(show_endpoint && !interactive, &result, None);
@@ -1418,10 +1418,10 @@ async fn print_deferred_images(
     Ok(())
 }
 
-/// `MIYU_IMAGE_TRACE=1` 时把远端图片这一路记进 `image-trace.log`(与 chafa、
+/// `YUNXI_IMAGE_TRACE=1` 时把远端图片这一路记进 `image-trace.log`(与 chafa、
 /// kitty 那两条同一个文件)。「图有时出不来」只能靠它在真机上抓现场。
 fn image_trace(line: &str) {
-    if miyu_base::terminal::chafa::trace_enabled() {
-        miyu_base::terminal::chafa::trace(&format!("[remote] {line}"));
+    if yunxi_base::terminal::chafa::trace_enabled() {
+        yunxi_base::terminal::chafa::trace(&format!("[remote] {line}"));
     }
 }

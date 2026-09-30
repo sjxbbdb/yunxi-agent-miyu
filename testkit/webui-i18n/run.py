@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """WebUI 双语走查(2026-09-23):沙箱 daemon + Playwright(Chromium)。
 
-     BIN=<miyu 二进制> python3 testkit/webui-i18n/run.py
+     BIN=<yunxi 二进制> python3 testkit/webui-i18n/run.py
 
 判定项(每条一行 ✅/❌,最后 n/m passed):
-  payload_zh / payload_en     /i18n.js 注入的 MIYU_LANG 与浏览器语言一致
+  payload_zh / payload_en     /i18n.js 注入的 YUNXI_LANG 与浏览器语言一致
   dict_stub_zh / dict_full_en 中文界面不下发英文词典(空壳),英文界面下发真词典
   zh_default                  zh 浏览器 + auto:界面中文,<html lang>=zh-CN
   en_default                  en 浏览器 + auto:界面英文,<html lang>=en-US
@@ -16,7 +16,7 @@
   config_zh_wins              config=zh 压过 en 浏览器
   settings_switch             设置页把「界面语言」改成英语保存 → 整页重载成英文
   console_en                  英文界面下控制台(用量/账号/设置)可见文本没有汉字
-产物:~/.cache/miyu-webui-i18n/<TAG>/{daemon.log,*.png}
+产物:~/.cache/yunxi-webui-i18n/<TAG>/{daemon.log,*.png}
 """
 import json
 import os
@@ -31,7 +31,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -42,12 +42,12 @@ import authlib  # noqa: E402
 
 BIN = Path(os.environ["BIN"])
 TAG = os.environ.get("TAG", "run")
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-webui-i18n")).expanduser() / TAG
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-webui-i18n")).expanduser() / TAG
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18496"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), MIYU_LOG="info")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), YUNXI_LOG="info")
 
 HAN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
 ZH_HEADERS = {"Accept-Language": "zh-CN,zh;q=0.9"}
@@ -141,8 +141,8 @@ def main() -> int:
         # ── 静态资源:语言注入与词典按语言分发 ──
         zh_js = fetch("/i18n.js", ZH_HEADERS)
         en_js = fetch("/i18n.js", EN_HEADERS)
-        check("payload_zh", 'window.MIYU_LANG="zh"' in zh_js, "Accept-Language: zh-CN")
-        check("payload_en", 'window.MIYU_LANG="en"' in en_js, "Accept-Language: en-US")
+        check("payload_zh", 'window.YUNXI_LANG="zh"' in zh_js, "Accept-Language: zh-CN")
+        check("payload_en", 'window.YUNXI_LANG="en"' in en_js, "Accept-Language: en-US")
         zh_dict = fetch("/i18n-en.js", ZH_HEADERS)
         en_dict = fetch("/i18n-en.js", EN_HEADERS)
         check("dict_stub_zh", "New chat" not in zh_dict and len(zh_dict) < 200)
@@ -163,7 +163,7 @@ def main() -> int:
             zh_lang = page.evaluate("() => document.documentElement.lang")
             zh_board = page.text_content("#emptyTitle")
             zh_placeholder = page.get_attribute("#composerInput", "placeholder")
-            zh_intl = page.evaluate("() => window.MiyuI18n?.intlLocale")
+            zh_intl = page.evaluate("() => window.YunXiI18n?.intlLocale")
             check("zh_default", zh_title == "新对话" and zh_lang == "zh-CN", f"{zh_title!r} {zh_lang}")
             page.close()
 
@@ -183,7 +183,7 @@ def main() -> int:
                 and en_placeholder and not HAN.search(en_placeholder) and en_placeholder != zh_placeholder,
                 f"board={en_board!r} placeholder={en_placeholder!r}",
             )
-            en_intl = page.evaluate("() => window.MiyuI18n?.intlLocale")
+            en_intl = page.evaluate("() => window.YunXiI18n?.intlLocale")
             check("intl_locale", zh_intl == "zh-CN" and en_intl == "en-US", f"{zh_intl} / {en_intl}")
             page.screenshot(path=str(OUT / "main-en.png"))
             # 这个 app 没有 hashchange 监听:只改 hash 的 goto 是同一文档导航,
@@ -252,7 +252,7 @@ def main() -> int:
                 "() => !document.getElementById('saveConfigButton').disabled", timeout=8000
             )
             page.click("#saveConfigButton")
-            page.wait_for_function("() => window.MiyuI18n && window.MiyuI18n.lang === 'en'", timeout=20000)
+            page.wait_for_function("() => window.YunXiI18n && window.YunXiI18n.lang === 'en'", timeout=20000)
             page.wait_for_selector("#composerInput", timeout=15000)
             page.wait_for_timeout(600)
             switched = page.get_attribute("#newChatButton", "title")

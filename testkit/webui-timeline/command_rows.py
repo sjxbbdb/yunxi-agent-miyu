@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """「运行命令」那一步的新版式：抬头给 short_title，命令本身排在底下。
 
-    BIN=<miyu 二进制> [WEB=<web 目录>] python3 testkit/webui-timeline/command_rows.py
+    BIN=<yunxi 二进制> [WEB=<web 目录>] python3 testkit/webui-timeline/command_rows.py
 
 形状（和 TUI 对齐）：
 
@@ -45,7 +45,7 @@ from playwright.sync_api import sync_playwright  # noqa: E402
 COMMAND = "\n".join(
     [
         "set -euo pipefail",
-        "cd /home/shorin/Documents/github/Miyu",
+        "cd /home/shorin/Documents/github/YunXi",
         "echo '== 第 3 行 =='",
         "ls -la | head -5",
         "echo '== 第 5 行 =='",

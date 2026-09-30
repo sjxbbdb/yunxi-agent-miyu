@@ -1,13 +1,13 @@
 //! 在 herdr 的 pane 里，回合结束 / 提问的提示音交给 herdr（用户 09-23 拍板）。
 //!
 //! herdr 自己按 tab 可见性放「完成」「在等你」两声（`[ui.sound]`，默认开），
-//! Miyu 再响一声就成了两声；弹窗照走系统通知（herdr 吞 OSC 99，见
-//! `miyu_base::terminal::kitty::is_kitty_itself`）。整条链的真机验证在
+//! YunXi 再响一声就成了两声；弹窗照走系统通知（herdr 吞 OSC 99，见
+//! `yunxi_base::terminal::kitty::is_kitty_itself`）。整条链的真机验证在
 //! `testkit/herdr/real_herdr.py`。
 
 use crate::cli::repl::jobs::notification_tone;
-use miyu_base::config::AppConfig;
-use miyu_base::notify::{NotifySound, NotifyTone};
+use yunxi_base::config::AppConfig;
+use yunxi_base::notify::{NotifySound, NotifyTone};
 
 /// 配一个真实存在的提示音文件：`tone()` 就不去往家目录里写内置音。
 fn config_with_sound_file() -> (AppConfig, tempfile::TempDir) {
@@ -21,12 +21,12 @@ fn config_with_sound_file() -> (AppConfig, tempfile::TempDir) {
 }
 
 #[test]
-fn inside_herdr_miyu_leaves_the_sound_to_herdr() {
+fn inside_herdr_yunxi_leaves_the_sound_to_herdr() {
     let (config, _dir) = config_with_sound_file();
     for sound in [NotifySound::TurnDone, NotifySound::Question] {
         assert!(
             matches!(notification_tone(&config, sound, true), NotifyTone::Silent),
-            "herdr 里 Miyu 不该自己放声（{sound:?}）"
+            "herdr 里 YunXi 不该自己放声（{sound:?}）"
         );
     }
 }

@@ -11,7 +11,7 @@ use crate::cli::*;
 /// Which session a one-shot CLI turn lands in.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::cli) enum TurnSession {
-    /// The terminal session — what shell-hook and `miyu new`/`session` drive.
+    /// The terminal session — what shell-hook and `yunxi new`/`session` drive.
     Current,
     /// An explicit `--session` target, resolved to a session id.
     Explicit(String),
@@ -20,16 +20,16 @@ pub(in crate::cli) enum TurnSession {
     Ephemeral,
 }
 
-/// Picks the session for `miyu ask` / a bare `miyu '<message>'`. Both default
+/// Picks the session for `yunxi ask` / a bare `yunxi '<message>'`. Both default
 /// to a throwaway session; `--session` and `--continue` opt back into a real
 /// one (clap already rejects passing both).
 pub(in crate::cli) async fn one_shot_session(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_arg: Option<&str>,
     continue_session: bool,
 ) -> Result<TurnSession> {
     if let Some(arg) = session_arg {
-        // 与 `miyu session list` 同一份列表、同一套编号,找不到退出码 3。
+        // 与 `yunxi session list` 同一份列表、同一套编号,找不到退出码 3。
         return Ok(TurnSession::Explicit(
             crate::cli::turn_request::resolve_managed_session(paths, arg)
                 .await?
@@ -51,7 +51,7 @@ pub(in crate::cli) fn ephemeral_session_name() -> String {
 
 /// `mode`(normal/dev)决定阅后即焚会话建在哪个人格名下;None = 普通。
 pub(in crate::cli) async fn create_ephemeral_session(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     mode: Option<&str>,
 ) -> Result<String> {
     let (_, data) = session_admin(
@@ -59,7 +59,7 @@ pub(in crate::cli) async fn create_ephemeral_session(
         IpcCommand::CreateSession {
             name: Some(ephemeral_session_name()),
             switch: false,
-            kind: Some(miyu_core::state::ASK_SESSION_KIND.to_string()),
+            kind: Some(yunxi_core::state::ASK_SESSION_KIND.to_string()),
             mode: mode.map(str::to_string),
         },
     )
@@ -68,16 +68,16 @@ pub(in crate::cli) async fn create_ephemeral_session(
         .and_then(|session| session.get("session_id"))
         .and_then(serde_json::Value::as_str)
         .map(str::to_string)
-        .ok_or_else(|| anyhow::anyhow!("Miyu core returned an invalid response"))
+        .ok_or_else(|| anyhow::anyhow!("YunXi core returned an invalid response"))
 }
 
 /// Tears a throwaway session down. Background jobs go first so nothing is left
 /// pointing at a session that is about to disappear. Best effort: a daemon
 /// that has gone away leaves a row the startup sweep collects.
-pub(in crate::cli) async fn discard_ephemeral_session(paths: &MiyuPaths, session_id: &str) {
+pub(in crate::cli) async fn discard_ephemeral_session(paths: &YunXiPaths, session_id: &str) {
     // CLI 中转(claude-code/antigravity)的联动:直连形态没有 daemon,DeleteSession
     // 那条路上的 forget 不会跑到,这里自己收——续传映射与 CLI 侧转录都在本进程。
-    miyu_core::llm::forget_relay_sessions(session_id);
+    yunxi_core::llm::forget_relay_sessions(session_id);
     let _ = send_ipc_admin(
         paths,
         IpcCommand::StopSessionJobs {
@@ -88,7 +88,7 @@ pub(in crate::cli) async fn discard_ephemeral_session(paths: &MiyuPaths, session
     let _ = send_ipc_admin(
         paths,
         IpcCommand::DeleteSession {
-            target: miyu_core::ipc::SessionRef::Id {
+            target: yunxi_core::ipc::SessionRef::Id {
                 id: session_id.to_string(),
             },
         },
@@ -105,7 +105,7 @@ pub(in crate::cli) struct EphemeralSessionGuard {
 
 impl Drop for EphemeralSessionGuard {
     fn drop(&mut self) {
-        miyu_core::llm::forget_relay_sessions(&self.session_id);
+        yunxi_core::llm::forget_relay_sessions(&self.session_id);
         let _ = self.state.delete_session(&self.session_id);
     }
 }
@@ -213,7 +213,7 @@ pub(in crate::cli) struct RemoteTurnSuspended {
 pub(in crate::cli) enum SuspendedAction {
     /// 命令还没执行：交给 `RemoteRepl::dispatch_slash`，做完按事件号挂回来。
     Command {
-        command: miyu_core::slash_commands::ReplSlashCommand,
+        command: yunxi_core::slash_commands::ReplSlashCommand,
         args: String,
     },
     /// `/session` 面板已经在回合里跑完、人挑了另一条会话（09-20）：换会话要
@@ -257,7 +257,7 @@ pub(in crate::cli) fn is_remote_turn_cancelled(error: &anyhow::Error) -> bool {
 /// 指纹里记上自己,它在前台的时候 daemon 就不回写。
 pub(in crate::cli) fn detect_origin_tty(
     stays_to_follow: bool,
-) -> Option<miyu_core::ipc::OriginTty> {
+) -> Option<yunxi_core::ipc::OriginTty> {
     let fd = [2, 1, 0]
         .into_iter()
         .find(|&fd| unsafe { libc::isatty(fd) } == 1)?;
@@ -265,14 +265,17 @@ pub(in crate::cli) fn detect_origin_tty(
     if !path.starts_with("/dev/") {
         return None;
     }
-    Some(miyu_core::ipc::OriginTty {
+    Some(yunxi_core::ipc::OriginTty {
         path,
         shell_pid: std::os::unix::process::parent_id(),
         follower_pid: stays_to_follow.then(std::process::id),
     })
 }
 
-pub(in crate::cli) async fn send_ipc_command(paths: &MiyuPaths, command: IpcCommand) -> Result<()> {
+pub(in crate::cli) async fn send_ipc_command(
+    paths: &YunXiPaths,
+    command: IpcCommand,
+) -> Result<()> {
     let mut stream = ipc::connect(&paths.ipc_socket()).await?;
     ipc::send(&mut stream, &IpcRequest::new(command)).await?;
     validate_ipc_command_response(ipc::receive::<IpcFrame>(&mut stream).await?)
@@ -284,8 +287,8 @@ pub(in crate::cli) fn validate_ipc_command_response(frame: Option<IpcFrame>) -> 
             Ok(())
         }
         Some(IpcFrame::Error { message, .. }) => bail!("{message}"),
-        Some(other) => bail!("Miyu core returned an unexpected response: {other:?}"),
-        None => bail!("Miyu core closed the connection without a response"),
+        Some(other) => bail!("YunXi core returned an unexpected response: {other:?}"),
+        None => bail!("YunXi core closed the connection without a response"),
     }
 }
 
@@ -310,7 +313,7 @@ pub(in crate::cli) fn error_frame(error: &impl std::fmt::Display) -> String {
     let headline = lines.next().unwrap_or_default();
     let mut frame = format!(
         "\x1b[31m{} {}: {headline}\x1b[0m\n",
-        miyu_hosts::render::timeline::glyph_err(),
+        yunxi_hosts::render::timeline::glyph_err(),
         t("error", "错误")
     );
     for line in lines {
@@ -338,7 +341,7 @@ pub(in crate::cli) fn display_session_name(name: &str) -> &str {
 }
 
 /// 会话有没有可见回合。空会话挂 banner、Tab 可换车道;读不到就当非空(保守)。
-pub(in crate::cli) fn session_is_empty(paths: &MiyuPaths, session_id: &str) -> bool {
+pub(in crate::cli) fn session_is_empty(paths: &YunXiPaths, session_id: &str) -> bool {
     // 只问有没有可见回合：原来把整条会话连大 JSON 列一起读出来再看长度，每换一次
     // 会话都是一次整段读（09-23）。读不到照旧当非空。
     StateStore::new(paths).is_ok_and(|store| store.session_is_empty(session_id))
@@ -405,7 +408,7 @@ pub(in crate::cli) fn replay_recent_turns(
 ///（这一屏不是本进程画的）才退回换画布 + 回放最近几轮。撤成空会话就回大厅。
 /// inline 擦不掉已经打出去的，只留那行「已撤销」。
 pub(in crate::cli) fn redraw_after_undo(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     mode: PersonaLane,
     session_id: &str,
@@ -435,7 +438,7 @@ pub(in crate::cli) fn redraw_after_undo(
 /// 「↑ 主会话」和 footer 上的层数跟着清掉。
 #[allow(clippy::too_many_arguments)]
 pub(in crate::cli) async fn apply_repl_session_switch(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     mode: PersonaLane,
     state: &ipc::SessionState,
@@ -466,7 +469,7 @@ pub(in crate::cli) async fn apply_repl_session_switch(
         send_ipc_admin(
             paths,
             IpcCommand::SetReplSession {
-                target: miyu_core::ipc::SessionRef::Id {
+                target: yunxi_core::ipc::SessionRef::Id {
                     id: state.session_id.clone(),
                 },
             },
@@ -481,7 +484,7 @@ pub(in crate::cli) async fn apply_repl_session_switch(
 /// 也拒子会话。
 #[allow(clippy::too_many_arguments)]
 pub(in crate::cli) async fn present_session(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     mode: PersonaLane,
     state: &ipc::SessionState,
@@ -642,11 +645,11 @@ pub(in crate::cli) fn session_list_entry(session: &serde_json::Value) -> Session
 pub(in crate::cli) fn session_ref_from_index(
     entries: &[SessionListEntry],
     index: usize,
-) -> Option<miyu_core::ipc::SessionRef> {
+) -> Option<yunxi_core::ipc::SessionRef> {
     index
         .checked_sub(1)
         .and_then(|index| entries.get(index))
-        .map(|entry| miyu_core::ipc::SessionRef::Id {
+        .map(|entry| yunxi_core::ipc::SessionRef::Id {
             id: entry.id.clone(),
         })
 }
@@ -726,7 +729,7 @@ pub(in crate::cli) fn session_initial_selection(
 /// What the interactive session picker came back with.
 pub(in crate::cli) enum SessionPick {
     Cancelled,
-    Switch(miyu_core::ipc::SessionRef),
+    Switch(yunxi_core::ipc::SessionRef),
     /// Deletion confirmed inside the picker. `index` is where the cursor sat,
     /// so the caller can reopen the refreshed list at the same spot.
     Delete {
@@ -765,7 +768,7 @@ pub(in crate::cli) fn select_session_target(
         )? {
             InlineSelectOutcome::Cancelled => SessionPick::Cancelled,
             InlineSelectOutcome::Chosen(index) => {
-                SessionPick::Switch(miyu_core::ipc::SessionRef::Id {
+                SessionPick::Switch(yunxi_core::ipc::SessionRef::Id {
                     id: entries[index].id.clone(),
                 })
             }
@@ -780,7 +783,7 @@ pub(in crate::cli) fn select_session_target(
 /// Resolves a user-typed `/session` / `/delete` argument into a session ref:
 /// a number picks from the visible session list, anything else is a name.
 /// REPL 会话列表的作用域：普通 + 开发两侧合并（daemon 的 `all` 档，管理面
-/// `miyu session list`、WebUI 侧栏、模型的 session 工具早就这么列）。原来这儿只可能
+/// `yunxi session list`、WebUI 侧栏、模型的 session 工具早就这么列）。原来这儿只可能
 /// 给 `None`/`"dev"`，普通模式看不见开发会话、反之亦然（用户 09-17）。每行本来
 /// 就带「普通/开发」标签；选中另一侧的会话时车道跟着切（`switch_to_session`）。
 pub(in crate::cli) fn repl_list_mode(_mode: PersonaLane) -> Option<String> {
@@ -805,24 +808,24 @@ pub(in crate::cli) fn order_entries_for_lane(
 /// 那条路的会话（`default`），REPL 压根不会停在它上面——`ensure_repl_session`
 /// 把指到它的指针视同缺失、就地自举一条新的。既然进不去，列出来只会让人误选，
 /// 还会在「当前会话被删掉」时被兜底逻辑挑中（用户实测：回车跳进了终端集成会话）。
-/// 要用它还是走 shell 那条路或 `miyu session`。
+/// 要用它还是走 shell 那条路或 `yunxi session`。
 pub(in crate::cli) fn repl_visible_entries(
     data: &serde_json::Value,
     mode: PersonaLane,
 ) -> Vec<SessionListEntry> {
     let entries = session_list_entries(data)
         .into_iter()
-        .filter(|entry| entry.id != miyu_core::state::DEFAULT_SESSION_ID)
+        .filter(|entry| entry.id != yunxi_core::state::DEFAULT_SESSION_ID)
         .collect();
     order_entries_for_lane(entries, mode)
 }
 
 pub(in crate::cli) async fn resolve_repl_session_target(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     mode: PersonaLane,
     arg: &str,
-) -> Result<Option<miyu_core::ipc::SessionRef>> {
+) -> Result<Option<yunxi_core::ipc::SessionRef>> {
     let index = arg.parse::<usize>().ok();
     // 名字寻址在 daemon 侧按"当前人格"检索,够不着另一侧的会话;统一走列表
     // （两侧合并）在客户端配对,再降成不可猜的 id 显式寻址。
@@ -841,7 +844,7 @@ pub(in crate::cli) async fn resolve_repl_session_target(
     let target = match index {
         Some(index) => session_ref_from_index(&entries, index),
         None => entries.iter().find(|entry| entry.name == arg).map(|entry| {
-            miyu_core::ipc::SessionRef::Id {
+            yunxi_core::ipc::SessionRef::Id {
                 id: entry.id.clone(),
             }
         }),
@@ -861,7 +864,7 @@ pub(in crate::cli) async fn resolve_repl_session_target(
 
 pub(in crate::cli) fn reload_repl_queue(
     live: &mut LiveReplTail,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: &str,
 ) -> Result<()> {
     let store = StateStore::new(paths)?.pinned(session_id);
@@ -917,14 +920,14 @@ pub(in crate::cli) async fn await_in_lobby<T>(
 /// 回合进行中也走这里(`in_turn`):不用分离回合,daemon 那边下一次工具调用就按新
 /// 设置来。全屏用 toast;inline 空闲时退回打一行,回合中不往正文里插字。
 pub(in crate::cli) async fn toggle_repl_readonly(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     session_id: &str,
     in_turn: bool,
 ) -> Result<()> {
     let next = !live.editor.readonly;
     let command = IpcCommand::SetSandboxReadonly {
-        target: miyu_core::ipc::SessionRef::Id {
+        target: yunxi_core::ipc::SessionRef::Id {
             id: session_id.to_string(),
         },
         readonly: next,
@@ -953,7 +956,7 @@ pub(in crate::cli) async fn toggle_repl_readonly(
 /// busy, core restarting, …) through the live tail instead of propagating
 /// them so the REPL survives.
 pub(in crate::cli) async fn repl_ipc_admin(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     command: IpcCommand,
 ) -> Result<Option<(ipc::SessionState, serde_json::Value)>> {
@@ -967,9 +970,9 @@ pub(in crate::cli) async fn repl_ipc_admin(
 }
 
 pub(in crate::cli) async fn repl_get_session_state(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
-    target: miyu_core::ipc::SessionRef,
+    target: yunxi_core::ipc::SessionRef,
 ) -> Result<Option<ipc::SessionState>> {
     // 带上 REPL 的当前目录:下一轮 StartTurn 也带它,默认沙盒的根跟着它走。
     let cwd = std::env::current_dir().ok();
@@ -983,12 +986,12 @@ pub(in crate::cli) async fn repl_get_session_state(
 /// Resolve a user-requested switch without replaying the session already on
 /// screen. Other state refreshes still use `repl_get_session_state` directly.
 pub(in crate::cli) async fn repl_get_session_switch(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
-    target: miyu_core::ipc::SessionRef,
+    target: yunxi_core::ipc::SessionRef,
     active_session_id: &str,
 ) -> Result<Option<ipc::SessionState>> {
-    if matches!(&target, miyu_core::ipc::SessionRef::Id { id } if id == active_session_id) {
+    if matches!(&target, yunxi_core::ipc::SessionRef::Id { id } if id == active_session_id) {
         return Ok(None);
     }
     Ok(repl_get_session_state(paths, live, target)
@@ -997,7 +1000,7 @@ pub(in crate::cli) async fn repl_get_session_switch(
 }
 
 pub(in crate::cli) async fn repl_fallback_session_state(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     mode: PersonaLane,
 ) -> Result<Option<ipc::SessionState>> {
@@ -1024,7 +1027,7 @@ pub(in crate::cli) async fn repl_fallback_session_state(
 /// `/session` 面板里列哪些会话。列不出来（IPC 出错已经说过了）、或者一条都没有（说一声）
 /// 就是 `None`。空闲时的面板和回合里开的面板（B4）共用。
 pub(in crate::cli) async fn session_picker_entries(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     mode: PersonaLane,
 ) -> Result<Option<Vec<SessionListEntry>>> {
@@ -1069,7 +1072,7 @@ pub(in crate::cli) enum SessionPickOutcome {
 /// "mine": the session on screen, or the root of the subagent tree being
 /// visited (the child itself is not in the list).
 pub(in crate::cli) async fn repl_pick_session(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     mode: PersonaLane,
     active_session_id: &str,
@@ -1131,12 +1134,12 @@ pub(in crate::cli) async fn repl_pick_session(
 
 /// 面板里按 Ctrl+D 删一条。删不成返回原因给面板显示（不往正文里打，面板也不关）。
 pub(in crate::cli) async fn delete_session_from_picker(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     session_id: String,
 ) -> Result<std::result::Result<(), String>> {
     let command = IpcCommand::DeleteSession {
-        target: miyu_core::ipc::SessionRef::Id { id: session_id },
+        target: yunxi_core::ipc::SessionRef::Id { id: session_id },
     };
     Ok(
         match await_in_lobby(live, send_ipc_admin(paths, command)).await {
@@ -1147,13 +1150,13 @@ pub(in crate::cli) async fn delete_session_from_picker(
 }
 
 pub(in crate::cli) async fn repl_active_or_default_state(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     active_session_id: &str,
 ) -> Result<(ipc::SessionState, bool)> {
     match send_ipc_admin(
         paths,
         IpcCommand::GetSessionState {
-            target: miyu_core::ipc::SessionRef::Id {
+            target: yunxi_core::ipc::SessionRef::Id {
                 id: active_session_id.to_string(),
             },
             cwd: std::env::current_dir().ok(),
@@ -1177,7 +1180,7 @@ pub(in crate::cli) async fn repl_active_or_default_state(
 /// ——两处各写一遍迟早分叉。取会话状态那一趟 IPC 套 `await_in_lobby`：大厅
 /// 里开 `/models` 时星空不能定格（09-17）。
 pub(in crate::cli) async fn session_footer_status(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     live: &mut LiveReplTail,
     session_id: &str,
@@ -1194,9 +1197,9 @@ pub(in crate::cli) async fn session_footer_status(
 }
 
 /// Ensures the daemon is running, then sends one admin command; used by the
-/// one-shot session subcommands (`miyu new/session/rename/...`).
+/// one-shot session subcommands (`yunxi new/session/rename/...`).
 pub(in crate::cli) async fn session_admin(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     command: IpcCommand,
 ) -> Result<(ipc::SessionState, serde_json::Value)> {
     session_admin_streaming(paths, command, |_, _| Ok(())).await
@@ -1204,7 +1207,7 @@ pub(in crate::cli) async fn session_admin(
 
 /// `session_admin` + 中途事件回调,见 [`send_ipc_admin_streaming`]。
 pub(in crate::cli) async fn session_admin_streaming<F>(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     command: IpcCommand,
     on_event: F,
 ) -> Result<(ipc::SessionState, serde_json::Value)>
@@ -1212,7 +1215,7 @@ where
     F: FnMut(&str, &serde_json::Value) -> Result<()>,
 {
     ipc::ensure_daemon(paths, None).await?;
-    let refreshed = MiyuPaths::new()?;
+    let refreshed = YunXiPaths::new()?;
     send_ipc_admin_streaming(&refreshed, command, on_event).await
 }
 
@@ -1223,7 +1226,7 @@ where
 /// 「/goal edit 被当作消息发出去了」。返回 true 表示已变身（调用方跳过这次
 /// 提交并重绘输入行）；没有目标时返回 false，走正常提交让命令层去报错。
 pub(in crate::cli) fn prefill_goal_edit_input(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: Option<&str>,
     live: &mut LiveReplTail,
 ) -> bool {
@@ -1244,7 +1247,7 @@ pub(in crate::cli) fn prefill_goal_edit_input(
 }
 
 pub(in crate::cli) async fn send_ipc_admin(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     command: IpcCommand,
 ) -> Result<(ipc::SessionState, serde_json::Value)> {
     send_ipc_admin_streaming(paths, command, |_, _| Ok(())).await
@@ -1256,7 +1259,7 @@ pub(in crate::cli) async fn send_ipc_admin(
 /// ——它要跑一次完整的摘要调用,几十秒不吭声的话终端看着就是死的。所以这里
 /// 收帧改成循环而不是只读一帧;不关心事件的调用方用上面那层薄壳,行为不变。
 pub(in crate::cli) async fn send_ipc_admin_streaming<F>(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     command: IpcCommand,
     mut on_event: F,
 ) -> Result<(ipc::SessionState, serde_json::Value)>
@@ -1270,7 +1273,7 @@ where
             Some(IpcFrame::Event { kind, data, .. }) => on_event(&kind, &data)?,
             Some(IpcFrame::AdminResult { state, data }) => return Ok((state, data)),
             Some(IpcFrame::Error { message, .. }) => bail!("{message}"),
-            _ => bail!("Miyu core returned an invalid admin response"),
+            _ => bail!("YunXi core returned an invalid admin response"),
         }
     }
 }
@@ -1279,7 +1282,7 @@ where
 /// (footer 转轮要有人喂)。收帧放在单独的任务里经通道转过来:`ipc::receive`
 /// 是按长度前缀分帧的,直接在 `select!` 里和定时器抢会把读到一半的帧丢掉。
 pub(in crate::cli) async fn send_ipc_admin_streaming_ticked<F, T>(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     command: IpcCommand,
     mut on_event: F,
     tick_every: Duration,
@@ -1317,10 +1320,10 @@ where
                     break Err(anyhow::anyhow!("{message}"))
                 }
                 Some(Ok(Some(_))) => {
-                    break Err(anyhow::anyhow!("Miyu core returned an invalid admin response"))
+                    break Err(anyhow::anyhow!("YunXi core returned an invalid admin response"))
                 }
                 Some(Ok(None)) | None => {
-                    break Err(anyhow::anyhow!("Miyu core closed the connection"))
+                    break Err(anyhow::anyhow!("YunXi core closed the connection"))
                 }
                 Some(Err(error)) => break Err(error),
             },
@@ -1337,27 +1340,27 @@ where
 
 // `ipc_text` / `ipc_u64` 随解码表一起住到 `runtime::ipc_events`(09-16),
 // 这里只转一手,cli 内几十处调用不动。
-pub(in crate::cli) use miyu_hosts::runtime::{ipc_text, ipc_u64};
+pub(in crate::cli) use yunxi_hosts::runtime::{ipc_text, ipc_u64};
 
 pub(in crate::cli) fn ipc_mode_name(mode: PersonaLane) -> &'static str {
     mode.mode_word()
 }
 
 pub(in crate::cli) fn ipc_images(
-    images: &[Option<miyu_base::clipboard::PastedImage>],
-) -> Vec<Option<miyu_core::ipc::ImageAttachment>> {
+    images: &[Option<yunxi_base::clipboard::PastedImage>],
+) -> Vec<Option<yunxi_core::ipc::ImageAttachment>> {
     images
         .iter()
         .map(|image| {
             image.as_ref().map(|image| match image {
-                miyu_base::clipboard::PastedImage::Binary(image) => {
-                    miyu_core::ipc::ImageAttachment::Binary {
+                yunxi_base::clipboard::PastedImage::Binary(image) => {
+                    yunxi_core::ipc::ImageAttachment::Binary {
                         mime: image.mime.clone(),
                         data: image.data.clone(),
                     }
                 }
-                miyu_base::clipboard::PastedImage::Path(path) => {
-                    miyu_core::ipc::ImageAttachment::Path { path: path.clone() }
+                yunxi_base::clipboard::PastedImage::Path(path) => {
+                    yunxi_core::ipc::ImageAttachment::Path { path: path.clone() }
                 }
             })
         })

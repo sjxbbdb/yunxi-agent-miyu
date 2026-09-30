@@ -126,15 +126,15 @@ def verify_container(args, manifest, required, records, provider, out):
         config={'config_version':3,'oobe_done':True,'active_provider':'opencodego',
             'active_provider_models':[{'provider_id':'opencodego','model':'deepseek-v4.1-flash'}],
             'providers':[provider],'memory':{'enabled':False}}
-        config_path=box.root/'miyu/config/config.jsonc'
+        config_path=box.root/'yunxi/config/config.jsonc'
         write_json(config_path,config)
         config_path.chmod(0o600)
-        name='miyu-verify-'+box.run_id[:12]
+        name='yunxi-verify-'+box.run_id[:12]
         probe=Path(__file__).resolve().parent/'probes/installed.py'
         base=['docker','exec',name]
         try:
             execute(['docker','run','--rm','-d','--name',name,
-                '--label','io.miyu.distribution.owner=distribution-2026-09-14',
+                '--label','io.yunxi.distribution.owner=distribution-2026-09-14',
                 '--mount',f'type=bind,src={args.packages.resolve()},dst=/packages,readonly',
                 '--mount',f'type=bind,src={probe},dst=/probe.py,readonly',
                 '--mount',f'type=bind,src={box.root},dst=/test-home',image,
@@ -146,13 +146,13 @@ def verify_container(args, manifest, required, records, provider, out):
             execute(base+['uname','-m'],'architecture.txt',30)
             for asset_id,record in records.items():
                 probe_home=box.root/'probes'/asset_id
-                for child in ('home','miyu/config','runtime','config','data','cache','state'):
+                for child in ('home','yunxi/config','runtime','config','data','cache','state'):
                     (probe_home/child).mkdir(parents=True,mode=0o700,exist_ok=True)
-                write_json(probe_home/'miyu/config/config.jsonc',config)
-                (probe_home/'miyu/config/config.jsonc').chmod(0o600)
+                write_json(probe_home/'yunxi/config/config.jsonc',config)
+                (probe_home/'yunxi/config/config.jsonc').chmod(0o600)
                 if record['asset']['format']=='tar.gz':
                     # Independent relocation test, away from /usr and all source assets.
-                    prefix='/opt/Miyu Tar Test'
+                    prefix='/opt/YunXi Tar Test'
                     execute(base+['mkdir','-p',prefix],asset_id+'-mkdir.txt',30)
                     execute(base+['tar','-xzf',f'/packages/{asset_id}/{record["asset"]["filename"]}',
                                   '-C',prefix],asset_id+'-extract.txt',120)

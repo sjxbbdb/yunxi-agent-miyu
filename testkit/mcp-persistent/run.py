@@ -10,7 +10,7 @@
     delete_session_reaps_its_process  删掉会话 a：它那个进程没了，b 的还在
     daemon_stop_leaves_no_orphans     daemon 收到 SIGTERM 退出之后：一个服务器进程都不剩
 
-用法：python3 testkit/mcp-persistent/run.py [miyu 二进制]   （默认 target/debug/miyu）
+用法：python3 testkit/mcp-persistent/run.py [yunxi 二进制]   （默认 target/debug/yunxi）
 """
 
 import json
@@ -73,11 +73,11 @@ def recv_exact(sock, n):
 
 
 class Sandbox:
-    def __init__(self, miyu):
-        self.miyu = miyu
+    def __init__(self, yunxi):
+        self.yunxi = yunxi
         self.port = free_port()
         self.stub_port = free_port()
-        self.home = Path(tempfile.mkdtemp(prefix="miyu-mcp-persistent-", dir=str(Path.home() / ".cache")))
+        self.home = Path(tempfile.mkdtemp(prefix="yunxi-mcp-persistent-", dir=str(Path.home() / ".cache")))
         self.run = self.home / "run"
         self.work = self.home / "work"
         for path in (self.run, self.home / "config", self.home / "cache", self.work):
@@ -107,10 +107,10 @@ class Sandbox:
         (self.home / "config" / "config.jsonc").write_text(json.dumps(config), encoding="utf-8")
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith("HERDR_")
-                    and k not in ("MIYU_SESSION", "MIYU_DIRECT", "MIYU_TURN_MODE", "MIYU_HOME",
+                    and k not in ("YUNXI_SESSION", "YUNXI_DIRECT", "YUNXI_TURN_MODE", "YUNXI_HOME",
                                   "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME")}
-        self.env.update(MIYU_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8",
-                        MIYU_LOG="info")
+        self.env.update(YUNXI_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8",
+                        YUNXI_LOG="info")
         self.stub = None
         self.daemon = None
 
@@ -120,7 +120,7 @@ class Sandbox:
             env=dict(self.env, STUB_PORT=str(self.stub_port), STUB_REQUEST_LOG=str(self.requests)),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         log = (self.home / "daemon.log").open("w")
-        self.daemon = subprocess.Popen([str(self.miyu), "__daemon", "--port", str(self.port)], env=self.env,
+        self.daemon = subprocess.Popen([str(self.yunxi), "__daemon", "--port", str(self.port)], env=self.env,
                                        cwd=str(self.work), stdin=subprocess.DEVNULL, stdout=log,
                                        stderr=subprocess.STDOUT)
         if not wait_for(self.ping, 40):
@@ -145,7 +145,7 @@ class Sandbox:
             return json.loads(recv_exact(sock, length))
 
     def ask(self, session, text, create=False):
-        args = [str(self.miyu), "ask", "--output-format", "json", "--session", session]
+        args = [str(self.yunxi), "ask", "--output-format", "json", "--session", session]
         if create:
             args.append("--create")
         proc = subprocess.run([*args, text], env=self.env, stdin=subprocess.DEVNULL, cwd=str(self.work),
@@ -203,8 +203,8 @@ class Sandbox:
 
 
 def main():
-    miyu = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "target" / "debug" / "miyu").resolve()
-    box = Sandbox(miyu)
+    yunxi = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "target" / "debug" / "yunxi").resolve()
+    box = Sandbox(yunxi)
     report = {}
     try:
         box.start()

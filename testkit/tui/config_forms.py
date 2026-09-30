@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """设置界面表单去掉「保存 / 返回」两行、去掉「导航中」（用户 09-26）。
 
-真二进制 + PTY + pyte（驱动照搬 config_visual.py），隔离的 MIYU_HOME，不起 daemon、
+真二进制 + PTY + pyte（驱动照搬 config_visual.py），隔离的 YUNXI_HOME，不起 daemon、
 不发模型请求。判据：
 
     settings_no_navigating_label   全局设置表单导航时不写「导航中」
@@ -13,7 +13,7 @@
     create_form_keeps_buttons      新增自定义模型（新增类表单）照旧有「保存」「返回」
     saved_on_exit                  主菜单「保存并退出」后，配置里是改过的上下文窗口
 
-Run: python3 testkit/tui/config_forms.py --binary /absolute/path/to/miyu
+Run: python3 testkit/tui/config_forms.py --binary /absolute/path/to/yunxi
 """
 
 import argparse
@@ -54,7 +54,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
     args = parser.parse_args()
-    sandbox = sandbox_dir.make("miyu-config-forms-")
+    sandbox = sandbox_dir.make("yunxi-config-forms-")
     home = sandbox / "home"
     (home / "config").mkdir(parents=True)
     runtime = Path(tempfile.mkdtemp(prefix="mx-cf-", dir="/tmp"))

@@ -6,7 +6,7 @@
 - 说过一句、退出、再开 → 屏幕上**看得到**上一句（接着上次那条聊）；
 - 车道指针没换、这条车道的会话没多一条。
 
-直连模式（`MIYU_DIRECT=1`，调试用）不跟这个开关、照旧开新会话：它启动时不回放历史，
+直连模式（`YUNXI_DIRECT=1`，调试用）不跟这个开关、照旧开新会话：它启动时不回放历史，
 接着上次那条会一句之前的话都看不见（09-26 定的口径，见 `cli/repl/direct.rs`）。
 
     cargo build
@@ -33,9 +33,9 @@ LAST = {"tui_start_session": "last"}
 
 
 def settings_scenario(report):
-    """`miyu config` → 全局设置最后一项「打开终端界面时进入」：默认「新会话」，改成「最近会话」
+    """`yunxi config` → 全局设置最后一项「打开终端界面时进入」：默认「新会话」，改成「最近会话」
     后保存退出，配置里是 `"tui_start_session": "last"`。"""
-    sandbox = sandbox_dir.make("miyu-start-session-")
+    sandbox = sandbox_dir.make("yunxi-start-session-")
     home = sandbox / "home"
     (home / "config").mkdir(parents=True)
     runtime = Path(tempfile.mkdtemp(prefix="mx-ss-", dir="/tmp"))
@@ -77,7 +77,7 @@ def settings_scenario(report):
 def scenario(report, label, direct):
     saved_env = h.ENV
     if direct:
-        h.ENV = dict(h.ENV, MIYU_DIRECT="1")
+        h.ENV = dict(h.ENV, YUNXI_DIRECT="1")
     stub, daemon, tui, master, sink = r.start(ns.STUB, LAST, direct=direct)
     try:
         said = f"{label}第一次说的话"

@@ -16,8 +16,8 @@
 跑之前给它私有端口和沙箱家，别跟别的走查抢：
 
     cargo build
-    MIYU_HOME=/tmp/miyu-sessdel/home MIYU_TUI_PORT=18465 STUB_PORT=18466 \\
-      MIYU_TUI_RUNTIME=/tmp/mx-sessdel OUT=~/.cache/miyu-sessdel \\
+    YUNXI_HOME=/tmp/yunxi-sessdel/home YUNXI_TUI_PORT=18465 STUB_PORT=18466 \\
+      YUNXI_TUI_RUNTIME=/tmp/mx-sessdel OUT=~/.cache/yunxi-sessdel \\
       python3 testkit/tui/session_delete.py
 """
 

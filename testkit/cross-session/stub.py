@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """跨会话消息黑盒(09-23)的桩 LLM:OpenAI 兼容 SSE,按最后一条消息分流。
 
-暗号写在 `miyu ask` 发出去的那句话里:
+暗号写在 `yunxi ask` 发出去的那句话里:
 
     TK list                      调 send_to_other_running_session(list),把结果原样回出来
     TK send <会话id> <正文>       调 send,回 SENT: + 工具结果

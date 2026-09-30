@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """真机探针：kitty 的通知协议（OSC 99）在这台机器上到底成不成。
 
-`testkit/tui/notify_sound.py` 验的是 Miyu 发出去的那串字节对不对；这个脚本验的
+`testkit/tui/notify_sound.py` 验的是 YunXi 发出去的那串字节对不对；这个脚本验的
 是**桌面那一侧**——同样一串字节写进一个 kitty 窗口之后：
 
-1. 通知守护进程里真的多出一条（`makoctl list`，`app_name` = Miyu）；
+1. 通知守护进程里真的多出一条（`makoctl list`，`app_name` = YunXi）；
 2. 真的响了一声（PipeWire 多出一路 sink-input）；
 3. 点它（`makoctl invoke`）真的把焦点跳回**发通知的那个 kitty 窗口**
    （`niri msg focused-window` 前后对比）——这一步会动你的焦点，所以要显式
@@ -28,7 +28,7 @@ import subprocess
 import sys
 import time
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -41,7 +41,7 @@ def b64(value):
 def sequence(ident, title, body, sound, only="always"):
     return (
         f"\x1b]99;i={ident}:e=1:d=0:a=focus:o={only}:u=1"
-        f":f={b64('Miyu')}:s={b64(sound)}:p=title;{b64(title)}\x1b\\"
+        f":f={b64('YunXi')}:s={b64(sound)}:p=title;{b64(title)}\x1b\\"
         f"\x1b]99;i={ident}:e=1:d=1:p=body;{b64(body)}\x1b\\"
     )
 
@@ -96,22 +96,22 @@ def main():
     # 提示音就一秒出头，采一次多半采空——发完之后一直盯到它响完。
     before = set(sink_inputs())
     with open(args.tty, "w") as terminal:
-        terminal.write(sequence("miyu-probe", "Miyu 回复完成", "正在等待处理", args.sound))
+        terminal.write(sequence("yunxi-probe", "YunXi 回复完成", "正在等待处理", args.sound))
     appeared = set()
     deadline = time.time() + 2.5
     while time.time() < deadline:
         appeared |= set(sink_inputs()) - before
         time.sleep(0.1)
-    shown = [n for n in mako_list() if n.get("app_name") == "Miyu"]
+    shown = [n for n in mako_list() if n.get("app_name") == "YunXi"]
     report["通知守护进程收到了"] = bool(shown)
     report["标题正文没乱码"] = bool(shown) and (
-        shown[0].get("summary") == "Miyu 回复完成"
+        shown[0].get("summary") == "YunXi 回复完成"
         and shown[0].get("body") == "正在等待处理"
     )
     report["通知是可点的"] = bool(shown) and "default" in (shown[0].get("actions") or {})
     report["响了一声"] = bool(appeared)
 
-    # 自定义文件那条路：Miyu 自己开播放器放，`notify.rs::play_tone` 的同一串
+    # 自定义文件那条路：YunXi 自己开播放器放，`notify.rs::play_tone` 的同一串
     # 命令按同样的顺序试一遍。
     if args.file:
         before = set(sink_inputs())

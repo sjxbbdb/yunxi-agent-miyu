@@ -1,12 +1,12 @@
 //! shell 集成。
 //!
-//! 装在 shell 里的钩子会把命令行内容交给 Miyu 判断：这是一条要执行的命令，
-//! 还是一句想问 Miyu 的话？判断在毫秒级发生（人还按着回车），所以这条路要
+//! 装在 shell 里的钩子会把命令行内容交给 YunXi 判断：这是一条要执行的命令，
+//! 还是一句想问 YunXi 的话？判断在毫秒级发生（人还按着回车），所以这条路要
 //! 尽量短。剪贴板粘贴与占位符展开也在这里。
 
 use crate::cli::*;
 
-pub(in crate::cli) fn remove_shell_hooks(paths: &MiyuPaths) -> Result<()> {
+pub(in crate::cli) fn remove_shell_hooks(paths: &YunXiPaths) -> Result<()> {
     let removed = shell::fish::uninstall(paths)?;
     let removed = shell::bash::uninstall(paths)? || removed;
     let removed = shell::zsh::uninstall(paths)? || removed;
@@ -14,8 +14,8 @@ pub(in crate::cli) fn remove_shell_hooks(paths: &MiyuPaths) -> Result<()> {
         println!(
             "{}",
             t(
-                "no installed Miyu shell hooks found",
-                "未找到已安装的 Miyu shell hook"
+                "no installed YunXi shell hooks found",
+                "未找到已安装的 YunXi shell hook"
             )
         );
     }
@@ -71,9 +71,9 @@ fn short_image_link(path: &std::path::Path, filename: &str) -> Result<String> {
     Ok(short_name)
 }
 
-pub(in crate::cli) fn run_clipboard_paste(paths: &MiyuPaths) -> Result<()> {
-    match miyu_base::clipboard::read_clipboard() {
-        Ok(miyu_base::clipboard::ClipboardContent::Image(img)) => {
+pub(in crate::cli) fn run_clipboard_paste(paths: &YunXiPaths) -> Result<()> {
+    match yunxi_base::clipboard::read_clipboard() {
+        Ok(yunxi_base::clipboard::ClipboardContent::Image(img)) => {
             let path = img.write_temp_file(&paths.cache_dir, 0)?;
             let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("image");
             // 占位符里的文件名是跨进程找回图片的唯一线索,删不得;但 32 位
@@ -88,7 +88,7 @@ pub(in crate::cli) fn run_clipboard_paste(paths: &MiyuPaths) -> Result<()> {
             io::stdout().flush()?;
             Ok(())
         }
-        Ok(miyu_base::clipboard::ClipboardContent::MediaPath(path)) => {
+        Ok(yunxi_base::clipboard::ClipboardContent::MediaPath(path)) => {
             let source = std::path::Path::new(&path);
             let filename = source
                 .file_name()
@@ -96,7 +96,7 @@ pub(in crate::cli) fn run_clipboard_paste(paths: &MiyuPaths) -> Result<()> {
                 .unwrap_or("image");
             let dir = paths.cache_dir.join("clipboard_images");
             std::fs::create_dir_all(&dir)?;
-            miyu_base::clipboard::cleanup_clipboard_images(&dir);
+            yunxi_base::clipboard::cleanup_clipboard_images(&dir);
             // 这条路(剪贴板里是图片**文件**而不是图片数据,例如从 QQ 或文件
             // 管理器复制)原先原样打出源文件名,而 QQ 的文件名正好是 32 位
             // 哈希,占位符就又长又吵——`Image` 分支早就截短了,这里漏了
@@ -112,12 +112,12 @@ pub(in crate::cli) fn run_clipboard_paste(paths: &MiyuPaths) -> Result<()> {
             io::stdout().flush()?;
             Ok(())
         }
-        Ok(miyu_base::clipboard::ClipboardContent::TextPath(path)) => {
+        Ok(yunxi_base::clipboard::ClipboardContent::TextPath(path)) => {
             print!("{}", path);
             io::stdout().flush()?;
             Ok(())
         }
-        Ok(miyu_base::clipboard::ClipboardContent::Text(text)) => {
+        Ok(yunxi_base::clipboard::ClipboardContent::Text(text)) => {
             let text = normalize_pasted_newlines(&text);
             if should_summarize_pasted_text(&text) {
                 let index = shell_pasted_text_index(&paths.cache_dir, &text)?;
@@ -176,7 +176,7 @@ pub(in crate::cli) fn run_shell_classify(shell_name: &str, message: &str) -> Res
 }
 
 pub(in crate::cli) async fn run_shell_intercept(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     shell_name: &str,
     message: String,
 ) -> Result<()> {
@@ -227,13 +227,13 @@ pub(in crate::cli) async fn run_shell_intercept(
         // 见正文为空就不复述，同一句不会打两遍。
         //
         // 不能只靠 `main.rs` 打 stderr：fish 钩子里 `fish_command_not_found`
-        // 那两条路是 `miyu --shell-intercept … 2>/dev/null`，stderr 整个被吞，
+        // 那两条路是 `yunxi --shell-intercept … 2>/dev/null`，stderr 整个被吞，
         // 「no LLM provider/model endpoint succeeded」这种回合失败就一个字都
         // 看不见（用户实测）。
         Err(err) => {
             println!(
                 "\x1b[31m{}: {:#}\x1b[0m",
-                miyu_base::i18n::text("error", "错误"),
+                yunxi_base::i18n::text("error", "错误"),
                 err
             );
             let _ = io::stdout().flush();
@@ -247,7 +247,7 @@ pub(in crate::cli) async fn run_shell_intercept(
 }
 
 pub(in crate::cli) fn expand_shell_pasted_text_placeholders(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     message: &str,
 ) -> Result<String> {
     let placeholders = find_pasted_text_placeholders(message);

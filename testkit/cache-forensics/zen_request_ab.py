@@ -2,7 +2,7 @@
 """x-opencode-request A/B: does keeping the request header constant within a turn
 change how much of the previous prompt OpenCode Go serves from cache?
 
-Arm A = what Miyu sends today: a new x-opencode-request per HTTP request.
+Arm A = what YunXi sends today: a new x-opencode-request per HTTP request.
 Arm B = what the opencode CLI sends: one id per user turn.
 
 Every trial opens a fresh x-opencode-session and a prefix nobody has sent before,
@@ -11,8 +11,8 @@ assistant/tool-sized pair. Step k >= 2 is scored by how much of step k-1's
 prompt came back as cached. Arms alternate trial by trial so a gateway incident
 hits both.
 
-Reads the provider key from ~/.miyu/config/config.jsonc and never prints it.
-Results: one JSON line per request under ~/.cache/miyu-cache-ab/.
+Reads the provider key from ~/.yunxi/config/config.jsonc and never prints it.
+Results: one JSON line per request under ~/.cache/yunxi-cache-ab/.
 """
 
 import argparse
@@ -30,8 +30,8 @@ from pathlib import Path
 import requests
 
 USER_AGENT = "opencode/1.18.29 ai-sdk/provider-utils/4.0.46 runtime/bun/1.4.0"
-CONFIG = Path.home() / ".miyu/config/config.jsonc"
-OUT_DIR = Path.home() / ".cache/miyu-cache-ab"
+CONFIG = Path.home() / ".yunxi/config/config.jsonc"
+OUT_DIR = Path.home() / ".cache/yunxi-cache-ab"
 WORDS = (
     "river stone lantern orbit maple cipher harbor quartz meadow signal ember "
     "falcon prism tundra velvet anchor comet garnet willow beacon canyon drift "

@@ -112,7 +112,7 @@ import urllib.request
 # Reddit 归档镜像,是这里唯一的数据源。
 ARCTIC_BASE = "https://arctic-shift.photon-reddit.com"
 
-USER_AGENT = "miyu-reddit-search/1.0 (https://github.com/SHORiN-KiWATA/Miyu)"
+USER_AGENT = "yunxi-reddit-search/1.0 (https://github.com/SHORiN-KiWATA/YunXi)"
 HTTP_TIMEOUT = 25
 
 # 归档是「发帖那一刻」抓的,投票和评论数要约 36 小时后才回填。这段时间内
@@ -144,12 +144,12 @@ class Failure(Exception):
 
 
 def cache_dir():
-    """中间产物统一收进 Miyu 的缓存目录;单独拿到终端跑时退回 XDG。"""
-    base = os.environ.get("MIYU_SCRIPT_CACHE_DIR")
+    """中间产物统一收进 YunXi 的缓存目录;单独拿到终端跑时退回 XDG。"""
+    base = os.environ.get("YUNXI_SCRIPT_CACHE_DIR")
     if not base:
         base = os.path.join(
             os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"),
-            "miyu-scripts")
+            "yunxi-scripts")
     path = os.path.join(base, "reddit_search")
     try:
         os.makedirs(path, exist_ok=True)
@@ -856,7 +856,7 @@ def normalize(raw):
 
 
 def read_args():
-    """Miyu 走 stdin JSON；直接在终端跑时走 argparse，两种形态同一份逻辑。"""
+    """YunXi 走 stdin JSON；直接在终端跑时走 argparse，两种形态同一份逻辑。"""
     if len(sys.argv) > 1:
         parser = argparse.ArgumentParser(
             prog="reddit-search", add_help=True,
@@ -877,7 +877,7 @@ def read_args():
         parser.add_argument("--no-full", dest="full", action="store_false")
         parser.add_argument("-f", "--format", default="md", choices=["md", "json"])
         return {k: v for k, v in vars(parser.parse_args()).items() if v is not None}
-    raw = os.environ.get("MIYU_ARGS_JSON")
+    raw = os.environ.get("YUNXI_ARGS_JSON")
     if not raw:
         try:
             raw = sys.stdin.read()

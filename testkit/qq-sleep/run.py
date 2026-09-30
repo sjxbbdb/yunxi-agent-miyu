@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """QQ 睡眠时间黑盒:沙箱 daemon + OpenAI 桩 + 假 NapCat(反向 WS)。
 
-    BIN=<miyu> python3 sleep_e2e.py
+    BIN=<yunxi> python3 sleep_e2e.py
 
 判定:
   睡眠中  游客群 @ / 游客私聊 / 白名单群 @ → 不回;白名单私聊 / 管理员私聊 / 管理员群 @ → 回
@@ -22,7 +22,7 @@ import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -31,14 +31,14 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "testkit" / "webui-fixes"))
 import authlib  # noqa: E402
 BIN = Path(os.environ["BIN"])
-OUT = Path(os.environ.get("OUT", "/tmp/miyu-sleep-e2e")).expanduser()
+OUT = Path(os.environ.get("OUT", "/tmp/yunxi-sleep-e2e")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18523"))
 QQ_PORT = int(os.environ.get("QQ_PORT", "18524"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18525"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 
 spec = importlib.util.spec_from_file_location("fake", REPO / "testkit" / "fake-onebot" / "run.py")
 fake = importlib.util.module_from_spec(spec)

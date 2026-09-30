@@ -10,12 +10,12 @@ description: Control a Bilibili live room. Use when the user says 开播、下�
 脚本不在常驻工具面上，经工具桥调：
 
 ```bash
-miyu tool-call bilibili_live_stream --stdin <<'JSON'
+yunxi tool-call bilibili_live_stream --stdin <<'JSON'
 {"command": "status"}
 JSON
 ```
 
-`command` 必填，其余可省。完整参数用 `miyu tool-call bilibili_live_stream --describe` 现取。
+`command` 必填，其余可省。完整参数用 `yunxi tool-call bilibili_live_stream --describe` 现取。
 
 ## 七个命令
 

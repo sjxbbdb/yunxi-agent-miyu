@@ -47,17 +47,17 @@ def nfpm_config(manifest, asset, stage, inventory):
     glibc=manifest['builders']['gnu-x86_64']['glibc']
     libc=f'libc6 (>= {glibc})' if family=='deb' else f'glibc >= {glibc}'
     voice=asset['component']=='voice'
-    name='miyu-voice' if voice else 'miyu'
+    name='yunxi-voice' if voice else 'yunxi'
     release=str(manifest['package_revision'])
     if family=='fedora':
         release+=f'.fc{manifest["fedora_version"]}'
     config.update(name=name,version=manifest['version'],release=release,
         maintainer='SHORiN <shorin@users.noreply.github.com>',
-        homepage='https://github.com/SHORiN-KiWATA/miyu-agent',license='MIT AND OFL-1.1',
-        description='Miyu voice front end' if voice else 'Miyu terminal AI assistant',contents=[])
+        homepage='https://github.com/sjxbbdb/yunxi-agent-miyu',license='MIT AND OFL-1.1',
+        description='YunXi voice front end' if voice else 'YunXi terminal AI assistant',contents=[])
     if voice:
         exact=f'{manifest["version"]}-{release}'
-        config['depends']=[f'miyu (= {exact})' if family=='deb' else f'miyu = {exact}',
+        config['depends']=[f'yunxi (= {exact})' if family=='deb' else f'yunxi = {exact}',
             'libasound2t64' if family=='deb' else 'alsa-lib',
             'libstdc++6' if family=='deb' else 'libstdc++',
             'libgcc-s1' if family=='deb' else 'libgcc', libc]

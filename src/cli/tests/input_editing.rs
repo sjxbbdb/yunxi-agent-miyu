@@ -13,7 +13,7 @@ use std::sync::Arc;
 /// 传 None——`parse_size(None)` 的语义正是「铺满整个终端」。
 #[test]
 fn every_tool_image_gets_a_size_not_just_memes() {
-    let config = miyu_base::config::AppConfig::default();
+    let config = yunxi_base::config::AppConfig::default();
     // 没有一个工具可以拿着 None 去调 print_image_file。
     for name in [
         "generate_image",
@@ -60,7 +60,7 @@ fn repl_history_is_capped() {
 #[test]
 fn models_is_the_cli_model_selector() {
     let matches = localized_command()
-        .try_get_matches_from(["miyu", "models", "1"])
+        .try_get_matches_from(["yunxi", "models", "1"])
         .unwrap();
     let cli = Cli::from_arg_matches(&matches).unwrap();
 
@@ -69,7 +69,7 @@ fn models_is_the_cli_model_selector() {
         Some(Command::Models(ModelsArgs { target: Some(ref target), global: false })) if target == "1"
     ));
     let old_matches = localized_command()
-        .try_get_matches_from(["miyu", "providers"])
+        .try_get_matches_from(["yunxi", "providers"])
         .unwrap();
     let old_cli = Cli::from_arg_matches(&old_matches).unwrap();
     assert!(old_cli.command.is_none());
@@ -80,7 +80,7 @@ fn models_is_the_cli_model_selector() {
 async fn one_shot_turns_default_to_a_throwaway_session() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
-    let paths = MiyuPaths {
+    let paths = YunXiPaths {
         root_dir: root.to_path_buf(),
         config_dir: root.join("config"),
         config_file: root.join("config/config.jsonc"),
@@ -96,7 +96,7 @@ async fn one_shot_turns_default_to_a_throwaway_session() {
         system_scripts_dir: root.join("system-scripts"),
     };
 
-    // Neither flag: `miyu ask` / `miyu '<message>'` must not touch a real
+    // Neither flag: `yunxi ask` / `yunxi '<message>'` must not touch a real
     // conversation. `--continue` opts back into the terminal session.
     // Both resolve without contacting the daemon.
     assert_eq!(
@@ -875,8 +875,8 @@ fn strips_terminal_control_sequences_from_repl_text() {
 }
 
 /// 只需要 state_dir 的 fixture：历史文件、状态库都落在它下面。
-fn state_only_paths(root: &std::path::Path) -> MiyuPaths {
-    MiyuPaths {
+fn state_only_paths(root: &std::path::Path) -> YunXiPaths {
+    YunXiPaths {
         root_dir: PathBuf::new(),
         config_dir: PathBuf::new(),
         config_file: PathBuf::new(),
@@ -922,7 +922,7 @@ fn repl_history_skips_synthetic_turns() {
             "turn_2",
             &format!(
                 "{}子代理「跑一下」已执行完毕：\n- job_id: j1\n这是系统自动触发的跟进，不是用户消息。</background-job-report>",
-                miyu_core::state::BACKGROUND_JOB_REPORT_TAG
+                yunxi_core::state::BACKGROUND_JOB_REPORT_TAG
             ),
             999999,
         )
@@ -933,7 +933,7 @@ fn repl_history_skips_synthetic_turns() {
             "turn_3",
             &format!(
                 "{}\nRound 1 of 3 — your standing objective</goal_round>",
-                miyu_core::state::GOAL_ROUND_TAG
+                yunxi_core::state::GOAL_ROUND_TAG
             ),
             999999,
         )
@@ -1012,7 +1012,7 @@ fn repl_history_does_not_leak_across_sessions() {
     let store = StateStore::new(&paths).unwrap();
     let session = |name: &str| {
         store
-            .create_session("miyu", name, "user", None)
+            .create_session("yunxi", name, "user", None)
             .unwrap()
             .session_id
     };

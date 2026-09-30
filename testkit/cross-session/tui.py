@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """跨会话消息的全屏 TUI 走查(09-23):沙箱 daemon + stub.py + 真 PTY + pyte 抓屏。
 
-TUI 开着「收件」(B,在线登记靠 TUI 的轮询自己报);「写代码」(A)用一次性 `miyu ask`
+TUI 开着「收件」(B,在线登记靠 TUI 的轮询自己报);「写代码」(A)用一次性 `yunxi ask`
 驱动,测具经 IPC 替它报在线(B 往回发时它得算开着)。判据:
 
     tui01_wake_block            A 发来 14 行 → B 的 TUI 画出「从 写代码（<短 id>）收到消息」那一块:
@@ -15,9 +15,9 @@ TUI 开着「收件」(B,在线登记靠 TUI 的轮询自己报);「写代码」
     tui07_midturn_block         B 正跑着一轮(sleep 6)时 A 发来一句:这一轮里画出同样的那一块,
                                 不画成用户气泡、不挂「排队中」,B 的 AI 在这一轮里读到(SAW_MIDTURN)
 
-    python3 testkit/cross-session/tui.py <miyu 二进制>
+    python3 testkit/cross-session/tui.py <yunxi 二进制>
 
-产物(抓屏文本)在 /tmp/miyu-xs-tui,全过就删;不碰线上 8300。
+产物(抓屏文本)在 /tmp/yunxi-xs-tui,全过就删;不碰线上 8300。
 """
 
 import json
@@ -43,13 +43,13 @@ if len(sys.argv) != 2:
     print(__doc__)
     raise SystemExit(2)
 BINARY = Path(sys.argv[1]).resolve()
-OUT = Path("/tmp/miyu-xs-tui")
+OUT = Path("/tmp/yunxi-xs-tui")
 # run.py 在导入时读这几个环境变量定路径与端口:全指到 /tmp,别落进家目录。
 os.environ.update(
-    MIYU_BIN=str(BINARY),
-    MIYU_HOME=str(OUT / "home"),
-    MIYU_TUI_RUNTIME="/tmp/mxs-tui",
-    MIYU_TUI_PORT=str(free_port()),
+    YUNXI_BIN=str(BINARY),
+    YUNXI_HOME=str(OUT / "home"),
+    YUNXI_TUI_RUNTIME="/tmp/mxs-tui",
+    YUNXI_TUI_PORT=str(free_port()),
     STUB_PORT=str(free_port()),
     OUT=str(OUT),
 )
@@ -90,7 +90,7 @@ def ask(session, text, create=False):
     args = [str(BINARY), "ask", "--output-format", "json", "--session", session]
     if create:
         args.append("--create")
-    env = {k: v for k, v in h.ENV.items() if k != "MIYU_TUI"}
+    env = {k: v for k, v in h.ENV.items() if k != "YUNXI_TUI"}
     return subprocess.run([*args, text], env=env, stdin=subprocess.DEVNULL, cwd=str(h.HOME),
                           capture_output=True, text=True, timeout=120)
 

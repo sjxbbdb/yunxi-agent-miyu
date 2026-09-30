@@ -16,8 +16,8 @@
 09-25 之前技能目录拼在 load_skill 的描述里,目录一变 tools 的字节就变,第 3 轮整段不命中;
 之后描述是常量、目录随回合尾巴发,第 3 轮应当照样命中,尾巴里多一份新目录。
 
-用法: skills_catalog_live.py <miyu 二进制> [标签]   新旧两个二进制各跑一次对比;
-      逐请求记账行存到 ~/.cache/miyu-cache-replay/skills-<标签>.json
+用法: skills_catalog_live.py <yunxi 二进制> [标签]   新旧两个二进制各跑一次对比;
+      逐请求记账行存到 ~/.cache/yunxi-cache-replay/skills-<标签>.json
 """
 
 import json
@@ -97,7 +97,7 @@ def main():
     ok = False
     try:
         result = scenario(box)
-        out = Path.home() / ".cache/miyu-cache-replay" / f"skills-{label}.json"
+        out = Path.home() / ".cache/yunxi-cache-replay" / f"skills-{label}.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
         print_table(result)

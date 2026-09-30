@@ -3,11 +3,11 @@
 
 config.terminal_session_mode(normal|dev,默认 normal)决定终端集成车道——shell
 提示符敲的话(shellhook)落进去的那条会话,也就是 daemon 的 current_session 指针
-指着的会话——跑普通还是开发模式。daemon 启动和 `miyu reload` 各对一次:掰「终端
+指着的会话——跑普通还是开发模式。daemon 启动和 `yunxi reload` 各对一次:掰「终端
 集成会话」(id default)的人格 + 把指针指过去。验:
 
     默认 → 指针在终端集成会话上 mode=normal,shellhook 回合工具面是普通面
-    指针停在另一条普通会话上(模拟换人格留下的状态)+ 改 dev + miyu reload
+    指针停在另一条普通会话上(模拟换人格留下的状态)+ 改 dev + yunxi reload
         → 指针拉回终端集成会话、mode=dev,shellhook 回合工具面换成 dev 面(不用重启)
     改回 normal + reload → 回到普通;别的会话不受影响;阅后即焚的裸 ask 不受影响
     daemon 带 dev 配置重启(指针又被拨到普通会话上)→ 启动路也把指针拉回来
@@ -25,7 +25,7 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -49,7 +49,7 @@ def set_mode(value):
 
 
 def start_daemon():
-    daemon = subprocess.Popen([str(tk.MIYU), "daemon", "--port", str(tk.PORT)], env=tk.env(),
+    daemon = subprocess.Popen([str(tk.YUNXI), "daemon", "--port", str(tk.PORT)], env=tk.env(),
                               stdout=(tk.OUT / "daemon.log").open("a"), stderr=subprocess.STDOUT)
     for _ in range(60):
         if tk.find_socket():
@@ -61,7 +61,7 @@ def start_daemon():
 
 
 def stop_daemon(daemon):
-    subprocess.run([str(tk.MIYU), "daemon", "stop"], env=tk.env(), capture_output=True, timeout=30)
+    subprocess.run([str(tk.YUNXI), "daemon", "stop"], env=tk.env(), capture_output=True, timeout=30)
     try:
         daemon.wait(timeout=10)
     except subprocess.TimeoutExpired:
@@ -118,14 +118,14 @@ def shellhook_tools(tag):
 
 
 def ask_tools():
-    """程序驱动的 `miyu ask --output-format json`(阅后即焚,没传 --mode):显式接口,不跟配置。"""
+    """程序驱动的 `yunxi ask --output-format json`(阅后即焚,没传 --mode):显式接口,不跟配置。"""
     code, out, err = tk.cli(["ask", "--output-format", "json", "TK ask"])
     assert code == 0, err
     return sorted(tk.reply_summary(tk.json_lines(out)[0]).get("tools") or [])
 
 
 def plain_tools(tag):
-    """裸 `miyu "…"`(阅后即焚,终端那条路):按配置建 dev/普通会话。"""
+    """裸 `yunxi "…"`(阅后即焚,终端那条路):按配置建 dev/普通会话。"""
     before = STUB_LOG.read_text(encoding="utf-8").count("\n") if STUB_LOG.exists() else 0
     code, out, err = tk.cli([f"TK {tag}"], timeout=120)
     assert code == 0, f"code={code} err={err[-300:]}"
@@ -135,7 +135,7 @@ def plain_tools(tag):
 
 
 def main():
-    assert tk.MIYU.exists(), f"missing binary {tk.MIYU}; run cargo build"
+    assert tk.YUNXI.exists(), f"missing binary {tk.YUNXI}; run cargo build"
     tk.build_home()
     # build_home 借的是真机配置,里面可能已经写着 terminal_session_mode:先抹掉,从默认值起。
     set_mode(None)
@@ -166,7 +166,7 @@ def main():
 
         set_mode("dev")
         code, _, err = tk.cli(["reload"])
-        check("miyu reload 成功", code == 0, err.strip()[:120])
+        check("yunxi reload 成功", code == 0, err.strip()[:120])
         lane = lane_entry()
         check("改 dev + reload:指针拉回终端集成会话,mode=dev(不用重启)",
               lane.get("session_id") == "default" and lane.get("mode") == "dev", lane)
@@ -178,10 +178,10 @@ def main():
               and lane.get("last_user_content") == "TK two", lane.get("last_user_content"))
         side = next(e for e in sessions() if e.get("name") == "side")
         check("side 不受影响(mode=normal)", side.get("mode") == "normal", side)
-        # 裸 `miyu "…"`(阅后即焚)也是终端那条路:客户端按配置建 dev 会话,跟着走;
+        # 裸 `yunxi "…"`(阅后即焚)也是终端那条路:客户端按配置建 dev 会话,跟着走;
         # 程序驱动的 `ask --output-format json` 有自己的 --mode,没传就是普通,不跟配置。
         plain_dev = plain_tools("plain-dev")
-        check("裸 miyu \"…\" 单次也跟着 dev(工具面 = dev 面)", plain_dev == dev_tools,
+        check("裸 yunxi \"…\" 单次也跟着 dev(工具面 = dev 面)", plain_dev == dev_tools,
               f"plain={len(plain_dev)} dev={len(dev_tools)}")
         ask_dev = ask_tools()
         check("程序驱动 ask --output-format json 没传 --mode 仍是普通面", ask_dev == normal_tools,
@@ -194,7 +194,7 @@ def main():
               and lane.get("session_id") == "default" and lane.get("mode") == "normal", lane)
         check("改回 normal 后 shellhook 工具面恢复普通面", shellhook_tools("three") == normal_tools)
         plain_normal = plain_tools("plain-normal")
-        check("改回 normal 后裸 miyu \"…\" 也是普通面", plain_normal == normal_tools,
+        check("改回 normal 后裸 yunxi \"…\" 也是普通面", plain_normal == normal_tools,
               f"plain={len(plain_normal)} normal={len(normal_tools)}")
 
         # 启动那条路:指针又停在普通会话上、配置是 dev
@@ -217,7 +217,7 @@ def main():
 
         stop_daemon(daemon)
         set_mode("bogus")
-        daemon = subprocess.Popen([str(tk.MIYU), "daemon", "--port", str(tk.PORT)], env=tk.env(),
+        daemon = subprocess.Popen([str(tk.YUNXI), "daemon", "--port", str(tk.PORT)], env=tk.env(),
                                   stdout=(tk.OUT / "daemon.log").open("a"), stderr=subprocess.STDOUT)
         time.sleep(3)
         code, out, err = tk.cli(["session", "list", "--json"])

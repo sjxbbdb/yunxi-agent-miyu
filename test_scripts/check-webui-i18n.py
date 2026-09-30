@@ -30,8 +30,8 @@ DICT_FILE = WEB / "i18n-en.js"
 
 # 只认汉字本身:全角符号(＋ · ！)是图形/标点,不是要翻译的文案。
 HAN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
-# t("…") 的调用点:裸 t 或 MiyuI18n.t(前面的字符不能是标识符/属性访问)
-T_CALL = re.compile(r"(?<![\w$.])(?:MiyuI18n\s*\.\s*)?t\s*\(")
+# t("…") 的调用点:裸 t 或 YunXiI18n.t(前面的字符不能是标识符/属性访问)
+T_CALL = re.compile(r"(?<![\w$.])(?:YunXiI18n\s*\.\s*)?t\s*\(")
 
 
 # 关键字后面跟 `/` 也是正则(`return /re/`、`case /re/`),不能按除法算——

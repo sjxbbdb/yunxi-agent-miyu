@@ -19,7 +19,7 @@
  * / connect-src 'self'，浏览器既取不到第三方页面也显示不了第三方图片，而放宽
  * 这两条等于让模型输出里的任意链接在你的浏览器上留一次带 IP 的请求。
  */
-window.MiyuLinkCards = (() => {
+window.YunXiLinkCards = (() => {
   let makeIconSlot = null;
   /** 卡片落地会改变正文高度,通知宿主重新跟随滚动(app.js 的 contentAdded)。 */
   let contentAdded = null;

@@ -49,7 +49,7 @@ pub(in crate::cli) enum PanelDone {
     /// `None` = 按了 Ctrl+C，什么都不改。
     Models(Option<Vec<bool>>),
     Session(SessionPick),
-    Question(miyu_base::question::QuestionResponse),
+    Question(yunxi_base::question::QuestionResponse),
 }
 
 /// 回合循环手里、落地面板结果时要用的东西：提问面板答完要记进这一步、回发给 daemon、
@@ -120,7 +120,7 @@ impl PanelModel for TurnPanel {
 /// 调用方要保证是全屏 TUI（`live.screen.is_some()`）。开不出来（没配模型、列不出会话）
 /// 就说一句，回合照旧。
 pub(in crate::cli) async fn open_turn_panel(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     command: ReplSlashCommand,
     session_id: &str,
@@ -156,7 +156,7 @@ fn picker_home(live: &LiveReplTail, session_id: &str) -> String {
         .unwrap_or_else(|| session_id.to_string())
 }
 
-fn models_panel(paths: &MiyuPaths, session_id: &str) -> Result<TurnPanel> {
+fn models_panel(paths: &YunXiPaths, session_id: &str) -> Result<TurnPanel> {
     let config = AppConfig::load(paths)?;
     let choices = config.text_provider_model_choices();
     if choices.is_empty() {
@@ -181,7 +181,7 @@ fn models_panel(paths: &MiyuPaths, session_id: &str) -> Result<TurnPanel> {
 /// 面板开着时来了一个事件。面板收掉了就把结果落地，告诉回合循环接下来怎么走；`None` =
 /// 面板还开着，或者这一下不归面板（鼠标、窗口变化照旧交给回合循环）。
 pub(in crate::cli) async fn turn_panel_event(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     event: &Event,
     scope: &mut TurnScope<'_>,
@@ -213,7 +213,7 @@ pub(in crate::cli) async fn turn_panel_event(
 /// 面板交出结果之后把它落地：换模型、换会话、删会话。回合跑完了面板还开着时，空闲那边
 /// 挑完也走这儿；提问面板那时候已经没人等了，不落地。
 pub(in crate::cli) async fn finish_turn_panel(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     panel: TurnPanel,
     done: PanelDone,
@@ -234,7 +234,7 @@ pub(in crate::cli) async fn finish_turn_panel(
 /// `/models` 面板的结果落成会话覆盖，footer 当场换模型标签。和空闲时 `cmd_models` 的
 /// 全屏路一个流程。出错不往外抛：那是这条命令的事，不该把正在看的这一轮打断。
 async fn apply_models(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     menu: &SessionModelMenu,
     active: Vec<bool>,
@@ -278,7 +278,7 @@ async fn apply_models(
 /// 原位。删掉的是自己这条就落到本车道的一条可用会话上——和空闲时 `repl_pick_session` 一个
 /// 规矩。
 async fn session_picked(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     pick: SessionPick,
     session_id: &str,
@@ -328,16 +328,16 @@ async fn session_picked(
 /// 回合中排队执行的命令（`DuringTurn::Queue`，目前只有 `/compact`）：发给守护进程。回合还在跑
 /// 就排进去、排队区挂一行；恰好刚跑完的话守护进程当场做了，什么都不用挂；出错说一句。
 pub(in crate::cli) async fn queue_turn_command(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live_tail: &mut LiveReplTail,
-    command: miyu_core::slash_commands::ReplSlashCommand,
+    command: yunxi_core::slash_commands::ReplSlashCommand,
     session_id: &str,
 ) -> Result<()> {
-    let target = miyu_core::ipc::SessionRef::Id {
+    let target = yunxi_core::ipc::SessionRef::Id {
         id: session_id.to_string(),
     };
     let request = match command {
-        miyu_core::slash_commands::ReplSlashCommand::Compact => IpcCommand::Compact { target },
+        yunxi_core::slash_commands::ReplSlashCommand::Compact => IpcCommand::Compact { target },
         _ => return Ok(()),
     };
     match send_ipc_admin(paths, request).await {

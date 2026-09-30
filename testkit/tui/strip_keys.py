@@ -6,8 +6,8 @@
 输入框；在状态行上回车相当于交互。命令列表开着时 ↑↓ 就在列表里。
 
     cargo build
-    MIYU_HOME=~/.cache/miyu-strip-keys/home MIYU_TUI_PORT=18681 STUB_PORT=18682 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-strip-keys/rt OUT=~/.cache/miyu-strip-keys/out \\
+    YUNXI_HOME=~/.cache/yunxi-strip-keys/home YUNXI_TUI_PORT=18681 STUB_PORT=18682 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-strip-keys/rt OUT=~/.cache/yunxi-strip-keys/out \\
       python3 testkit/tui/strip_keys.py
 
 步骤：一轮里开 6 条后台命令 → 任务条露 5 条加「↓ 还有 1 个」→ ↑ 翻历史、↓ 翻回来（不进

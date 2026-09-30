@@ -27,7 +27,7 @@ def build_macho(*, cputype=macho.CPU_TYPE_ARM64, filetype=macho.MH_EXECUTE, mino
 class MachoTests(unittest.TestCase):
     def check(self, data):
         with tempfile.TemporaryDirectory() as temp:
-            path = Path(temp)/'miyu'
+            path = Path(temp)/'yunxi'
             path.write_bytes(data)
             return macho.require_macos_arm64_executable(path, '15.0')
 

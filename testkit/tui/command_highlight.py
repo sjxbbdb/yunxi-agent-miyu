@@ -28,19 +28,19 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", ROOT / "target" / "debug" / "miyu"))
+BIN = Path(os.environ.get("YUNXI_BIN", ROOT / "target" / "debug" / "yunxi"))
 SMOKE = ROOT / "testkit" / "repl-smoke"
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-cmd-highlight/home"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-cmd-highlight/home"))
 RUNTIME = os.environ.get("RUNTIME", "/tmp/mx-cmd-highlight")
 PORT = int(os.environ.get("PORT", "18469"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18481"))
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-cmd-highlight"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-cmd-highlight"))
 COLS, ROWS = 110, 46
 
 # 用户截图里那条命令的形状：shell 外壳 + heredoc 里的 Python。
@@ -90,7 +90,7 @@ def main():
 
     tui.HOME, tui.PORT, tui.STUB_PORT, tui.BIN = HOME, PORT, STUB_PORT, BIN
     tui.COLS, tui.ROWS = COLS, ROWS
-    tui.ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, MIYU_TUI="1")
+    tui.ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, YUNXI_TUI="1")
     tui.write_config()
     # 让命令那一步**默认就是展开的**：这个走查要看的是展开内容，点击在走查里
     # 一向脆（按下与抬起之间有间隔就被当成拖选），能绕开就绕开。

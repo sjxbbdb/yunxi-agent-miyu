@@ -14,13 +14,13 @@
 
 长会话用专用桩模型 `smooth_stub.py` 现造（每轮 `TOOLS:n` 次工具、一段思考、一段长
 正文；`SLOW` 按真模型的节奏慢慢吐）。时间都从 PTY 主端量：写下事件
-那一刻到对应的同步块收尾（`ESC[?2026l`）到达那一刻，含 Miyu 自己的处理，不含终端
+那一刻到对应的同步块收尾（`ESC[?2026l`）到达那一刻，含 YunXi 自己的处理，不含终端
 （kitty/herdr）的解析与上屏。
 
     cargo build
     python3 testkit/tui/smooth_probe.py [--turns 40] [--strace]
 
-`MIYU_BIN` 换二进制做 A/B。TUI 走查只能一个一个跑（共用端口与沙箱家目录）。
+`YUNXI_BIN` 换二进制做 A/B。TUI 走查只能一个一个跑（共用端口与沙箱家目录）。
 """
 
 import argparse
@@ -136,7 +136,7 @@ def summary(values):
 
 
 def sync_trace_path():
-    return Path("/tmp/miyu-sync-trace.log")
+    return Path("/tmp/yunxi-sync-trace.log")
 
 
 def reset_sync_trace():
@@ -147,7 +147,7 @@ def reset_sync_trace():
 
 
 def read_sync_trace():
-    """进程内每个最外层同步块的时长（毫秒）。见 `tail/update.rs` 的 MIYU_SYNC_TRACE。
+    """进程内每个最外层同步块的时长（毫秒）。见 `tail/update.rs` 的 YUNXI_SYNC_TRACE。
 
     每行 `微秒 [字节]`（09-23 起带上这一帧攒了多少字节；老二进制只有微秒）。
     """
@@ -473,7 +473,7 @@ def main():
     parser.add_argument("--json", type=str, default="")
     args = parser.parse_args()
     h.COLS, h.ROWS = args.cols, args.rows
-    h.ENV["MIYU_SYNC_TRACE"] = "1"
+    h.ENV["YUNXI_SYNC_TRACE"] = "1"
     if not h.BIN.exists():
         print(f"! 先 cargo build：{h.BIN} 不存在", file=sys.stderr)
         return 2

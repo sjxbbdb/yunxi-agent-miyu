@@ -302,7 +302,7 @@ def build_response(raw, detail, include_incidents, max_incidents):
 # ---------------------------------------------------------------- main
 
 def read_args():
-    raw = os.environ.get("MIYU_ARGS_JSON")
+    raw = os.environ.get("YUNXI_ARGS_JSON")
     if not raw and sys.stdin is not None and not sys.stdin.isatty():
         raw = sys.stdin.read()
     raw = (raw or "").strip() or "{}"

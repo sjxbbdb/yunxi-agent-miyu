@@ -13,15 +13,15 @@ pub(in crate::cli) enum InitKind {
     Quiet,
 }
 
-pub(in crate::cli) fn run_init(paths: &MiyuPaths, kind: InitKind) -> Result<()> {
+pub(in crate::cli) fn run_init(paths: &YunXiPaths, kind: InitKind) -> Result<()> {
     let quiet = matches!(kind, InitKind::Quiet);
     let interactive = !quiet && io::stdin().is_terminal() && io::stdout().is_terminal();
     if interactive {
         println!(
             "{}\n",
             match kind {
-                InitKind::FirstRun | InitKind::Quiet => t("Miyu first start", "Miyu 首次启动"),
-                InitKind::Explicit => t("Miyu initialization", "Miyu 初始化"),
+                InitKind::FirstRun | InitKind::Quiet => t("YunXi first start", "YunXi 首次启动"),
+                InitKind::Explicit => t("YunXi initialization", "YunXi 初始化"),
             }
         );
     }
@@ -43,13 +43,13 @@ pub(in crate::cli) fn run_init(paths: &MiyuPaths, kind: InitKind) -> Result<()> 
     )?;
     StateStore::new(paths)?.init_files()?;
     let config = AppConfig::load_or_default(paths)?;
-    if miyu_engine::default_kb::bundled_available() {
+    if yunxi_engine::default_kb::bundled_available() {
         print_init_step(
             interactive,
             t("Importing default knowledge base", "正在导入默认知识库"),
             &paths.data_dir.join("kb").display().to_string(),
         )?;
-        if let Err(err) = miyu_engine::default_kb::ensure_initialized(paths, &config) {
+        if let Err(err) = yunxi_engine::default_kb::ensure_initialized(paths, &config) {
             if interactive {
                 eprintln!(
                     "{}: {err}",
@@ -71,7 +71,7 @@ pub(in crate::cli) fn run_init(paths: &MiyuPaths, kind: InitKind) -> Result<()> 
     } else if !quiet {
         println!(
             "{} {}",
-            t("initialized Miyu at", "Miyu 已初始化于"),
+            t("initialized YunXi at", "YunXi 已初始化于"),
             paths.config_dir.display()
         );
     }
@@ -95,12 +95,12 @@ pub(in crate::cli) fn terminal_bell_fallback() {
     }
 }
 
-pub(in crate::cli) const DEFAULT_PERSONA_LABEL_ZH: &str = "Miyu（内置默认）";
+pub(in crate::cli) const DEFAULT_PERSONA_LABEL_ZH: &str = "YunXi（内置默认）";
 
-pub(in crate::cli) const DEFAULT_PERSONA_LABEL_EN: &str = "Miyu (built-in default)";
+pub(in crate::cli) const DEFAULT_PERSONA_LABEL_EN: &str = "YunXi (built-in default)";
 
 pub(in crate::cli) fn list_persona_files(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
 ) -> Result<Vec<String>> {
     let dir = config.prompts_dir_path(paths);
@@ -131,7 +131,7 @@ pub(in crate::cli) struct PersonaChoices {
 }
 
 impl PersonaChoices {
-    pub(in crate::cli) fn load(paths: &MiyuPaths) -> Result<Self> {
+    pub(in crate::cli) fn load(paths: &YunXiPaths) -> Result<Self> {
         let config = AppConfig::load(paths)?;
         let personas = list_persona_files(paths, &config)?;
         let current = config.prompt.active_persona.trim().to_string();
@@ -142,12 +142,12 @@ impl PersonaChoices {
         })
     }
 
-    /// 按名字找：`default` / `miyu` / `内置` 是内置默认（空串）；否则按文件名匹配
+    /// 按名字找：`default` / `yunxi` / `内置` 是内置默认（空串）；否则按文件名匹配
     /// （不分大小写、可省 `.md`、可只写一截）。
     pub(in crate::cli) fn resolve(&self, argument: &str) -> Result<String> {
         let argument = argument.trim();
         if argument.eq_ignore_ascii_case("default")
-            || argument.eq_ignore_ascii_case("miyu")
+            || argument.eq_ignore_ascii_case("yunxi")
             || argument == "内置"
         {
             return Ok(String::new());
@@ -229,7 +229,7 @@ impl PersonaChoices {
     /// 落盘。返回（改了没, 给用户的一句话）。
     pub(in crate::cli) fn apply(
         mut self,
-        paths: &MiyuPaths,
+        paths: &YunXiPaths,
         target: String,
     ) -> Result<(bool, String)> {
         if target == self.current {
@@ -250,7 +250,7 @@ impl PersonaChoices {
 
 /// Interactive persona picker (single-select). Returns true when the active
 /// persona changed and the config was saved.
-pub(in crate::cli) fn run_persona_picker(paths: &MiyuPaths, argument: &str) -> Result<bool> {
+pub(in crate::cli) fn run_persona_picker(paths: &YunXiPaths, argument: &str) -> Result<bool> {
     let choices = PersonaChoices::load(paths)?;
     let argument = argument.trim();
     let target = if !argument.is_empty() {
@@ -272,7 +272,7 @@ pub(in crate::cli) fn run_persona_picker(paths: &MiyuPaths, argument: &str) -> R
     Ok(changed)
 }
 
-pub(in crate::cli) async fn run_config(paths: &MiyuPaths, args: ConfigArgs) -> Result<bool> {
+pub(in crate::cli) async fn run_config(paths: &YunXiPaths, args: ConfigArgs) -> Result<bool> {
     match args.command {
         Some(ConfigCommand::Validate) => {
             AppConfig::load(paths)?;

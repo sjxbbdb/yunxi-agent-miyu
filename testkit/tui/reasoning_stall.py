@@ -15,8 +15,8 @@
     cargo build
     python3 testkit/tui/reasoning_stall.py
 
-产物在 ~/.cache/miyu-reasoning-stall/（frames.jsonl、raw.bin）。
-**这些 TUI 走查只能一个一个跑**：共用同一个 `MIYU_HOME` 和桩模型端口。
+产物在 ~/.cache/yunxi-reasoning-stall/（frames.jsonl、raw.bin）。
+**这些 TUI 走查只能一个一个跑**：共用同一个 `YUNXI_HOME` 和桩模型端口。
 """
 
 import json
@@ -34,7 +34,7 @@ import run as h  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import fold_summary as fs  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-reasoning-stall"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-reasoning-stall"))
 GAP = float(os.environ.get("GAP", "4"))
 STALL = 1.5
 THOUGHT_RE = re.compile(r"已思考 · (?:\d+ 词元 · )?([\d.]+)(ms|s)")

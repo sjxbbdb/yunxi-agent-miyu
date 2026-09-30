@@ -72,10 +72,10 @@ const RESET: &str = "\x1b[0m";
 /// 整条线连同标题、按键提示**一律暗色**：它是取景框，不是内容。
 fn frame_line(width: usize, label: &str, trailing: Option<&str>) -> String {
     let tail = trailing.map(|text| format!(" {text} ")).unwrap_or_default();
-    let tail_width = miyu_hosts::render::visible_width(&tail);
+    let tail_width = yunxi_hosts::render::visible_width(&tail);
     let label_room = width.saturating_sub(tail_width + 8);
-    let label = miyu_hosts::render::clip_to_display_width(label, label_room.max(4));
-    let label_width = miyu_hosts::render::visible_width(&label);
+    let label = yunxi_hosts::render::clip_to_display_width(label, label_room.max(4));
+    let label_width = yunxi_hosts::render::visible_width(&label);
     let fill = width.saturating_sub(label_width + tail_width + 6).max(1);
     format!("{DIM}── {label} {}{tail}──{RESET}", "─".repeat(fill))
 }
@@ -196,7 +196,7 @@ impl Overlay {
         let command = self.command.trim().to_string();
         if !command.is_empty() {
             head.extend(
-                miyu_hosts::render::wrap_display_text(&format!("$ {command}"), width)
+                yunxi_hosts::render::wrap_display_text(&format!("$ {command}"), width)
                     .into_iter()
                     .map(|piece| format!("{indent}{piece}")),
             );
@@ -207,7 +207,7 @@ impl Overlay {
                 if line.trim().is_empty() {
                     return vec![String::new()];
                 }
-                miyu_hosts::render::wrap_display_text(line, width)
+                yunxi_hosts::render::wrap_display_text(line, width)
                     .into_iter()
                     .map(|piece| format!("{indent}{piece}"))
                     .collect::<Vec<_>>()

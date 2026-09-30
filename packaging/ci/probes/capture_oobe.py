@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture real Miyu OOBE PTY frames and render their terminal cells as PNG."""
+"""Capture real YunXi OOBE PTY frames and render their terminal cells as PNG."""
 import argparse
 from datetime import datetime, timezone
 import errno
@@ -178,7 +178,7 @@ class Renderer:
         draw.line((margin, margin+header, width-margin, margin+header), fill='#30323e')
         for offset, color in [(0,'#e38c9a'),(22,'#e4bf79'),(44,'#9ccfa0')]:
             draw.ellipse((margin+20+offset, margin+19, margin+30+offset, margin+29), fill=color)
-        label = f'Miyu 0.6.0  ·  {title}'
+        label = f'YunXi 0.6.0  ·  {title}'
         draw.text((width/2, margin+header/2), label, font=self.fonts[1], fill='#aebde8', anchor='mm')
         origin_x, origin_y = margin+inset, margin+header+inset
         # Paint every cell background first. A wide glyph's continuation cell
@@ -236,16 +236,16 @@ def capture(binary, out, evidence, *, cols, rows, symbols):
                   'network': 'Isolated Linux user/network namespace. No external or host-loopback connection.',
                   'screens': []}
     with Sandbox() as sandbox:
-        (sandbox.root/'miyu/config/config.jsonc').unlink()
+        (sandbox.root/'yunxi/config/config.jsonc').unlink()
         env = sandbox.environment({'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8'})
-        env.update(TERM='xterm-256color', COLORTERM='truecolor', MIYU_COLOR='truecolor',
-                   MIYU_OOBE_NO_IME='1', SHELL='/bin/bash')
+        env.update(TERM='xterm-256color', COLORTERM='truecolor', YUNXI_COLOR='truecolor',
+                   YUNXI_OOBE_NO_IME='1', SHELL='/bin/bash')
         version = subprocess.run([str(binary), '--version'], env=env, cwd=sandbox.root/'work',
                                  check=True, capture_output=True, text=True, timeout=10).stdout.strip()
         # 版本从 Cargo.toml 读，不写死：0.6.1 发版时发现这儿还钉着 0.6.0，
         # 任何后续版本的截图都会被它拦下来。
         expected = tomllib.loads((REPO/'Cargo.toml').read_text())['package']['version']
-        if not re.search(rf"\bmiyu {re.escape(expected)}\b", version, re.IGNORECASE):
+        if not re.search(rf"\byunxi {re.escape(expected)}\b", version, re.IGNORECASE):
             raise ValueError(f'Expected a real {expected} binary, received: {version}')
         provenance['version'] = version
         reaper = OwnedReaper()
@@ -266,7 +266,7 @@ def capture(binary, out, evidence, *, cols, rows, symbols):
             terminal.page('回车进入设置引导')
             shot('01-welcome', '欢迎')
             terminal.send(ENTER)
-            terminal.page('用内置的 Miyu', '自己捏一个')
+            terminal.page('用内置的 YunXi', '自己捏一个')
             shot('02-persona', '选择人格')
             terminal.send(ENTER)
             terminal.page('自选功能', '内置功能')
@@ -295,12 +295,12 @@ def capture(binary, out, evidence, *, cols, rows, symbols):
                     terminal.close()
             finally:
                 try:
-                    provenance['reaped_descendants'] = reaper.reap(str(sandbox.root/'miyu'))
+                    provenance['reaped_descendants'] = reaper.reap(str(sandbox.root/'yunxi'))
                 finally:
                     reaper.close()
     if sha256_file(binary) != provenance['binary_sha256']:
         raise ValueError('The binary changed while screenshots were being captured.')
-    provenance['cleanup'] = 'Owned PTY processes and temporary HOME/MIYU_HOME/XDG roots removed.'
+    provenance['cleanup'] = 'Owned PTY processes and temporary HOME/YUNXI_HOME/XDG roots removed.'
     provenance['raw_ansi_sha256'] = sha256_file(evidence/'session.ansi')
     write_json(out/'capture-provenance.json', provenance)
     write_json(evidence/'capture-provenance.json', provenance)

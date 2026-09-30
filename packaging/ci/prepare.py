@@ -171,7 +171,7 @@ def prepare_resources(manifest, source, output, *, cache, offline):
         raise ValueError('Wiki archive is not tied to the frozen commit.')
     kb = runtime/'default-kb/manifest'
     kb.mkdir(parents=True)
-    write_json(kb/'manifest.json', {'name': 'miyu-default-kb', 'generated_by': 'miyu distribution prepare'})
+    write_json(kb/'manifest.json', {'name': 'yunxi-default-kb', 'generated_by': 'yunxi distribution prepare'})
     (kb/'shorinwiki.commit').write_text(manifest['wiki_commit']+'\n')
     if 'ort-gnu' in receipts:
         unpack_root(downloaded('ort-gnu'), runtime/'onnxruntime', output/'.extract-ort')
@@ -306,7 +306,7 @@ def prepare(manifest_path, output, *, cache=None, offline=False, skip_vendor=Fal
     if output.is_relative_to(source) or source.is_relative_to(output):
         raise ValueError('Prepared inputs and the frozen source must be separate directories.')
     output = fresh_directory(output)
-    (output/'.miyu-owned-prepared-inputs').write_text(manifest_sha256+'\n')
+    (output/'.yunxi-owned-prepared-inputs').write_text(manifest_sha256+'\n')
     archives, fixtures = prepare_resources(manifest, source, output, cache=cache, offline=offline)
     if not skip_vendor:
         prepare_vendor(source, output, offline=offline, vendor_cache=vendor_cache)

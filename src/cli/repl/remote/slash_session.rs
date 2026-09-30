@@ -8,7 +8,7 @@ impl RemoteRepl {
         let name = command_args.trim();
         // 当前这条本来就是白纸：不新建（用户 09-20 拍板）。
         //
-        // 规则和启动（`miyu` / `miyu dev`）、`/dev new` 一致，统一成一句话：
+        // 规则和启动（`yunxi` / `yunxi dev`）、`/dev new` 一致，统一成一句话：
         // **空会话永远只有一条**。原来 `/new` 无条件新建，是唯一会攒空会话的
         // 口子——连敲两次不说话就多两条，列表里全是「新会话」。
         // 带名字就把当前这条改名，你的意图不丢。
@@ -18,7 +18,7 @@ impl RemoteRepl {
                     &self.paths,
                     &mut self.live_repl,
                     IpcCommand::RenameSession {
-                        target: miyu_core::ipc::SessionRef::Id {
+                        target: yunxi_core::ipc::SessionRef::Id {
                             id: self.active_session_id.clone(),
                         },
                         name: name.to_string(),
@@ -71,7 +71,7 @@ impl RemoteRepl {
             &self.paths,
             &mut self.live_repl,
             IpcCommand::GetSessionState {
-                target: miyu_core::ipc::SessionRef::Id { id: session_id },
+                target: yunxi_core::ipc::SessionRef::Id { id: session_id },
                 cwd: std::env::current_dir().ok(),
             },
         )
@@ -100,7 +100,7 @@ impl RemoteRepl {
     /// 那条车道上就只提示一句。
     ///
     /// 加 `new`（`/dev new` / `/normal new`，用户 09-20 要的）就**开一条新的**，
-    /// 语义和 `miyu dev` / `miyu` 启动完全一样（`fresh`：那条车道指针指的会话
+    /// 语义和 `yunxi dev` / `yunxi` 启动完全一样（`fresh`：那条车道指针指的会话
     /// 本来就空就原地用，不然新建）——一条没说过话的会话和一条新建的会话用户
     /// 分不出来，但会话列表分得出来。已经在那条车道上时 `new` 照做，不再只
     /// 提示一句：你要的就是新会话，跟人在哪条车道没关系。
@@ -305,7 +305,7 @@ impl RemoteRepl {
             &self.paths,
             &mut self.live_repl,
             IpcCommand::RenameSession {
-                target: miyu_core::ipc::SessionRef::Id {
+                target: yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 },
                 name: name.clone(),
@@ -328,7 +328,7 @@ impl RemoteRepl {
     pub(super) async fn cmd_delete(&mut self, command_args: &str) -> Result<LoopStep> {
         let arg = command_args.trim();
         let target = if arg.is_empty() {
-            miyu_core::ipc::SessionRef::Id {
+            yunxi_core::ipc::SessionRef::Id {
                 id: self.active_session_id.clone(),
             }
         } else {
@@ -362,7 +362,7 @@ impl RemoteRepl {
             &self.paths,
             &mut self.live_repl,
             IpcCommand::DeleteSession {
-                target: miyu_core::ipc::SessionRef::Id {
+                target: yunxi_core::ipc::SessionRef::Id {
                     id: target_state.session_id,
                 },
             },
@@ -399,7 +399,7 @@ impl RemoteRepl {
 
     pub(super) async fn cmd_sandbox(&mut self, command_args: &str) -> Result<LoopStep> {
         let (arg, allow_read) =
-            miyu_core::slash_commands::take_repl_flag(command_args, "--allow-read");
+            yunxi_core::slash_commands::take_repl_flag(command_args, "--allow-read");
         if arg.is_empty() && allow_read {
             repl_note(
                 &mut self.live_repl,
@@ -417,7 +417,7 @@ impl RemoteRepl {
             let Some(state) = repl_get_session_state(
                 &self.paths,
                 &mut self.live_repl,
-                miyu_core::ipc::SessionRef::Id {
+                yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 },
             )
@@ -435,7 +435,7 @@ impl RemoteRepl {
                 &self.paths,
                 &mut self.live_repl,
                 IpcCommand::SetSandbox {
-                    target: miyu_core::ipc::SessionRef::Id {
+                    target: yunxi_core::ipc::SessionRef::Id {
                         id: self.active_session_id.clone(),
                     },
                     root: None,
@@ -471,7 +471,7 @@ impl RemoteRepl {
             &self.paths,
             &mut self.live_repl,
             IpcCommand::SetSandbox {
-                target: miyu_core::ipc::SessionRef::Id {
+                target: yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 },
                 root: Some(path.clone()),
@@ -488,7 +488,7 @@ impl RemoteRepl {
             if let Some(state) = repl_get_session_state(
                 &self.paths,
                 &mut self.live_repl,
-                miyu_core::ipc::SessionRef::Id {
+                yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 },
             )
@@ -518,7 +518,7 @@ impl RemoteRepl {
             &self.paths,
             &mut self.live_repl,
             IpcCommand::Goal {
-                target: miyu_core::ipc::SessionRef::Id {
+                target: yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 },
                 input: command_args.to_string(),
@@ -558,7 +558,10 @@ impl RemoteRepl {
         //
         // 只在「真的会自己往前跑」时撤：`/goal` 查状态、`/goal pause`、
         // `/goal clear` 都不该把大厅弄没。
-        if goal.as_ref().is_some_and(miyu_core::ipc::GoalHint::running) {
+        if goal
+            .as_ref()
+            .is_some_and(yunxi_core::ipc::GoalHint::running)
+        {
             self.live_repl
                 .set_session_empty(&self.config, &self.paths, false);
         }

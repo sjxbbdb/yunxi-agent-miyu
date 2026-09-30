@@ -1,6 +1,6 @@
 //! 模型与思考变体的命令。
 //!
-//! `miyu models` 管的是「这个会话用哪些模型」，`miyu variant` 管的是「思考多
+//! `yunxi models` 管的是「这个会话用哪些模型」，`yunxi variant` 管的是「思考多
 //! 深」。两者都有全局池与会话覆盖两层：会话不设就继承全局，设了就只用自己
 //! 那份。菜单渲染也在这里——终端里要在有限宽度内把 provider、模型名、变体三
 //! 列排整齐。
@@ -19,7 +19,7 @@ pub(in crate::cli) fn short_model_name(model: &str, provider: &str) -> String {
 
 pub(in crate::cli) fn print_mixed_model_endpoint(
     show: bool,
-    result: &miyu_core::llm::ChatResult,
+    result: &yunxi_core::llm::ChatResult,
     variant: Option<&str>,
 ) {
     if !show {
@@ -92,15 +92,15 @@ pub(in crate::cli) fn show_mixed_model_endpoint(config: &AppConfig, interactive:
         }
 }
 
-pub(in crate::cli) fn initialize_models_cache(paths: &MiyuPaths) {
-    miyu_base::models_cache::try_load(paths);
-    miyu_base::models_cache::spawn_background_refresh(paths.clone());
+pub(in crate::cli) fn initialize_models_cache(paths: &YunXiPaths) {
+    yunxi_base::models_cache::try_load(paths);
+    yunxi_base::models_cache::spawn_background_refresh(paths.clone());
     if let Ok(config) = AppConfig::load_or_default(paths) {
-        miyu_base::models_cache::spawn_provider_api_refresh(config.providers);
+        yunxi_base::models_cache::spawn_provider_api_refresh(config.providers);
     }
 }
 
-pub(in crate::cli) async fn run_models(paths: &MiyuPaths, args: ModelsArgs) -> Result<()> {
+pub(in crate::cli) async fn run_models(paths: &YunXiPaths, args: ModelsArgs) -> Result<()> {
     run_models_for_session(paths, args, None).await.map(|_| ())
 }
 
@@ -128,10 +128,10 @@ pub(in crate::cli) fn parse_models_argument(argument: &str) -> ModelsArgs {
     }
 }
 
-/// `miyu models --global`:直接编辑全局激活模型池。
+/// `yunxi models --global`:直接编辑全局激活模型池。
 ///
 /// 不带 --global 时这条命令改的只是终端集成会话的覆盖,全局池此前只能进
-/// `miyu config` 的 TUI 里翻。全局池是所有没有单独覆盖的会话(WebUI、通讯
+/// `yunxi config` 的 TUI 里翻。全局池是所有没有单独覆盖的会话(WebUI、通讯
 /// 平台、新开的终端会话)共同的默认来源,值得有一条一行就能改完的路。
 ///
 /// 与会话覆盖的两点不同:池不能清空(至少留一个端点,`set_active_provider_models`
@@ -140,7 +140,7 @@ pub(in crate::cli) fn parse_models_argument(argument: &str) -> ModelsArgs {
 /// 不在终端里（只打了个清单）。调用方靠它决定要不要说"已更新"——不看这个
 /// 的话，Esc 取消也会收到一句"会话模型已更新"（用户实测）。
 pub(in crate::cli) async fn run_models_global(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     target: Option<&str>,
 ) -> Result<bool> {
     let mut config = AppConfig::load(paths)?;
@@ -164,7 +164,7 @@ pub(in crate::cli) async fn run_models_global(
                 )
             );
         }
-        let choice = miyu_base::config::resolve_provider_model_argument(&choices, target)
+        let choice = yunxi_base::config::resolve_provider_model_argument(&choices, target)
             .map_err(anyhow::Error::msg)?;
         vec![ActiveProviderModelConfig {
             provider_id: choice.provider_id.clone(),
@@ -240,10 +240,10 @@ pub(in crate::cli) async fn run_models_global(
 
 /// Switches the model pool of one session (the current session when
 /// `session_id` is None). The override persists on the session, so reopening
-/// it restores the model; the global pool is managed in `miyu config`.
+/// it restores the model; the global pool is managed in `yunxi config`.
 /// 返回真表示**真的改了**；见 [`run_models_global`]。
 pub(in crate::cli) async fn run_models_for_session(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     args: ModelsArgs,
     session_id: Option<&str>,
 ) -> Result<bool> {
@@ -274,7 +274,7 @@ pub(in crate::cli) async fn run_models_for_session(
             );
             return Ok(true);
         }
-        let choice = miyu_base::config::resolve_provider_model_argument(&choices, target)
+        let choice = yunxi_base::config::resolve_provider_model_argument(&choices, target)
             .map_err(anyhow::Error::msg)?;
         let label = choice.label();
         let models = vec![ActiveProviderModelConfig {
@@ -306,12 +306,12 @@ pub(in crate::cli) async fn run_models_for_session(
 
 /// /models 交互菜单的数据。第一项是「继承全局模型池」，与 config TUI 的会话/QQ
 /// 模型菜单同款：会话没有自己的覆盖时它就是当前状态。此前想恢复继承只能记住
-/// `miyu models default` 这个隐藏写法，菜单里根本看不到这条路。
+/// `yunxi models default` 这个隐藏写法，菜单里根本看不到这条路。
 ///
 /// 行内（`inline_fuzzy_select`）与全屏面板（`pick_multi_with`）共用：菜单项、入场勾选
 /// 在这里算，选完交回 `apply` 落盘——两条路一个规矩。
 pub(in crate::cli) struct SessionModelMenu {
-    choices: Vec<miyu_base::config::ProviderModelChoice>,
+    choices: Vec<yunxi_base::config::ProviderModelChoice>,
     pub(in crate::cli) labels: Vec<String>,
     pub(in crate::cli) initial: Vec<bool>,
     /// 各行「因继承而勾上」吗——全局激活池里的那几个（第 0 行恒为假）。Tab 的
@@ -396,8 +396,8 @@ pub(in crate::cli) fn decide_model_menu(initial: &[bool], active: &[bool]) -> Mo
 impl SessionModelMenu {
     pub(in crate::cli) fn new(
         config: &AppConfig,
-        choices: Vec<miyu_base::config::ProviderModelChoice>,
-        paths: &MiyuPaths,
+        choices: Vec<yunxi_base::config::ProviderModelChoice>,
+        paths: &YunXiPaths,
         session_id: Option<&str>,
     ) -> Result<Self> {
         let override_pool = session_model_override_snapshot(paths, session_id)?;
@@ -434,7 +434,7 @@ impl SessionModelMenu {
     /// 把菜单结果落成会话覆盖。返回（真的改了没, 给用户的一句话）。
     pub(in crate::cli) async fn apply(
         &self,
-        paths: &MiyuPaths,
+        paths: &YunXiPaths,
         session_id: Option<&str>,
         active: Vec<bool>,
     ) -> Result<(bool, String)> {
@@ -486,7 +486,7 @@ impl SessionModelMenu {
     }
 }
 
-pub(in crate::cli) fn run_list_models(paths: &MiyuPaths) -> Result<()> {
+pub(in crate::cli) fn run_list_models(paths: &YunXiPaths) -> Result<()> {
     let config = AppConfig::load(paths)?;
     let choices = config.text_provider_model_choices();
     if choices.is_empty() {
@@ -503,8 +503,8 @@ pub(in crate::cli) fn run_list_models(paths: &MiyuPaths) -> Result<()> {
     println!(
         "{}",
         t(
-            "switch with: miyu models <index|provider/model>; 'miyu models default' follows the global pool",
-            "切换：miyu models <序号|供应商/模型>；miyu models default 恢复跟随全局模型池"
+            "switch with: yunxi models <index|provider/model>; 'yunxi models default' follows the global pool",
+            "切换：yunxi models <序号|供应商/模型>；yunxi models default 恢复跟随全局模型池"
         )
     );
     Ok(())
@@ -512,7 +512,7 @@ pub(in crate::cli) fn run_list_models(paths: &MiyuPaths) -> Result<()> {
 
 pub(in crate::cli) fn print_model_choices(
     config: &AppConfig,
-    choices: &[miyu_base::config::ProviderModelChoice],
+    choices: &[yunxi_base::config::ProviderModelChoice],
     override_pool: Option<&[ActiveProviderModelConfig]>,
 ) {
     for (index, choice) in choices.iter().enumerate() {
@@ -546,7 +546,7 @@ pub(in crate::cli) fn print_model_choices(
 /// Reads a session's model override straight from the shared state database;
 /// works whether or not the daemon is running.
 pub(in crate::cli) fn session_model_override_snapshot(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: Option<&str>,
 ) -> Result<Option<Vec<ActiveProviderModelConfig>>> {
     let store = StateStore::new(paths)?;
@@ -558,7 +558,7 @@ pub(in crate::cli) fn session_model_override_snapshot(
 }
 
 pub(in crate::cli) async fn set_session_models(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_id: Option<&str>,
     models: Vec<ActiveProviderModelConfig>,
 ) -> Result<()> {
@@ -603,7 +603,7 @@ pub(in crate::cli) enum VariantOutcome {
     Rejected(String),
 }
 
-pub(in crate::cli) fn run_variant(paths: &MiyuPaths, args: VariantArgs) -> Result<()> {
+pub(in crate::cli) fn run_variant(paths: &YunXiPaths, args: VariantArgs) -> Result<()> {
     let selected = args
         .name
         .as_deref()
@@ -613,13 +613,13 @@ pub(in crate::cli) fn run_variant(paths: &MiyuPaths, args: VariantArgs) -> Resul
         bail!(
             "{}",
             t(
-                "interactive thinking-level selection requires a terminal; use `miyu effort <name>`",
-                "交互选择思考档位需要终端；请使用 `miyu effort <名称>`",
+                "interactive thinking-level selection requires a terminal; use `yunxi effort <name>`",
+                "交互选择思考档位需要终端；请使用 `yunxi effort <名称>`",
             )
         );
     }
-    if !miyu_base::models_cache::is_loaded() {
-        miyu_base::models_cache::refresh_blocking(paths).map_err(|error| {
+    if !yunxi_base::models_cache::is_loaded() {
+        yunxi_base::models_cache::refresh_blocking(paths).map_err(|error| {
             anyhow::anyhow!(
                 "{}: {error:#}",
                 t("failed to load model metadata", "无法加载模型元数据")
@@ -628,7 +628,7 @@ pub(in crate::cli) fn run_variant(paths: &MiyuPaths, args: VariantArgs) -> Resul
     }
 
     let mut config = AppConfig::load_or_default(paths)?;
-    // 与 `miyu models` 同一个作用域：终端集成会话钉了自己的模型时，档位列的
+    // 与 `yunxi models` 同一个作用域：终端集成会话钉了自己的模型时，档位列的
     // 是那个模型的，不是全局文本模型的。
     let store = StateStore::new(paths)?;
     apply_session_model_override(&store, &mut config);
@@ -637,7 +637,7 @@ pub(in crate::cli) fn run_variant(paths: &MiyuPaths, args: VariantArgs) -> Resul
         paths,
         &mut client,
         selected,
-        "miyu effort",
+        "yunxi effort",
         VariantScope::Global,
         inline_variant_select,
     )? {
@@ -649,7 +649,7 @@ pub(in crate::cli) fn run_variant(paths: &MiyuPaths, args: VariantArgs) -> Resul
 }
 
 /// 档位改到哪一份（09-24：effort 做成会话级）。终端会话里的 `/effort` 只改这个会话；
-/// `miyu effort` 与直连模式改全局默认档。
+/// `yunxi effort` 与直连模式改全局默认档。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(in crate::cli) enum VariantScope<'a> {
     Global,
@@ -662,7 +662,7 @@ pub(in crate::cli) enum VariantScope<'a> {
 /// `client` 进来时带的是全局档位；改完它带的是生效的那一档（会话钉了的用钉的），
 /// 调用方拿它刷 footer。
 pub(in crate::cli) fn execute_variant(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     client: &mut OpenAiCompatibleClient,
     selected: Option<&str>,
     selector_command: &str,
@@ -689,7 +689,7 @@ pub(in crate::cli) fn execute_variant(
         // 会话里 `/effort default` 是钉成模型默认档，不是回到跟随全局（用户 09-24）。
         let variant = match scope {
             VariantScope::Session(_) => {
-                variant.or_else(|| Some(miyu_core::llm::MODEL_DEFAULT_PIN.to_string()))
+                variant.or_else(|| Some(yunxi_core::llm::MODEL_DEFAULT_PIN.to_string()))
             }
             VariantScope::Global => variant,
         };
@@ -712,11 +712,11 @@ pub(in crate::cli) fn execute_variant(
             // 会话那份只记钉住的：选「跟随全局」（值为空）就是拔掉钉子，选「默认」钉的是
             // 模型默认档（`MODEL_DEFAULT_PIN`）。
             let store = StateStore::new(paths)?;
-            let scope = miyu_core::llm::ThinkingVariantScope::Session {
+            let scope = yunxi_core::llm::ThinkingVariantScope::Session {
                 store: &store,
                 session_id,
             };
-            let mut pinned = miyu_core::llm::ThinkingVariantPreferences::load_scoped(paths, scope);
+            let mut pinned = yunxi_core::llm::ThinkingVariantPreferences::load_scoped(paths, scope);
             for (provider_id, model, variant) in &selections {
                 pinned.set(provider_id, model, variant.clone());
             }
@@ -732,7 +732,7 @@ pub(in crate::cli) fn execute_variant(
 /// 各档位。光标先落在这个会话钉住的那一项上，没钉就落在「跟随全局」上——原样回车不会
 /// 把跟随变成钉住。
 fn variant_menu_for(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     options: &[ThinkingVariantOptions],
     scope: VariantScope<'_>,
 ) -> Option<VariantMenu> {
@@ -740,7 +740,7 @@ fn variant_menu_for(
         return VariantMenu::new(options);
     };
     let store = StateStore::new(paths).ok()?;
-    let pinned = miyu_core::llm::ThinkingVariantPreferences::load_session(&store, session_id);
+    let pinned = yunxi_core::llm::ThinkingVariantPreferences::load_session(&store, session_id);
     let items = options
         .iter()
         .map(|option| {

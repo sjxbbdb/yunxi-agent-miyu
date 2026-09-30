@@ -3,8 +3,8 @@
 一直翻得到第一句。改前固定回放 3 轮，往上翻到第 12 句就到头了。
 
     cargo build
-    MIYU_HOME=~/.cache/miyu-replay-pages/home MIYU_TUI_PORT=18651 STUB_PORT=18652 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-replay-pages/rt OUT=~/.cache/miyu-replay-pages/out \\
+    YUNXI_HOME=~/.cache/yunxi-replay-pages/home YUNXI_TUI_PORT=18651 STUB_PORT=18652 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-replay-pages/rt OUT=~/.cache/yunxi-replay-pages/out \\
       python3 testkit/tui/replay_pages.py
 
 步骤：说 14 句（每句回 8 段）→ `/dev` 切走 → `/normal` 切回来（换会话会擦掉画布、

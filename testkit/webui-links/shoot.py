@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 import syntax
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:18411"
-OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "/tmp/miyu-webui-links")
+OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "/tmp/yunxi-webui-links")
 OUT.mkdir(parents=True, exist_ok=True)
 
 problems = []
@@ -24,8 +24,8 @@ problems = []
 # run.py 发的那条用户消息里的 sh 代码块,一字不差。
 USER_CODE = (
     "# 重建向量索引\n"
-    'export MIYU_HOME="/tmp/mx"\n'
-    'miyu kb embed reindex --quiet && echo "done $?"'
+    'export YUNXI_HOME="/tmp/mx"\n'
+    'yunxi kb embed reindex --quiet && echo "done $?"'
 )
 
 

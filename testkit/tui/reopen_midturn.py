@@ -7,7 +7,7 @@
     cargo build
     python3 testkit/tui/reopen_midturn.py
 
-这些 TUI 走查只能一个一个跑（共用 MIYU_HOME 与桩模型端口）。
+这些 TUI 走查只能一个一个跑（共用 YUNXI_HOME 与桩模型端口）。
 """
 
 import os
@@ -23,7 +23,7 @@ MESSAGE = "reopen-probe 这句话只发一次"
 
 def main():
     report = {}
-    h.ENV["MIYU_LOG"] = "info"
+    h.ENV["YUNXI_LOG"] = "info"
     stub, daemon, tui, master, sink = r.start({
         "STUB_REASONING": "1",
         # 回合要跑得够久：关掉再开的时候它得还在跑。
@@ -36,7 +36,7 @@ def main():
         # 大厅还在画的时候按下的键会丢，先等它画完。
         h.drain_until(master, sink, "A G E N T", 15.0)
         h.drain(master, 1.0, sink)
-        # 用户 09-21 的完整流程：开 miyu（自动就是新会话）→ 说一句话让 AI 跑着
+        # 用户 09-21 的完整流程：开 yunxi（自动就是新会话）→ 说一句话让 AI 跑着
         # → 关掉 TUI → 再开（又是新会话）→ `/session` 切回去。所以这句话是这条
         # 会话的**第一条**、是回合的主 prompt，不是排进正在跑的回合的跟进消息。
         os.write(master, MESSAGE.encode())

@@ -9,9 +9,9 @@
     web03_notice_after_reload  刷新之后回看,还是那一行提示
     web04_no_envelope        页面上不露 <service-restart 外壳,也不画成用户气泡
 
-截图落在 OUT(默认 /tmp/miyu-resume-webui),全过就删(KEEP=1 留着)。
+截图落在 OUT(默认 /tmp/yunxi-resume-webui),全过就删(KEEP=1 留着)。
 
-    python3 testkit/turn-resume/webui.py <miyu 二进制>
+    python3 testkit/turn-resume/webui.py <yunxi 二进制>
 """
 import os
 import shutil
@@ -26,10 +26,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "webui-composer"))
 from sandbox import WebSandbox  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", "/tmp/miyu-resume-webui"))
+OUT = Path(os.environ.get("OUT", "/tmp/yunxi-resume-webui"))
 NOTICE = "重启了，接着上一轮继续"
-# 09-24 起提示里不带「Miyu」（用户：去掉这里的 Miyu）。只查 NOTICE 的话老文案也含它。
-STALE = "Miyu 重启"
+# 09-24 起提示里不带「YunXi」（用户：去掉这里的 YunXi）。只查 NOTICE 的话老文案也含它。
+STALE = "YunXi 重启"
 
 
 def main():

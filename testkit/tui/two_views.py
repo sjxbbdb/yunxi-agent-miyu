@@ -15,9 +15,9 @@
 
     python3 testkit/tui/two_views.py
 
-产物在 ~/.cache/miyu-two-views/。
+产物在 ~/.cache/yunxi-two-views/。
 
-**别和别的 TUI 走查并行跑**：共用 MIYU_HOME 和桩端口。
+**别和别的 TUI 走查并行跑**：共用 YUNXI_HOME 和桩端口。
 """
 
 import json
@@ -33,14 +33,14 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", ROOT / "target" / "debug" / "miyu"))
+BIN = Path(os.environ.get("YUNXI_BIN", ROOT / "target" / "debug" / "yunxi"))
 SMOKE = ROOT / "testkit" / "repl-smoke"
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-two-views/home"))
-RUNTIME = os.environ.get("MIYU_TV_RUNTIME", "/tmp/mx-two-views")
-PORT = int(os.environ.get("MIYU_TV_PORT", "18461"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-two-views/home"))
+RUNTIME = os.environ.get("YUNXI_TV_RUNTIME", "/tmp/mx-two-views")
+PORT = int(os.environ.get("YUNXI_TV_PORT", "18461"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18489"))
 BASE = f"http://127.0.0.1:{PORT}"
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-two-views"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-two-views"))
 COLS, ROWS = 100, 40
 BAR = "┃"
 # 等待转轮的字形（`wait_spinner.rs` 的 BRAILLE_FRAMES）。
@@ -75,7 +75,7 @@ def tui_module():
     tui.BIN = BIN
     tui.COLS, tui.ROWS = COLS, ROWS
     tui.ENV = dict(
-        os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, MIYU_TUI="1"
+        os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME, YUNXI_TUI="1"
     )
     return tui
 
@@ -303,7 +303,7 @@ def main():
             return 2
         daemon = subprocess.Popen(
             [str(BIN), "__daemon", "--port", str(PORT)],
-            env=dict(tui.ENV, MIYU_LOG="debug"),
+            env=dict(tui.ENV, YUNXI_LOG="debug"),
             cwd=str(HOME),
             stdout=(OUT / "daemon.log").open("w"),
             stderr=subprocess.STDOUT,
@@ -416,7 +416,7 @@ def main():
             return subprocess.Popen(
                 [str(BIN), "--shell-intercept", "--shell", "fish", "--stdin"],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                env=dict(tui.ENV, MIYU_TUI="0"), cwd=str(HOME), text=True,
+                env=dict(tui.ENV, YUNXI_TUI="0"), cwd=str(HOME), text=True,
             ), text
 
         first, first_text = shellhook(PROMPT_SHELL)

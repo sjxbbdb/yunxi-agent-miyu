@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--manifest',required=True,type=Path)
     parser.add_argument('--dir',required=True,type=Path)
     parser.add_argument('--notes',type=Path)
-    parser.add_argument('--repository',default='SHORiN-KiWATA/miyu-agent')
+    parser.add_argument('--repository',default='sjxbbdb/yunxi-agent-miyu')
     mode=parser.add_mutually_exclusive_group()
     mode.add_argument('--dry-run',action='store_true')
     mode.add_argument('--execute',action='store_true')

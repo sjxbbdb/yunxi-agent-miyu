@@ -45,7 +45,7 @@ class GitHubRelease:
         self.gh('release','upload',tag,str(path),'--repo',self.repository)
 
     def remote_hash(self,tag,name):
-        with tempfile.TemporaryDirectory(prefix='miyu-release-readback-') as temp:
+        with tempfile.TemporaryDirectory(prefix='yunxi-release-readback-') as temp:
             self.gh('release','download',tag,'--repo',self.repository,'--pattern',name,'--dir',temp)
             return sha256_file(Path(temp)/name)
 
@@ -77,7 +77,7 @@ def publish_verified(manifest,directory,notes,backend):
         raise ValueError('Remote tag does not resolve to the verified source commit.')
     release=backend.release(tag)
     if release is None:
-        backend.create_draft(tag,f'Miyu {manifest["version"]}',notes,
+        backend.create_draft(tag,f'YunXi {manifest["version"]}',notes,
                              manifest['channels']['github']=='prerelease')
         release=backend.release(tag)
     remote=verify_remote_allowlist(release,names)

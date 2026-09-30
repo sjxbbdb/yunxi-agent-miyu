@@ -10,7 +10,7 @@
   B 不吃 PDF 的模型 → 回答里没有暗号,但提示里给了路径(不静默吞文件)
   C 同 A 但走 anthropic 协议 → 钉住 document 块那条独立的下放路径
 
-    MIYU_PDF_PROVIDER=opencode MIYU_PDF_MODEL=claude-sonnet-4-6 \
+    YUNXI_PDF_PROVIDER=opencode YUNXI_PDF_MODEL=claude-sonnet-4-6 \
         python3 testkit/pdf/run.py
 """
 
@@ -22,26 +22,26 @@ import subprocess
 import sys
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-pdf/home"))
-WORK = Path(os.environ.get("MIYU_PDF_WORK", "/tmp/miyu-pdf/work"))
-PROVIDER = os.environ.get("MIYU_PDF_PROVIDER", "opencode")
-MODEL = os.environ.get("MIYU_PDF_MODEL", "claude-sonnet-4-6")
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-pdf/home"))
+WORK = Path(os.environ.get("YUNXI_PDF_WORK", "/tmp/yunxi-pdf/work"))
+PROVIDER = os.environ.get("YUNXI_PDF_PROVIDER", "opencode")
+MODEL = os.environ.get("YUNXI_PDF_MODEL", "claude-sonnet-4-6")
 # 不吃 PDF 的对照组:同一个供应商换一个纯文本模型,避免把"换了供应商"混进变量。
-PLAIN_MODEL = os.environ.get("MIYU_PDF_PLAIN_MODEL", MODEL)
+PLAIN_MODEL = os.environ.get("YUNXI_PDF_PLAIN_MODEL", MODEL)
 
 sys.path.insert(0, str(Path(__file__).parent))
 from make_pdf import build  # noqa: E402
 
 # 直连:agent 在本进程跑,每次重读配置。经 daemon 的话第一次 ask 会把它拉起来,
 # 之后改配置也不重载——A/B 两组就会双双跑在第一组的模型上(第一版栽在这)。
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR="/tmp/mx-pdf", MIYU_DIRECT="1")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR="/tmp/mx-pdf", YUNXI_DIRECT="1")
 Path("/tmp/mx-pdf").mkdir(exist_ok=True)
 
 
@@ -59,7 +59,7 @@ def write_config(modalities: list[str]) -> None:
 
 
 def stop_daemon() -> None:
-    """MIYU_DIRECT 挡不住一个已经在跑的隔离 daemon:ask 会连上它,于是两组
+    """YUNXI_DIRECT 挡不住一个已经在跑的隔离 daemon:ask 会连上它,于是两组
     都跑在**它启动时**那份配置上,A/B 变成 A/A(第一版在这浪费了半小时)。"""
     subprocess.run(
         [str(BIN), "daemon", "stop"], env=ENV, cwd=WORK,

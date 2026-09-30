@@ -23,7 +23,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -32,16 +32,16 @@ sys.path.insert(0, str(Path(__file__).parent))
 import metrics  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-webui-jitter/home"))
-RUNTIME = os.environ.get("MIYU_JT_RUNTIME", "/tmp/mx-jt")
-PORT = int(os.environ.get("MIYU_JT_PORT", "18421"))
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-webui-jitter/home"))
+RUNTIME = os.environ.get("YUNXI_JT_RUNTIME", "/tmp/mx-jt")
+PORT = int(os.environ.get("YUNXI_JT_PORT", "18421"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18496"))
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-webui-jitter"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-webui-jitter"))
 TAG = os.environ.get("TAG", "run")
 ENGINES = os.environ.get("ENGINES", "webkit,chromium").split(",")
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
 
 
 def api(path, body=None, method="GET"):

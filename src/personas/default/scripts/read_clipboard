@@ -26,10 +26,10 @@ Detection (same as the Rust `clipboard::read_clipboard`):
   3. image/* target present -> read the first of png/jpeg/webp/gif/bmp that the
      holder actually offers (fallback: ask for image/png anyway), write it to
      <cache>/clipboard_images/<sha256[:16] hex>.<ext>, report `image` and an
-     extra `MIYU-IMAGE:` line so the delivery layer shows it
+     extra `YUNXI-IMAGE:` line so the delivery layer shows it
   4. nothing usable -> plain text read; still empty -> `empty`
 
-Cache directory: $MIYU_SCRIPT_CACHE_DIR, else ~/.cache/miyu-scripts.
+Cache directory: $YUNXI_SCRIPT_CACHE_DIR, else ~/.cache/yunxi-scripts.
 """
 
 import hashlib
@@ -197,7 +197,7 @@ def video_mime(path):
 # ---------------------------------------------------------------- image cache
 
 def cache_dir():
-    base = os.environ.get("MIYU_SCRIPT_CACHE_DIR") or os.path.join(os.path.expanduser("~"), ".cache", "miyu-scripts")
+    base = os.environ.get("YUNXI_SCRIPT_CACHE_DIR") or os.path.join(os.path.expanduser("~"), ".cache", "yunxi-scripts")
     return os.path.abspath(base)
 
 
@@ -265,7 +265,7 @@ def detect():
                         result = {"ok": True, "kind": "clipboard", "content_type": content_type,
                                   "source": "clipboard_path", "path": path}
                         ext = os.path.splitext(path)[1][1:].lower()
-                        image_line = f"MIYU-IMAGE: {os.path.abspath(path)} | clipboard image" if ext in IMAGE_EXTENSIONS else None
+                        image_line = f"YUNXI-IMAGE: {os.path.abspath(path)} | clipboard image" if ext in IMAGE_EXTENSIONS else None
                         return result, image_line
                     return {"ok": True, "kind": "clipboard", "content_type": "text_path",
                             "source": "clipboard_path", "path": path}, None
@@ -300,13 +300,13 @@ def image_result(mime, data):
     path = write_image_cache_file(mime, data)
     result = {"ok": True, "kind": "clipboard", "content_type": "image", "source": "clipboard_binary",
               "path": path, "mime": mime, "bytes": len(data), "multimodal_available": True}
-    return result, f"MIYU-IMAGE: {path} | clipboard image"
+    return result, f"YUNXI-IMAGE: {path} | clipboard image"
 
 
 # ---------------------------------------------------------------- main
 
 def read_args():
-    raw = os.environ.get("MIYU_ARGS_JSON")
+    raw = os.environ.get("YUNXI_ARGS_JSON")
     if not raw and sys.stdin is not None and not sys.stdin.isatty():
         raw = sys.stdin.read()
     raw = (raw or "").strip() or "{}"

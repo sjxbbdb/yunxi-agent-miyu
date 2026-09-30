@@ -5,7 +5,7 @@
 claude 用原生 Bash/Write → 断言收到带 phase 的 tool.preparing,且早于对应的
 tool.started。未配 WebUI 密码时 loopback 免登录。
 
-    MIYU_HOME=/tmp/miyu-ccprep/home python3 testkit/claude-code/preparing_web.py
+    YUNXI_HOME=/tmp/yunxi-ccprep/home python3 testkit/claude-code/preparing_web.py
 
 09-06 实测(haiku):Bash 准备执行→started 0.3s;Write 准备编辑→started 8.7s。
 """
@@ -19,20 +19,20 @@ import time
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-BIN = Path(os.environ.get("MIYU_BIN", REPO / "target" / "debug" / "miyu"))
-HOME = os.environ.get("MIYU_HOME", "/tmp/miyu-ccprep/home")
-PORT = int(os.environ.get("MIYU_PROBE_PORT", "8400"))
+BIN = Path(os.environ.get("YUNXI_BIN", REPO / "target" / "debug" / "yunxi"))
+HOME = os.environ.get("YUNXI_HOME", "/tmp/yunxi-ccprep/home")
+PORT = int(os.environ.get("YUNXI_PROBE_PORT", "8400"))
 BASE = f"http://127.0.0.1:{PORT}"
 RUNTIME = os.environ.get("XDG_RUNTIME_DIR_PROBE", "/tmp/mx-ccprep")
-ENV = dict(os.environ, MIYU_HOME=HOME, XDG_RUNTIME_DIR=RUNTIME)
+ENV = dict(os.environ, YUNXI_HOME=HOME, XDG_RUNTIME_DIR=RUNTIME)
 Path(RUNTIME).mkdir(exist_ok=True)
-WORK = Path(os.environ.get("MIYU_PROBE_WORK", "/tmp/miyu-ccprep/work"))
+WORK = Path(os.environ.get("YUNXI_PROBE_WORK", "/tmp/yunxi-ccprep/work"))
 WORK.mkdir(parents=True, exist_ok=True)
 
 PROMPT = (

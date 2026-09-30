@@ -5,7 +5,7 @@
 //! **`\n` 断的行不许并**。
 
 use crate::cli::repl::tail::screen::term::Term;
-use miyu_hosts::render::blocks::SOFT_WRAP_MARKER;
+use yunxi_hosts::render::blocks::SOFT_WRAP_MARKER;
 
 fn text(term: &Term) -> Vec<String> {
     (0..term.line_count())
@@ -96,7 +96,7 @@ fn the_cursor_follows_its_character_through_a_reflow() {
 #[test]
 fn turn_markers_move_with_their_content() {
     crate::cli::tests::tui_blocks::with_blocks(|| {
-        let marker = miyu_hosts::render::blocks::TURN_START_MARKER;
+        let marker = yunxi_hosts::render::blocks::TURN_START_MARKER;
         let mut term = term_at(10, &format!("aaaaaaaaaaaaaaa\n{marker}bbb"));
         assert_eq!(term.turn_starts(), &[2]);
 
@@ -115,11 +115,11 @@ fn turn_markers_move_with_their_content() {
 /// 出来的」告诉缓冲**——不告诉的话缓冲只看到一串 `\n`，并不回去。
 #[test]
 fn a_rendered_body_reflows_with_the_window() {
-    use miyu_core::llm::{ChatStreamChunk, ChatStreamKind};
-    use miyu_hosts::render::{ReasoningDisplayMode, StreamRenderer, ToolCallDisplayMode};
+    use yunxi_core::llm::{ChatStreamChunk, ChatStreamKind};
+    use yunxi_hosts::render::{ReasoningDisplayMode, StreamRenderer, ToolCallDisplayMode};
 
     crate::cli::tests::tui_blocks::with_blocks(|| {
-        miyu_hosts::render::set_cols_override(40);
+        yunxi_hosts::render::set_cols_override(40);
         let mut renderer = StreamRenderer::new(
             ReasoningDisplayMode::Summary,
             ToolCallDisplayMode::Summary,
@@ -138,7 +138,7 @@ fn a_rendered_body_reflows_with_the_window() {
             })
             .unwrap();
         let frame = renderer.take_output_frame();
-        miyu_hosts::render::set_cols_override(0);
+        yunxi_hosts::render::set_cols_override(0);
 
         let mut term = Term::default();
         term.set_cols(40);
@@ -165,11 +165,11 @@ fn a_rendered_body_reflows_with_the_window() {
 /// 流会把整段攒着、最后由 `finish` 一次性吐出来，走的是另一条落地路径。
 #[test]
 fn a_body_without_a_trailing_newline_also_reflows() {
-    use miyu_core::llm::{ChatStreamChunk, ChatStreamKind};
-    use miyu_hosts::render::{ReasoningDisplayMode, StreamRenderer, ToolCallDisplayMode};
+    use yunxi_core::llm::{ChatStreamChunk, ChatStreamKind};
+    use yunxi_hosts::render::{ReasoningDisplayMode, StreamRenderer, ToolCallDisplayMode};
 
     crate::cli::tests::tui_blocks::with_blocks(|| {
-        miyu_hosts::render::set_cols_override(40);
+        yunxi_hosts::render::set_cols_override(40);
         let mut renderer = StreamRenderer::new(
             ReasoningDisplayMode::Summary,
             ToolCallDisplayMode::Summary,
@@ -190,7 +190,7 @@ fn a_body_without_a_trailing_newline_also_reflows() {
         }
         renderer.finish().unwrap();
         let frame = renderer.take_output_frame();
-        miyu_hosts::render::set_cols_override(0);
+        yunxi_hosts::render::set_cols_override(0);
 
         let mut term = Term::default();
         term.set_cols(40);
@@ -213,10 +213,10 @@ fn a_body_without_a_trailing_newline_also_reflows() {
 /// 终端里塞标记是不能接受的。
 #[test]
 fn inline_bodies_carry_no_soft_wrap_markers() {
-    miyu_hosts::render::blocks::set_enabled(false);
-    miyu_hosts::render::set_cols_override(40);
-    let wrapped = miyu_hosts::render::timeline::indent_body(&"长正文".repeat(30));
-    miyu_hosts::render::set_cols_override(0);
+    yunxi_hosts::render::blocks::set_enabled(false);
+    yunxi_hosts::render::set_cols_override(40);
+    let wrapped = yunxi_hosts::render::timeline::indent_body(&"长正文".repeat(30));
+    yunxi_hosts::render::set_cols_override(0);
     assert!(
         wrapped.contains('\n'),
         "这段该被折成好几行，否则这条测试什么都没验到"

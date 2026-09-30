@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#171821">
-  <title>Miyu</title>
+  <title>YunXi</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/vendor/katex/katex.min.css">
   <!-- matugen 生成的 MD3 token 覆盖;app.js 依据「配色方案」切换 link.disabled -->
@@ -19,7 +19,7 @@
   <script defer src="/i18n-en.js"></script>
   <script defer src="/i18n.js"></script>
   <script defer src="/highlight.js"></script>
-  <!-- 命令层要先于 app.js 就位:app.js 初始化时就会调 MiyuCommands.load -->
+  <!-- 命令层要先于 app.js 就位:app.js 初始化时就会调 YunXiCommands.load -->
   <script defer src="/commands.js"></script>
   <script defer src="/lightbox.js"></script>
   <script defer src="/preview.js"></script>
@@ -54,9 +54,9 @@
     <aside class="sidebar" id="sidebar" aria-label="会话" data-i18n-aria-label="会话">
       <header class="brand-row">
         <div class="brand-identity">
-          <img src="/assets/miyu-logo.png" alt="Miyu" class="brand-avatar" id="brandAvatar">
+          <img src="/assets/yunxi-logo.png" alt="YunXi" class="brand-avatar" id="brandAvatar">
           <div>
-            <strong id="brandName">Miyu</strong>
+            <strong id="brandName">YunXi</strong>
             <span><i class="status-dot is-connecting" id="sidebarStatusDot"></i><span id="sidebarConnectionStatus" data-i18n="连接中">连接中</span></span>
           </div>
         </div>
@@ -121,8 +121,8 @@
           </div>
 
           <section class="blocked-state" id="blockedState" aria-labelledby="blockedTitle" hidden>
-            <img src="/assets/miyu-logo.png" alt="" aria-hidden="true">
-            <h1 id="blockedTitle" data-i18n="登录 Miyu">登录 Miyu</h1>
+            <img src="/assets/yunxi-logo.png" alt="" aria-hidden="true">
+            <h1 id="blockedTitle" data-i18n="登录 YunXi">登录 YunXi</h1>
             <p id="blockedMessage" data-i18n="输入访问密码以继续。">输入访问密码以继续。</p>
             <form class="login-form" id="loginForm" hidden novalidate>
               <label for="loginUsername" data-i18n="用户名">用户名</label>
@@ -207,10 +207,10 @@
 
           <section class="empty-state" id="emptyState" aria-labelledby="emptyTitle" hidden>
             <div class="empty-visual" id="emptyVisual">
-              <img id="emptyBoardImage" src="/assets/miyuwallpaper.png" alt="Miyu 看板图片" data-i18n-alt="Miyu 看板图片" decoding="async">
+              <img id="emptyBoardImage" src="/assets/yunxi-wallpaper.png" alt="YunXi 看板图片" data-i18n-alt="YunXi 看板图片" decoding="async">
             </div>
             <div class="empty-copy">
-              <span class="empty-kicker"><i class="status-dot"></i><span id="emptyKickerName">Miyu</span></span>
+              <span class="empty-kicker"><i class="status-dot"></i><span id="emptyKickerName">YunXi</span></span>
               <h1 id="emptyTitle" data-i18n="今天想聊些什么？">今天想聊些什么？</h1>
               <p id="emptySubtitle" data-i18n="从一个问题、计划或此刻的想法开始。">从一个问题、计划或此刻的想法开始。</p>
             </div>
@@ -257,7 +257,7 @@
             <!-- 首屏兜底:人格加载完由 applyPersona 换成配置值(或按人格名生成的默认句)。 -->
             <!-- 输入行:框内只留交互按钮(面板/语音/附件/发送);其余信息移到框下的 composer-info。 -->
             <div class="composer-input-row">
-              <textarea id="composerInput" rows="2" placeholder="给 Miyu 发消息" data-i18n-placeholder="给 Miyu 发消息" aria-label="消息" data-i18n-aria-label="消息" disabled></textarea>
+              <textarea id="composerInput" rows="2" placeholder="给 YunXi 发消息" data-i18n-placeholder="给 YunXi 发消息" aria-label="消息" data-i18n-aria-label="消息" disabled></textarea>
               <div class="composer-inbox-bar">
                 <button class="attach-button" id="attachButton" type="button" title="添加附件" data-i18n-title="添加附件" aria-label="添加附件" data-i18n-aria-label="添加附件" disabled>
                   <span class="icon-slot" data-icon="paperclip" aria-hidden="true"><span class="icon-fallback">+</span></span>
@@ -606,7 +606,7 @@
             <h2 data-i18n="语言">语言</h2>
             <div class="settings-card">
               <div class="settings-row">
-                <div class="lbl"><strong data-i18n="界面语言">界面语言</strong><small data-i18n="整个 Miyu 都用这一种语言（命令行、终端、网页、通知）；自动=跟随浏览器。改完要保存，页面会自己重载。">整个 Miyu 都用这一种语言（命令行、终端、网页、通知）；自动=跟随浏览器。改完要保存，页面会自己重载。</small></div>
+                <div class="lbl"><strong data-i18n="界面语言">界面语言</strong><small data-i18n="整个 YunXi 都用这一种语言（命令行、终端、网页、通知）；自动=跟随浏览器。改完要保存，页面会自己重载。">整个 YunXi 都用这一种语言（命令行、终端、网页、通知）；自动=跟随浏览器。改完要保存，页面会自己重载。</small></div>
                 <div class="segmented" id="languageSeg" role="group" aria-label="界面语言" data-i18n-aria-label="界面语言">
                   <button type="button" data-language="auto" data-i18n="自动">自动</button>
                   <button type="button" data-language="en" data-i18n="英语">英语</button>
@@ -657,7 +657,7 @@
             </section>
             <section class="settings-section about-section settings-panel" data-settings-panel="interface">
             <h2 data-i18n="关于">关于</h2>
-            <div class="about-row"><span>Miyu WebUI</span><span id="versionLabel">--</span></div>
+            <div class="about-row"><span>YunXi WebUI</span><span id="versionLabel">--</span></div>
             </section>
             <section class="settings-section settings-panel st-page" data-settings-panel="prompts" hidden><div class="st-root" id="settings-prompts"></div></section>
             <section class="settings-section settings-panel st-page" data-settings-panel="providers" hidden><div class="st-root" id="settings-providers"></div></section>
@@ -704,7 +704,7 @@
             <p data-i18n="使用预置人格,或创建专属于自己的 AI 人格。">使用预置人格,或创建专属于自己的 AI 人格。</p>
             <div class="oobe-choice" role="radiogroup">
               <button type="button" class="oobe-option" data-persona-mode="shared" role="radio" aria-checked="false">
-                <b id="oobeSharedName">Miyu</b><span id="oobeSharedHint" data-i18n="预置人格,不可修改">预置人格,不可修改</span>
+                <b id="oobeSharedName">YunXi</b><span id="oobeSharedHint" data-i18n="预置人格,不可修改">预置人格,不可修改</span>
               </button>
               <button type="button" class="oobe-option is-on" data-persona-mode="private" role="radio" aria-checked="true">
                 <b data-i18n="创建我的人格">创建我的人格</b><span data-i18n="自己起名、写设定、传头像;记忆和资料只属于你">自己起名、写设定、传头像;记忆和资料只属于你</span>
@@ -799,7 +799,7 @@
   </div>
 
   <noscript>
-    <div class="noscript-state" data-i18n="Miyu WebUI 需要启用 JavaScript。">Miyu WebUI 需要启用 JavaScript。</div>
+    <div class="noscript-state" data-i18n="YunXi WebUI 需要启用 JavaScript。">YunXi WebUI 需要启用 JavaScript。</div>
   </noscript>
 </body>
 </html>

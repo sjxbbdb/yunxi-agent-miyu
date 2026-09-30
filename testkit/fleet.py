@@ -2,7 +2,7 @@
 """走查红绿账（09-25）：按 `testkit/fleet.json` 一个一个跑黑盒走查，和已知红账对账。
 
     python3 testkit/fleet.py --list                       列出登记的走查
-    python3 testkit/fleet.py [--bin 路径] [--only a,b]    跑（默认 target/debug/miyu），出报告
+    python3 testkit/fleet.py [--bin 路径] [--only a,b]    跑（默认 target/debug/yunxi），出报告
     python3 testkit/fleet.py --check [--against-ref HEAD^] 只查账本本身（CI 用）
 
 判定：退出码 0 且输出里没有「N/M passed」式的少过，才算绿。账上该绿的红了，当场复跑一次
@@ -12,12 +12,12 @@
     红转绿  账上记着红、这次绿了——从 known_red 里划掉（账本只减不增）
     旧红    账上记着红、这次还红——照旧
 
-每项一个全新的 MIYU_HOME（跑完留着，daemon 日志在里面），端口固定（见 fleet.json 的 `env`），同一时刻只跑一项：走查量的是
-终端时序，并行会互相抢 CPU 和端口。产物放在 ~/.cache/miyu-fleet/<时间>/，不进 /tmp。
+每项一个全新的 YUNXI_HOME（跑完留着，daemon 日志在里面），端口固定（见 fleet.json 的 `env`），同一时刻只跑一项：走查量的是
+终端时序，并行会互相抢 CPU 和端口。产物放在 ~/.cache/yunxi-fleet/<时间>/，不进 /tmp。
 
 绝不碰线上 8300 daemon：每项都有自己的家目录和端口；--bin 给绝对路径。
 
---bin 要 `cargo build` 编的那份：`cargo test`（含 --no-run、refactor-check）之后的 target/debug/miyu 带 testkit，
+--bin 要 `cargo build` 编的那份：`cargo test`（含 --no-run、refactor-check）之后的 target/debug/yunxi 带 testkit，
 终端探测走测试的固定路径，链接画成「标题 <网址>」，round26 的 OSC 8 两项必红（09-26 白跑过一轮）。
 
 账上没收的（09-25 盘点）：
@@ -49,8 +49,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / "testkit" / "fleet.json"
 PASSED = re.compile(r"(\d+)\s*/\s*(\d+)\s+passed")
-# 走查的进程多半坐在某个 herdr pane 里；漏给被测的 miyu 会把人正在看的侧栏搅乱（09-23）。
-SCRUBBED = ("MIYU_SESSION", "MIYU_DIRECT", "MIYU_TURN_MODE", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
+# 走查的进程多半坐在某个 herdr pane 里；漏给被测的 yunxi 会把人正在看的侧栏搅乱（09-23）。
+SCRUBBED = ("YUNXI_SESSION", "YUNXI_DIRECT", "YUNXI_TURN_MODE", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
             "XDG_STATE_HOME", "XDG_CACHE_HOME")
 
 
@@ -142,8 +142,8 @@ def run_one(entry, binary, out, base_env, index, tag=""):
         link.unlink()
     link.symlink_to(os.path.relpath(artifacts, link.parent))
     env = dict(base_env)
-    env.update(BIN=str(binary), MIYU_BIN=str(binary), MIYU_HOME=str(home),
-               MIYU_TUI_RUNTIME=str(out / "rt"), MIYU_ST_RUNTIME=str(out / "strt"),
+    env.update(BIN=str(binary), YUNXI_BIN=str(binary), YUNXI_HOME=str(home),
+               YUNXI_TUI_RUNTIME=str(out / "rt"), YUNXI_ST_RUNTIME=str(out / "strt"),
                OUT=str(artifacts))
     for key, value in entry.get("env", {}).items():
         env[key] = str(value).replace("{bin}", str(binary))
@@ -172,12 +172,12 @@ def run_one(entry, binary, out, base_env, index, tag=""):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--bin", default=str(ROOT / "target" / "debug" / "miyu"))
+    parser.add_argument("--bin", default=str(ROOT / "target" / "debug" / "yunxi"))
     parser.add_argument("--only", help="逗号分隔的走查名")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--check", action="store_true", help="只查账本")
     parser.add_argument("--against-ref", help="--check 时和这个提交里的账本比：红账只减不增")
-    parser.add_argument("--out", help="产物目录（默认 ~/.cache/miyu-fleet/<时间>）")
+    parser.add_argument("--out", help="产物目录（默认 ~/.cache/yunxi-fleet/<时间>）")
     args = parser.parse_args()
 
     ledger = load()
@@ -202,10 +202,10 @@ def main():
 
     binary = Path(args.bin).resolve()
     if not binary.exists():
-        print(f"找不到 miyu 二进制：{binary}（先 cargo build）")
+        print(f"找不到 yunxi 二进制：{binary}（先 cargo build）")
         return 2
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    out = Path(args.out) if args.out else Path.home() / ".cache" / "miyu-fleet" / stamp
+    out = Path(args.out) if args.out else Path.home() / ".cache" / "yunxi-fleet" / stamp
     out.mkdir(parents=True, exist_ok=True)
     base_env = {key: value for key, value in os.environ.items()
                 if not key.startswith("HERDR_") and key not in SCRUBBED}

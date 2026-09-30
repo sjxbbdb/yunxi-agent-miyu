@@ -1,10 +1,10 @@
 //! 人格与用户身份的编辑攒到「保存并退出」才写（用户 09-26）。
 
 use crate::config_tui::*;
-use miyu_base::config::{persona_scope_name, PersonaManifest};
+use yunxi_base::config::{persona_scope_name, PersonaManifest};
 
-fn test_paths(root: &std::path::Path) -> MiyuPaths {
-    MiyuPaths {
+fn test_paths(root: &std::path::Path) -> YunXiPaths {
+    YunXiPaths {
         root_dir: root.to_path_buf(),
         config_dir: root.join("config"),
         config_file: root.join("config/config.jsonc"),
@@ -13,7 +13,7 @@ fn test_paths(root: &std::path::Path) -> MiyuPaths {
         cache_dir: root.join("cache"),
         state_dir: root.join("state"),
         pictures_dir: root.join("pictures"),
-        fish_hook_file: root.join("fish/miyu.fish"),
+        fish_hook_file: root.join("fish/yunxi.fish"),
         bash_hook_file: root.join("shell/bash-hook.sh"),
         zsh_hook_file: root.join("shell/zsh-hook.zsh"),
         scripts_dir: root.join("config/scripts"),
@@ -101,7 +101,7 @@ fn names_being_renamed_away_are_still_taken() {
     assert!(ensure_draft_name_available(&paths, &config, &drafts, "甲.md", Some("乙.md")).is_ok());
 }
 
-/// 攒着的时候盘上一个字不动；「保存并退出」时改名、正文、附属文件、Miyu 附加、用户身份一起落。
+/// 攒着的时候盘上一个字不动；「保存并退出」时改名、正文、附属文件、YunXi 附加、用户身份一起落。
 #[test]
 fn nothing_is_written_until_the_drafts_are_flushed() {
     let temp = tempfile::tempdir().unwrap();
@@ -124,7 +124,7 @@ fn nothing_is_written_until_the_drafts_are_flushed() {
     );
     pending
         .drafts
-        .set_miyu_extras("Miyu 新提示".to_string(), String::new());
+        .set_yunxi_extras("YunXi 新提示".to_string(), String::new());
     pending.drafts.set_identity(
         "我.md".to_string(),
         IdentityDraft {
@@ -153,11 +153,11 @@ fn nothing_is_written_until_the_drafts_are_flushed() {
     );
     let (hint, _) = persona_aux_values(&paths, &config, &persona_scope_name("乙.md"));
     assert_eq!(hint, "新提示");
-    let miyu_hint = std::fs::read_to_string(miyu_core::persona_hint::manual_hint_path(
+    let yunxi_hint = std::fs::read_to_string(yunxi_core::persona_hint::manual_hint_path(
         &config, &paths, "default",
     ))
     .unwrap();
-    assert_eq!(miyu_hint.trim(), "Miyu 新提示");
+    assert_eq!(yunxi_hint.trim(), "YunXi 新提示");
     assert!(!config.identity_path(&paths, "我.md").exists());
     assert_eq!(
         read_identity(&paths, &config, "新我.md").unwrap().trim(),

@@ -1,33 +1,33 @@
 #!/usr/bin/env bash
 # 起一个专供「用不同终端手测图片渲染」的沙盒。
 #
-# 与 daemon 隔离的 MIYU_HOME、独立端口，沿用本机的供应商配置（QQ/语音关掉），
+# 与 daemon 隔离的 YUNXI_HOME、独立端口，沿用本机的供应商配置（QQ/语音关掉），
 # 所以模型可用——直接在 REPL 里让她显示图片，走的就是用户真正会遇到的那条路。
 #
 # 用法：
 #   testkit/chafa-compat/sandbox.sh            # 起沙盒
-#   ~/.cache/miyu-chafa-sandbox/miyu-sb        # 在任意终端里开 REPL
-#   ~/.cache/miyu-chafa-sandbox/with-chafa 1.14.5 ~/.cache/miyu-chafa-sandbox/miyu-sb
+#   ~/.cache/yunxi-chafa-sandbox/yunxi-sb        # 在任意终端里开 REPL
+#   ~/.cache/yunxi-chafa-sandbox/with-chafa 1.14.5 ~/.cache/yunxi-chafa-sandbox/yunxi-sb
 #                                              # 换用旧版 chafa 再测一遍
 set -euo pipefail
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for __herdr_var in $(env | sed -n 's/^\(HERDR_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$__herdr_var"; done
-ROOT=/home/shorin/.cache/miyu-chafa-sandbox
+ROOT=/home/shorin/.cache/yunxi-chafa-sandbox
 HERE="$(cd "$(dirname "$0")" && pwd)"
-BIN="$(cd "$HERE/../.." && pwd)/target/release/miyu"
-SCRIPTS=/home/shorin/.local/share/miyu/scripts
+BIN="$(cd "$HERE/../.." && pwd)/target/release/yunxi"
+SCRIPTS=/home/shorin/.local/share/yunxi/scripts
 PORT=8389
 
 [ -x "$BIN" ] || { echo "二进制还没编译好: $BIN" >&2; exit 1; }
 
-systemctl --user stop miyu-chafa-sandbox.service 2>/dev/null || true
+systemctl --user stop yunxi-chafa-sandbox.service 2>/dev/null || true
 rm -rf "$ROOT"
 mkdir -p "$ROOT/home/config" "$ROOT/runtime" "$ROOT/images"
 
 python3 - "$ROOT/home/config/config.jsonc" <<'PY'
 import re, sys
-src = open("/home/shorin/.miyu/config/config.jsonc", encoding="utf-8").read()
+src = open("/home/shorin/.yunxi/config/config.jsonc", encoding="utf-8").read()
 for key in ("qq", "voice"):
     src, n = re.subn(r'("%s":\s*\{\s*\n\s*"enabled":\s*)true' % key, r'\1false', src, count=1)
     assert n == 1, key
@@ -62,10 +62,10 @@ png("small.png", 128, 128)
 png("big.png", 1024, 768)
 PY
 
-systemd-run --user --unit=miyu-chafa-sandbox --collect -E LANG=zh_CN.UTF-8 -E LANGUAGE=zh_CN:en \
+systemd-run --user --unit=yunxi-chafa-sandbox --collect -E LANG=zh_CN.UTF-8 -E LANGUAGE=zh_CN:en \
   -p WorkingDirectory="$ROOT/home" \
-  --setenv=MIYU_HOME="$ROOT/home" --setenv=XDG_RUNTIME_DIR="$ROOT/runtime" \
-  --setenv=MIYU_SYSTEM_SCRIPTS_DIR="$SCRIPTS" \
+  --setenv=YUNXI_HOME="$ROOT/home" --setenv=XDG_RUNTIME_DIR="$ROOT/runtime" \
+  --setenv=YUNXI_SYSTEM_SCRIPTS_DIR="$SCRIPTS" \
   "$BIN" __daemon --port "$PORT"
 
 for _ in $(seq 1 60); do
@@ -73,17 +73,17 @@ for _ in $(seq 1 60); do
   sleep 0.5
 done
 
-# REPL 入口。MIYU_IMAGE_TRACE 打开，每次打图都往
-# ~/.miyu/cache/logs/image-trace.log 追一行（chafa 版本、参数、选中格式、耗时）。
-cat > "$ROOT/miyu-sb" <<EOF
+# REPL 入口。YUNXI_IMAGE_TRACE 打开，每次打图都往
+# ~/.yunxi/cache/logs/image-trace.log 追一行（chafa 版本、参数、选中格式、耗时）。
+cat > "$ROOT/yunxi-sb" <<EOF
 #!/usr/bin/env bash
-export MIYU_HOME=$ROOT/home
+export YUNXI_HOME=$ROOT/home
 export XDG_RUNTIME_DIR=$ROOT/runtime
-export MIYU_SYSTEM_SCRIPTS_DIR=$SCRIPTS
-export MIYU_IMAGE_TRACE=1
+export YUNXI_SYSTEM_SCRIPTS_DIR=$SCRIPTS
+export YUNXI_IMAGE_TRACE=1
 exec $BIN "\$@"
 EOF
-chmod +x "$ROOT/miyu-sb"
+chmod +x "$ROOT/yunxi-sb"
 
 # 换用历史版本的 chafa 跑同一条命令：with-chafa 1.14.5 <命令...>
 OLD="$HERE/old"
@@ -104,13 +104,13 @@ PATH="\$shim:\$PATH" "\$@"
 EOF
 chmod +x "$ROOT/with-chafa"
 
-: > /home/shorin/.miyu/cache/logs/image-trace.log 2>/dev/null || true
+: > /home/shorin/.yunxi/cache/logs/image-trace.log 2>/dev/null || true
 
 echo "沙盒就绪 (端口 $PORT)"
 echo "  二进制   $BIN"
 echo "  测试图   $ROOT/images/{small,wide,tall,big}.png"
-echo "  REPL     $ROOT/miyu-sb"
-echo "  旧 chafa $ROOT/with-chafa 1.14.5 $ROOT/miyu-sb"
-echo "  取证日志 ~/.miyu/cache/logs/image-trace.log"
+echo "  REPL     $ROOT/yunxi-sb"
+echo "  旧 chafa $ROOT/with-chafa 1.14.5 $ROOT/yunxi-sb"
+echo "  取证日志 ~/.yunxi/cache/logs/image-trace.log"
 echo "  health=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/api/health")"
 echo "  本机 chafa $(chafa --version 2>/dev/null | head -1)"

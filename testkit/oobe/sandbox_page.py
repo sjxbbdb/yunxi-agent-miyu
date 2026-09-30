@@ -3,7 +3,7 @@
 
     python3 testkit/oobe/sandbox_page.py [binary]
 
-真二进制 + PTY + pyte,每一程一个临时 MIYU_HOME,不碰真配置、不联网(到接模型那屏
+真二进制 + PTY + pyte,每一程一个临时 YUNXI_HOME,不碰真配置、不联网(到接模型那屏
 就 Ctrl+S 跳过)。终端集成那屏一律选「不装」——选别的会真往 shell 的配置里写。
 
 两程:回车 = 开启(新装的默认值),下移再回车 = 不开;各看一眼配置文件里的
@@ -25,13 +25,13 @@ import pyte
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 BIN = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "target", "debug", "miyu"
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "target", "debug", "yunxi"
 )
 COLS, ROWS = 100, 40
 ENTER, DOWN, SPACE, CTRL_S = b"\r", b"\x1b[B", b" ", b"\x13"
@@ -46,14 +46,14 @@ def check(ok, name, detail=""):
 
 class Oobe:
     def __init__(self):
-        self.home = str(sandbox_dir.make("miyu-oobe-sandbox-", delete_at_exit=False))
+        self.home = str(sandbox_dir.make("yunxi-oobe-sandbox-", delete_at_exit=False))
         self.screen = pyte.Screen(COLS, ROWS)
         self.stream = pyte.ByteStream(self.screen)
         pid, fd = pty.fork()
         if pid == 0:
             os.environ["TERM"] = "xterm-256color"
-            os.environ["MIYU_HOME"] = self.home
-            os.environ["MIYU_OOBE_NO_IME"] = "1"
+            os.environ["YUNXI_HOME"] = self.home
+            os.environ["YUNXI_OOBE_NO_IME"] = "1"
             os.environ["LANG"] = "zh_CN.UTF-8"
             os.execvp(BIN, [BIN, "oobe"])
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", ROWS, COLS, 0, 0))

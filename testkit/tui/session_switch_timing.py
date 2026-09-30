@@ -5,8 +5,8 @@
 等后台那条跑完，从主会话切进它、`/back` 回来，各量三样：到画面认得出来的耗时、到画面静下来
 （0.5 秒没有新输出）的耗时、这段时间终端收到的字节数。
 
-    MIYU_BIN=... MIYU_HOME=~/.cache/miyu-session-ux/home MIYU_TUI_PORT=18961 STUB_PORT=18962 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-session-ux/rt OUT=~/.cache/miyu-session-ux/out \\
+    YUNXI_BIN=... YUNXI_HOME=~/.cache/yunxi-session-ux/home YUNXI_TUI_PORT=18961 STUB_PORT=18962 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-session-ux/rt OUT=~/.cache/yunxi-session-ux/out \\
       python3 testkit/tui/session_switch_timing.py
 """
 

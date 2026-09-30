@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """subagent 工具黑盒实测(09-11 改名 + dev 模式)。
 
-`miyu tool-call subagent '<json>'` 在 daemon 不在时本地执行同一条工具路径,
+`yunxi tool-call subagent '<json>'` 在 daemon 不在时本地执行同一条工具路径,
 子代理的请求全落到桩 LLM 上——模型实际看到的系统提示词与工具面就是取证。
 
 判据:
@@ -26,13 +26,13 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 REPO = Path(__file__).resolve().parents[2]
-MIYU = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
+YUNXI = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
 BASE = Path(__file__).resolve().parent
 OUT = BASE / "out"
 HOME = BASE / "home"
@@ -82,11 +82,11 @@ def build_home():
 
 def env():
     e = dict(os.environ)
-    e["MIYU_HOME"] = str(HOME)
+    e["YUNXI_HOME"] = str(HOME)
     for key in (
-        "MIYU_DIRECT",
-        "MIYU_SESSION",
-        "MIYU_TURN_MODE",
+        "YUNXI_DIRECT",
+        "YUNXI_SESSION",
+        "YUNXI_TURN_MODE",
         "XDG_CACHE_HOME",
         "XDG_CONFIG_HOME",
         "XDG_DATA_HOME",
@@ -99,7 +99,7 @@ def env():
 
 def cli(args, timeout=180):
     proc = subprocess.run(
-        [str(MIYU), *args],
+        [str(YUNXI), *args],
         env=env(),
         cwd=str(WORK),
         capture_output=True,
@@ -116,8 +116,8 @@ def stub_records():
 
 
 def main():
-    if not MIYU.exists():
-        print(f"缺少二进制 {MIYU}，先 cargo build")
+    if not YUNXI.exists():
+        print(f"缺少二进制 {YUNXI}，先 cargo build")
         return 1
     build_home()
     stub_env = dict(os.environ)

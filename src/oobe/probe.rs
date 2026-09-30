@@ -5,7 +5,7 @@
 //! 会把「载入」拖成「卡住」。CLI 的模型目录（最长 20 秒）另起线程，见
 //! [`super::providers`]。
 //!
-//! 每步都记真实耗时。平时不显示，`MIYU_OOBE_VERBOSE=1` 调出来看——排查环境问题时有用。
+//! 每步都记真实耗时。平时不显示，`YUNXI_OOBE_VERBOSE=1` 调出来看——排查环境问题时有用。
 
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -205,7 +205,7 @@ impl Loader {
                 // 拉起引导的终端 PATH 里不一定有,光查 PATH 会误报「没找到 CLI」。
                 let clis: Vec<(&'static str, bool)> = ["claude", "codex", "agy", "codebuddy"]
                     .into_iter()
-                    .map(|name| (name, miyu_base::paths::program_available(name)))
+                    .map(|name| (name, yunxi_base::paths::program_available(name)))
                     .collect();
                 let keys = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY"];
                 self.facts.env_key = keys.iter().any(|key| std::env::var_os(key).is_some());
@@ -279,7 +279,7 @@ pub(super) struct Fcitx {
 impl Fcitx {
     pub fn probe() -> Self {
         // 自动化跑的时候别碰真输入法：反复起停会把用户的输入法开开关关。
-        if std::env::var_os("MIYU_OOBE_NO_IME").is_some() {
+        if std::env::var_os("YUNXI_OOBE_NO_IME").is_some() {
             return Self {
                 available: false,
                 original: None,

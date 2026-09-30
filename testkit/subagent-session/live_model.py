@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """真模型看一眼：子代理只在后台跑之后，模型派完是不是就收这一轮、不空转查状态（09-26）。
 
-沙箱 MIYU_HOME + 真配置的一份拷贝（不动 ~/.miyu；平台、网页、语音、闹钟都摘掉）+ 独立端口 daemon。
-一次性 `miyu ask --output-format stream-json` 让模型派一个子代理，按事件流逐轮看工具调用：
+沙箱 YUNXI_HOME + 真配置的一份拷贝（不动 ~/.yunxi；平台、网页、语音、闹钟都摘掉）+ 独立端口 daemon。
+一次性 `yunxi ask --output-format stream-json` 让模型派一个子代理，按事件流逐轮看工具调用：
 
     dispatched          第一轮调了 subagent
     no_polling          第一轮派完没有去查任务状态（job 工具）、没有 sleep 干等
@@ -35,8 +35,8 @@ spec = importlib.util.spec_from_file_location("persona_ab", REPO / "testkit" / "
 persona_ab = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(persona_ab)
 
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
-SANDBOX = sandbox_dir.make("miyu-subagent-live-")
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
+SANDBOX = sandbox_dir.make("yunxi-subagent-live-")
 HOME = SANDBOX / "home"
 RUNTIME = SANDBOX / "runtime"
 
@@ -53,8 +53,8 @@ def free_port():
 
 
 def env():
-    e = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), LANG="zh_CN.UTF-8")
-    for key in ("MIYU_DIRECT", "MIYU_SESSION", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
+    e = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), LANG="zh_CN.UTF-8")
+    for key in ("YUNXI_DIRECT", "YUNXI_SESSION", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
                 "XDG_STATE_HOME"):
         e.pop(key, None)
     return e

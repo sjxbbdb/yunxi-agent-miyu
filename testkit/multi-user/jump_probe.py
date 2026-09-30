@@ -2,8 +2,8 @@
 """WebUI 流式输出「字会跳」探针:对着一个跑着的 daemon 发一句话,每 60ms 采样
 正文气泡的位置/高度/文本长度与时间线 scrollTop,把「往回跳」的时刻记下来并截图。
 
-BASE=http://127.0.0.1:8388 PASSWORD=miyu-sandbox python3 testkit/multi-user/jump_probe.py [提示词]
-产物:~/.cache/miyu-jump-probe/{samples.jsonl, jumps.json, jump-*.png, video/}
+BASE=http://127.0.0.1:8388 PASSWORD=yunxi-sandbox python3 testkit/multi-user/jump_probe.py [提示词]
+产物:~/.cache/yunxi-jump-probe/{samples.jsonl, jumps.json, jump-*.png, video/}
 """
 import json
 import os
@@ -14,10 +14,10 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 BASE = os.environ.get("BASE", "http://127.0.0.1:8388")
-PASSWORD = os.environ.get("PASSWORD", "miyu-sandbox")
+PASSWORD = os.environ.get("PASSWORD", "yunxi-sandbox")
 USERNAME = os.environ.get("USERNAME_", "shorin")
 PROMPT = sys.argv[1] if len(sys.argv) > 1 else "用大约四百字介绍一下 Arch Linux 的滚动更新模型,分三段,别用列表。"
-OUT = Path("~/.cache/miyu-jump-probe").expanduser()
+OUT = Path("~/.cache/yunxi-jump-probe").expanduser()
 SECONDS = float(os.environ.get("SECONDS", "45"))
 
 SAMPLE_JS = """

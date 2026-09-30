@@ -1,7 +1,7 @@
-//! `miyu mcp-serve`:把本会话的工具注册表以 MCP stdio server 形态挂给外部
+//! `yunxi mcp-serve`:把本会话的工具注册表以 MCP stdio server 形态挂给外部
 //! agent(claude-code 供应商中转的工具桥,由 claude 作为子进程拉起)。
 //!
-//! 与 `miyu tool-call` 同源:daemon 存活时经 IPC 以 MIYU_SESSION 的会话身份
+//! 与 `yunxi tool-call` 同源:daemon 存活时经 IPC 以 YUNXI_SESSION 的会话身份
 //! 解析目录并执行(guard/超时管线齐备);daemon 不在(直连调试形态)则本地
 //! 建 registry 兜底。传输是 MCP stdio(JSON-RPC 2.0 行分隔),只实现 tools
 //! 能力;工具失败按 MCP 语义回 `isError` 结果而不是 JSON-RPC error,让上游
@@ -9,29 +9,31 @@
 
 use crate::cli::*;
 
-pub(in crate::cli) async fn run_mcp_serve(paths: &MiyuPaths) -> Result<()> {
-    let session = std::env::var("MIYU_SESSION").ok().filter(|s| !s.is_empty());
+pub(in crate::cli) async fn run_mcp_serve(paths: &YunXiPaths) -> Result<()> {
+    let session = std::env::var("YUNXI_SESSION")
+        .ok()
+        .filter(|s| !s.is_empty());
     // antigravity 线的全局 MCP 注册对用户自己交互式开的 agy 同样生效——那时
     // 没有会话身份;守卫在场就只应答空工具表,不降级成无作用域直连。
-    let require_session = std::env::var("MIYU_MCP_REQUIRE_SESSION")
+    let require_session = std::env::var("YUNXI_MCP_REQUIRE_SESSION")
         .map(|value| value == "1")
         .unwrap_or(false);
     let guarded = require_session && session.is_none();
     // 上游模型方言:antigravity 中转点名 gemini,桥吐的 schema 按它整形。
-    let dialect = std::env::var("MIYU_MCP_SCHEMA_DIALECT").unwrap_or_default();
+    let dialect = std::env::var("YUNXI_MCP_SCHEMA_DIALECT").unwrap_or_default();
     // 与 claude 原生重复的工具由拉起方经 env 点名剔除(原生优先):目录里
     // 不出现、调用被拒,两边同源。
-    let excluded: std::collections::HashSet<String> = std::env::var("MIYU_MCP_EXCLUDE")
+    let excluded: std::collections::HashSet<String> = std::env::var("YUNXI_MCP_EXCLUDE")
         .unwrap_or_default()
         .split(',')
         .map(str::trim)
         .filter(|name| !name.is_empty())
         .map(str::to_string)
         .collect();
-    let origin = std::env::var("MIYU_TURN_ORIGIN")
+    let origin = std::env::var("YUNXI_TURN_ORIGIN")
         .ok()
         .filter(|s| !s.is_empty());
-    let depth: u32 = std::env::var("MIYU_BRIDGE_DEPTH")
+    let depth: u32 = std::env::var("YUNXI_BRIDGE_DEPTH")
         .ok()
         .and_then(|raw| raw.parse().ok())
         .unwrap_or(0);
@@ -68,7 +70,7 @@ pub(in crate::cli) async fn run_mcp_serve(paths: &MiyuPaths) -> Result<()> {
                 "result": {
                     "content": [{
                         "type": "text",
-                        "text": "no Miyu session is attached to this MCP server (started outside a Miyu relay turn)"
+                        "text": "no YunXi session is attached to this MCP server (started outside a YunXi relay turn)"
                     }],
                     "isError": true
                 }
@@ -113,7 +115,7 @@ fn write_line(value: &serde_json::Value) -> Result<()> {
 
 #[allow(clippy::too_many_arguments)]
 async fn handle_request(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session: &Option<String>,
     origin: &Option<String>,
     depth: u32,
@@ -132,7 +134,7 @@ async fn handle_request(
             Ok(serde_json::json!({
                 "protocolVersion": version,
                 "capabilities": { "tools": {} },
-                "serverInfo": { "name": "miyu", "version": env!("CARGO_PKG_VERSION") },
+                "serverInfo": { "name": "yunxi", "version": env!("CARGO_PKG_VERSION") },
             }))
         }
         "ping" => Ok(serde_json::json!({})),
@@ -186,7 +188,7 @@ async fn handle_request(
 }
 
 async fn list_tools(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session: &Option<String>,
     dialect: &str,
 ) -> Result<serde_json::Value> {
@@ -232,9 +234,9 @@ async fn list_tools(
             .collect::<Vec<_>>();
         return Ok(serde_json::json!({ "tools": tools }));
     }
-    // 直连回退:与 tool-call 的回退同一构建方式(模式取 MIYU_TURN_MODE)。
+    // 直连回退:与 tool-call 的回退同一构建方式(模式取 YUNXI_TURN_MODE)。
     let config = AppConfig::load_or_default(paths)?;
-    let mode = if std::env::var("MIYU_TURN_MODE").unwrap_or_default() == "dev" {
+    let mode = if std::env::var("YUNXI_TURN_MODE").unwrap_or_default() == "dev" {
         PersonaLane::Dev
     } else {
         PersonaLane::Active
@@ -257,7 +259,7 @@ async fn list_tools(
 }
 
 async fn call_tool(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session: &Option<String>,
     origin: &Option<String>,
     depth: u32,
@@ -282,11 +284,11 @@ async fn call_tool(
             .unwrap_or_default()
             .to_string());
     }
-    if depth >= miyu_base::workspace::MAX_BRIDGE_DEPTH {
+    if depth >= yunxi_base::workspace::MAX_BRIDGE_DEPTH {
         bail!("tool bridge recursion limit reached (depth {depth})");
     }
     let config = AppConfig::load_or_default(paths)?;
-    let mode = if std::env::var("MIYU_TURN_MODE").unwrap_or_default() == "dev" {
+    let mode = if std::env::var("YUNXI_TURN_MODE").unwrap_or_default() == "dev" {
         PersonaLane::Dev
     } else {
         PersonaLane::Active
@@ -295,20 +297,20 @@ async fn call_tool(
     if !registry.contains(name) {
         bail!("{:#}", registry.unknown_tool_error(name));
     }
-    let turn_origin: miyu_base::workspace::TurnOrigin = origin
+    let turn_origin: yunxi_base::workspace::TurnOrigin = origin
         .as_deref()
         .and_then(|raw| serde_json::from_str(raw).ok())
-        .unwrap_or(miyu_base::workspace::TurnOrigin::Human);
-    let invoke = miyu_base::workspace::with_turn_origin(
+        .unwrap_or(yunxi_base::workspace::TurnOrigin::Human);
+    let invoke = yunxi_base::workspace::with_turn_origin(
         turn_origin,
-        miyu_base::workspace::with_bridge_depth(depth + 1, async {
+        yunxi_base::workspace::with_bridge_depth(depth + 1, async {
             registry.call(name, arguments).await
         }),
     );
     match session {
         Some(session) => {
             let session: std::sync::Arc<str> = session.clone().into();
-            miyu_base::workspace::with_session(session, invoke).await
+            yunxi_base::workspace::with_session(session, invoke).await
         }
         None => invoke.await,
     }

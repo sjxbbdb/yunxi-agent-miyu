@@ -42,7 +42,14 @@ use crossterm::cursor::{Hide, MoveTo, Show};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::execute;
 use crossterm::terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
-use miyu_base::config::{
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use std::io::{self, Write};
+use std::path::PathBuf;
+use std::process::Command;
+use std::sync::mpsc::{self, Receiver};
+use std::time::Duration;
+use yunxi_base::config::{
     merge_group_join_approval_settings, merge_real_context_settings, ActiveProviderModelConfig,
     AppConfig, PlatformCommandPermission, PlatformConversationConfig, PlatformConversationKind,
     PlatformModelPoolInheritance, PlatformModelRoute, PlatformPersonaOverride, PlatformRateLimit,
@@ -54,39 +61,32 @@ use miyu_base::config::{
     QQ_GROUP_JOIN_APPROVAL_PLUGIN_ID, QQ_MEME_COLLECTOR_PLUGIN_ID, QQ_MESSAGE_HISTORY_PLUGIN_ID,
     REAL_CONTEXT_PLUGIN_ID,
 };
-use miyu_base::default_models::{OPENCODE_DEFAULT_VISION_MODEL, OPENCODE_PROVIDER_ID};
-use miyu_base::i18n::{is_zh, text as t};
-use miyu_base::paths::MiyuPaths;
-use miyu_core::llm::{
+use yunxi_base::default_models::{OPENCODE_DEFAULT_VISION_MODEL, OPENCODE_PROVIDER_ID};
+use yunxi_base::i18n::{is_zh, text as t};
+use yunxi_base::paths::YunXiPaths;
+use yunxi_core::llm::{
     thinking_variant_options_for_model, ThinkingVariantOptions, ThinkingVariantPreferences,
 };
-use miyu_core::state::StateStore;
-use miyu_hosts::platforms::commands::{self, PlatformCommandDescriptor};
-use miyu_hosts::platforms::plugins::{
+use yunxi_core::state::StateStore;
+use yunxi_hosts::platforms::commands::{self, PlatformCommandDescriptor};
+use yunxi_hosts::platforms::plugins::{
     active_judgement_skip_ids, apply_active_judgement_skip_editor_changes,
 };
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::io::{self, Write};
-use std::path::PathBuf;
-use std::process::Command;
-use std::sync::mpsc::{self, Receiver};
-use std::time::Duration;
 
-pub fn run(paths: &MiyuPaths) -> Result<bool> {
+pub fn run(paths: &YunXiPaths) -> Result<bool> {
     // 全屏 REPL 里开设置:备用屏已经是它的,这里退了再进会闪一下 shell 画面。
     run_with(paths, !crate::cli::in_fullscreen())
 }
 
 /// 调用方自己管着备用屏(引导之后紧接着进全屏 REPL):只进不退。
-pub fn run_embedded(paths: &MiyuPaths) -> Result<bool> {
+pub fn run_embedded(paths: &YunXiPaths) -> Result<bool> {
     run_with(paths, false)
 }
 
-fn run_with(paths: &MiyuPaths, owns_alt_screen: bool) -> Result<bool> {
+fn run_with(paths: &YunXiPaths, owns_alt_screen: bool) -> Result<bool> {
     AppConfig::init_files(paths)?;
-    miyu_base::models_cache::try_load(paths);
-    miyu_base::models_cache::spawn_background_refresh(paths.clone());
+    yunxi_base::models_cache::try_load(paths);
+    yunxi_base::models_cache::spawn_background_refresh(paths.clone());
     let config = AppConfig::load_or_default(paths)?;
     let thinking_variants = ThinkingVariantPreferences::load(paths);
     TerminalSession::start(paths, owns_alt_screen)?.run(paths, config, thinking_variants)
@@ -99,9 +99,9 @@ struct TerminalSession {
 }
 
 impl TerminalSession {
-    fn start(paths: &MiyuPaths, owns_alt_screen: bool) -> Result<Self> {
+    fn start(paths: &YunXiPaths, owns_alt_screen: bool) -> Result<Self> {
         terminal::enable_raw_mode()?;
-        // 独立 `miyu config` 没有 REPL 的挂断看门狗;不发 SIGHUP 的断开
+        // 独立 `yunxi config` 没有 REPL 的挂断看门狗;不发 SIGHUP 的断开
         // (tmux kill-pane、SSH 掉线)会让 crossterm 对 HUP fd 全速自旋。
         crate::cli::spawn_hangup_watchdog();
         let mut stdout = io::stdout();
@@ -133,7 +133,7 @@ impl TerminalSession {
 
     fn run(
         mut self,
-        paths: &MiyuPaths,
+        paths: &YunXiPaths,
         mut config: AppConfig,
         mut thinking_variants: ThinkingVariantPreferences,
     ) -> Result<bool> {
@@ -156,7 +156,7 @@ impl Drop for TerminalSession {
 /// 同时在往账本追加;账本在库里(`state/usage.db`),改名是一条 UPDATE,和追加
 /// 互不覆盖。账本改失败不阻断保存,配置已经落盘了。
 fn sync_usage_ledger_after_save(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     pristine_config: Option<&String>,
     config: &AppConfig,
 ) {
@@ -164,7 +164,7 @@ fn sync_usage_ledger_after_save(
     else {
         return;
     };
-    let ledger = match miyu_core::state::usage::ledger(&paths.state_dir) {
+    let ledger = match yunxi_core::state::usage::ledger(&paths.state_dir) {
         Ok(ledger) => ledger,
         Err(error) => {
             tracing::warn!(error = %error, "opening the usage ledger failed");
@@ -172,7 +172,7 @@ fn sync_usage_ledger_after_save(
         }
     };
     for (old, new) in
-        miyu_base::config::detect_provider_renames(&before.providers, &config.providers)
+        yunxi_base::config::detect_provider_renames(&before.providers, &config.providers)
     {
         match ledger.rename_provider(&old, &new) {
             Ok(rows) => tracing::info!(
@@ -203,7 +203,7 @@ fn sync_usage_ledger_after_save(
 /// 所以排在配置前面），然后存配置、思考档位、功能清单与开发提示词。任何一步失败都交回
 /// 错误、留在菜单里——内存里的改动都还在（09-26）。
 fn save_everything(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     thinking_variants: &mut ThinkingVariantPreferences,
     pending: &mut PendingWrites,
@@ -221,13 +221,13 @@ fn save_everything(
 fn dirty_snapshot(config: &AppConfig) -> Option<String> {
     let mut probe = config.clone();
     probe.plugins.memory = probe.memory_config().clone();
-    probe.memory = miyu_base::config::MemoryConfig::default();
+    probe.memory = yunxi_base::config::MemoryConfig::default();
     serde_json::to_string(&probe).ok()
 }
 
 fn run_main_menu(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
     thinking_variants: &mut ThinkingVariantPreferences,
 ) -> Result<bool> {
@@ -369,7 +369,7 @@ impl<'a> ProviderBrowser<'a> {
     }
 
     fn new(
-        paths: &'a MiyuPaths,
+        paths: &'a YunXiPaths,
         config: &'a mut AppConfig,
         thinking_variants: &'a mut ThinkingVariantPreferences,
     ) -> Self {
@@ -529,14 +529,14 @@ impl<'a> ProviderBrowser<'a> {
         if let Some(provider) = self.config.providers.get(self.provider_idx).cloned() {
             let seq = self.fetch_seq;
             let cli_binary =
-                miyu_base::provider_catalog::builtin_cli_binary(&self.config, &provider);
+                yunxi_base::provider_catalog::builtin_cli_binary(&self.config, &provider);
             let (tx, rx) = mpsc::channel();
             self.fetch_rx = Some(rx);
             self.loading = true;
             self.note(t("Fetching model list...", "正在获取模型列表...").to_string());
             std::thread::spawn(move || {
                 let result =
-                    miyu_base::provider_catalog::fetch_models(&provider, cli_binary.as_deref())
+                    yunxi_base::provider_catalog::fetch_models(&provider, cli_binary.as_deref())
                         .map_err(|err| err.to_string());
                 let _ = tx.send((seq, result));
             });
@@ -637,7 +637,9 @@ impl<'a> ProviderBrowser<'a> {
         let added = insert_custom_model(self.config, self.provider_idx, &self.raw_models, &name);
         if added {
             if let Some(provider) = self.config.providers.get_mut(self.provider_idx) {
-                miyu_base::provider_catalog::auto_configure_model_tags(self.paths, provider, &name);
+                yunxi_base::provider_catalog::auto_configure_model_tags(
+                    self.paths, provider, &name,
+                );
             }
         } else {
             self.undo.undo(self.config);
@@ -805,7 +807,7 @@ impl<'a> ProviderBrowser<'a> {
                 let mut model_updated = false;
                 if let Some(model) = self.models.get(self.model_idx).cloned() {
                     if let Some(provider) = self.config.providers.get_mut(self.provider_idx) {
-                        miyu_base::provider_catalog::auto_configure_model_tags(
+                        yunxi_base::provider_catalog::auto_configure_model_tags(
                             self.paths,
                             provider,
                             &model.full,
@@ -862,7 +864,7 @@ impl<'a> ProviderBrowser<'a> {
                 removed = Some((provider_id, model));
             } else {
                 provider.models.push(model.full.clone());
-                miyu_base::provider_catalog::auto_configure_model_tags(
+                yunxi_base::provider_catalog::auto_configure_model_tags(
                     self.paths,
                     provider,
                     &model.full,
@@ -1011,7 +1013,7 @@ impl<'a> ProviderBrowser<'a> {
     }
 }
 
-use miyu_base::config::EMBEDDING_MODALITY;
+use yunxi_base::config::EMBEDDING_MODALITY;
 
 #[cfg(test)]
 mod tests;

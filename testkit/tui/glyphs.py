@@ -7,7 +7,7 @@
 表是从 `src/render/stream/timeline.rs` 里现读的，不是手抄的：改了代码这儿就跟着变。
 
     python3 testkit/tui/glyphs.py           # 完整表
-    python3 testkit/tui/glyphs.py --ascii   # 连 MIYU_TUI_ASCII=1 的退路一起看
+    python3 testkit/tui/glyphs.py --ascii   # 连 YUNXI_TUI_ASCII=1 的退路一起看
     python3 testkit/tui/glyphs.py --plain   # 不上色（重定向到文件时用）
 """
 
@@ -219,7 +219,7 @@ def main():
     print()
     print(
         "%s共 %d 类工具图标 + %d 个特殊图标。"
-        "看不清就是字体里没有那个字形——`MIYU_TUI_ASCII=1` 走退路那一列。%s"
+        "看不清就是字体里没有那个字形——`YUNXI_TUI_ASCII=1` 走退路那一列。%s"
         % (dim, len(rows), len(extra), reset)
     )
     return 0

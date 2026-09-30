@@ -7,7 +7,7 @@
 //! 个模式下另一项必填），表单本身校验不了。
 
 use crate::config_tui::*;
-use miyu_base::config::{ModelPoolRef, ModelTier};
+use yunxi_base::config::{ModelPoolRef, ModelTier};
 
 pub(in crate::config_tui) const REPLY_PROCESSOR_PLUGIN_ID: &str = "reply_processor";
 
@@ -59,7 +59,7 @@ impl Default for ReplyProcessorSettingsForm {
 
 pub(in crate::config_tui) fn select_platform_plugins(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
 ) -> Result<()> {
     let mut selected = 0usize;
@@ -128,7 +128,7 @@ pub(in crate::config_tui) fn select_platform_plugins(
             .platforms
             .qq
             .plugins
-            .get(miyu_base::config::QQ_SCHEDULED_MESSAGES_PLUGIN_ID)
+            .get(yunxi_base::config::QQ_SCHEDULED_MESSAGES_PLUGIN_ID)
             .map(|plugin| plugin.enabled_or(false))
             .unwrap_or(false);
         let scheduled_messages_state = if scheduled_messages_enabled {

@@ -7,8 +7,8 @@
 没说完的时候，子代理那边跑命令的那一步要出现。
 
     cargo build
-    MIYU_HOME=~/.cache/miyu-bg-visit/home MIYU_TUI_PORT=18681 STUB_PORT=18682 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-bg-visit/rt OUT=~/.cache/miyu-bg-visit/out \\
+    YUNXI_HOME=~/.cache/yunxi-bg-visit/home YUNXI_TUI_PORT=18681 STUB_PORT=18682 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-bg-visit/rt OUT=~/.cache/yunxi-bg-visit/out \\
       python3 testkit/tui/bg_visit_midturn.py [--thinking | --sub-thinking]
 
 步骤：主回合派一条后台子代理（它跑两轮命令，每轮先想一句）→ 主回合慢慢吐一大段 → 主回合

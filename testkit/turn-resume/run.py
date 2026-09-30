@@ -17,7 +17,7 @@
     crashloop_keeps_counting      续跑的那一轮每次都被打断:次数一直往上数,第 4 次照样接着跑(不设上限)
     no_orphans                    收尾后没有残留进程
 
-用法: run.py <miyu 二进制>        全过退出码 0
+用法: run.py <yunxi 二进制>        全过退出码 0
 
 隔离:/tmp 下的临时家目录 + 独立 XDG_RUNTIME_DIR + 独立端口,跑完删掉,不碰线上 8300。
 """
@@ -75,9 +75,9 @@ def recv_exact(sock, n):
 
 
 class Sandbox:
-    def __init__(self, miyu: Path):
-        self.miyu = miyu
-        self.home = Path(tempfile.mkdtemp(prefix="miyu-resume-", dir="/tmp"))
+    def __init__(self, yunxi: Path):
+        self.yunxi = yunxi
+        self.home = Path(tempfile.mkdtemp(prefix="yunxi-resume-", dir="/tmp"))
         self.run = self.home / "run"
         self.work = self.home / "work"
         self.stub_log = self.home / "stub.jsonl"
@@ -99,10 +99,10 @@ class Sandbox:
         (self.home / "config" / "config.jsonc").write_text(json.dumps(config), encoding="utf-8")
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith("HERDR_")
-                    and k not in ("MIYU_SESSION", "MIYU_DIRECT", "MIYU_TURN_MODE", "MIYU_HOME",
+                    and k not in ("YUNXI_SESSION", "YUNXI_DIRECT", "YUNXI_TURN_MODE", "YUNXI_HOME",
                                   "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME")}
-        self.env.update(MIYU_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8",
-                        MIYU_LOG="info")
+        self.env.update(YUNXI_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8",
+                        YUNXI_LOG="info")
         self.stub = None
         self.daemon = None
         self.clients = []
@@ -119,7 +119,7 @@ class Sandbox:
         """直接起 `__daemon`:pid 就是 daemon 本身,SIGKILL / SIGTERM 打得准。"""
         self.boots += 1
         log = (self.home / f"daemon-{self.boots}.log").open("w")
-        self.daemon = subprocess.Popen([str(self.miyu), "__daemon", "--port", str(PORT)], env=self.env,
+        self.daemon = subprocess.Popen([str(self.yunxi), "__daemon", "--port", str(PORT)], env=self.env,
                                        cwd=str(self.work), stdin=subprocess.DEVNULL, stdout=log,
                                        stderr=subprocess.STDOUT)
         if not wait_for(self.ping, 40):
@@ -173,7 +173,7 @@ class Sandbox:
                 cmdline = (proc / "cmdline").read_bytes()
             except OSError:
                 continue
-            if f"MIYU_HOME={self.home}".encode() in environ or str(self.home).encode() in cmdline:
+            if f"YUNXI_HOME={self.home}".encode() in environ or str(self.home).encode() in cmdline:
                 found.append(proc.name)
         return found
 
@@ -191,7 +191,7 @@ class Sandbox:
             return json.loads(recv_exact(sock, length))
 
     def ask(self, session, text, create=False, timeout=120):
-        args = [str(self.miyu), "ask", "--output-format", "json", "--session", session]
+        args = [str(self.yunxi), "ask", "--output-format", "json", "--session", session]
         if create:
             args.append("--create")
         proc = subprocess.run([*args, text], env=self.env, stdin=subprocess.DEVNULL, cwd=str(self.work),
@@ -201,7 +201,7 @@ class Sandbox:
 
     def ask_in_background(self, session, text):
         """跑慢工具的那一轮:客户端挂在后台,daemon 被杀时它跟着断。"""
-        client = subprocess.Popen([str(self.miyu), "ask", "--output-format", "json", "--session", session, text],
+        client = subprocess.Popen([str(self.yunxi), "ask", "--output-format", "json", "--session", session, text],
                                   env=self.env, stdin=subprocess.DEVNULL, cwd=str(self.work),
                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.clients.append(client)

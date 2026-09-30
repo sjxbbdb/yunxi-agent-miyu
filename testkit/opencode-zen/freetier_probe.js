@@ -8,7 +8,7 @@
 // 用法：
 //     bun run testkit/opencode-zen/freetier_probe.js [模型名]
 //
-// key 从 ~/.miyu/config/config.jsonc 的 opencode 供应商里读；读不到就用字面量
+// key 从 ~/.yunxi/config/config.jsonc 的 opencode 供应商里读；读不到就用字面量
 // `public`（免费档匿名也能打）。每次请求之间隔 5 秒——打太快会先撞 429
 // `FreeUsageLimitError`，那是额度不是闸，别把两者看混：
 //   · 403 + FreeTierError      → 被客户端识别闸挡住
@@ -30,7 +30,7 @@ const GAP_MS = 5000
 
 async function apiKey() {
   try {
-    const raw = await Bun.file(`${homedir()}/.miyu/config/config.jsonc`).text()
+    const raw = await Bun.file(`${homedir()}/.yunxi/config/config.jsonc`).text()
     const cfg = JSON.parse(raw.replace(/^\s*\/\/.*$/gm, ""))
     const zen = cfg.providers?.find((p) => p.base_url?.startsWith("https://opencode.ai/zen/v1"))
     return zen?.api_key || "public"
@@ -102,7 +102,7 @@ const key = await apiKey()
 console.log(`模型 ${MODEL}，key ${key === "public" ? "public（匿名）" : "配置里的真 key"}，每次间隔 ${GAP_MS / 1000}s\n`)
 
 await check("基准：三件都满足", "allowed", headers(key), body())
-await check("Miyu 改名前的工具名", "blocked", headers(key), body({ toolNames: ["run_command", "read_file", "web_search"] }))
+await check("YunXi 改名前的工具名", "blocked", headers(key), body({ toolNames: ["run_command", "read_file", "web_search"] }))
 await check("只有 shell，没有 read", "blocked", headers(key), body({ toolNames: ["shell"] }))
 await check("只有 read，没有 shell", "blocked", headers(key), body({ toolNames: ["read"] }))
 await check("bash 代替 shell", "allowed", headers(key), body({ toolNames: ["bash", "read"] }))
@@ -115,6 +115,6 @@ await check("一个 x-opencode-* 头都不带", "blocked", headers(key, { openco
 
 console.log(`\n${pass}/${total} passed`)
 if (pass !== total) {
-  console.log("判据变了。重新二分，然后同步 crates/miyu-core/src/llm/openai_compatible/zen_tools.rs 里的别名与模块注释。")
+  console.log("判据变了。重新二分，然后同步 crates/yunxi-core/src/llm/openai_compatible/zen_tools.rs 里的别名与模块注释。")
   process.exit(1)
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """多用户浏览器走查:登录页(用户名+密码/注册表单)、成员看不到管理面板、账号页。
 
-BIN=<miyu> python3 testkit/multi-user/ui.py     # 截图落 /tmp/miyu-multi-user-ui/ui-*.png
+BIN=<yunxi> python3 testkit/multi-user/ui.py     # 截图落 /tmp/yunxi-multi-user-ui/ui-*.png
 """
 import json
 import os
@@ -13,7 +13,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -26,7 +26,7 @@ import authlib  # noqa: E402
 import e2e  # noqa: E402  复用隔离 daemon 的准备
 
 BIN = Path(os.environ["BIN"]).expanduser()
-OUT = Path(os.environ.get("OUT", "/tmp/miyu-multi-user-ui")).expanduser()
+OUT = Path(os.environ.get("OUT", "/tmp/yunxi-multi-user-ui")).expanduser()
 PORT = int(os.environ.get("PORT", "18492"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18496"))
 BASE = f"http://127.0.0.1:{PORT}"
@@ -34,8 +34,8 @@ e2e.PORT, e2e.STUB_PORT, e2e.BASE = PORT, STUB_PORT, BASE
 e2e.OUT = OUT / "ui"
 e2e.HOME = e2e.OUT / "home"
 e2e.RUNTIME = e2e.OUT / "runtime"
-e2e.ENV = dict(os.environ, MIYU_HOME=str(e2e.HOME), XDG_RUNTIME_DIR=str(e2e.RUNTIME),
-               MIYU_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), MIYU_ADMIN_USER="admin")
+e2e.ENV = dict(os.environ, YUNXI_HOME=str(e2e.HOME), XDG_RUNTIME_DIR=str(e2e.RUNTIME),
+               YUNXI_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), YUNXI_ADMIN_USER="admin")
 
 results = []
 
@@ -99,7 +99,7 @@ def main():
             page.fill("#oobeName", "小满")
             check("没有预置模板,设定自己写", page.evaluate("() => !document.getElementById('oobeTemplates')"))
             page.fill("#oobePrompt", "你是小满,一只会说话的橘猫。")
-            page.set_input_files("#oobeAvatarInput", str(REPO / "web/assets/miyu-logo.png"))
+            page.set_input_files("#oobeAvatarInput", str(REPO / "web/assets/yunxi-logo.png"))
             page.wait_for_timeout(300)
             page.click("#oobeNext")
             page.wait_for_timeout(500)
@@ -130,7 +130,7 @@ def main():
             page.click(".con-rail-item[data-console-panel='account']")
             page.wait_for_timeout(900)
             rows = page.evaluate("() => [...document.querySelectorAll('#personaList .persona-row b')].map(e => e.textContent)")
-            check("账号页人格卡列出 Miyu 与小满(当前)", any("小满" in r and "当前" in r for r in rows) and any("Miyu" in r for r in rows), json.dumps(rows, ensure_ascii=False))
+            check("账号页人格卡列出 YunXi 与小满(当前)", any("小满" in r and "当前" in r for r in rows) and any("YunXi" in r for r in rows), json.dumps(rows, ensure_ascii=False))
             page.screenshot(path=str(OUT / "ui-member-persona.png"))
             settings_hidden = page.evaluate("() => document.getElementById('sidebarSettingsButton').hidden")
             check("成员侧栏没有设置按钮", settings_hidden is True, str(settings_hidden))

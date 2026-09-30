@@ -72,7 +72,7 @@ class Handler(BaseHTTPRequestHandler):
             self._finish("tool_calls")
         elif acts == 1:
             # 第二幕:中途说一句(把组切开),再来一个会失败的工具。
-            # 注意 run_command 退出码非零不算失败(Miyu 的规则是输出 JSON 的 ok/success 为
+            # 注意 run_command 退出码非零不算失败(YunXi 的规则是输出 JSON 的 ok/success 为
             # false 或 "tool error:" 前缀才算),所以用读一个不存在的文件来拿真正的 tool error。
             self._text("两条都跑完了，再读一个不存在的文件会怎样。")
             self._sse(_tc(0, "call_c", "read_file", {"path": "/definitely-not-here.txt"}))

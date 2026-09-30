@@ -2,7 +2,7 @@
 """真模型走查:被打断的轮、轮中插话之后,下一轮还吃不吃得到前缀缓存(09-24)。
 
 隔离家目录 + 独立端口 daemon,供应商用本机配置里的 `deepseek`(官方 deepseek-flash,
-key 从 ~/.miyu/config/config.jsonc 读、只写进临时家目录、跑完删掉)。三个会话:
+key 从 ~/.yunxi/config/config.jsonc 读、只写进临时家目录、跑完删掉)。三个会话:
 
     baseline    正常的工具轮 → 下一轮
     interrupted 第二个工具还在跑时按停止 → 下一轮
@@ -12,8 +12,8 @@ key 从 ~/.miyu/config/config.jsonc 读、只写进临时家目录、跑完删�
     pure_append  前缀指纹 same >= prev(上一条请求的每条消息原样还在)
     cache_hit    cache_read 盖住了上一条请求的 prompt(差不过 256 token:末尾不满块的零头)
 
-用法: replay_live.py <miyu 二进制> [标签]   同一脚本对新旧两个二进制各跑一次对比;
-      逐请求记账行存到 ~/.cache/miyu-cache-replay/live-<标签>.json
+用法: replay_live.py <yunxi 二进制> [标签]   同一脚本对新旧两个二进制各跑一次对比;
+      逐请求记账行存到 ~/.cache/yunxi-cache-replay/live-<标签>.json
 """
 
 import json
@@ -29,7 +29,7 @@ import tempfile
 import time
 from pathlib import Path
 
-CONFIG = Path.home() / ".miyu/config/config.jsonc"
+CONFIG = Path.home() / ".yunxi/config/config.jsonc"
 
 
 def free_port():
@@ -69,10 +69,10 @@ def deepseek_provider():
 
 
 class Sandbox:
-    def __init__(self, miyu):
-        self.miyu = miyu
+    def __init__(self, yunxi):
+        self.yunxi = yunxi
         self.port = free_port()
-        self.home = Path(tempfile.mkdtemp(prefix="miyu-replay-live-", dir=str(Path.home() / ".cache")))
+        self.home = Path(tempfile.mkdtemp(prefix="yunxi-replay-live-", dir=str(Path.home() / ".cache")))
         self.run = self.home / "run"
         self.work = self.home / "work"
         for path in (self.run, self.home / "config", self.work):
@@ -95,16 +95,16 @@ class Sandbox:
         (self.home / "config" / "config.jsonc").write_text(json.dumps(config), encoding="utf-8")
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith("HERDR_")
-                    and k not in ("MIYU_SESSION", "MIYU_DIRECT", "MIYU_TURN_MODE", "MIYU_HOME",
+                    and k not in ("YUNXI_SESSION", "YUNXI_DIRECT", "YUNXI_TURN_MODE", "YUNXI_HOME",
                                   "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME")}
-        self.env.update(MIYU_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8",
-                        MIYU_LOG="info")
+        self.env.update(YUNXI_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8",
+                        YUNXI_LOG="info")
         self.daemon = None
         self.clients = []
 
     def start(self):
         log = (self.home / "daemon.log").open("w")
-        self.daemon = subprocess.Popen([str(self.miyu), "__daemon", "--port", str(self.port)], env=self.env,
+        self.daemon = subprocess.Popen([str(self.yunxi), "__daemon", "--port", str(self.port)], env=self.env,
                                        cwd=str(self.work), stdin=subprocess.DEVNULL, stdout=log,
                                        stderr=subprocess.STDOUT)
         if not wait_for(self.ping, 40):
@@ -129,7 +129,7 @@ class Sandbox:
             return json.loads(recv_exact(sock, length))
 
     def ask(self, session, text, create=False, timeout=240, mode=None):
-        args = [str(self.miyu), "ask", "--output-format", "json", "--session", session]
+        args = [str(self.yunxi), "ask", "--output-format", "json", "--session", session]
         if create:
             args.append("--create")
         if mode:
@@ -140,7 +140,7 @@ class Sandbox:
             raise AssertionError(f"ask {session!r} failed ({proc.returncode}): {proc.stderr[-600:]!r}")
 
     def ask_in_background(self, session, text):
-        client = subprocess.Popen([str(self.miyu), "ask", "--output-format", "json", "--session", session, text],
+        client = subprocess.Popen([str(self.yunxi), "ask", "--output-format", "json", "--session", session, text],
                                   env=self.env, stdin=subprocess.DEVNULL, cwd=str(self.work),
                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.clients.append(client)
@@ -311,7 +311,7 @@ def main():
     try:
         results = scenario(box)
         # 家目录里有 key,整个删;逐请求的记账行(不含正文与 key)先抄出来留证。
-        out = Path.home() / ".cache/miyu-cache-replay" / f"live-{label}.json"
+        out = Path.home() / ".cache/yunxi-cache-replay" / f"live-{label}.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(results, ensure_ascii=False, indent=1), encoding="utf-8")
         for result in results:

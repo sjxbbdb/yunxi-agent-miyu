@@ -5,12 +5,12 @@
 （09-22 起括号内带空格），这是纯文本；图渲染器只认 Markdown 链接语法，于是整行
 和正文同色。同一张图里「每个来源一行」也被 CommonMark 并成了一段。
 
-直接驱动真二进制的渲染子进程（daemon 平时就是这么起它的：`miyu __renderer-worker`
-+ `MIYU_INTERNAL_RENDERER_WORKER=1`，长度前缀的 JSON 请求，二进制帧回 PNG），
+直接驱动真二进制的渲染子进程（daemon 平时就是这么起它的：`yunxi __renderer-worker`
++ `YUNXI_INTERNAL_RENDERER_WORKER=1`，长度前缀的 JSON 请求，二进制帧回 PNG），
 不起 daemon、不连 QQ、不花模型额度。数成图里链接色的像素。
 
-Run: python3 testkit/qq-longtext/link_color.py --binary /absolute/path/to/miyu
-产物：$OUT（默认 ~/.cache/miyu-qq-longtext-link）/*.png
+Run: python3 testkit/qq-longtext/link_color.py --binary /absolute/path/to/yunxi
+产物：$OUT（默认 ~/.cache/yunxi-qq-longtext-link）/*.png
 """
 
 import argparse
@@ -26,12 +26,12 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
-# 与 crates/miyu-hosts/src/platforms/plugins/renderer/paint.rs 的调色盘一致。
+# 与 crates/yunxi-hosts/src/platforms/plugins/renderer/paint.rs 的调色盘一致。
 LINK = {"paper": (45, 95, 125), "light": (48, 101, 190), "dark": (104, 179, 255)}
 SOURCES = (
     "模型 & 价格 | DeepSeek API Docs (https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)\n"
@@ -62,7 +62,7 @@ def render(binary, home, markdown, theme):
     config = {"theme": theme, "font_size": 36, "code_font_size": 30,
               "padding": 64, "font": "", "title_font": "", "code_font": "", "emoji_font": ""}
     payload = json.dumps({"markdown": markdown, "config": config}).encode()
-    env = dict(os.environ, MIYU_HOME=str(home), MIYU_INTERNAL_RENDERER_WORKER="1")
+    env = dict(os.environ, YUNXI_HOME=str(home), YUNXI_INTERNAL_RENDERER_WORKER="1")
     worker = subprocess.Popen([str(binary), "__renderer-worker"], env=env, cwd=str(home),
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                               stderr=subprocess.DEVNULL)
@@ -97,9 +97,9 @@ def main():
     parser.add_argument("--binary", type=Path, required=True)
     args = parser.parse_args()
     binary = args.binary.resolve()
-    out = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-qq-longtext-link"))
+    out = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-qq-longtext-link"))
     out.mkdir(parents=True, exist_ok=True)
-    home = sandbox_dir.make("miyu-longtext-link-")
+    home = sandbox_dir.make("yunxi-longtext-link-")
 
     for theme in ("paper", "light", "dark"):
         image = render(binary, home, SOURCES, theme)

@@ -9,22 +9,22 @@
 testkit/chafa-compat/sandbox.sh      # 起沙盒（端口 8389，与本机 daemon 隔离）
 ```
 
-daemon 起在 8389（systemd user unit `miyu-chafa-sandbox`），**所有终端共用它**，
+daemon 起在 8389（systemd user unit `yunxi-chafa-sandbox`），**所有终端共用它**，
 各终端只是各开一个 REPL 客户端——图片渲染发生在 CLI 这一侧，正是要测的地方。
 
 然后在**每一种要测的终端里**开一个窗口，跑：
 
 ```bash
-~/.cache/miyu-chafa-sandbox/miyu-sb normal
+~/.cache/yunxi-chafa-sandbox/yunxi-sb normal
 ```
 
 **先随便聊两三句把屏幕填满**，再要图——这一步是必须的：图只在"放不进屏幕剩余
 空间"时才会丢，而刚进 REPL 时屏幕是空的，怎么测都正常。填满之后连着要三张：
 
 ```
-显示 ~/.cache/miyu-chafa-sandbox/images/small.png
-显示 ~/.cache/miyu-chafa-sandbox/images/wide.png
-显示 ~/.cache/miyu-chafa-sandbox/images/tall.png
+显示 ~/.cache/yunxi-chafa-sandbox/images/small.png
+显示 ~/.cache/yunxi-chafa-sandbox/images/wide.png
+显示 ~/.cache/yunxi-chafa-sandbox/images/tall.png
 ```
 
 日志里可以自查有没有测到点子上：每条 chafa 行**前面**那条 CPR 的
@@ -45,7 +45,7 @@ daemon 起在 8389（systemd user unit `miyu-chafa-sandbox`），**所有终端�
 
 | 项 | 怎么看 |
 |---|---|
-| 出的是真图还是字符画 | `tail -5 ~/.miyu/cache/logs/image-trace.log` 里的 `format=` |
+| 出的是真图还是字符画 | `tail -5 ~/.yunxi/cache/logs/image-trace.log` 里的 `format=` |
 | 图有没有错位/阶梯 | 直接看 |
 | 图下方的正文有没有盖住图 | 图打完之后再问她一句 |
 | 输入框有没有画到图上 | 图打完那一瞬间看底部 |
@@ -74,7 +74,7 @@ chafa 1.18.2 TERM=xterm-256color COLORTERM=truecolor TERM_PROGRAM=- KITTY=1 raw=
 先设个短名：
 
 ```bash
-SB=~/.cache/miyu-chafa-sandbox/miyu-sb
+SB=~/.cache/yunxi-chafa-sandbox/yunxi-sb
 ```
 
 ### 第一档：本机已装，先测这些
@@ -125,20 +125,20 @@ Kubuntu 是 Konsole，都已覆盖。
 
 ## 对照：手跑 chafa
 
-同一个终端里，同一张图，不经 Miyu：
+同一个终端里，同一张图，不经 YunXi：
 
 ```bash
-chafa --polite on --size 36x8 ~/.cache/miyu-chafa-sandbox/images/small.png
+chafa --polite on --size 36x8 ~/.cache/yunxi-chafa-sandbox/images/small.png
 ```
 
-这是 Miyu 现在传的参数。**手跑和 Miyu 里出的东西应该一模一样**——不一样就说明
+这是 YunXi 现在传的参数。**手跑和 YunXi 里出的东西应该一模一样**——不一样就说明
 差别还在我们这边，把 trace 行贴出来。
 
 ## 换旧版 chafa 再来一遍
 
 ```bash
 testkit/chafa-compat/fetch-old-chafa.sh                       # 先拉历史二进制
-~/.cache/miyu-chafa-sandbox/with-chafa 1.14.5 ~/.cache/miyu-chafa-sandbox/miyu-sb
+~/.cache/yunxi-chafa-sandbox/with-chafa 1.14.5 ~/.cache/yunxi-chafa-sandbox/yunxi-sb
 ```
 
 1.14.5 = Debian 13 / Ubuntu 24.04+ / Fedora 41 的仓库版本。**修复前这里一张图都

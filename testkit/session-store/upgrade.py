@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """会话项目第 1 段：老数据升级进库、删会话清干净、回退到老版本照样能开库。
 
-    BIN=<新 miyu> OLD_BIN=<老 miyu，可省> python3 testkit/session-store/upgrade.py
+    BIN=<新 yunxi> OLD_BIN=<老 yunxi，可省> python3 testkit/session-store/upgrade.py
 
-沙箱 daemon（隔离 MIYU_HOME，默认端口 18571），不调模型。步骤：
+沙箱 daemon（隔离 YUNXI_HOME，默认端口 18571），不调模型。步骤：
 1. 起一次 daemon 建库，另建一个会话（当前那个是终端集成会话，按设计删不掉），停掉；
 2. 照老版本的样子给这个会话摆好老文件：待办、思考档位钉、上键历史，以及机器级的
    usage.json、usage-history.jsonl；
@@ -23,18 +23,18 @@ import time
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里：HERDR_* 漏给被测的 miyu 会搅乱那个 pane（09-23）。
+# 跑测具的进程多半坐在某个 herdr pane 里：HERDR_* 漏给被测的 yunxi 会搅乱那个 pane（09-23）。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 BIN = Path(os.environ["BIN"])
 OLD_BIN = os.environ.get("OLD_BIN")
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-session-store")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-session-store")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18571"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), MIYU_LOG="info")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), YUNXI_LOG="info")
 
 RESULTS = []
 COOKIE = []
@@ -100,7 +100,7 @@ class Daemon:
         self.up = wait_http(f"{BASE}/")
         COOKIE.clear()
         if self.up:
-            status, _ = api("POST", "/api/auth/login", {"username": "miyu", "password": "miyu"})
+            status, _ = api("POST", "/api/auth/login", {"username": "yunxi", "password": "yunxi"})
             self.up = status == 204
 
     def stop(self):

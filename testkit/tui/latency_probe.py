@@ -8,7 +8,7 @@
 读屏是增量喂 pyte（不每次整段重放，否则读屏本身就几百毫秒），按键之后 5ms 一看。
 每个场景换一个桩模型进程（daemon 不动，它每次请求现连）。
 
-    MIYU_BIN=target/debug/miyu python3 testkit/tui/latency_probe.py [--rounds 3] [--json]
+    YUNXI_BIN=target/debug/yunxi python3 testkit/tui/latency_probe.py [--rounds 3] [--json]
 """
 
 import argparse
@@ -166,8 +166,8 @@ def cold_tab(tty, idle_secs, pids):
 
 def ipc(command):
     """直接对沙箱 daemon 发一条 IPC（4 字节大端长度 + JSON），返回 (毫秒, 回帧)。"""
-    # 运行目录按家目录哈希分：`<XDG_RUNTIME_DIR>/miyu-<哈希>/core.sock`，取最新那个。
-    path = max(Path(h.RUNTIME).glob("miyu*/core.sock"), key=lambda sock: sock.stat().st_mtime)
+    # 运行目录按家目录哈希分：`<XDG_RUNTIME_DIR>/yunxi-<哈希>/core.sock`，取最新那个。
+    path = max(Path(h.RUNTIME).glob("yunxi*/core.sock"), key=lambda sock: sock.stat().st_mtime)
     started = time.perf_counter()
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
         sock.connect(str(path))

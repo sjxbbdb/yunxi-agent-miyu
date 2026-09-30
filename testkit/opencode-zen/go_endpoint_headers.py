@@ -4,13 +4,13 @@
 用法:
     python3 go_endpoint_headers.py [供应商 id]     # 默认 opencodego
 
-从 `$MIYU_HOME/config/config.jsonc`(默认 ~/.miyu)取该供应商的 key 与地址,
+从 `$YUNXI_HOME/config/config.jsonc`(默认 ~/.yunxi)取该供应商的 key 与地址,
 对同一条最短请求打四次,只改头:
 
-    A 裸请求           —— 修复前 Miyu 的形态
+    A 裸请求           —— 修复前 YunXi 的形态
     B 只有对的 UA      —— 隔离出「缺 session」这一项
     C UA + session     —— 最小可用集
-    D 五头全带         —— 修复后 Miyu 的形态
+    D 五头全带         —— 修复后 YunXi 的形态
 
 期望:B 回 400 MissingSessionID,C/D 回 200。A 看运气(默认 UA 会先被 CF 1010 挡)。
 """
@@ -30,7 +30,7 @@ REQUEST = "msg_080a85b8d001GbUgeBrzPv21j7"
 
 
 def load_provider():
-    home = pathlib.Path(os.environ.get("MIYU_HOME", pathlib.Path.home() / ".miyu"))
+    home = pathlib.Path(os.environ.get("YUNXI_HOME", pathlib.Path.home() / ".yunxi"))
     raw = (home / "config" / "config.jsonc").read_text(encoding="utf-8")
     config = json.loads(re.sub(r"^\s*//.*$", "", raw, flags=re.M))
     for provider in config.get("providers", []):

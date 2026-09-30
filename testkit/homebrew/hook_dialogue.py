@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""在真交互 shell（PTY）里敲一句中文，看 hook 有没有把它交给 Miyu、模型有没有回话。
+"""在真交互 shell（PTY）里敲一句中文，看 hook 有没有把它交给 YunXi、模型有没有回话。
 
 用法: python3 hook_dialogue.py <沙箱目录> <zsh|bash> <转录文件>
 
-沙箱目录下要有 home/（装好 hook 的假 HOME）、miyu/（MIYU_HOME，带 provider 配置）、
-rt/（XDG_RUNTIME_DIR）。PATH 只给系统目录——miyu 不在 PATH 上，靠 hook 兜底去
+沙箱目录下要有 home/（装好 hook 的假 HOME）、yunxi/（YUNXI_HOME，带 provider 配置）、
+rt/（XDG_RUNTIME_DIR）。PATH 只给系统目录——yunxi 不在 PATH 上，靠 hook 兜底去
 /opt/homebrew/bin 找（09-23 Homebrew 验收）。兼容 macOS 自带的 python3（3.9）。
 最后一行打印 PASS/FAIL；退出码 0 表示拿到了回复。
 """
@@ -16,7 +16,7 @@ import sys
 import time
 
 sandbox, shell, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
-env = {'HOME': f'{sandbox}/home', 'MIYU_HOME': f'{sandbox}/miyu', 'XDG_RUNTIME_DIR': f'{sandbox}/rt',
+env = {'HOME': f'{sandbox}/home', 'YUNXI_HOME': f'{sandbox}/yunxi', 'XDG_RUNTIME_DIR': f'{sandbox}/rt',
        'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'TERM': 'xterm-256color', 'LANG': 'zh_CN.UTF-8',
        'SHELL': f'/bin/{shell}', 'USER': os.environ.get('USER', 'user')}
 argv = ['/bin/zsh', '-i'] if shell == 'zsh' else ['/bin/bash', '-l', '-i']

@@ -18,7 +18,7 @@ from lib.common import load_json
 ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = (ROOT/homebrew.FORMULA).read_text()
 SHA = hashlib.sha256(b'macos tarball').hexdigest()
-URL = homebrew.release_url('v0.6.3', 'miyu-0.6.3-1-aarch64-apple-darwin.tar.gz')
+URL = homebrew.release_url('v0.6.3', 'yunxi-0.6.3-1-aarch64-apple-darwin.tar.gz')
 
 
 class RenderTests(unittest.TestCase):
@@ -47,7 +47,7 @@ class RenderTests(unittest.TestCase):
 
     def test_placeholders_and_unsafe_values_rejected(self):
         for overrides in ({'sha256': '0'*64}, {'sha256': 'abc'}, {'version': 'v0.6.3'},
-                          {'url': 'http://example.com/miyu.tar.gz'}, {'url': URL+'"; system "x'},
+                          {'url': 'http://example.com/yunxi.tar.gz'}, {'url': URL+'"; system "x'},
                           {'package_revision': 0}):
             with self.subTest(overrides=overrides), self.assertRaises(ValueError):
                 self.render(**overrides)
@@ -56,7 +56,7 @@ class RenderTests(unittest.TestCase):
                                     package_revision=1, url=URL, sha256=SHA)
 
     def test_local_file_url_for_acceptance_installs(self):
-        rendered = self.render(url='file:///tmp/miyu-release/macos/packages/macos-core/miyu.tar.gz')
+        rendered = self.render(url='file:///tmp/yunxi-release/macos/packages/macos-core/yunxi.tar.gz')
         self.assertTrue(homebrew.formula_fields(rendered)['url'].startswith('file:///tmp/'))
 
 
@@ -75,26 +75,26 @@ class TemplateContractTests(unittest.TestCase):
 
     def test_tap_readme_installs_by_fully_qualified_name(self):
         readme = (ROOT/'packaging/homebrew/README.md').read_text()
-        self.assertIn('brew install shorin-kiwata/miyu/miyu', readme)
+        self.assertIn('brew install sjxbbdb/yunxi/yunxi', readme)
 
 
 class ChannelOutputTests(unittest.TestCase):
     def test_render_homebrew_writes_the_complete_tap_tree(self):
         manifest = {'version': '0.6.3', 'package_revision': 1, 'tag': 'v0.6.3'}
-        record = {'filename': 'miyu-0.6.3-1-aarch64-apple-darwin.tar.gz', 'sha256': SHA}
+        record = {'filename': 'yunxi-0.6.3-1-aarch64-apple-darwin.tar.gz', 'sha256': SHA}
         with tempfile.TemporaryDirectory() as temp:
             out = Path(temp)
             patch_lines = list(channel_update.render_homebrew(manifest, record, out, apply=False))
             tap = out/'homebrew'
             self.assertEqual(sorted(p.relative_to(tap).as_posix() for p in tap.rglob('*') if p.is_file()),
-                             ['Formula/miyu.rb', 'README.md'])
-            self.assertEqual(homebrew.formula_fields((tap/'Formula/miyu.rb').read_text())['sha256'], SHA)
+                             ['Formula/yunxi.rb', 'README.md'])
+            self.assertEqual(homebrew.formula_fields((tap/'Formula/yunxi.rb').read_text())['sha256'], SHA)
             self.assertTrue(any(line.startswith('+  sha256') for line in patch_lines))
         self.assertEqual((ROOT/homebrew.FORMULA).read_text(), TEMPLATE, 'apply=False 不能改仓库')
 
     def test_apply_updates_the_repository_truth_source(self):
         manifest = {'version': '0.6.3', 'package_revision': 2, 'tag': 'v0.6.3'}
-        record = {'filename': 'miyu-0.6.3-2-aarch64-apple-darwin.tar.gz', 'sha256': SHA}
+        record = {'filename': 'yunxi-0.6.3-2-aarch64-apple-darwin.tar.gz', 'sha256': SHA}
         with tempfile.TemporaryDirectory() as temp:
             repo = Path(temp)/'repo'
             (repo/'packaging/homebrew/Formula').mkdir(parents=True)
@@ -104,7 +104,7 @@ class ChannelOutputTests(unittest.TestCase):
                 list(channel_update.render_homebrew(manifest, record, Path(temp)/'out', apply=True))
             fields = homebrew.formula_fields((repo/homebrew.FORMULA).read_text())
         self.assertEqual((fields['version'], fields['revision']), ('0.6.3', 1))
-        self.assertTrue(fields['url'].endswith('/v0.6.3/miyu-0.6.3-2-aarch64-apple-darwin.tar.gz'))
+        self.assertTrue(fields['url'].endswith('/v0.6.3/yunxi-0.6.3-2-aarch64-apple-darwin.tar.gz'))
 
 
 if __name__ == '__main__':

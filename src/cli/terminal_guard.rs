@@ -22,7 +22,7 @@ impl Drop for ReplCursorRestore {
 /// newline translation. 实现挪到了 `terminal::restore_output_processing`：
 /// chafa 跑完也要补一次，那边是两个调用方的公共位置。
 pub(super) fn restore_live_output_processing() -> Result<()> {
-    miyu_base::terminal::restore_output_processing()
+    yunxi_base::terminal::restore_output_processing()
 }
 
 /// 终端已死(PTY 对端关闭):POLLHUP/POLLERR/POLLNVAL 任一命中。
@@ -66,7 +66,7 @@ pub(super) fn terminal_hangup() -> bool {
     // 对端已经关掉的伪终端：tcgetattr 报 EIO，`isatty` 因此返回假——下面会把它当
     // 管道、改盯控制终端。进程的控制终端要不是这一个（测具起进程没设、或别的会话
     // 起的），就永远判不出挂断，crossterm 对死 fd 全速自旋（09-23 实测一个
-    // `miyu config` 这样空转了 8 小时）。它不是管道，是一个死掉的终端。
+    // `yunxi config` 这样空转了 8 小时）。它不是管道，是一个死掉的终端。
     if !stdin_is_tty && dead_terminal(libc::STDIN_FILENO) {
         return true;
     }
@@ -79,7 +79,7 @@ pub(super) fn terminal_hangup() -> bool {
 /// 盯哪个 fd 判挂断:stdin 是终端就盯 stdin;stdin 被管道/重定向占用时盯
 /// **控制终端**——管道读到 EOF 是正常收尾,不是挂断。
 ///
-/// shellhook 的 `printf '%s' "$buffer" | miyu --shell-intercept --stdin` 就是
+/// shellhook 的 `printf '%s' "$buffer" | yunxi --shell-intercept --stdin` 就是
 /// 这个形态:写端 printf 一退出,stdin 立刻常驻 POLLHUP。原先一律裸 poll
 /// stdin,于是问题面板一打开(它是 `spawn_hangup_watchdog` 的第一个调用点)
 /// 就按下 5 秒倒计时,到点 `exit(1)`,daemon 看到一次性客户端断线又把回合
@@ -136,7 +136,7 @@ pub(super) fn fd_hung_up(fd: libc::c_int) -> bool {
 /// 终端没了（挂断）或者收到终止信号：先把 herdr 那个 pane 的权威还回去，再退。
 ///
 /// `process::exit` 绕过所有 Drop——回合守卫收尾时报 idle / release 的那条路走
-/// 不到，侧栏上就一直挂着一个已经不在了的 miyu（09-20 记下、09-23 补上）。
+/// 不到，侧栏上就一直挂着一个已经不在了的 yunxi（09-20 记下、09-23 补上）。
 /// 不在 herdr 里时 `release_blocking` 什么都不做。
 pub(crate) fn exit_after_terminal_gone(code: i32) -> ! {
     crate::cli::repl::herdr::release_blocking();
@@ -156,7 +156,7 @@ pub(crate) fn exit_on_termination_signals() {
         return;
     };
     let _ = std::thread::Builder::new()
-        .name("miyu-signals".to_string())
+        .name("yunxi-signals".to_string())
         .spawn(move || {
             if signals.forever().next().is_none() {
                 return;

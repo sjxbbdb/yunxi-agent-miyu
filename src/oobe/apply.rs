@@ -12,9 +12,9 @@
 //! | → | 完成标志 | `config.oobe_done` |
 
 use anyhow::{bail, Context, Result};
-use miyu_base::config::feature_catalog::{self, FeatureItem, FeatureSources};
-use miyu_base::config::{AppConfig, PersonaManifest, ProviderConfig};
-use miyu_base::paths::MiyuPaths;
+use yunxi_base::config::feature_catalog::{self, FeatureItem, FeatureSources};
+use yunxi_base::config::{AppConfig, PersonaManifest, ProviderConfig};
+use yunxi_base::paths::YunXiPaths;
 
 /// 人格屏的结果。
 pub(super) enum PersonaPick {
@@ -44,7 +44,7 @@ pub(super) fn persona_file_name(name: &str) -> Result<String> {
 /// 写人格文件并激活。返回这个人格的 scope（persona.toml 落在它名下）。
 pub(super) fn save_persona(
     config: &mut AppConfig,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     pick: &PersonaPick,
 ) -> Result<String> {
     match pick {
@@ -78,7 +78,7 @@ pub(super) fn save_persona(
 /// 在「用户之前关过、又重跑引导」时才起作用。
 pub(super) fn save_features(
     config: &mut AppConfig,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     scope: &str,
     items: &[FeatureItem],
     sources: &FeatureSources,
@@ -103,12 +103,12 @@ pub(super) fn save_features(
 }
 
 /// 当前人格清单，给功能屏预填。
-pub(super) fn current_manifest(config: &AppConfig, paths: &MiyuPaths) -> PersonaManifest {
+pub(super) fn current_manifest(config: &AppConfig, paths: &YunXiPaths) -> PersonaManifest {
     PersonaManifest::load(config, paths, &config.active_persona_scope())
 }
 
 /// 用户自述。空的就不写（也不删已有的）。
-pub(super) fn save_identity(config: &AppConfig, paths: &MiyuPaths, text: &str) -> Result<()> {
+pub(super) fn save_identity(config: &AppConfig, paths: &YunXiPaths, text: &str) -> Result<()> {
     if text.trim().is_empty() {
         return Ok(());
     }
@@ -122,14 +122,14 @@ pub(super) fn save_identity(config: &AppConfig, paths: &MiyuPaths, text: &str) -
     Ok(())
 }
 
-pub(super) fn current_identity(config: &AppConfig, paths: &MiyuPaths) -> String {
+pub(super) fn current_identity(config: &AppConfig, paths: &YunXiPaths) -> String {
     std::fs::read_to_string(config.user_identity_path(paths))
         .map(|text| text.trim_end().to_string())
         .unwrap_or_default()
 }
 
 /// 当前激活的人格名（自定义时是文件名去掉 .md）及其提示词，给人格屏预填。
-pub(super) fn current_persona(config: &AppConfig, paths: &MiyuPaths) -> Option<(String, String)> {
+pub(super) fn current_persona(config: &AppConfig, paths: &YunXiPaths) -> Option<(String, String)> {
     let file = config.prompt.active_persona.trim();
     if file.is_empty() {
         return None;
@@ -146,11 +146,11 @@ pub(super) fn current_persona(config: &AppConfig, paths: &MiyuPaths) -> Option<(
 ///
 /// 标记块可能在任何一个候选启动文件里(macOS 上 bash 写在 `.bash_profile`),
 /// 与安装、卸载用同一张候选表。
-pub(super) fn hook_installed(paths: &MiyuPaths, shell: &str) -> bool {
+pub(super) fn hook_installed(paths: &YunXiPaths, shell: &str) -> bool {
     let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
     let rc_has = |marker: &str| {
         home.as_ref().is_some_and(|home| {
-            miyu_base::shell::startup::candidates(shell, home)
+            yunxi_base::shell::startup::candidates(shell, home)
                 .iter()
                 .filter_map(|file| std::fs::read_to_string(file).ok())
                 .any(|text| text.contains(marker))
@@ -158,26 +158,26 @@ pub(super) fn hook_installed(paths: &MiyuPaths, shell: &str) -> bool {
     };
     match shell {
         "fish" => paths.fish_hook_file.is_file(),
-        "bash" => paths.bash_hook_file.is_file() && rc_has("miyu bash hook"),
-        "zsh" => paths.zsh_hook_file.is_file() && rc_has("miyu zsh hook"),
+        "bash" => paths.bash_hook_file.is_file() && rc_has("yunxi bash hook"),
+        "zsh" => paths.zsh_hook_file.is_file() && rc_has("yunxi zsh hook"),
         _ => false,
     }
 }
 
 /// 装 shell hook。安装函数自己会往 stdout 打几行提示——引导在备用屏上，
 /// 打完整屏重画一次就盖掉了。
-pub(super) fn install_hook(paths: &MiyuPaths, shell: &str) -> Result<()> {
+pub(super) fn install_hook(paths: &YunXiPaths, shell: &str) -> Result<()> {
     match shell {
-        "fish" => miyu_base::shell::fish::install(paths),
-        "bash" => miyu_base::shell::bash::install(paths),
-        "zsh" => miyu_base::shell::zsh::install(paths),
+        "fish" => yunxi_base::shell::fish::install(paths),
+        "bash" => yunxi_base::shell::bash::install(paths),
+        "zsh" => yunxi_base::shell::zsh::install(paths),
         other => bail!("不认识的 shell: {other}"),
     }
 }
 
 pub(super) fn save_provider(
     config: &mut AppConfig,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     provider: ProviderConfig,
     model: &str,
 ) -> Result<()> {
@@ -188,14 +188,14 @@ pub(super) fn save_provider(
 /// 沙盒屏(09-23):默认以沙盒运行吗。
 pub(super) fn save_sandbox_default(
     config: &mut AppConfig,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     enabled: bool,
 ) -> Result<()> {
     config.tools.sandbox.default_enabled = enabled;
     config.save(paths).context("保存配置失败")
 }
 
-pub(super) fn mark_done(config: &mut AppConfig, paths: &MiyuPaths) -> Result<()> {
+pub(super) fn mark_done(config: &mut AppConfig, paths: &YunXiPaths) -> Result<()> {
     config.oobe_done = true;
     config.save(paths).context("保存配置失败")
 }
@@ -212,6 +212,6 @@ mod tests {
         assert!(persona_file_name("system-prompt").is_err());
         // 纯中文名可以用:目录名由 `persona_scope_name` 按名字哈希。
         assert_eq!(persona_file_name("小满").unwrap(), "小满.md");
-        assert!(miyu_base::config::persona_scope_name("小满.md").starts_with("persona-"));
+        assert!(yunxi_base::config::persona_scope_name("小满.md").starts_with("persona-"));
     }
 }

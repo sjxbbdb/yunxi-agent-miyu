@@ -1,7 +1,7 @@
 {
   "name": "remember_fact",
   "display_name": "记录记忆",
-  "description": "Remember a fact or useful knowledge long-term in Miyu's memory.",
+  "description": "Remember a fact or useful knowledge long-term in YunXi's memory.",
   "parameters": {
     "type": "object",
     "properties": {

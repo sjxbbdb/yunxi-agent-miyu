@@ -5,11 +5,11 @@
 //! （名字 / id / 地址 / 协议 / key）。CLI 的模型目录最长要 20 秒（`provider_catalog/cli.rs`
 //! 的超时），所以探到 CLI 就**提前**在后台线程拉，等用户走到最后一屏时目录已经在手里。
 
-use miyu_base::config::{ActiveProviderModelConfig, AppConfig, ProviderConfig};
-use miyu_base::default_models::OPENCODE_PROVIDER_ID;
-use miyu_base::paths::MiyuPaths;
 use std::collections::HashMap;
 use std::sync::mpsc::{self, Receiver};
+use yunxi_base::config::{ActiveProviderModelConfig, AppConfig, ProviderConfig};
+use yunxi_base::default_models::OPENCODE_PROVIDER_ID;
+use yunxi_base::paths::YunXiPaths;
 
 /// 协议取值照 `config_tui/providers.rs` 那份下拉。**不能假定 OpenAI 兼容**——
 /// Anthropic 的 Messages 协议是平级的一档。
@@ -323,10 +323,10 @@ pub(super) struct CatalogJob {
 
 impl CatalogJob {
     pub fn spawn(config: &AppConfig, provider: ProviderConfig) -> Self {
-        let binary = miyu_base::provider_catalog::builtin_cli_binary(config, &provider);
+        let binary = yunxi_base::provider_catalog::builtin_cli_binary(config, &provider);
         let (sender, receiver) = mpsc::channel();
         std::thread::spawn(move || {
-            let result = miyu_base::provider_catalog::fetch_models(&provider, binary.as_deref())
+            let result = yunxi_base::provider_catalog::fetch_models(&provider, binary.as_deref())
                 .map_err(|error| format!("{error:#}"));
             let _ = sender.send(result);
         });
@@ -422,7 +422,7 @@ pub(super) fn with_key(mut provider: ProviderConfig, api_key: &str) -> ProviderC
 /// 模型是同一套动作，设置界面里看到的勾选才对得上。
 pub(super) fn apply(
     config: &mut AppConfig,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     mut provider: ProviderConfig,
     model: &str,
 ) {
@@ -432,7 +432,7 @@ pub(super) fn apply(
         if !provider.models.iter().any(|item| item == model) {
             provider.models.push(model.to_string());
         }
-        miyu_base::provider_catalog::auto_configure_model_tags(paths, &mut provider, model);
+        yunxi_base::provider_catalog::auto_configure_model_tags(paths, &mut provider, model);
         provider.default_model = model.to_string();
     }
     match config
@@ -499,7 +499,7 @@ mod tests {
     #[test]
     fn detected_cli_becomes_option_and_apply_activates() {
         let mut config = AppConfig::default();
-        let paths = miyu_base::paths::MiyuPaths::new().unwrap();
+        let paths = yunxi_base::paths::YunXiPaths::new().unwrap();
         let options = options(&config, |bin| bin == "claude");
         assert!(options[0].label.contains("Claude Code"));
         assert_eq!(options[0].note, "需已登录");
@@ -530,7 +530,7 @@ mod tests {
     #[test]
     fn preset_reuses_existing_entry_and_marks_model_active() {
         let mut config = AppConfig::default();
-        let paths = miyu_base::paths::MiyuPaths::new().unwrap();
+        let paths = yunxi_base::paths::YunXiPaths::new().unwrap();
         let deepseek = options(&config, |_| false)
             .into_iter()
             .find(|option| option.label == "DeepSeek")

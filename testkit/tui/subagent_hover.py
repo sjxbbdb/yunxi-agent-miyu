@@ -6,7 +6,7 @@
 
     cargo build
     python3 testkit/tui/subagent_hover.py            # 新二进制
-    MIYU_BIN=~/.local/bin/miyu python3 testkit/tui/subagent_hover.py   # 对照
+    YUNXI_BIN=~/.local/bin/yunxi python3 testkit/tui/subagent_hover.py   # 对照
 """
 
 import json

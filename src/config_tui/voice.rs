@@ -1,18 +1,18 @@
 //! 语音功能菜单:总开关 → 播报供应商(MiniMax:连接/模型、音色浏览、参数、
 //! 试听;小米 MiMo:连接/模型/音色、风格与指令、试听)→ 识别与唤醒设置。
 //!
-//! 唤醒词能否编码成 KWS 音节这件事在 `miyu-voice` 进程里做(本进程不链接
+//! 唤醒词能否编码成 KWS 音节这件事在 `yunxi-voice` 进程里做(本进程不链接
 //! 语音栈),这里只做形式校验(非空、含中文)。麦克风列表同样问
-//! `miyu-voice devices` 要,二进制不在就退化成手填。
+//! `yunxi-voice devices` 要,二进制不在就退化成手填。
 //!
-//! TUI 跑在 `miyu config` 的 tokio 运行时线程上,不能在这里 `block_on`
+//! TUI 跑在 `yunxi config` 的 tokio 运行时线程上,不能在这里 `block_on`
 //! (运行时套运行时会 panic,整个 TUI 崩出):网络请求与 IPC 统统丢到独立
 //! 线程里,那个线程自己起一个 current_thread 运行时。
 
 use crate::config_tui::*;
 use anyhow::Context as _;
-use miyu_base::config::{MiniMaxTtsConfig, VoiceTtsConfig, TTS_PROVIDERS};
-use miyu_hosts::web::voice_tts::{MIMO_MODELS, MIMO_VOICES};
+use yunxi_base::config::{MiniMaxTtsConfig, VoiceTtsConfig, TTS_PROVIDERS};
+use yunxi_hosts::web::voice_tts::{MIMO_MODELS, MIMO_VOICES};
 
 /// MiMo 风格标签(文档 2026-09):情绪 / 语气 / 音色定位 / 角色 / 方言,多选。
 const MIMO_STYLES: &[&str] = &[
@@ -111,9 +111,9 @@ where
     .map_err(|_| anyhow::anyhow!("network thread panicked"))?
 }
 
-/// 问 `miyu-voice devices` 要输入源列表(源名, 描述);拿不到返回空。
+/// 问 `yunxi-voice devices` 要输入源列表(源名, 描述);拿不到返回空。
 fn list_microphones() -> Vec<(String, String)> {
-    let Some(binary) = miyu_hosts::web::voice_bridge::locate_binary() else {
+    let Some(binary) = yunxi_hosts::web::voice_bridge::locate_binary() else {
         return Vec::new();
     };
     let Ok(output) = std::process::Command::new(binary)
@@ -139,7 +139,7 @@ fn list_microphones() -> Vec<(String, String)> {
 fn fetch_minimax_voice_list(cfg: &MiniMaxTtsConfig) -> Result<Vec<(String, String)>> {
     let cfg = cfg.clone();
     let voices = block_on_thread(move || async move {
-        miyu_hosts::web::voice_tts::list_minimax_voices(&cfg).await
+        yunxi_hosts::web::voice_tts::list_minimax_voices(&cfg).await
     })?;
     Ok(voices
         .iter()
@@ -154,7 +154,7 @@ fn fetch_minimax_voice_list(cfg: &MiniMaxTtsConfig) -> Result<Vec<(String, Strin
 
 /// 经 daemon 试听:把(可能尚未保存的)tts 配置整份带过去,按 `provider` 合成。
 fn preview_tts(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     tts: &VoiceTtsConfig,
     provider: &str,
     text: Option<&str>,
@@ -173,21 +173,21 @@ fn preview_tts(
     tts.active = Some(provider.to_string());
     let socket = paths.ipc_socket();
     block_on_thread(move || async move {
-        let mut stream = miyu_core::ipc::connect(&socket).await.context(t(
-            "Miyu daemon is not running (preview needs it)",
-            "Miyu daemon 未运行(试听要 daemon 在跑)",
+        let mut stream = yunxi_core::ipc::connect(&socket).await.context(t(
+            "YunXi daemon is not running (preview needs it)",
+            "YunXi daemon 未运行(试听要 daemon 在跑)",
         ))?;
-        miyu_core::ipc::send(
+        yunxi_core::ipc::send(
             &mut stream,
-            &miyu_core::ipc::Request::new(miyu_core::ipc::Command::VoiceSpeak {
+            &yunxi_core::ipc::Request::new(yunxi_core::ipc::Command::VoiceSpeak {
                 text,
                 tts: Some(tts),
             }),
         )
         .await?;
-        match miyu_core::ipc::receive::<miyu_core::ipc::Frame>(&mut stream).await? {
-            Some(miyu_core::ipc::Frame::Ack) => Ok(()),
-            Some(miyu_core::ipc::Frame::Error { message, .. }) => bail!("{message}"),
+        match yunxi_core::ipc::receive::<yunxi_core::ipc::Frame>(&mut stream).await? {
+            Some(yunxi_core::ipc::Frame::Ack) => Ok(()),
+            Some(yunxi_core::ipc::Frame::Error { message, .. }) => bail!("{message}"),
             other => bail!("unexpected reply to VoiceSpeak: {other:?}"),
         }
     })
@@ -255,7 +255,7 @@ fn adopt_provider_if_current_unusable(tts: &mut VoiceTtsConfig, provider: &str) 
 /// 语音功能入口菜单:语音唤醒开关 / 文本转语音开关 / 播报供应商 / 识别与唤醒设置。
 pub(in crate::config_tui) fn edit_voice(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
 ) -> Result<()> {
     let mut selected = 0usize;
@@ -319,7 +319,7 @@ pub(in crate::config_tui) fn edit_voice(
 // ---------------------------------------------------------------------------
 
 /// 预置的播报供应商列表:`[*]` 是当前生效的那个;[Enter] 配置,[Tab] 设为当前。
-fn edit_tts_providers(ui: &mut Ui, paths: &MiyuPaths, config: &mut AppConfig) -> Result<()> {
+fn edit_tts_providers(ui: &mut Ui, paths: &YunXiPaths, config: &mut AppConfig) -> Result<()> {
     let mut selected = 0usize;
     loop {
         let tts = &config.voice.tts;
@@ -368,7 +368,7 @@ fn edit_tts_providers(ui: &mut Ui, paths: &MiyuPaths, config: &mut AppConfig) ->
 // ---------------------------------------------------------------------------
 
 /// MiMo 配置菜单:连接与模型 / 风格与指令 / 试听。
-fn edit_mimo(ui: &mut Ui, paths: &MiyuPaths, config: &mut AppConfig) -> Result<()> {
+fn edit_mimo(ui: &mut Ui, paths: &YunXiPaths, config: &mut AppConfig) -> Result<()> {
     let mut selected = 0usize;
     loop {
         let cfg = &config.voice.tts.mimo;
@@ -401,7 +401,7 @@ fn edit_mimo(ui: &mut Ui, paths: &MiyuPaths, config: &mut AppConfig) -> Result<(
                 } else {
                     format!(
                         " · {}",
-                        miyu_hosts::web::voice_bridge::clip(cfg.prompt.trim(), 24)
+                        yunxi_hosts::web::voice_bridge::clip(cfg.prompt.trim(), 24)
                     )
                 }
             ),
@@ -531,7 +531,7 @@ fn edit_mimo_style(ui: &mut Ui, config: &mut AppConfig) -> Result<()> {
 // ---------------------------------------------------------------------------
 
 /// MiniMax 配置菜单。
-fn edit_minimax(ui: &mut Ui, paths: &MiyuPaths, config: &mut AppConfig) -> Result<()> {
+fn edit_minimax(ui: &mut Ui, paths: &YunXiPaths, config: &mut AppConfig) -> Result<()> {
     let mut selected = 0usize;
     loop {
         let cfg = &config.voice.tts.minimax;
@@ -794,7 +794,7 @@ fn voice_matches_tags(tags: &[&str], picked: &[&'static str]) -> bool {
 
 /// 音色浏览:列表来自 `get_voice`(名字 + 描述),`/` 搜索,`t` 按标签筛选
 /// (多选,Tab 勾选),`p` 试听当前行,`Enter` 选用。
-fn browse_minimax_voices(ui: &mut Ui, paths: &MiyuPaths, config: &mut AppConfig) -> Result<()> {
+fn browse_minimax_voices(ui: &mut Ui, paths: &YunXiPaths, config: &mut AppConfig) -> Result<()> {
     let all = fetch_minimax_voice_list(&config.voice.tts.minimax)?;
     if all.is_empty() {
         bail!(t("no voices returned", "MiniMax 没有返回音色"));
@@ -1012,7 +1012,7 @@ fn edit_voice_form(ui: &mut Ui, config: &mut AppConfig) -> Result<()> {
         Field::new(
             t(
                 "Microphone (empty = default)",
-                "麦克风(空=系统默认;装了 miyu-voice 才能列设备)",
+                "麦克风(空=系统默认;装了 yunxi-voice 才能列设备)",
             ),
             current_mic.clone().unwrap_or_default(),
         )
@@ -1088,13 +1088,13 @@ fn edit_voice_form(ui: &mut Ui, config: &mut AppConfig) -> Result<()> {
     );
     run_form_without_buttons(ui, t(" RECOGNITION ", " 识别与唤醒设置 "), &mut fields)?;
 
-    let keywords = miyu_base::config::split_wake_keywords(&fields[0].value);
+    let keywords = yunxi_base::config::split_wake_keywords(&fields[0].value);
     if keywords.is_empty() {
         bail!(t("wake keyword is empty", "唤醒词为空"));
     }
     for keyword in &keywords {
         // 汉字 / 假名 / 拉丁字母 / 显式拼音(mi3 yu2)都行,真正能不能编码由
-        // miyu-voice 按模型词表判定,编不出来的它会记日志跳过。
+        // yunxi-voice 按模型词表判定,编不出来的它会记日志跳过。
         let acceptable = keyword.chars().all(|ch| {
             ch.is_whitespace()
                 || ch.is_ascii_alphanumeric()
@@ -1105,7 +1105,7 @@ fn edit_voice_form(ui: &mut Ui, config: &mut AppConfig) -> Result<()> {
         if !acceptable {
             bail!(t(
                 "wake keyword may only contain Chinese characters, kana, or Latin letters",
-                "唤醒词只能是汉字、假名或拉丁字母(如 未有未有 / みゆみゆ / miyumiyu)"
+                "唤醒词只能是汉字、假名或拉丁字母(如 未有未有 / みゆみゆ / yunxiyunxi)"
             ));
         }
     }

@@ -8,7 +8,7 @@
     cargo build
     python3 testkit/tui/page_follow.py
 
-产物：~/.cache/miyu-tui-smoke/round26-pagefollow-*.txt，trace 在 /tmp/miyu-screen-trace.log。
+产物：~/.cache/yunxi-tui-smoke/round26-pagefollow-*.txt，trace 在 /tmp/yunxi-screen-trace.log。
 """
 
 import json
@@ -18,12 +18,12 @@ import sys
 import time
 from pathlib import Path
 
-os.environ["MIYU_SCREEN_TRACE"] = "1"
+os.environ["YUNXI_SCREEN_TRACE"] = "1"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 import round26 as r  # noqa: E402
 
-TRACE = Path("/tmp/miyu-screen-trace.log")
+TRACE = Path("/tmp/yunxi-screen-trace.log")
 STUB = {
     "STUB_REASONING": "1",
     "STUB_TOOL": "1",

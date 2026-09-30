@@ -2,10 +2,10 @@
 """手动验收用的沙箱:起一个隔离的 daemon + 桩模型,产出几份 artifact,然后把地址
 打出来等你自己用浏览器点。
 
-    BIN=<miyu 二进制> python3 testkit/webui-artifact/manual.py
+    BIN=<yunxi 二进制> python3 testkit/webui-artifact/manual.py
 
-跟生产完全隔离(自己的 MIYU_HOME、自己的端口),不碰你的会话、配置和记忆库。
-Ctrl-C 收摊,沙箱目录留在 ~/.cache/miyu-artifact-manual 里。
+跟生产完全隔离(自己的 YUNXI_HOME、自己的端口),不碰你的会话、配置和记忆库。
+Ctrl-C 收摊,沙箱目录留在 ~/.cache/yunxi-artifact-manual 里。
 
 自动化能测的都测过了(run.py),这里专门留给自动化测不了的那一项:
 **人手点一下 probe.html 里那个按钮**,看文字变不变。Playwright 自带的 click
@@ -20,20 +20,20 @@ import time
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 HERE = Path(__file__).resolve().parent
 BIN = Path(os.environ["BIN"]).expanduser()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-artifact-manual")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-artifact-manual")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18486"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18496"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 
 
 def write_config():

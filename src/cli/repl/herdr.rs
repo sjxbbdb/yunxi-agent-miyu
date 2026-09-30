@@ -4,9 +4,9 @@
 //! pane 的 agent 状态（空闲 / 在跑 / 卡住等人）汇总到侧栏，往 tab 和 workspace
 //! 上卷。它给外部 agent 留了一条官方接口——`herdr pane report-agent`——`--agent`
 //! 是**自由字符串**，不在它二进制里硬编码的那二十来个 kind 之列也能用（官方文档
-//! 拿 `docs-bot` 做的示例）。走这条路 Miyu 不需要 herdr 改一行代码。
+//! 拿 `docs-bot` 做的示例）。走这条路 YunXi 不需要 herdr 改一行代码。
 //!
-//! 上报之后能拿到：侧栏出现 `miyu` 行与状态色、她反问时整条 workspace 变红、
+//! 上报之后能拿到：侧栏出现 `yunxi` 行与状态色、她反问时整条 workspace 变红、
 //! herdr 自己的桌面通知，以及 `herdr agent attach/wait/prompt` 三条命令。
 //!
 //! **不在 herdr 里就是彻底的 no-op**：判据是 herdr 自己注入 pane 进程的那几个
@@ -14,10 +14,10 @@
 //!
 //! 几条来自官方文档、直接影响正确性的边界：
 //!
-//! - `--source` 要稳定唯一（我们固定 `custom:miyu`）。一个 pane 的生命周期内
+//! - `--source` 要稳定唯一（我们固定 `custom:yunxi`）。一个 pane 的生命周期内
 //!   最多接受 32 个不同 source 的上报，释放也不回收名额，所以不能每轮换一个。
 //! - `--seq` 必须**严格单调递增**，herdr 会丢掉同一 source 的过期序号。计数器挂
-//!   在**进程**上：daemon 每回合新建 Agent（见记忆 `miyu-per-turn-agent-latches`），
+//!   在**进程**上：daemon 每回合新建 Agent（见记忆 `yunxi-per-turn-agent-latches`），
 //!   挂在回合上会归零。
 //! - 退出要 `release-agent`，否则那个 pane 的权威一直挂着我们的名字。
 //! - 上报是起外部进程，**必须异步且失败静默**：它不能拖慢回合，更不能把错误糊到
@@ -26,8 +26,8 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// 我们在 herdr 那边的身份。`source` 是权威标识，`agent` 是侧栏上显示的字。
-const SOURCE: &str = "custom:miyu";
-const AGENT: &str = "miyu";
+const SOURCE: &str = "custom:yunxi";
+const AGENT: &str = "yunxi";
 
 /// 上报的状态。herdr 的 `--state` 只认这四个；侧栏上那个「done」是它自己派生的
 /// （idle 且用户还没看过），不由我们报。
@@ -85,13 +85,13 @@ static SEQ: AtomicU64 = AtomicU64::new(1);
 /// 下一个序号。**基准是进程启动时的毫秒时间戳**。
 ///
 /// herdr 按 `source` 记序号水位并**丢掉过期序号**，而我们的 source 是固定的
-/// `custom:miyu`——每个进程从 1 重新数的话，第二次开 Miyu 报的 1/2/3 全都小于
+/// `custom:yunxi`——每个进程从 1 重新数的话，第二次开 YunXi 报的 1/2/3 全都小于
 /// herdr 已经见过的水位，**整个进程的上报被静默丢光**（用户 09-20 实测：重开
 /// 一次之后侧栏彻底不显示了；第一次能显示是因为那时还没有水位）。
 ///
 /// 所以序号要**跨进程**单调，不只是进程内单调。时间戳天然满足，也不用落盘。
 /// （回合内仍要挂进程而不是挂 Agent：daemon 每回合新建 Agent，见记忆
-/// `miyu-per-turn-agent-latches`。）
+/// `yunxi-per-turn-agent-latches`。）
 fn next_seq() -> u64 {
     static BASE: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
     let base = *BASE.get_or_init(|| {
@@ -105,7 +105,7 @@ fn next_seq() -> u64 {
 
 /// 报一次状态。不在 herdr 里就直接返回。
 ///
-/// `session_id` 是 Miyu 这条会话的 id，交给 herdr 当 `agent_session_id`——侧栏和
+/// `session_id` 是 YunXi 这条会话的 id，交给 herdr 当 `agent_session_id`——侧栏和
 /// `agent list` 会带上它，将来做「herdr 重启后恢复」时也是靠它指回来。
 pub(in crate::cli) fn report(state: HerdrState, message: Option<&str>, session_id: Option<&str>) {
     let Some(pane) = pane() else {
@@ -142,7 +142,7 @@ pub(in crate::cli) fn report(state: HerdrState, message: Option<&str>, session_i
 ///
 /// 这一处**等它跑完**再返回：别处的上报是丢出去就不管（不能拖慢回合），但退出
 /// 那一刻进程马上就没了，丢出去的子进程会跟着被收走，侧栏上就一直挂着一个已经
-/// 不存在的 miyu。等一下最多几十毫秒，而且人已经在退出了。
+/// 不存在的 yunxi。等一下最多几十毫秒，而且人已经在退出了。
 pub(in crate::cli) fn release_blocking() {
     let Some(pane) = pane() else {
         return;
@@ -279,8 +279,8 @@ mod tests {
 
 /// 把当前会话名写进终端标题（OSC 2 / OSC 0）。
 ///
-/// Miyu 一直不打终端标题——全仓找不到一处 OSC 0/2。后果有两处：herdr 侧栏的
-/// `terminal_title` token 对 Miyu 恒空（Claude Code 打了，所以它那行显示得出
+/// YunXi 一直不打终端标题——全仓找不到一处 OSC 0/2。后果有两处：herdr 侧栏的
+/// `terminal_title` token 对 YunXi 恒空（Claude Code 打了，所以它那行显示得出
 /// 当前任务名）；kitty 的标签页也只显示 shell 名。
 ///
 /// 这一条和 herdr **无关**，放在这个模块只是因为同一项里一起做的；不在 herdr
@@ -296,9 +296,9 @@ pub(in crate::cli) fn set_terminal_title(title: &str) {
         .take(120)
         .collect();
     let safe = if safe.is_empty() {
-        "Miyu".to_string()
+        "YunXi".to_string()
     } else {
-        format!("Miyu · {safe}")
+        format!("YunXi · {safe}")
     };
     let mut stdout = std::io::stdout();
     // OSC 2 = 窗口标题，OSC 1 = 图标名（标签页多半看这个）。两条都发，各终端
@@ -310,10 +310,10 @@ pub(in crate::cli) fn set_terminal_title(title: &str) {
 /// 按会话名设终端标题。会话是**首条消息之后**才自动命名的，所以回合收尾时要
 /// 再设一次——不然标题永远停在刚开那会儿的空名上。
 pub(in crate::cli) fn set_terminal_title_for_session(
-    paths: &miyu_base::paths::MiyuPaths,
+    paths: &yunxi_base::paths::YunXiPaths,
     session_id: &str,
 ) {
-    let name = miyu_core::state::StateStore::new(paths)
+    let name = yunxi_core::state::StateStore::new(paths)
         .ok()
         .and_then(|store| store.session_record(session_id).ok().flatten())
         .map(|record| record.name)
@@ -346,7 +346,7 @@ mod title_tests {
 pub(in crate::cli) struct TurnGuard {
     session_id: String,
     /// 这个进程跑完就没了（一次性 / shellhook）吗。真时收尾要 `release` 而不是
-    /// 报 idle——否则那个 pane 上永远挂着一个已经不存在的 miyu：人在终端里说了
+    /// 报 idle——否则那个 pane 上永远挂着一个已经不存在的 yunxi：人在终端里说了
     /// 一句自然语言，侧栏就多出一个赖着不走的 agent。
     transient: bool,
 }

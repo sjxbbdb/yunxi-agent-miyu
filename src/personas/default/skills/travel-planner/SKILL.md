@@ -17,16 +17,16 @@ description: Travel itinerary planning. Produces a sourced, actionable day-by-da
 这两件是脚本工具，**不在常驻工具面上**（契约太长，常驻不划算），只能在加载本 skill 之后用 `run_command` 经工具桥调用：
 
 ```bash
-miyu tool-call flight_deals --stdin <<'JSON'
+yunxi tool-call flight_deals --stdin <<'JSON'
 {"origin": "上海", "dest": "东京", "depart": "+30"}
 JSON
 
-miyu tool-call hotel_deals --stdin <<'JSON'
+yunxi tool-call hotel_deals --stdin <<'JSON'
 {"location": "Tokyo", "checkin": "+30", "nights": 3}
 JSON
 ```
 
-完整参数用 `miyu tool-call flight_deals --describe`（或 `hotel_deals`）现取，别凭记忆拼。要点：
+完整参数用 `yunxi tool-call flight_deals --describe`（或 `hotel_deals`）现取，别凭记忆拼。要点：
 
 - **`flight_deals`** 只算单程，往返就把 origin/dest 对调再查一次；没有固定日期时用 `{"action":"sweep","window":"09-29..10-08","days":"5-7"}` 扫窗口。出发地绝不猜，用户没说就问。
 - **`hotel_deals`** 地名**优先用英文**：中文地名只做模糊匹配，实测「苏州金鸡湖」会返回 30 km 外昆山南站的酒店且不报错。报价前先看输出里的 `warnings` 和 `sources_failed`，少一个数据源时表面正常但最低价可能偏高。

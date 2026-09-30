@@ -23,7 +23,7 @@ pub(in crate::cli) struct ReplFooterStatus {
     /// set_footer 的权威覆盖(from_config 构造)自然回落 None。
     pub(in crate::cli) running_spinner: Option<usize>,
     /// 会话上挂着的目标（`/goal`）。画在输入框第一行的右端，不占 footer。
-    pub(in crate::cli) goal: Option<miyu_core::ipc::GoalHint>,
+    pub(in crate::cli) goal: Option<yunxi_core::ipc::GoalHint>,
     /// 这一轮从什么时候开始算（09-24：声波右边那个计时，是这一轮对话的总用时，不是
     /// 会话的）。权威那份在 `LiveReplTail::turn_started`，这里是每次换 footer 时同步
     /// 过来的副本（`goal` 就是整份覆盖时漏过的）。
@@ -134,7 +134,7 @@ pub(in crate::cli) fn usage_fits_on_footer_line(
 pub(in crate::cli) fn turn_clock_label(footer: &ReplFooterStatus) -> Option<String> {
     footer.running_spinner?;
     let started = footer.turn_started?;
-    Some(miyu_base::durations::format_hms(started.elapsed()))
+    Some(yunxi_base::durations::format_hms(started.elapsed()))
 }
 
 /// 这条车道的高亮色：输入框左侧那根粗线、footer 左下角的模式标签、输入框右上
@@ -166,7 +166,7 @@ pub(in crate::cli) fn goal_hint_style(mode: PersonaLane) -> &'static str {
 /// 了」（用户 09-19）。这行常驻提示就管这一件事，所以只说三个词：什么状态、第几
 /// 轮、这个状态持续了多久。颜色另走 [`goal_hint_style`]——这里只出字，好让走查
 /// 和单测比得了原文。
-pub(in crate::cli) fn goal_hint_text(goal: Option<&miyu_core::ipc::GoalHint>) -> String {
+pub(in crate::cli) fn goal_hint_text(goal: Option<&yunxi_core::ipc::GoalHint>) -> String {
     let Some(goal) = goal else {
         return String::new();
     };
@@ -197,7 +197,10 @@ pub(in crate::cli) fn goal_hint_text(goal: Option<&miyu_core::ipc::GoalHint>) ->
         if (0..86_400).contains(&elapsed) {
             // 时分秒(用户 09-23:原来写成 `1407s`,跑久了读不出是多久)。
             let elapsed = std::time::Duration::from_secs(elapsed as u64);
-            text.push_str(&format!(" · {}", miyu_base::durations::format_hms(elapsed)));
+            text.push_str(&format!(
+                " · {}",
+                yunxi_base::durations::format_hms(elapsed)
+            ));
         }
     }
     text
@@ -247,7 +250,7 @@ impl ReplFooterStatus {
                 context_window: window.map(|(value, _)| value),
                 context_window_assumed: matches!(
                     window,
-                    Some((_, miyu_base::config::ContextWindowSource::Assumed))
+                    Some((_, yunxi_base::config::ContextWindowSource::Assumed))
                 ),
                 ..meter_cumulative(cumulative)
             },
@@ -256,7 +259,7 @@ impl ReplFooterStatus {
 
     pub(in crate::cli) fn update_token_usage(
         &mut self,
-        result: &miyu_core::llm::ChatResult,
+        result: &yunxi_core::llm::ChatResult,
         session_tokens: u64,
         context_window: Option<usize>,
         cumulative: TurnTokens,
@@ -531,7 +534,7 @@ pub(in crate::cli) fn repl_footer_left(
     let thinking = footer.thinking.as_deref().unwrap_or_default();
     let colored_thinking = (!thinking.is_empty()).then(|| primary_footer_text(thinking));
     let colored_thinking = colored_thinking.as_deref().unwrap_or_default();
-    // 回合运行中,模型信息右侧是 Miyu 的声波律动(用户 08-20 选定):五柱
+    // 回合运行中,模型信息右侧是 YunXi 的声波律动(用户 08-20 选定):五柱
     // 波浪的高度与亮度随帧流动,颜色跟随模式主色(普通蓝/dev 酒红)。与
     // 模型信息之间隔三个空格,不进 " · " 序列(用户点名)。波浪右边紧跟这一轮
     // 的计时(用户 09-24),两样同进同退:跑完一起消失。
@@ -646,10 +649,10 @@ pub(in crate::cli) fn sound_wave_frame(frame: usize, dev: bool) -> String {
 /// 那个金同源(`palette::GOLD`),而且按同一个色深降级——256 色的终端(macOS 自带
 /// 的 Terminal.app 就是)里写死真彩色,状态行和大厅会是两种金。
 pub(in crate::cli) fn readonly_label_style() -> String {
-    let theme = miyu_base::terminal::palette::Theme::detect();
+    let theme = yunxi_base::terminal::palette::Theme::detect();
     format!(
         "\x1b[1m{}",
-        theme.fg_ansi(miyu_base::terminal::palette::GOLD)
+        theme.fg_ansi(yunxi_base::terminal::palette::GOLD)
     )
 }
 
@@ -682,7 +685,7 @@ pub(in crate::cli) fn turn_meter(
 /// footer 上的思考档位：会话作用域的模型池，加上这个会话钉住的档位（09-24：effort
 /// 做成会话级）。几处重算 footer 的地方都走这里，别再各自 `from_config` 了事。
 pub(in crate::cli) fn footer_thinking_summary(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     session_config: &AppConfig,
     session_id: &str,
 ) -> Result<Option<String>> {
@@ -697,7 +700,7 @@ pub(in crate::cli) fn footer_thinking_summary(
 /// The footer/status display must reflect the session's pinned model pool,
 /// not just the global config.
 pub(in crate::cli) fn footer_config_for_session(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     session_id: &str,
 ) -> AppConfig {
@@ -707,7 +710,7 @@ pub(in crate::cli) fn footer_config_for_session(
     };
     if let Ok(Some(models)) = store.session_model_override(session_id) {
         // 与 `apply_session_model_override` 同一道守卫:远端 REPL 走的是这条路,
-        // 覆盖指向已删除的模型时曾让 `miyu normal` 整个起不来(08-28)。
+        // 覆盖指向已删除的模型时曾让 `yunxi normal` 整个起不来(08-28)。
         match config.usable_model_override(models) {
             Some(usable) => config.active_provider_models = Some(usable),
             None => crate::cli::model_cmds::drop_stale_model_override(&store, session_id),

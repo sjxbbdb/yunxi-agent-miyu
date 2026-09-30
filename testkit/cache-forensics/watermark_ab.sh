@@ -17,13 +17,13 @@
 #   bash testkit/cache-forensics/watermark_ab.sh report
 #   bash testkit/cache-forensics/watermark_ab.sh stop
 set -euo pipefail
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for __herdr_var in $(env | sed -n 's/^\(HERDR_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$__herdr_var"; done
 
-BIN=${MIYU_BIN:-$(cd "$(dirname "$0")/../.." && pwd)/target/debug/miyu}
-MODEL=${MIYU_AB_MODEL:-opencodego/mimo-v2.6-flash}
-REAL=$HOME/.miyu/config/config.jsonc
+BIN=${YUNXI_BIN:-$(cd "$(dirname "$0")/../.." && pwd)/target/debug/yunxi}
+MODEL=${YUNXI_AB_MODEL:-opencodego/mimo-v2.6-flash}
+REAL=$HOME/.yunxi/config/config.jsonc
 ROUNDS=${2:-14}
 # 窗口不能压得太小。20000 那版两组都只剩 1 轮、一次压缩都没跑：系统提示词
 # 加工具表就占 12700，可见历史最多 7300，全落在压缩的保尾预算（8192）里，
@@ -35,7 +35,7 @@ declare -A PORTS=([a]=8393 [b]=8394)
 # arm -> "compact_at trim_at"
 declare -A LEVELS=([a]="0.9 0.9" [b]="0.8 0.95")
 
-home_for() { echo "$HOME/.cache/miyu-wm-ab-$1"; }
+home_for() { echo "$HOME/.cache/yunxi-wm-ab-$1"; }
 
 seed() {
   local arm=$1 dir levels
@@ -90,7 +90,7 @@ start() {
   dir=$(home_for "$arm")
   # 起不来时要看得见原因：第一版把 stderr 也吞了，只剩 set -e 让整个脚本
   # 悄悄退出，查了两轮才发现是上一次的 daemon 没停干净。
-  if ! MIYU_HOME="$dir" "$BIN" daemon --port "${PORTS[$arm]}" start >/dev/null; then
+  if ! YUNXI_HOME="$dir" "$BIN" daemon --port "${PORTS[$arm]}" start >/dev/null; then
     echo "  [$arm] daemon 起不来（home=$dir port=${PORTS[$arm]}）" >&2
     return 1
   fi
@@ -99,7 +99,7 @@ start() {
 
 stop_all() {
   for arm in a b; do
-    MIYU_HOME="$(home_for "$arm")" "$BIN" daemon stop >/dev/null 2>&1 || true
+    YUNXI_HOME="$(home_for "$arm")" "$BIN" daemon stop >/dev/null 2>&1 || true
   done
   echo "两组 daemon 已停"
 }
@@ -119,7 +119,7 @@ run() {
   echo "== 交替跑 $ROUNDS 轮（A=改之前 / B=改之后） =="
   for i in $(seq 1 "$ROUNDS"); do
     for arm in a b; do
-      MIYU_HOME="$(home_for "$arm")" timeout 600 "$BIN" --session wm --create \
+      YUNXI_HOME="$(home_for "$arm")" timeout 600 "$BIN" --session wm --create \
         --model "$MODEL" "$(prompt_for "$i")" >/dev/null 2>&1 || echo "    [$arm] 第 $i 轮失败"
     done
     echo "    第 $i 轮完成（两组）"

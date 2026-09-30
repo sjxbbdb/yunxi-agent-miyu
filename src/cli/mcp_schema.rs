@@ -1,7 +1,7 @@
 //! MCP 桥对外吐的工具 schema:先做一层与方言无关的净化,再按上游模型方言整形。
 //!
 //! 净化(所有方言都过):`enum` 里的空串和类型不符的项剔掉,剔空了连键一起删,
-//! `default` 不在 enum 里就剔掉。Miyu 的工具 schema 是给 OpenAI/Anthropic 线写的,
+//! `default` 不在 enum 里就剔掉。YunXi 的工具 schema 是给 OpenAI/Anthropic 线写的,
 //! 那两家来者不拒,所以脏项一直埋着;Google 侧对空 enum 是硬 400,而且不是废掉
 //! 这一个工具,是当轮全部工具一起被毙(`properties[site].enum[4]: cannot be empty`,
 //! 09-03 antigravity 中转首跑撞上)。原来只在 gemini 方言里滤,claude-code 与 codex
@@ -11,7 +11,7 @@
 //! 无差别递归会把同名属性静默删掉(PR #46 就踩了这个)。
 //!
 //! Gemini 方言整形:`type` 不能是数组,`additionalProperties`/`pattern`/`default`
-//! 这些键不认。整形只发生在桥上、只在拉起方点名 `MIYU_MCP_SCHEMA_DIALECT=gemini`
+//! 这些键不认。整形只发生在桥上、只在拉起方点名 `YUNXI_MCP_SCHEMA_DIALECT=gemini`
 //! 时——工具自己的 schema 一个字不改,别的供应商照旧。
 
 use serde_json::{json, Map, Value};

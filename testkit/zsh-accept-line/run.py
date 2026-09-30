@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""回车那一刻的单行分流:哪些交给 zsh、哪些交给 Miyu。fish 那份的 zsh 版。
+"""回车那一刻的单行分流:哪些交给 zsh、哪些交给 YunXi。fish 那份的 zsh 版。
 
 守的是同一个坑:zsh 也是**先展开再找命令**。一句自然语言里带个没匹配上的
 通配符,zsh 在展开阶段就报 `no matches found`,`command_not_found_handler`
@@ -24,9 +24,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 SOURCE = REPO / "src" / "shell" / "zsh.rs"
-FUNCTIONS = ["__miyu_first_token", "__miyu_head_is_plain_word"]
+FUNCTIONS = ["__yunxi_first_token", "__yunxi_head_is_plain_word"]
 
-# (输入, 期望去向)。SHELL = 照旧交给 zsh;AI = 交给 Miyu。
+# (输入, 期望去向)。SHELL = 照旧交给 zsh;AI = 交给 YunXi。
 CASES = [
     ("输出这段命令sudo rm -f /var/lib/nope/core.a1b2.*.zst", "AI"),
     ("帮我看看 *.zst 是什么", "AI"),
@@ -70,8 +70,8 @@ def main():
 
 decide() {
     local head
-    head=$(__miyu_first_token "$1")
-    if [[ -n $head ]] && __miyu_head_is_plain_word "$head" \\
+    head=$(__yunxi_first_token "$1")
+    if [[ -n $head ]] && __yunxi_head_is_plain_word "$head" \\
         && ! whence -- "$head" >/dev/null 2>&1; then
         printf 'AI\\t%s\\n' "$head"
     else

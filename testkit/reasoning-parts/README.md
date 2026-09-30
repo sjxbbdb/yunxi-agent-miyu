@@ -10,9 +10,9 @@
 
 ```sh
 # 隔离 home + 独立 daemon + PTY REPL + OpenAI 桩,pyte 渲染屏幕后数正文占了几行
-MODE=empty      BIN=target/release/miyu python3 testkit/reasoning-parts/repro_openai.py
-MODE=interleave BIN=target/release/miyu python3 testkit/reasoning-parts/repro_openai.py
-MODE=seq        BIN=target/release/miyu python3 testkit/reasoning-parts/repro_openai.py
+MODE=empty      BIN=target/release/yunxi python3 testkit/reasoning-parts/repro_openai.py
+MODE=interleave BIN=target/release/yunxi python3 testkit/reasoning-parts/repro_openai.py
+MODE=seq        BIN=target/release/yunxi python3 testkit/reasoning-parts/repro_openai.py
 ```
 
 | MODE | 桩的流 | 修前 | 修后 |
@@ -22,13 +22,13 @@ MODE=seq        BIN=target/release/miyu python3 testkit/reasoning-parts/repro_op
 | interleave | reasoning 与 content 逐 token 交替 | 5 行 | 5 行(真交错思考要给摘要行腾位置,按设计) |
 | plain | 只有 content | 1 行 | 1 行 |
 
-产物在 `~/.cache/miyu-wrap-repro-openai/<MODE>/`:`raw.bin`(PTY 原始字节)、`screen.txt`。
+产物在 `~/.cache/yunxi-wrap-repro-openai/<MODE>/`:`raw.bin`(PTY 原始字节)、`screen.txt`。
 桩(`stub_reasoning.py`)另有 `long` / `job` 两种剧本,供 `testkit/webui-fixes` 用。
 
 ## `/models` 结果行位置(repl_models_probe.py)
 
 ```sh
-BIN=target/release/miyu python3 testkit/reasoning-parts/repl_models_probe.py
+BIN=target/release/yunxi python3 testkit/reasoning-parts/repl_models_probe.py
 ```
 
 敲 `/models stub-model` 与 `/models default`,断言两条结果行都独占一行、在输入框之上。

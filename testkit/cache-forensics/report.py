@@ -125,8 +125,8 @@ def main():
     parser.add_argument("--session", help="只看这一个会话 id")
     parser.add_argument(
         "--logs",
-        default=os.path.expanduser("~/.miyu/cache/logs"),
-        help="日志目录（默认 ~/.miyu/cache/logs）",
+        default=os.path.expanduser("~/.yunxi/cache/logs"),
+        help="日志目录（默认 ~/.yunxi/cache/logs）",
     )
     parser.add_argument("--limit", type=int, default=20, help="逐条列出多少条异常")
     args = parser.parse_args()

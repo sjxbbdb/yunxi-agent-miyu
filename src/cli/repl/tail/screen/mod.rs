@@ -55,7 +55,7 @@ static FULLSCREEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool
 /// 带上量：跑了多少词元是判断"它在干活还是卡住"的唯一线索，状态行上有、面板里
 /// 没有说不通（用户实测：在这里我期望有的 token 消耗记录也没有）。命令类任务
 /// 没有这个概念，那一截就不出现。
-pub(in crate::cli) fn job_panel_title(job: &miyu_engine::tools::jobs::JobOverview) -> String {
+pub(in crate::cli) fn job_panel_title(job: &yunxi_engine::tools::jobs::JobOverview) -> String {
     match job.metric.as_deref().filter(|text| !text.trim().is_empty()) {
         Some(metric) => format!("{} · {} · {}", job.title, job.status, metric.trim()),
         None => format!("{} · {}", job.title, job.status),
@@ -77,7 +77,7 @@ pub(in crate::cli) fn content_viewport() -> Option<(u16, u16)> {
     if !in_fullscreen() {
         return None;
     }
-    miyu_base::terminal::content_viewport()
+    yunxi_base::terminal::content_viewport()
 }
 
 /// 把 kitty 的图形传输段（`ESC _ G … ESC \`）从字节流里分出来。
@@ -221,14 +221,14 @@ pub(in crate::cli) fn rss_kb() -> u64 {
 }
 
 pub(in crate::cli) fn trace_rss(tag: &str) {
-    if std::env::var_os("MIYU_SCREEN_TRACE").is_none() {
+    if std::env::var_os("YUNXI_SCREEN_TRACE").is_none() {
         return;
     }
     let note = format!("{tag} rss={}\n", rss_kb());
     if let Ok(mut file) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open("/tmp/miyu-screen-trace.log")
+        .open("/tmp/yunxi-screen-trace.log")
     {
         let _ = std::io::Write::write_all(&mut file, note.as_bytes());
     }
@@ -250,7 +250,7 @@ impl Screen {
         // 先藏光标再进副屏：副屏的光标初始在 (0,0) 且可见，第一帧画出来之前
         // 它会在左上角明晃晃地停一下。
         // 引导刚把备用屏交过来的话就不再进一次:再进会把上一帧清掉,闪一下。
-        if miyu_base::terminal::take_held_alt_screen() {
+        if yunxi_base::terminal::take_held_alt_screen() {
             execute!(stdout, crossterm::cursor::Hide, EnableMouseCapture)?;
         } else {
             execute!(
@@ -262,7 +262,7 @@ impl Screen {
         }
         // 渲染器从这一刻起给可折叠的块留展开内容。inline 下不开，字节流
         // 一个标记都不多。
-        miyu_hosts::render::blocks::set_enabled(true);
+        yunxi_hosts::render::blocks::set_enabled(true);
         FULLSCREEN.store(true, std::sync::atomic::Ordering::Relaxed);
         let (cols, rows) = crossterm::terminal::size().unwrap_or((80, 24));
         // 宽度要在这儿就交给缓冲：`resize` 只在**尺寸变化**时才设，而初值
@@ -275,7 +275,7 @@ impl Screen {
         // 表格按整屏宽排，再加两格装订边就比屏幕宽一格，右边那根边框折到下一
         // 行的第 0 列（用户实测：真 TUI 里表格没有 inline 的效果好）。行数先按
         // 整屏减活动区估，第一帧 `paint` 会用真实的正文高度盖掉它。
-        miyu_base::terminal::set_content_viewport(Some((
+        yunxi_base::terminal::set_content_viewport(Some((
             content_cols(cols) as u16,
             rows.saturating_sub(6).max(4),
         )));
@@ -745,14 +745,14 @@ impl Screen {
 
 impl Drop for Screen {
     fn drop(&mut self) {
-        miyu_base::terminal::set_content_viewport(None);
+        yunxi_base::terminal::set_content_viewport(None);
         // 只有真进过全屏才还原终端。`swap` 兼作闸：测试里构造的 `Screen`
         // 没进过 alt screen，往真 stdout 吐一串还原序列会把 `cargo test`
         // 的输出弄脏，也会真的把别人的鼠标捕获关掉。
         if !FULLSCREEN.swap(false, std::sync::atomic::Ordering::Relaxed) {
             return;
         }
-        miyu_hosts::render::blocks::set_enabled(false);
+        yunxi_hosts::render::blocks::set_enabled(false);
         let mut stdout = std::io::stdout();
         // 同理，回主屏那一下也别让光标先跳到左上角：inline 那边接手后会把它
         // 放到该在的位置再显示出来。

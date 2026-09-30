@@ -2,7 +2,7 @@
 """会话 A 正在跑一轮时,对会话 B 的各种命令该照常工作(09-10 用户反馈:
 「有会话在运行的时候我在另一个会话里无法 reset」)。隔离 daemon + 桩模型,接口层。
 
-BIN=<miyu> python3 testkit/multi-user/cross_session_probe.py
+BIN=<yunxi> python3 testkit/multi-user/cross_session_probe.py
 """
 import json
 import os
@@ -11,7 +11,7 @@ import sys
 import time
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -22,15 +22,15 @@ sys.path.insert(0, str(HERE))
 import e2e  # noqa: E402
 
 BIN = Path(os.environ["BIN"]).expanduser()
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-multi-user")).expanduser() / "cross"
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-multi-user")).expanduser() / "cross"
 PORT = int(os.environ.get("PORT", "18494"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18490"))
 BASE = f"http://127.0.0.1:{PORT}"
 e2e.PORT, e2e.STUB_PORT, e2e.BASE = PORT, STUB_PORT, BASE
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME),
-           MIYU_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), MIYU_ADMIN_USER="admin")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME),
+           YUNXI_SYSTEM_SCRIPTS_DIR=str(REPO / "src/scripts"), YUNXI_ADMIN_USER="admin")
 e2e.HOME, e2e.RUNTIME, e2e.ENV = HOME, RUNTIME, ENV
 
 results = []

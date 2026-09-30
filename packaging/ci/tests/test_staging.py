@@ -36,7 +36,7 @@ class StagingTests(unittest.TestCase):
             with self.subTest(path=str(path.relative_to(personas))):
                 self.assertIn(path.resolve(), installed)
                 destination, mode = installed[path.resolve()]
-                self.assertEqual(destination, Path('share/miyu/personas')/path.relative_to(personas))
+                self.assertEqual(destination, Path('share/yunxi/personas')/path.relative_to(personas))
                 if path.parent.name == 'scripts':
                     self.assertEqual(mode, '0755')
 
@@ -64,14 +64,14 @@ class StagingTests(unittest.TestCase):
             source = root/'script'
             source.write_text('fixture')
             stage = root/'stage'
-            install_file(source, stage/'bin/miyu', 0o755)
-            (stage/'bin/miyupm').symlink_to('miyu')
+            install_file(source, stage/'bin/yunxi', 0o755)
+            (stage/'bin/yunxipm').symlink_to('yunxi')
             inventory = tree_manifest(stage)
             self.assertEqual(inventory, tree_manifest(stage))
-            self.assertEqual(next(i for i in inventory if i['path']=='bin/miyu')['mode'], '0755')
-            self.assertEqual(next(i for i in inventory if i['path']=='bin/miyupm')['target'], 'miyu')
+            self.assertEqual(next(i for i in inventory if i['path']=='bin/yunxi')['mode'], '0755')
+            self.assertEqual(next(i for i in inventory if i['path']=='bin/yunxipm')['target'], 'yunxi')
             with self.assertRaises(ValueError):
-                install_file(source, stage/'bin/miyu', 0o755)
+                install_file(source, stage/'bin/yunxi', 0o755)
 
     def test_catalog_duplicate_and_path_escape_rejected(self):
         catalog = load_json(COMMON/'assets.json')

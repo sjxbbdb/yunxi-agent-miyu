@@ -35,7 +35,7 @@ https://example.com
 
 这行是独占一整行的 md 链接：
 
-[GitHub 上的 Miyu](https://github.com/SHORiN-KiWATA/Miyu)
+[GitHub 上的 YunXi](https://github.com/SHORiN-KiWATA/YunXi)
 
 视频站也该出卡：
 
@@ -50,7 +50,7 @@ https://zh.wikipedia.org/wiki/Arch_Linux
 参考资料是「标题 (地址)」这么写的，标题也该跟着成链（放进列表项里，免得占掉链接卡片的名额）：
 
 - Efficient LLM Collaboration via Planning (https://arxiv.org/html/2506.11578v3)
-- 本地路径也得认：[bilibili-summary](file:///home/mac/.miyu/mcp-servers/bilibili-summary)
+- 本地路径也得认：[bilibili-summary](file:///home/mac/.yunxi/mcp-servers/bilibili-summary)
 
 ```
 https://example.com/inside-fence
@@ -64,7 +64,7 @@ use std::collections::HashMap;
 /// 统计一下
 pub fn main() {
     let mut counts: HashMap<&str, u32> = HashMap::new();
-    counts.insert("miyu", 1);
+    counts.insert("yunxi", 1);
     println!("{:?} {}", counts, true);
 }
 ```
@@ -76,7 +76,7 @@ pub fn main() {
 +++ b/web/app.js
 @@ -1,3 +1,4 @@
 -  code.textContent = codeText;
-+  MiyuHighlight.paint(code, language, codeText, true);
++  YunXiHighlight.paint(code, language, codeText, true);
    pre.appendChild(code);
 ```
 

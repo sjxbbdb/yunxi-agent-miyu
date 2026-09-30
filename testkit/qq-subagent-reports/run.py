@@ -4,7 +4,7 @@
 用户拍板:同一轮派出去的几个子代理,等最后一个跑完合成一份再起一轮;账号掉线时汇报留在
 会话库里,连上再发(daemon 重启也不丢)。桩模型是 testkit/subagent-session/stub.py。
 
-    BIN=<miyu> python3 testkit/qq-subagent-reports/run.py
+    BIN=<yunxi> python3 testkit/qq-subagent-reports/run.py
 
 判定:
   pair_merged_into_one_wake   管理员在群里让她并排派两个子代理:只起一轮唤醒,那一轮带两份汇报
@@ -25,7 +25,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里:HERDR_* 漏给被测的 miyu,它就会往那个 pane
+# 跑测具的进程多半坐在某个 herdr pane 里:HERDR_* 漏给被测的 yunxi,它就会往那个 pane
 # 报状态(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -34,8 +34,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "testkit"))
 import sandbox_dir  # noqa: E402
 
-BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
-SANDBOX = sandbox_dir.make("miyu-qq-subagent-reports-")
+BIN = Path(os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
+SANDBOX = sandbox_dir.make("yunxi-qq-subagent-reports-")
 HOME = SANDBOX / "home"
 RUNTIME = SANDBOX / "runtime"
 STUB_LOG = SANDBOX / "stub.jsonl"
@@ -176,7 +176,7 @@ def held_rows():
 
 
 def start_daemon(tag):
-    env = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), MIYU_LOG="info")
+    env = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), YUNXI_LOG="info")
     log = (SANDBOX / f"daemon-{tag}.log").open("w")
     daemon = subprocess.Popen([str(BIN), "__daemon", "--port", str(PORT)], env=env, cwd=str(HOME),
                               stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)

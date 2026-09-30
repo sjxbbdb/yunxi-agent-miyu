@@ -226,7 +226,7 @@ impl FuzzyList {
 /// 空闲时（`RemoteRepl::cmd_models`）和回合跑着时（`midturn_panel`，09-20）
 /// 共用：只要路径 + 会话 id，不碰 `RemoteRepl` 的状态，所以回合循环里也调得了。
 pub(in crate::cli) async fn pick_models_panel(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     session_id: &str,
 ) -> Result<bool> {

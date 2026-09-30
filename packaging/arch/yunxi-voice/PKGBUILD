@@ -1,0 +1,31 @@
+# Maintainer: SHORiN <shorin@users.noreply.github.com>
+#
+# AUR `yunxi-voice` 包装包：下载 GitHub Release 上由 packaging/arch/yunxi-release
+# 拆包产出的 yunxi-voice 预编译资产重新打包。可选组件：装上它并在设置里开启
+# 「语音功能」，daemon 就会拉起 `yunxi-voice` 进程做唤醒词监听与本地识别。
+
+pkgname=yunxi-voice
+pkgver=0.7.0
+pkgrel=1
+pkgdesc='YunXi 语音前端：唤醒词 + 本地语音识别(SenseVoice / sherpa-onnx)，可选组件'
+arch=('x86_64')
+url='https://github.com/sjxbbdb/yunxi-agent-miyu'
+license=('MIT')
+options=('!strip' '!debug')
+export LC_ALL=C.UTF-8
+_release_pkgrel=1
+depends=("yunxi=${pkgver}-${_release_pkgrel}" 'alsa-lib' 'bzip2' 'gcc-libs' 'glibc')
+optdepends=('libnotify: desktop notifications when YunXi hears you')
+source=(
+  "${pkgname}-${pkgver}-${_release_pkgrel}-${CARCH}.release.pkg.tar.zst::${url}/releases/download/v${pkgver}/${pkgname}-${pkgver}-${_release_pkgrel}-${CARCH}.pkg.tar.zst"
+)
+sha256sums=(
+  '485807c48b76668ea0bc76d44dadc7deb76cb8221a8bc98881e23c43127280f0'
+)
+
+# Keep the last published version and checksum until channel_update records
+# the newly verified release asset. Never use SKIP for a binary release asset.
+package() {
+  install -d "${pkgdir}/usr"
+  cp -a "${srcdir}/usr/." "${pkgdir}/usr/"
+}

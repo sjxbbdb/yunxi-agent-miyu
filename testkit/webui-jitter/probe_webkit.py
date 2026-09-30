@@ -110,7 +110,7 @@ class Probe:
 
 
 def main():
-    app = Gtk.Application(application_id="dev.miyu.jitterprobe", flags=Gio.ApplicationFlags.NON_UNIQUE)
+    app = Gtk.Application(application_id="dev.yunxi.jitterprobe", flags=Gio.ApplicationFlags.NON_UNIQUE)
     app.connect("activate", lambda app: Probe(app))
     app.run([])
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """在无头 kitty 里画几种「无竖线装饰」候选样式,截图 + 用 kitten get-text 看复制会得到什么。
 
-跑法:OUT=~/.cache/miyu-copy-styles testkit/kitty-image/run_headless.sh python3 copy_styles.py
+跑法:OUT=~/.cache/yunxi-copy-styles testkit/kitty-image/run_headless.sh python3 copy_styles.py
 """
 import os
 import subprocess
@@ -9,10 +9,10 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, "/home/shorin/Documents/github/Miyu/testkit/kitty-image")
+sys.path.insert(0, "/home/shorin/Documents/github/YunXi/testkit/kitty-image")
 import ghost_probe as probe  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-copy-styles")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-copy-styles")).expanduser()
 OUT.mkdir(parents=True, exist_ok=True)
 
 

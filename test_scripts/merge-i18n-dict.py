@@ -17,13 +17,13 @@ PARTS = ROOT / ".i18n-parts"
 DICT = ROOT / "web" / "i18n-en.js"
 
 HEADER = """// WebUI 英文词典(2026-09-23):键 = 中文原文,值 = 英文。与 web/i18n.js 配对。
-// 中文界面下服务端只发一个空壳(见 crates/miyu-hosts/src/web/assets.rs),
+// 中文界面下服务端只发一个空壳(见 crates/yunxi-hosts/src/web/assets.rs),
 // 这份内容不进中文用户的下载。
 //
 // 维护:新增/修改界面文案时,把中文写进代码里的 t("…")/data-i18n,英文补进
 // 本文件;scripts/check-webui-i18n.py 会把漏掉的揪出来(缺词条=红)。
 // 本文件由 test_scripts/merge-i18n-dict.py 从分片生成,勿手改条目顺序。
-window.MIYU_I18N_EN = Object.freeze({
+window.YUNXI_I18N_EN = Object.freeze({
 """
 
 

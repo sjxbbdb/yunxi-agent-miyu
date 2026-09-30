@@ -5,8 +5,8 @@
 //! - 编辑：那一步点开是 diff（原来是结果那团 JSON——实时的 diff 走侧信道，流水里没有）。
 
 use crate::cli::*;
-use miyu_base::question::{answered_tool_output, QuestionExchange, QuestionRequest};
-use miyu_core::state::{ReplayEntry, TurnReplay};
+use yunxi_base::question::{answered_tool_output, QuestionExchange, QuestionRequest};
+use yunxi_core::state::{ReplayEntry, TurnReplay};
 
 fn asked_turn(output: String) -> TurnReplay {
     let arguments = serde_json::json!({"questions": [{
@@ -61,7 +61,7 @@ fn replay(turn: TurnReplay) -> String {
     super::tui_blocks::with_blocks(|| {
         let frame =
             session_replay_frame(&[turn], PersonaLane::Active, &config, 100, false).unwrap();
-        miyu_hosts::render::strip_ansi_text(&String::from_utf8_lossy(&frame))
+        yunxi_hosts::render::strip_ansi_text(&String::from_utf8_lossy(&frame))
     })
 }
 
@@ -111,7 +111,7 @@ fn edited_turn() -> TurnReplay {
 /// 一帧里点得开的内容全摊平：块里套块，点开一层才露出下一层的块号。
 fn expandable_lines(frame: &str) -> Vec<String> {
     fn block_ids(text: &str) -> Vec<u64> {
-        text.match_indices("miyu-block=")
+        text.match_indices("yunxi-block=")
             .filter_map(|(at, marker)| {
                 text[at + marker.len()..]
                     .chars()
@@ -129,9 +129,9 @@ fn expandable_lines(frame: &str) -> Vec<String> {
         if !seen.insert(id) {
             continue;
         }
-        for line in miyu_hosts::render::blocks::get(id).unwrap_or_default() {
+        for line in yunxi_hosts::render::blocks::get(id).unwrap_or_default() {
             pending.extend(block_ids(&line));
-            lines.push(miyu_hosts::render::strip_ansi_text(&line));
+            lines.push(yunxi_hosts::render::strip_ansi_text(&line));
         }
     }
     lines

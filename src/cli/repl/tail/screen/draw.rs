@@ -50,12 +50,12 @@ impl Screen {
     /// 不退出 alt screen：那些组件打的是普通 ANSI，在备用屏上一样显示；
     /// 它们撑空行把画面顶上去也没关系，`resume` 会整屏重画。
     pub(in crate::cli) fn suspend(&mut self) -> Result<()> {
-        if std::env::var_os("MIYU_SCREEN_TRACE").is_some() {
+        if std::env::var_os("YUNXI_SCREEN_TRACE").is_some() {
             use std::io::Write as _;
             if let Ok(mut f) = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open("/tmp/miyu-screen-trace.log")
+                .open("/tmp/yunxi-screen-trace.log")
             {
                 let _ = writeln!(f, "suspend");
             }
@@ -92,12 +92,12 @@ impl Screen {
     /// 反过来，自己写的帧（流式输出、拖选重画）必须走 diff——每帧
     /// `Clear(All)` + 全量重绘会让光标一路闪、拖选卡到没法用。
     pub(in crate::cli) fn resume(&mut self, external: bool) {
-        if std::env::var_os("MIYU_SCREEN_TRACE").is_some() {
+        if std::env::var_os("YUNXI_SCREEN_TRACE").is_some() {
             use std::io::Write as _;
             if let Ok(mut f) = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open("/tmp/miyu-screen-trace.log")
+                .open("/tmp/yunxi-screen-trace.log")
             {
                 let _ = writeln!(f, "resume susp={}", self.suspended);
             }
@@ -129,7 +129,7 @@ impl Screen {
         // 正文区的尺寸交出去：图片、表格、公式按它算才不会顶出可视范围。
         // 左右各两列边距：左边那条是装订边（`indent_body` 加的），右边留着是为了
         // 让折行有个落点——正好顶到最后一列的话，看着像是被屏幕切掉的。
-        miyu_base::terminal::set_content_viewport(Some((
+        yunxi_base::terminal::set_content_viewport(Some((
             super::content_cols(self.cols) as u16,
             body.saturating_sub(1).max(4),
         )));
@@ -174,7 +174,7 @@ impl Screen {
             return Ok(body);
         }
 
-        if std::env::var_os("MIYU_SCREEN_TRACE").is_some() {
+        if std::env::var_os("YUNXI_SCREEN_TRACE").is_some() {
             let total = self.content_rows();
             let note = format!(
                 "{} paint body={body} total={total} scroll={} follow={} lines={} cursor={} clear={} susp={}\n",
@@ -202,7 +202,7 @@ impl Screen {
                 self.expanded.keys().collect::<Vec<_>>(),
                 self.term.filled_rows(),
             );
-            let path = std::path::Path::new("/tmp/miyu-screen-trace.log");
+            let path = std::path::Path::new("/tmp/yunxi-screen-trace.log");
             if let Ok(mut file) = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
@@ -222,7 +222,7 @@ impl Screen {
         }
         self.row_keys.resize(usize::from(body), None);
 
-        if std::env::var_os("MIYU_SCREEN_TRACE").is_some() {
+        if std::env::var_os("YUNXI_SCREEN_TRACE").is_some() {
             queue!(
                 stdout,
                 Print(format!("\x1b]1337;paint={}\x07", self.scroll))

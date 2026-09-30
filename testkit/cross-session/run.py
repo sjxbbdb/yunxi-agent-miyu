@@ -16,7 +16,7 @@ C 没有。判据:
     presence_expires                 停报 B 的在线,过期之后 A 的 list 里就没有 B 了
     no_orphans                       daemon 停掉后没有残留进程
 
-用法: run.py <miyu 二进制>        全过退出码 0
+用法: run.py <yunxi 二进制>        全过退出码 0
 
 隔离:/tmp 下的临时家目录 + 独立 XDG_RUNTIME_DIR + 独立端口,跑完删掉,不碰线上 8300。
 """
@@ -57,9 +57,9 @@ def check(name, ok, detail=""):
 
 
 class Sandbox:
-    def __init__(self, miyu: Path):
-        self.miyu = miyu
-        self.home = sandbox_dir.make("miyu-xs-", delete_at_exit=False)
+    def __init__(self, yunxi: Path):
+        self.yunxi = yunxi
+        self.home = sandbox_dir.make("yunxi-xs-", delete_at_exit=False)
         self.run = self.home / "run"
         self.stub_log = self.home / "stub.jsonl"
         for path in (self.run, self.home / "config", self.home / "work"):
@@ -82,9 +82,9 @@ class Sandbox:
         # herdr 侧栏报桩模型的状态(main f7379843 起所有测具都剥)。
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith("HERDR_")
-                    and k not in ("MIYU_SESSION", "MIYU_DIRECT", "MIYU_TURN_MODE", "MIYU_HOME",
+                    and k not in ("YUNXI_SESSION", "YUNXI_DIRECT", "YUNXI_TURN_MODE", "YUNXI_HOME",
                                   "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME")}
-        self.env.update(MIYU_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8")
+        self.env.update(YUNXI_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.run), LANG="zh_CN.UTF-8")
         self.stub = None
         self.daemon = None
 
@@ -94,7 +94,7 @@ class Sandbox:
         stub_env.update(STUB_PORT=str(STUB_PORT), STUB_LOG=str(self.stub_log))
         self.stub = subprocess.Popen([sys.executable, str(HERE / "stub.py")], env=stub_env,
                                      stdout=subprocess.DEVNULL, stderr=(self.home / "stub.err").open("w"))
-        self.daemon = subprocess.Popen([str(self.miyu), "daemon", "--port", str(PORT)], env=self.env,
+        self.daemon = subprocess.Popen([str(self.yunxi), "daemon", "--port", str(PORT)], env=self.env,
                                        cwd=str(self.home / "work"), stdin=subprocess.DEVNULL,
                                        stdout=(self.home / "daemon.log").open("w"), stderr=subprocess.STDOUT)
         if not wait_for(self.socket, 40):
@@ -104,7 +104,7 @@ class Sandbox:
         return next(iter(self.run.rglob("*.sock")), None)
 
     def stop(self):
-        subprocess.run([str(self.miyu), "daemon", "stop"], env=self.env, capture_output=True, timeout=30)
+        subprocess.run([str(self.yunxi), "daemon", "stop"], env=self.env, capture_output=True, timeout=30)
         for proc in (self.daemon, self.stub):
             if proc and proc.poll() is None:
                 proc.terminate()
@@ -134,7 +134,7 @@ class Sandbox:
                 cmdline = (proc / "cmdline").read_bytes()
             except OSError:
                 continue
-            if f"MIYU_HOME={self.home}".encode() in environ or str(self.home).encode() in cmdline:
+            if f"YUNXI_HOME={self.home}".encode() in environ or str(self.home).encode() in cmdline:
                 found.append(proc.name)
         return found
 
@@ -150,7 +150,7 @@ class Sandbox:
             return json.loads(recv_exact(sock, length))
 
     def ask(self, session, text, create=False, timeout=120):
-        args = [str(self.miyu), "ask", "--output-format", "json", "--session", session]
+        args = [str(self.yunxi), "ask", "--output-format", "json", "--session", session]
         if create:
             args.append("--create")
         proc = subprocess.run([*args, text], env=self.env, stdin=subprocess.DEVNULL, cwd=str(self.home / "work"),

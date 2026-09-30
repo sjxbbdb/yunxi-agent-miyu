@@ -6,10 +6,10 @@
 （09-25 走查 `bg_visit_midturn.py` 时撞上）。
 
     cargo build
-    MIYU_HOME=~/.cache/miyu-long-reply/home MIYU_TUI_PORT=18695 STUB_PORT=18696 \\
-      MIYU_TUI_RUNTIME=~/.cache/miyu-long-reply/rt OUT=~/.cache/miyu-long-reply/out \\
+    YUNXI_HOME=~/.cache/yunxi-long-reply/home YUNXI_TUI_PORT=18695 STUB_PORT=18696 \\
+      YUNXI_TUI_RUNTIME=~/.cache/yunxi-long-reply/rt OUT=~/.cache/yunxi-long-reply/out \\
       python3 testkit/tui/long_reply_replay.py
-    # 对照改前：MIYU_BIN=~/.local/bin/miyu …（同上）
+    # 对照改前：YUNXI_BIN=~/.local/bin/yunxi …（同上）
 
 两场，各一个沙箱：
 - plain：说一句，回一段 3000 多字的长文；

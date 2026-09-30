@@ -56,8 +56,8 @@ class WebSandbox:
     def env(self):
         env = {k: v for k, v in os.environ.items()
                if not k.startswith("HERDR_")
-               and k not in ("MIYU_SESSION", "MIYU_DIRECT", "MIYU_TURN_MODE", "MIYU_HOME")}
-        env.update(MIYU_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.runtime), LANG="zh_CN.UTF-8")
+               and k not in ("YUNXI_SESSION", "YUNXI_DIRECT", "YUNXI_TURN_MODE", "YUNXI_HOME")}
+        env.update(YUNXI_HOME=str(self.home), XDG_RUNTIME_DIR=str(self.runtime), LANG="zh_CN.UTF-8")
         return env
 
     def start(self):

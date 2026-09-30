@@ -19,8 +19,8 @@ pid),没发生的标出来,不算数。
     heavy   三条大段日志把上下文堆到约 14 万,六个场景一圈 + 打断/插话/复读再一圈(上下文涨到
             二十多万),每边约 1000 万 prompt token
 
-用法: replay_live_suite.py <miyu 二进制> <标签> [small|heavy]
-      逐请求记账(不含正文与 key)存到 ~/.cache/miyu-cache-replay/suite-<标签>.json
+用法: replay_live_suite.py <yunxi 二进制> <标签> [small|heavy]
+      逐请求记账(不含正文与 key)存到 ~/.cache/yunxi-cache-replay/suite-<标签>.json
 """
 
 import json
@@ -33,7 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from replay_live import Sandbox, wait_for  # noqa: E402
 
-OUT_DIR = Path.home() / ".cache/miyu-cache-replay"
+OUT_DIR = Path.home() / ".cache/yunxi-cache-replay"
 LINES = 1200
 ALL = ("normal", "interrupt_tool", "followup_tool", "repeat", "interrupt_stream", "restart")
 KEY = ("interrupt_tool", "followup_tool", "repeat")
@@ -78,8 +78,8 @@ def warmup_message(nonce, index, total, lines):
 
 
 class Suite:
-    def __init__(self, miyu, profile):
-        self.box = Sandbox(miyu)
+    def __init__(self, yunxi, profile):
+        self.box = Sandbox(yunxi)
         self.profile = profile
         self.nonce = secrets.token_hex(6)
         # 压缩会在中途把前缀断一次、搅乱测量;窗口给大(模型本身是 100 万),这一套不测压缩

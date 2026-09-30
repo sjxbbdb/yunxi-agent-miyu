@@ -13,9 +13,9 @@
     batch_delete_removes         删除 → 确认 → 两条都没了(侧栏与接口都没了),操作栏收起
     batch_delete_viewed_falls_back  正在看的那条也被删了:切到剩下的某一条
 
-截图(侧栏选择模式、输入框那排)落在 OUT(默认 /tmp/miyu-composer-webui),全过就删。
+截图(侧栏选择模式、输入框那排)落在 OUT(默认 /tmp/yunxi-composer-webui),全过就删。
 
-    python3 testkit/webui-composer/walk.py <miyu 二进制>
+    python3 testkit/webui-composer/walk.py <yunxi 二进制>
 """
 import os
 import re
@@ -30,7 +30,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from sandbox import WebSandbox  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", "/tmp/miyu-composer-webui"))
+OUT = Path(os.environ.get("OUT", "/tmp/yunxi-composer-webui"))
 
 
 def seconds_of(text):

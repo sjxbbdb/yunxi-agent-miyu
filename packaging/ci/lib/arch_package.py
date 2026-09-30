@@ -20,7 +20,7 @@ else:
     from .manifest import validate_manifest
     from .staging import install_file, selected_files, tree_manifest, validate_assets
 
-OWNER = 'io.miyu.distribution.owner=distribution-2026-09-14'
+OWNER = 'io.yunxi.distribution.owner=distribution-2026-09-14'
 CORE_DEPENDS = ('alsa-lib', 'chafa', 'gcc-libs', 'glibc', 'onnxruntime', 'python', 'ripgrep')
 
 
@@ -30,8 +30,8 @@ def recipe(version, revision, component):
     if component not in ('core', 'voice'):
         raise ValueError('Invalid Arch package component.')
     voice = component == 'voice'
-    name = 'miyu-voice' if voice else 'miyu'
-    depends = (f'miyu={version}-{revision}', 'alsa-lib', 'bzip2', 'gcc-libs', 'glibc') if voice else CORE_DEPENDS
+    name = 'yunxi-voice' if voice else 'yunxi'
+    depends = (f'yunxi={version}-{revision}', 'alsa-lib', 'bzip2', 'gcc-libs', 'glibc') if voice else CORE_DEPENDS
     dependencies = ' '.join("'" + value + "'" for value in depends)
     description = 'Voice wake word and speech recognition front end' if voice else 'Terminal AI assistant'
     licenses = "'MIT' 'Apache-2.0'" if voice else "'MIT' 'OFL-1.1'"
@@ -41,7 +41,7 @@ pkgver={version}
 pkgrel={revision}
 pkgdesc='{description}'
 arch=('x86_64')
-url='https://github.com/SHORiN-KiWATA/miyu-agent'
+url='https://github.com/sjxbbdb/yunxi-agent-miyu'
 license=({licenses})
 depends=({dependencies})
 options=('!strip' '!debug' '!lto' '!purge' 'staticlibs' 'libtool' '!zipman' 'emptydirs')
@@ -73,16 +73,16 @@ def package_arch(manifest, asset, stage: Path, inventory: list, destination: Pat
         capture_output=True, text=True, timeout=30)
     image = json.loads(inspect.stdout)[0]
     if (image['Architecture'] != 'amd64'
-            or image.get('Config', {}).get('Labels', {}).get('io.miyu.distribution.owner') != 'distribution-2026-09-14'):
+            or image.get('Config', {}).get('Labels', {}).get('io.yunxi.distribution.owner') != 'distribution-2026-09-14'):
         raise ValueError('Expected the owned native x86_64 Arch builder image.')
     image_id = image['Id']
     if not re.fullmatch(r'sha256:[0-9a-f]{64}', image_id):
         raise ValueError('Builder image did not resolve to an immutable ID.')
     destination.parent.mkdir(parents=True, exist_ok=True)
     run_id = uuid.uuid4().hex
-    name = 'miyu-arch-package-' + run_id
+    name = 'yunxi-arch-package-' + run_id
     log_path = destination.parent / 'arch-package.log'
-    with tempfile.TemporaryDirectory(prefix='miyu-arch-', dir=destination.parent) as temporary:
+    with tempfile.TemporaryDirectory(prefix='yunxi-arch-', dir=destination.parent) as temporary:
         work = Path(temporary)
         write_json(work/'.distribution-owner.json', {'run_id': run_id, 'pid': os.getpid()})
         (work/'PKGBUILD').write_text(recipe(manifest['version'], manifest['package_revision'], asset['component']))
@@ -92,7 +92,7 @@ def package_arch(manifest, asset, stage: Path, inventory: list, destination: Pat
         command = ['docker', 'run', '--rm', '--name', name, '--label', OWNER,
             '--network', 'none', '--user', f'{uid}:{gid}', '--workdir', '/build',
             '--env', 'HOME=/build', '--env', 'LC_ALL=C.UTF-8',
-            '--env', 'PACKAGER=Miyu Release <shorin@users.noreply.github.com>',
+            '--env', 'PACKAGER=YunXi Release <shorin@users.noreply.github.com>',
             '--env', f'SOURCE_DATE_EPOCH={manifest["source_date_epoch"]}',
             '--mount', f'type=bind,src={stage},dst=/stage,readonly',
             '--mount', f'type=bind,src={work},dst=/build', image_id,
@@ -111,8 +111,8 @@ def package_arch(manifest, asset, stage: Path, inventory: list, destination: Pat
             info = (work/'package-info.txt').read_text()
             wanted = f'pkgver = {manifest["version"]}-{manifest["package_revision"]}'
             component = asset['component']
-            expected_name = 'miyu-voice' if component == 'voice' else 'miyu'
-            dependencies = ([f'miyu={manifest["version"]}-{manifest["package_revision"]}', 'alsa-lib', 'bzip2', 'gcc-libs', 'glibc']
+            expected_name = 'yunxi-voice' if component == 'voice' else 'yunxi'
+            dependencies = ([f'yunxi={manifest["version"]}-{manifest["package_revision"]}', 'alsa-lib', 'bzip2', 'gcc-libs', 'glibc']
                 if component == 'voice' else list(CORE_DEPENDS))
             actual_dependencies = [line.removeprefix('depend = ') for line in info.splitlines() if line.startswith('depend = ')]
             if (wanted not in info.splitlines() or 'arch = x86_64' not in info.splitlines()
@@ -155,20 +155,20 @@ def source_install(source, wiki, component, destination, wiki_commit, sherpa_lic
     catalog = validate_assets(load_json(source/'packaging/common/assets.json'))
     if destination.exists() and any(destination.iterdir()):
         raise ValueError('Resource installation destination must be empty.')
-    with tempfile.TemporaryDirectory(prefix='miyu-source-assets-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='yunxi-source-assets-') as temporary:
         runtime = Path(temporary)
         meta = runtime/'default-kb/manifest'
         meta.mkdir(parents=True)
-        write_json(meta/'manifest.json', {'name': 'miyu-default-kb', 'source_commit': source_commit,
+        write_json(meta/'manifest.json', {'name': 'yunxi-default-kb', 'source_commit': source_commit,
             'wiki_commit': wiki_commit, 'generated_by': 'packaging/common/assets.json'})
         (meta/'shorinwiki.commit').write_text(wiki_commit+'\n')
         if sherpa_license:
             install_file(Path(sherpa_license), runtime/'licenses/sherpa-onnx-LICENSE', 0o644)
         roots = {'source': source, 'wiki': wiki, 'runtime': runtime}
-        binary = 'miyu-voice' if component == 'voice' else 'miyu'
+        binary = 'yunxi-voice' if component == 'voice' else 'yunxi'
         install_file(source/'target/x86_64-unknown-linux-gnu/release'/binary, destination/'bin'/binary, 0o755)
         if component == 'core':
-            (destination/'bin/miyupm').symlink_to('miyu')
+            (destination/'bin/yunxipm').symlink_to('yunxi')
         for rule in catalog['assets']:
             if rule['component'] != component or 'arch-x86_64' not in rule.get('build_ids', ['arch-x86_64']):
                 continue

@@ -7,7 +7,7 @@
 fish hook 把命令行管道喂进来:
 
 ```fish
-printf '%s' "$buffer" | miyu --shell-intercept --shell fish --stdin
+printf '%s' "$buffer" | yunxi --shell-intercept --shell fish --stdin
 ```
 
 stdin 是**管道**、stdout 是终端、进程持有控制终端(`/dev/tty`)。`run.py` 用
@@ -35,12 +35,12 @@ cargo build                                   # 静态资源与 CLI 都编进二
 python3 testkit/shellhook-question/run.py             # 不按键,看面板能不能活过 5.5s
 KEYS=arrows python3 testkit/shellhook-question/run.py # 3s 后敲 ↑ ↓
 KEYS=answer python3 testkit/shellhook-question/run.py # 再敲回车提交
-MIYU_LOG=debug python3 testkit/shellhook-question/run.py   # 同时留 daemon 日志
+YUNXI_LOG=debug python3 testkit/shellhook-question/run.py   # 同时留 daemon 日志
 ```
 
-产物在 `~/.cache/miyu-shellhook-question/`:`raw.bin`(终端原始输出)、
+产物在 `~/.cache/yunxi-shellhook-question/`:`raw.bin`(终端原始输出)、
 `chunks.json`(带时间戳的分块)、`report.json`、`daemon.log`。daemon 的详细
-日志在 `$MIYU_HOME/cache/logs/miyu.*.log`。
+日志在 `$YUNXI_HOME/cache/logs/yunxi.*.log`。
 
 ## 判定
 

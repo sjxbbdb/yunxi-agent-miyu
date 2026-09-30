@@ -8,7 +8,7 @@
     cargo build --release        # 预算要 release，debug 的体积与 RSS 不可比
     python3 testkit/tui/budget.py
 
-产物在 ~/.cache/miyu-tui-budget/budget.json。
+产物在 ~/.cache/yunxi-tui-budget/budget.json。
 """
 
 import json
@@ -25,30 +25,30 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = ROOT / "target" / "release" / "miyu"
+BIN = ROOT / "target" / "release" / "yunxi"
 SMOKE = ROOT / "testkit" / "repl-smoke"
 
-HOME = Path(os.environ.get("MIYU_HOME", "/tmp/miyu-tui-budget/home"))
-RUNTIME = os.environ.get("MIYU_TUI_RUNTIME", "/tmp/mx-budget")
-PORT = int(os.environ.get("MIYU_TUI_PORT", "18443"))
+HOME = Path(os.environ.get("YUNXI_HOME", "/tmp/yunxi-tui-budget/home"))
+RUNTIME = os.environ.get("YUNXI_TUI_RUNTIME", "/tmp/mx-budget")
+PORT = int(os.environ.get("YUNXI_TUI_PORT", "18443"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18497"))
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-tui-budget"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-tui-budget"))
 COLS, ROWS = 200, 60
 IDLE_SECONDS = float(os.environ.get("IDLE_SECONDS", "5"))
 
 
 def env_for(tui):
-    env = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
+    env = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
     if tui:
-        env["MIYU_TUI"] = "1"
+        env["YUNXI_TUI"] = "1"
     else:
-        env.pop("MIYU_TUI", None)
+        env.pop("YUNXI_TUI", None)
     return env
 
 

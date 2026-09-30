@@ -31,9 +31,9 @@ impl LiveReplTail {
     /// 行数、哪几行、状态变了才要，转轮和用时由 `tick_job_strip` 单独补帧。
     pub(in crate::cli) fn set_jobs(
         &mut self,
-        jobs: Vec<miyu_engine::tools::jobs::JobOverview>,
+        jobs: Vec<yunxi_engine::tools::jobs::JobOverview>,
     ) -> bool {
-        let jobs: Vec<miyu_engine::tools::jobs::JobOverview> = if self.suppressed_jobs.is_empty() {
+        let jobs: Vec<yunxi_engine::tools::jobs::JobOverview> = if self.suppressed_jobs.is_empty() {
             jobs
         } else {
             let now = std::time::Instant::now();

@@ -13,8 +13,8 @@
 //! **之前**落（[`PendingWrites::flush_before_config`]），清单和开发提示词在存配置之后。
 
 use crate::config_tui::*;
-use miyu_base::config::PersonaManifest;
 use std::collections::BTreeMap;
+use yunxi_base::config::PersonaManifest;
 
 #[derive(Default)]
 pub(in crate::config_tui) struct PendingWrites {
@@ -35,7 +35,7 @@ impl PendingWrites {
     pub(in crate::config_tui) fn manifest(
         &self,
         config: &AppConfig,
-        paths: &MiyuPaths,
+        paths: &YunXiPaths,
         scope: &str,
     ) -> PersonaManifest {
         self.manifests
@@ -58,8 +58,8 @@ impl PendingWrites {
             .map(|previous| previous.name.clone())
             .unwrap_or_else(|| disk.clone());
         let (from, to) = (
-            miyu_base::config::persona_scope_name(&shown),
-            miyu_base::config::persona_scope_name(&draft.name),
+            yunxi_base::config::persona_scope_name(&shown),
+            yunxi_base::config::persona_scope_name(&draft.name),
         );
         if from != to {
             if let Some(manifest) = self.manifests.remove(&from) {
@@ -72,7 +72,7 @@ impl PendingWrites {
     /// 删掉界面上这个人格：它攒着的编辑和功能清单都作废，交回盘上的名字。
     pub(in crate::config_tui) fn forget_persona(&mut self, shown: &str) -> String {
         self.manifests
-            .remove(&miyu_base::config::persona_scope_name(shown));
+            .remove(&yunxi_base::config::persona_scope_name(shown));
         self.drafts.forget_persona(shown)
     }
 
@@ -80,15 +80,15 @@ impl PendingWrites {
     pub(in crate::config_tui) fn flush_before_config(
         &mut self,
         config: &mut AppConfig,
-        paths: &MiyuPaths,
+        paths: &YunXiPaths,
     ) -> Result<()> {
         self.drafts.flush(config, paths)
     }
 
     /// 开发模式提示词此刻的正文。
-    pub(in crate::config_tui) fn dev_prompt(&self, paths: &MiyuPaths) -> String {
+    pub(in crate::config_tui) fn dev_prompt(&self, paths: &YunXiPaths) -> String {
         self.dev_prompt.clone().unwrap_or_else(|| {
-            std::fs::read_to_string(paths.config_dir.join(miyu_base::config::DEV_PROMPT_FILE))
+            std::fs::read_to_string(paths.config_dir.join(yunxi_base::config::DEV_PROMPT_FILE))
                 .unwrap_or_default()
         })
     }
@@ -101,7 +101,7 @@ impl PendingWrites {
     pub(in crate::config_tui) fn flush(
         &mut self,
         config: &AppConfig,
-        paths: &MiyuPaths,
+        paths: &YunXiPaths,
     ) -> Result<()> {
         for (scope, manifest) in std::mem::take(&mut self.manifests) {
             let path = PersonaManifest::manifest_path(config, paths, &scope);
@@ -111,7 +111,7 @@ impl PendingWrites {
             std::fs::write(&path, manifest.to_toml())?;
         }
         if let Some(text) = self.dev_prompt.take() {
-            let path = paths.config_dir.join(miyu_base::config::DEV_PROMPT_FILE);
+            let path = paths.config_dir.join(yunxi_base::config::DEV_PROMPT_FILE);
             let text = text.trim();
             if text.is_empty() {
                 if path.exists() {

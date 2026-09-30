@@ -48,10 +48,10 @@ class CleanupTests(unittest.TestCase):
 class InstallationRecipeTests(unittest.TestCase):
     def test_rpm_does_not_own_filesystem_roots(self):
         entries=[{'path':name,'type':'directory'} for name in
-            ('bin','lib','share','share/licenses','lib/miyu','share/miyu')]
-        entries.append({'path':'bin/miyu','type':'file'})
+            ('bin','lib','share','share/licenses','lib/yunxi','share/yunxi')]
+        entries.append({'path':'bin/yunxi','type':'file'})
         self.assertEqual([entry['path'] for entry in package_inventory({'format':'rpm'},entries)],
-                         ['lib/miyu','share/miyu','bin/miyu'])
+                         ['lib/yunxi','share/yunxi','bin/yunxi'])
         self.assertEqual(package_inventory({'format':'deb'},entries),entries)
 
     def test_mint_installs_through_apt_like_its_ubuntu_base(self):

@@ -121,7 +121,7 @@ pub(in crate::cli) fn command_hint_lines(
     picked: Option<usize>,
 ) -> Vec<String> {
     let input = input.trim_start();
-    let suggestions = miyu_core::slash_commands::repl_command_suggestions(input);
+    let suggestions = yunxi_core::slash_commands::repl_command_suggestions(input);
     if suggestions.is_empty() {
         return Vec::new();
     }

@@ -17,7 +17,7 @@ pub(in crate::config_tui) use identity::*;
 pub(in crate::config_tui) use reply::*;
 
 use crate::config_tui::*;
-use miyu_base::config::{ModelPoolRef, ModelTier};
+use yunxi_base::config::{ModelPoolRef, ModelTier};
 
 pub(in crate::config_tui) fn real_context_values(
     config: &AppConfig,
@@ -48,7 +48,7 @@ pub(in crate::config_tui) fn apply_real_context_values(
 
 pub(in crate::config_tui) fn edit_real_context(
     ui: &mut Ui,
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &mut AppConfig,
 ) -> Result<()> {
     let (mut enabled, mut settings) = real_context_values(config)?;

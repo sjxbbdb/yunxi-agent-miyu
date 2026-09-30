@@ -139,7 +139,7 @@ impl RemoteRepl {
         repl_get_session_state(
             &self.paths,
             &mut self.live_repl,
-            miyu_core::ipc::SessionRef::Id {
+            yunxi_core::ipc::SessionRef::Id {
                 id: session_id.to_string(),
             },
         )
@@ -207,7 +207,7 @@ impl RemoteRepl {
     }
 }
 
-fn session_title(paths: &MiyuPaths, session_id: &str) -> String {
+fn session_title(paths: &YunXiPaths, session_id: &str) -> String {
     let name = StateStore::new(paths)
         .ok()
         .and_then(|store| store.session_record(session_id).ok().flatten())
@@ -217,7 +217,7 @@ fn session_title(paths: &MiyuPaths, session_id: &str) -> String {
 }
 
 /// 从 `root` 往下的子代理会话，先序排（父在子前），跑完的、中断的也列。
-async fn subagent_tree(paths: &MiyuPaths, root: &str) -> Vec<TreeRow> {
+async fn subagent_tree(paths: &YunXiPaths, root: &str) -> Vec<TreeRow> {
     let mut pending = children_of(paths, root)
         .await
         .into_iter()
@@ -245,7 +245,7 @@ async fn subagent_tree(paths: &MiyuPaths, root: &str) -> Vec<TreeRow> {
     tree
 }
 
-async fn children_of(paths: &MiyuPaths, session_id: &str) -> Vec<SubagentRow> {
+async fn children_of(paths: &YunXiPaths, session_id: &str) -> Vec<SubagentRow> {
     match send_ipc_admin(
         paths,
         IpcCommand::ListSubagentSessions {

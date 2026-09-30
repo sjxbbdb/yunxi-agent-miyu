@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """复刻 REPL 的真实形态：终端处于 raw 模式时，chafa 还能探测出 sixel 吗？
 
-Miyu 打图的时刻，终端已经被 REPL 设成 raw（crossterm enable_raw_mode 改的
+YunXi 打图的时刻，终端已经被 REPL 设成 raw（crossterm enable_raw_mode 改的
 是这个终端设备的 termios）。chafa 用 ctty 探测时要自己设 termios 再恢复。
 这一层此前没测过。
 """

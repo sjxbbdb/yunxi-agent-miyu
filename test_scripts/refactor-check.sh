@@ -21,7 +21,7 @@ cd "$(git rev-parse --show-toplevel)"
 # 「已思考」这些）。不钉住的话，同一份代码在中文 shell 里 2621 条全绿、在英文
 # shell 或 systemd 的干净环境里红 11 条——2026-09-21 本机与 CI 各撞了一次。
 # 真正的修法是让那些用例自己把 locale 钉死，在那之前先由门禁统一。
-export MIYU_LANG=zh
+export YUNXI_LANG=zh
 
 step() { printf '\n\033[1m── %s ──\033[0m\n' "$1"; }
 
@@ -33,8 +33,8 @@ cargo check --workspace --all-targets
 
 step "voice 形态"
 # `--features voice` 那一面平时一行都不编:默认 feature 是空的,而 voice 的实现
-# 09-16 拆 crate 时搬进了 miyu-engine。0.6.1 发版当天才发现 src/bin/voice.rs 还在
-# 引 `miyu::voice::*`——语音二进制从拆 crate 起就编不过,只有打包那一步会碰到它。
+# 09-16 拆 crate 时搬进了 yunxi-engine。0.6.1 发版当天才发现 src/bin/voice.rs 还在
+# 引 `yunxi::voice::*`——语音二进制从拆 crate 起就编不过,只有打包那一步会碰到它。
 # sherpa 的静态库由 build.rs 现下(首次几十 MB,之后走缓存);离线机器可以给
 # SHERPA_ONNX_ARCHIVE_DIR 指一份本地归档。
 cargo check --features voice --all-targets

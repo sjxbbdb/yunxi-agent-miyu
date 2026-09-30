@@ -1,6 +1,6 @@
 """WebUI 测具共用的登录小工具(09-11 起 WebUI 永远要登录)。
 
-首次登录用内置账号(用户名 `miyu`,密码 `miyu`),登录后创建管理员账号,之后内置
+首次登录用内置账号(用户名 `yunxi`,密码 `yunxi`),登录后创建管理员账号,之后内置
 口令失效、只能用账号登录。这里把这套走一遍,给接口层一个带 cookie 的 opener,给
 Playwright 页面一个「看到登录页就登进去」的帮手。
 """
@@ -8,10 +8,10 @@ import http.cookiejar
 import json
 import urllib.request
 
-BUILTIN_USERNAME = "miyu"
-BUILTIN_PASSWORD = "miyu"
+BUILTIN_USERNAME = "yunxi"
+BUILTIN_PASSWORD = "yunxi"
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "miyu-test"
+ADMIN_PASSWORD = "yunxi-test"
 
 OPENER = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 

@@ -11,9 +11,9 @@
     cargo build
     python3 testkit/tui/error_visual.py
 
-产物在 ~/.cache/miyu-error-visual/（screen.txt 就是给人看的那张图）。
+产物在 ~/.cache/yunxi-error-visual/（screen.txt 就是给人看的那张图）。
 
-**这些 TUI 走查只能一个一个跑**：共用同一个 `MIYU_HOME` 和端口。
+**这些 TUI 走查只能一个一个跑**：共用同一个 `YUNXI_HOME` 和端口。
 """
 
 import json
@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-error-visual"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-error-visual"))
 PROMPT = "走查一句"
 QUOTA_PORT = int(os.environ.get("QUOTA_PORT", "18497"))
 # 真实的 OpenAI 系限流报文，够长，正好也验「每条理由按条裁」那一段。
@@ -37,7 +37,7 @@ BODY = json.dumps(
     {
         "error": {
             "message": (
-                "Rate limit reached for model in organization org-miyu on tokens per min "
+                "Rate limit reached for model in organization org-yunxi on tokens per min "
                 "(TPM): Limit 30000, Used 30000, Requested 512. Please try again in 1.024s. "
                 "Visit https://platform.openai.com/account/rate-limits to learn more."
             ),

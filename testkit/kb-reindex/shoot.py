@@ -21,7 +21,7 @@ import authlib  # noqa: E402  管理员由 run.py 建好了，这里只在页面
 
 REPO = Path(__file__).resolve().parents[2]
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:18436"
-OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "/tmp/miyu-kb-reindex")
+OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "/tmp/yunxi-kb-reindex")
 # 面板一次最多收 MAX_DROP_FILES(200)个,多投的会被前端就地忽略。
 DROP_COUNT = int(sys.argv[3]) if len(sys.argv) > 3 else 200
 OUT.mkdir(parents=True, exist_ok=True)

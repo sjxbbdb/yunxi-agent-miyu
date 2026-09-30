@@ -11,7 +11,7 @@ const TOOL_SCOPES: &[&str] = &["off", "dev", "normal", "all"];
 pub(in crate::config_tui) fn edit_antigravity_provider_form(
     ui: &mut Ui,
     provider: ProviderConfig,
-    plugin: &mut miyu_base::config::AntigravityPluginConfig,
+    plugin: &mut yunxi_base::config::AntigravityPluginConfig,
 ) -> Result<Option<ProviderConfig>> {
     let mut fields = vec![
         Field::new(
@@ -31,10 +31,10 @@ pub(in crate::config_tui) fn edit_antigravity_provider_form(
         .choices(TOOL_SCOPES),
         Field::new(
             t(
-                "Miyu tools via MCP bridge scope",
-                "Miyu 工具挂给 agy 的作用域",
+                "YunXi tools via MCP bridge scope",
+                "YunXi 工具挂给 agy 的作用域",
             ),
-            plugin.miyu_tools.clone(),
+            plugin.yunxi_tools.clone(),
         )
         .choices(TOOL_SCOPES),
         Field::new(
@@ -42,7 +42,7 @@ pub(in crate::config_tui) fn edit_antigravity_provider_form(
                 "Register bridged tools eagerly",
                 "桥工具 eager 注册(原生名直调)",
             ),
-            plugin.miyu_tools_eager.to_string(),
+            plugin.yunxi_tools_eager.to_string(),
         )
         .choices(&["true", "false"]),
         Field::new(
@@ -96,16 +96,16 @@ pub(in crate::config_tui) fn edit_antigravity_provider_form(
         };
         plugin.binary = fields[2].value.trim().to_string();
         plugin.native_tools = normalize_scope(&fields[3].value);
-        plugin.miyu_tools = normalize_scope(&fields[4].value);
-        plugin.miyu_tools_eager = eager;
+        plugin.yunxi_tools = normalize_scope(&fields[4].value);
+        plugin.yunxi_tools_eager = eager;
         plugin.idle_timeout_seconds = fields[6].value.trim().parse().unwrap_or(300);
         plugin.print_timeout_seconds = fields[7].value.trim().parse().unwrap_or(24 * 60 * 60);
         plugin.reuse_process = parse_bool_field(&fields[8].value).unwrap_or(true);
         plugin.reuse_idle_seconds = fields[9].value.trim().parse().unwrap_or(600);
         if !enabled {
             // 关掉即清理 agy 侧落盘物:代理目录与全局 mcp_config 的桥条目,
-            // 否则用户交互式开 agy 还会一直挂着一个指向旧二进制的 miyu 服务器。
-            miyu_core::llm::remove_antigravity_relay_files();
+            // 否则用户交互式开 agy 还会一直挂着一个指向旧二进制的 yunxi 服务器。
+            yunxi_core::llm::remove_antigravity_relay_files();
         }
         let mut updated = provider.clone();
         updated.enabled = enabled;

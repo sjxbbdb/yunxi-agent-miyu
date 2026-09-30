@@ -9,7 +9,7 @@ use crate::config_tui::{
     upsert_group_join_approval_group, validate_reply_processor_settings,
     ReplyProcessorSettingsForm, REPLY_PROCESSOR_PLUGIN_ID,
 };
-use miyu_base::config::{
+use yunxi_base::config::{
     AppConfig, PlatformPluginInstanceConfig, QqGroupJoinApprovalGroupConfig,
     RealContextPluginSettings, REAL_CONTEXT_PLUGIN_ID,
 };
@@ -24,7 +24,7 @@ fn group_join_approval_defaults_to_enabled_with_empty_groups() {
     assert_eq!(settings.max_retries, 1);
     assert_eq!(
         settings.text_models.tier_ref(),
-        Some(miyu_base::config::ModelTier::Lite)
+        Some(yunxi_base::config::ModelTier::Lite)
     );
 }
 
@@ -218,16 +218,16 @@ fn real_context_settings_use_generic_map_and_preserve_unknown_keys() {
 #[test]
 fn real_context_batch_parsers_are_line_based_and_deduplicated() {
     let mappings =
-        parse_real_context_identity_lines("# 昵称<Tab>QQ号\nMiyu\t123\n小羽 = 456").unwrap();
+        parse_real_context_identity_lines("# 昵称<Tab>QQ号\nYunXi\t123\n小羽 = 456").unwrap();
     assert_eq!(mappings.len(), 2);
-    assert_eq!(mappings[0].nickname, "Miyu");
+    assert_eq!(mappings[0].nickname, "YunXi");
     assert_eq!(mappings[0].user_id, 123);
-    assert!(parse_real_context_identity_lines("Miyu\t123\nMiyu\t456").is_err());
-    assert!(parse_real_context_identity_lines("Miyu 123").is_err());
+    assert!(parse_real_context_identity_lines("YunXi\t123\nYunXi\t456").is_err());
+    assert!(parse_real_context_identity_lines("YunXi 123").is_err());
 
     assert_eq!(
-        parse_real_context_string_lines("晚安\n 晚安 \nMiyu", 128).unwrap(),
-        vec!["晚安", "Miyu"]
+        parse_real_context_string_lines("晚安\n 晚安 \nYunXi", 128).unwrap(),
+        vec!["晚安", "YunXi"]
     );
 }
 

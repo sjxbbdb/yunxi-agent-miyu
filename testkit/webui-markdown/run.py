@@ -21,15 +21,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
-# MIYU_APP_JS 指向别的副本,用来跑「修之前会红」这一步:
+# YUNXI_APP_JS 指向别的副本,用来跑「修之前会红」这一步:
 #   git show HEAD:web/app.js > /tmp/before.js
-#   MIYU_APP_JS=/tmp/before.js python3 testkit/webui-markdown/run.py
-APP = Path(os.environ.get("MIYU_APP_JS", REPO / "web" / "app.js"))
+#   YUNXI_APP_JS=/tmp/before.js python3 testkit/webui-markdown/run.py
+APP = Path(os.environ.get("YUNXI_APP_JS", REPO / "web" / "app.js"))
 
 # app.js 是个 IIFE,内部函数外面够不着。把末尾的启动调用换成导出:启动要真 DOM
 # 和后端,这里两样都没有;函数本身一个字节没改。
 ENTRY = "\n  initialize();\n})();"
-EXPORT = "\n  window.__miyuMarkdown = { renderMarkdown, appendInline };\n})();"
+EXPORT = "\n  window.__yunxiMarkdown = { renderMarkdown, appendInline };\n})();"
 
 # (名字, markdown, 断言函数)。断言收到的是 #root 的 DOM 探针结果。
 CASES = [
@@ -93,7 +93,7 @@ CASES = [
 PROBE = """(markdown) => {
   const root = document.getElementById('root');
   root.innerHTML = '';
-  window.__miyuMarkdown.renderMarkdown(root, markdown);
+  window.__yunxiMarkdown.renderMarkdown(root, markdown);
   const table = root.querySelector('table');
   const cell = table ? table.querySelector('tbody td') : null;
   const para = root.querySelector('p');
@@ -136,7 +136,7 @@ def main():
 
     # 得有个真 origin:about:blank 上 Chromium 不给碰 localStorage,而 app.js
     # 顶层就在读它。起个只服务这两个文件的本地 http。
-    serve = sandbox_dir.make("miyu-md-")
+    serve = sandbox_dir.make("yunxi-md-")
     (serve / "app.js").write_text(harness)
     (serve / "index.html").write_text(
         "<!doctype html><meta charset=utf-8><div id=root></div><script src=app.js></script>"
@@ -153,7 +153,7 @@ def main():
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.goto(base)
-        if page.evaluate("() => !window.__miyuMarkdown"):
+        if page.evaluate("() => !window.__yunxiMarkdown"):
             browser.close()
             sys.exit("app.js 没能加载出解析器:\n" + "\n".join(errors))
 

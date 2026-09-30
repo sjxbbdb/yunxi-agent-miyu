@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""不开真终端，只看 miyu 往 tty 上吐了什么字节。
+"""不开真终端，只看 yunxi 往 tty 上吐了什么字节。
 
 用来把「图没画出来」拆成两截：是渲染器没出图（字节流里没有 `ESC_G` 传输段），
 还是出了图但 kitty 没画（字节里有、屏幕上没有）。真 kitty 那条走查（terminal.py）
@@ -20,15 +20,15 @@ import time
 import urllib.parse
 from pathlib import Path
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
-HOME = Path("/tmp/miyu-mermaid-probe/home")
+HOME = Path("/tmp/yunxi-mermaid-probe/home")
 REPO = Path(__file__).resolve().parents[2]
-# 走查红绿账（testkit/fleet.py）按 MIYU_BIN / BIN 指定被测的二进制，和别的走查同一个口径。
-BIN = Path(os.environ.get("MIYU_BIN") or os.environ.get("BIN") or REPO / "target" / "debug" / "miyu")
+# 走查红绿账（testkit/fleet.py）按 YUNXI_BIN / BIN 指定被测的二进制，和别的走查同一个口径。
+BIN = Path(os.environ.get("YUNXI_BIN") or os.environ.get("BIN") or REPO / "target" / "debug" / "yunxi")
 SMOKE = REPO / "testkit" / "repl-smoke"
 
 FLOW = (
@@ -100,9 +100,9 @@ def main():
         pid, fd = pty.fork()
         if pid == 0:
             os.environ.update(
-                MIYU_HOME=str(HOME),
-                MIYU_DIRECT="1",
-                MIYU_TUI="0",
+                YUNXI_HOME=str(HOME),
+                YUNXI_DIRECT="1",
+                YUNXI_TUI="0",
                 TERM="xterm-kitty",
                 COLUMNS="100",
                 LINES="40",
@@ -126,7 +126,7 @@ def main():
             stub.kill()
 
     raw = b"".join(chunks)
-    Path(f"/tmp/miyu-mermaid-probe/{which}.raw").write_bytes(raw)
+    Path(f"/tmp/yunxi-mermaid-probe/{which}.raw").write_bytes(raw)
     apc = re.findall(rb"\x1b_G([^\x1b]*)\x1b\\", raw)
     print(f"{which}: {len(raw)} 字节, kitty 图片段 {len(apc)} 个")
     if apc:

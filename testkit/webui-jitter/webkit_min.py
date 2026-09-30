@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """最小复现:WebKitGTK 里一个 overflow:auto 的滚动容器,把里面某个块的子节点整体
-replaceChildren 掉,scrollTop 会不会被归零。不带 Miyu 的任何 CSS/JS。
+replaceChildren 掉,scrollTop 会不会被归零。不带 YunXi 的任何 CSS/JS。
 
     cage -- python3 webkit_min.py [variant]
 
 variant:
     plain      纯 div 嵌套
-    zoom       外层加 zoom:1.1(Miyu 的 .app-shell 用它)
-    fit        块用 width:fit-content(Miyu 的 .assistant-content.is-slim)
+    zoom       外层加 zoom:1.1(YunXi 的 .app-shell 用它)
+    fit        块用 width:fit-content(YunXi 的 .assistant-content.is-slim)
 """
 
 import json
@@ -22,7 +22,7 @@ from gi.repository import Gio, GLib, Gtk, WebKit  # noqa: E402
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else "plain"
 SHELL_STYLE = {"plain": "", "zoom": "zoom:1.1;", "fit": ""}.get(VARIANT, "")
 BLOCK_STYLE = {"plain": "", "zoom": "", "fit": "width:fit-content;max-width:100%;"}.get(VARIANT, "")
-# grid 系列:照抄 Miyu 的 .main-stage > .conversation-stage > .chat-scroll 三层网格。
+# grid 系列:照抄 YunXi 的 .main-stage > .conversation-stage > .chat-scroll 三层网格。
 GRID_LAYOUTS = {
     "grid": """
 .shell{height:100vh;display:grid;grid-template-rows:minmax(0,1fr)}
@@ -93,7 +93,7 @@ JS = """
 
 
 def main():
-    app = Gtk.Application(application_id="dev.miyu.webkitmin", flags=Gio.ApplicationFlags.NON_UNIQUE)
+    app = Gtk.Application(application_id="dev.yunxi.webkitmin", flags=Gio.ApplicationFlags.NON_UNIQUE)
 
     def activate(app):
         window = Gtk.ApplicationWindow(application=app)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """网页回复末尾那行 ✻ 与混合模型池的「供应商 / 模型」（09-26）。
 
-    BIN=<miyu> python3 testkit/webui-turn-end/run.py
+    BIN=<yunxi> python3 testkit/webui-turn-end/run.py
 
 沙箱 daemon + OpenAI 桩（MODE=plain）+ Playwright（无头 Chromium）。会话池两个模型，所以网页原来在
 用量那一行开头写「stub / stub-model」，回复末尾那行 ✻ 又写一遍模型名（用户 09-26：写了两遍）：
@@ -29,13 +29,13 @@ sys.path.insert(0, str(KIT))
 import authlib  # noqa: E402
 
 BIN = Path(os.environ["BIN"])
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-webui-turn-end")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-webui-turn-end")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18597"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18598"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME))
 END_RE = re.compile(r"^✻ stub / stub-\S+ · \S+ ?(?:\d+ 秒|不到 1 秒|\d+ 分 \d+ 秒) · .+ 完成$")
 RESULTS = []
 

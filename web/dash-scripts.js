@@ -7,7 +7,7 @@
  * 同一套后端逻辑,这里只是把它们摆出来给人看、给人点。
  */
 (() => {
-  const D = window.MiyuDash;
+  const D = window.YunXiDash;
   if (!D) return;
 
   const state = { overview: null, filter: "all", q: "", loadSeq: 0, persona: D.recall("scripts.persona"), personas: [], active: "" };
@@ -231,7 +231,7 @@
         [t("参数来源"), script.parameters ? sourceLabel(script, "parameters") : t("无 schema,自由 JSON 走 stdin")],
         [t("超时"), t("{seconds}s{note}", { seconds: script.timeout_seconds, note: script.timeout_default ? t("(默认)") : "" })],
         [t("分组 / 加载"), t("{groups} · {policy} · {loading}", { groups: script.groups.join(", ") || "—", policy: script.load_policy, loading: script.always_loaded ? t("常驻") : t("按需") })],
-        ["argv", script.argv === "flags" ? t("flags:参数同时展开为 --key=value") : t("none:只走 stdin JSON 与 MIYU_ARGS_JSON")],
+        ["argv", script.argv === "flags" ? t("flags:参数同时展开为 --key=value") : t("none:只走 stdin JSON 与 YUNXI_ARGS_JSON")],
         [t("index 覆盖"), overrideText]
       ]),
       script.parameters ? D.el("h4.dash-section", { text: t("参数 schema") }) : null,

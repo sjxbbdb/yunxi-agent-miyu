@@ -125,17 +125,17 @@ fn append_without_sync_marks(out: &mut Vec<u8>, frame: &[u8]) {
     }
 }
 
-/// `MIYU_SYNC_TRACE=1`：每个最外层同步块的时长（微秒）与这一帧的字节数追加到
-/// `/tmp/miyu-sync-trace.log`。kitty 在块开着的时间里按活光标给输入法定位，块越
+/// `YUNXI_SYNC_TRACE=1`：每个最外层同步块的时长（微秒）与这一帧的字节数追加到
+/// `/tmp/yunxi-sync-trace.log`。kitty 在块开着的时间里按活光标给输入法定位，块越
 /// 短越不容易撞上（09-17），这把尺子量的就是那个窗口。
 static SYNC_TRACE: std::sync::LazyLock<bool> =
-    std::sync::LazyLock::new(|| std::env::var_os("MIYU_SYNC_TRACE").is_some());
+    std::sync::LazyLock::new(|| std::env::var_os("YUNXI_SYNC_TRACE").is_some());
 
 fn trace_block(elapsed: std::time::Duration, bytes: usize) {
     if let Ok(mut file) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open("/tmp/miyu-sync-trace.log")
+        .open("/tmp/yunxi-sync-trace.log")
     {
         let _ = writeln!(file, "{} {bytes}", elapsed.as_micros());
     }

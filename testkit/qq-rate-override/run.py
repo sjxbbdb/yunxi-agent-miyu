@@ -3,7 +3,7 @@
 
 沙箱 daemon(自己的端口,不碰 8300)+ 进程内 OpenAI 桩 + 假 NapCat(反向 WS)+ Playwright。
 
-    BIN=<miyu> python3 testkit/qq-rate-override/run.py
+    BIN=<yunxi> python3 testkit/qq-rate-override/run.py
 
 准入(真实群消息走 dispatch 的限流闸):
   白名单群 999000001 平台档位是 20 条/60 秒,会话专属配置覆盖成 1 条/60 秒
@@ -27,7 +27,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-# 跑测具的进程多半坐在某个 herdr pane 里:HERDR_* 漏给被测的 miyu 会去认领那个 pane(09-23)。
+# 跑测具的进程多半坐在某个 herdr pane 里:HERDR_* 漏给被测的 yunxi 会去认领那个 pane(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
 
@@ -36,14 +36,14 @@ sys.path.insert(0, str(REPO / "testkit" / "webui-fixes"))
 import authlib  # noqa: E402
 
 BIN = Path(os.environ["BIN"])
-OUT = Path(os.environ.get("OUT", "~/.cache/miyu-qq-rate-override")).expanduser()
+OUT = Path(os.environ.get("OUT", "~/.cache/yunxi-qq-rate-override")).expanduser()
 HOME = OUT / "home"
 RUNTIME = OUT / "runtime"
 PORT = int(os.environ.get("PORT", "18541"))
 QQ_PORT = int(os.environ.get("QQ_PORT", "18542"))
 STUB_PORT = int(os.environ.get("STUB_PORT", "18543"))
 BASE = f"http://127.0.0.1:{PORT}"
-ENV = dict(os.environ, MIYU_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), MIYU_LOG="info")
+ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=str(RUNTIME), YUNXI_LOG="info")
 
 spec = importlib.util.spec_from_file_location("fake", REPO / "testkit" / "fake-onebot" / "run.py")
 fake = importlib.util.module_from_spec(spec)

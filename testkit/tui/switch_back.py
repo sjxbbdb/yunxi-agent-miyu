@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """回合跑着的时候 `/dev` 切走、再 `/normal` 切回来，之前说的那句话还在不在。
 
-用户 09-20 实测：「我 miyu 命令开启一个空会话，然后说一句话，在 AI 输出过程中
+用户 09-20 实测：「我 yunxi 命令开启一个空会话，然后说一句话，在 AI 输出过程中
 运行 /dev 或者 /normal 切换到另一个模式的最近会话，然后再切回来，这个时候我之前
 说的那句话就看不到了」。
 
@@ -16,8 +16,8 @@
 一次家，读数全废）：
 
     cargo build
-    MIYU_HOME=/tmp/miyu-switchback/home MIYU_TUI_PORT=18455 STUB_PORT=18456 \\
-      MIYU_TUI_RUNTIME=/tmp/mx-switchback OUT=~/.cache/miyu-switchback \\
+    YUNXI_HOME=/tmp/yunxi-switchback/home YUNXI_TUI_PORT=18455 STUB_PORT=18456 \\
+      YUNXI_TUI_RUNTIME=/tmp/mx-switchback OUT=~/.cache/yunxi-switchback \\
       python3 testkit/tui/switch_back.py
 """
 

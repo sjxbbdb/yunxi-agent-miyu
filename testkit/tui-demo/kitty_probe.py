@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """在真 kitty（无头 cage）里跑 demo，用 kitty 远程控制打字（含 SGR 鼠标序列），grim 逐状态截图。
 
-    OUT=~/.cache/miyu-tui-probe testkit/kitty-image/run_headless.sh \
-        python3 testkit/tui-demo/kitty_probe.py ~/.cache/miyu-tui-demo-target/release/miyu-tui-demo
+    OUT=~/.cache/yunxi-tui-probe testkit/kitty-image/run_headless.sh \
+        python3 testkit/tui-demo/kitty_probe.py ~/.cache/yunxi-tui-demo-target/release/yunxi-tui-demo
 
 产物：$OUT/tui-{start,slash,select,copied,img,turn,session,help}.png
 """
 import os, subprocess, sys, time
 
 BIN = sys.argv[1]
-OUT = os.environ.get("OUT") or os.path.expanduser("~/.cache/miyu-tui-probe")
+OUT = os.environ.get("OUT") or os.path.expanduser("~/.cache/yunxi-tui-probe")
 os.makedirs(OUT, exist_ok=True)
 listen = os.environ["KITTY_LISTEN_ON"]
 

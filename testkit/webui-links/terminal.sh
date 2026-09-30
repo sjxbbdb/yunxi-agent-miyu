@@ -6,31 +6,31 @@
 # 「标题 (地址)」整行成链、file:// 也算链接），拿同一段正文去量，两边给出不同
 # 结果时一眼看得见。
 #
-# 不花额度。沙箱 MIYU_HOME + 独立 XDG_RUNTIME_DIR，碰不到生产 daemon
+# 不花额度。沙箱 YUNXI_HOME + 独立 XDG_RUNTIME_DIR，碰不到生产 daemon
 # （AGENTS §5.4：普通 CLI 的未知子命令会把参数当对话发给生产 daemon）。
 #
 #     bash testkit/webui-links/terminal.sh
 #
 # 前置：cargo build（渲染代码编进二进制）。
 set -u
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for __herdr_var in $(env | sed -n 's/^\(HERDR_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$__herdr_var"; done
 
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
-export MIYU_HOME=${MIYU_HOME:-/tmp/miyu-term-links/home}
+export YUNXI_HOME=${YUNXI_HOME:-/tmp/yunxi-term-links/home}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR_OVERRIDE:-/tmp/mx-term}
 # 真 PTY 里跑：OSC 8 的能力判定看 TERM，dumb/linux 下是**故意**不发的。
 export TERM=xterm-256color
-BIN=${MIYU_BIN:-$REPO/target/debug/miyu}
+BIN=${YUNXI_BIN:-$REPO/target/debug/yunxi}
 STUB_PORT=${STUB_PORT:-18497}
-OUT=/tmp/miyu-term-links/out.raw
+OUT=/tmp/yunxi-term-links/out.raw
 
-rm -rf /tmp/miyu-term-links "$XDG_RUNTIME_DIR"
-mkdir -p "$MIYU_HOME/config" "$XDG_RUNTIME_DIR"
+rm -rf /tmp/yunxi-term-links "$XDG_RUNTIME_DIR"
+mkdir -p "$YUNXI_HOME/config" "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
 
-cat > "$MIYU_HOME/config/config.jsonc" <<JSON
+cat > "$YUNXI_HOME/config/config.jsonc" <<JSON
 {
   "active_provider": "stub",
   "active_provider_models": [{ "provider_id": "stub", "model": "stub-model" }],
@@ -88,7 +88,7 @@ check("「标题 (地址)」的标题上了链接色",
 check("标题和地址挂同一个 OSC 8 目标",
       any(url.startswith("https://arxiv.org/html/2506.11578v3") for url in targets),
       " ".join(sorted(set(targets))))
-check("file:// 也成链", any(url.startswith("file:///home/mac/.miyu") for url in targets))
+check("file:// 也成链", any(url.startswith("file:///home/mac/.yunxi") for url in targets))
 check("md 链接的原文没漏出来", "](https://" not in raw and "](file://" not in raw)
 check("行内代码里的地址没被上链接色",
       f"{INLINE_CODE}https://example.com/inside-code{RESET}" in raw)

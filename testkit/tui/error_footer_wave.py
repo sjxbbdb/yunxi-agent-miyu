@@ -14,9 +14,9 @@
     cargo build
     python3 testkit/tui/error_footer_wave.py
 
-产物在 ~/.cache/miyu-error-footer-wave/。
+产物在 ~/.cache/yunxi-error-footer-wave/。
 
-这一条自带家目录和端口（`/tmp/miyu-footer-wave`、18521/18522），可以和别的
+这一条自带家目录和端口（`/tmp/yunxi-footer-wave`、18521/18522），可以和别的
 TUI 走查同时跑。
 """
 
@@ -33,14 +33,14 @@ from pathlib import Path
 # 自带一套家目录/端口再 import run(它在模块层就按 env 定好了常量)。
 # 09-21 实录:照默认值跑会和别的会话正在跑的 TUI 走查抢同一个沙箱,而且开头
 # 那下 rmtree 会把人家的家删掉。这条走查不依赖共享状态,就别去挤那一份。
-os.environ.setdefault("MIYU_HOME", "/tmp/miyu-footer-wave/home")
-os.environ.setdefault("MIYU_TUI_RUNTIME", "/tmp/mx-footer-wave")
-os.environ.setdefault("MIYU_TUI_PORT", "18521")
+os.environ.setdefault("YUNXI_HOME", "/tmp/yunxi-footer-wave/home")
+os.environ.setdefault("YUNXI_TUI_RUNTIME", "/tmp/mx-footer-wave")
+os.environ.setdefault("YUNXI_TUI_PORT", "18521")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-error-footer-wave"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-error-footer-wave"))
 PROMPT = "走查一句"
 QUOTA_PORT = int(os.environ.get("QUOTA_PORT", "18522"))
 WAVE_GLYPHS = "▁▂▃▄▅▆▇"

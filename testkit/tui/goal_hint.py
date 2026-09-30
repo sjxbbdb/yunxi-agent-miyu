@@ -16,9 +16,9 @@
     cargo build
     python3 testkit/tui/goal_hint.py
 
-产物在 ~/.cache/miyu-goal-hint/。
+产物在 ~/.cache/yunxi-goal-hint/。
 
-**这些 TUI 走查只能一个一个跑**：共用同一个 `MIYU_HOME` 和桩模型端口。
+**这些 TUI 走查只能一个一个跑**：共用同一个 `YUNXI_HOME` 和桩模型端口。
 """
 
 import json
@@ -32,7 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as h  # noqa: E402
 
-OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "miyu-goal-hint"))
+OUT = Path(os.environ.get("OUT", Path.home() / ".cache" / "yunxi-goal-hint"))
 # 一轮续轮在飞行中停住多久。要够两次抓屏之间看出秒数在走。
 ROUND_SECONDS = 9
 

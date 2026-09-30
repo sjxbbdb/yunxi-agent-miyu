@@ -17,14 +17,14 @@
 
 use crate::cli::repl::tail::*;
 use crate::cli::*;
-use miyu_base::question::{QuestionRequest, QuestionResponse};
+use yunxi_base::question::{QuestionRequest, QuestionResponse};
 
 /// 弹出提问面板，按结果回发 `AnswerQuestion` / `CloseQuestion` / `Cancel`。
 ///
 /// `live` 为 `None` = 没有活动的 REPL 尾巴（一次性客户端）：面板照弹，只是不
 /// 需要挂起/恢复那一套。
 pub(in crate::cli) async fn handle_question_requested(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     mut live: Option<&mut LiveReplTail>,
     renderer: &mut render::StreamRenderer,
@@ -91,10 +91,10 @@ pub(in crate::cli) async fn handle_question_requested(
     notify_if_unfocused(
         &config,
         live.as_deref().map(|live| live.editor.focused),
-        t("Miyu is waiting on you", "Miyu 在等你回答"),
+        t("YunXi is waiting on you", "YunXi 在等你回答"),
         // 问题正文同样不外泄，理由同上。
         t("waiting for you", "正在等待处理"),
-        miyu_base::notify::NotifySound::Question,
+        yunxi_base::notify::NotifySound::Question,
     );
     // A panel that cannot be shown is not a reason to abort the
     // turn: fall through to the same path a closed panel takes, so
@@ -201,7 +201,7 @@ impl QuestionLayer {
 /// 的位置上，回合接着收事件。
 #[allow(clippy::too_many_arguments)]
 async fn open_question_layer(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     config: &AppConfig,
     live: &mut LiveReplTail,
     renderer: &mut render::StreamRenderer,
@@ -233,10 +233,10 @@ async fn open_question_layer(
     notify_if_unfocused(
         config,
         Some(live.editor.focused),
-        t("Miyu is waiting on you", "Miyu 在等你回答"),
+        t("YunXi is waiting on you", "YunXi 在等你回答"),
         // 问题正文不外泄。
         t("waiting for you", "正在等待处理"),
-        miyu_base::notify::NotifySound::Question,
+        yunxi_base::notify::NotifySound::Question,
     );
     live.open_turn_panel(crate::cli::repl::midturn_panel::TurnPanel::Question(
         QuestionLayer {
@@ -249,7 +249,7 @@ async fn open_question_layer(
 
 /// 在活动区的面板上答了 / 关了：记进这一步，回发给 daemon。
 pub(in crate::cli) async fn answer_question_layer(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     live: &mut LiveReplTail,
     renderer: &mut render::StreamRenderer,
     run_id: &str,
@@ -333,7 +333,7 @@ fn close_question_layer(
 
 /// 在这块面板上答的 / 关的：把结果回发给 daemon。
 async fn reply(
-    paths: &MiyuPaths,
+    paths: &YunXiPaths,
     renderer: &mut render::StreamRenderer,
     asked: QuestionResponse,
     question_id: String,

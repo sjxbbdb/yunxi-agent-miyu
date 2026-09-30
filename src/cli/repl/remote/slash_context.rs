@@ -9,7 +9,7 @@ impl RemoteRepl {
             &self.paths,
             &mut self.live_repl,
             IpcCommand::Undo {
-                target: miyu_core::ipc::SessionRef::Id {
+                target: yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 },
             },
@@ -109,7 +109,7 @@ impl RemoteRepl {
             &self.paths,
             &mut self.live_repl,
             IpcCommand::Pop {
-                target: miyu_core::ipc::SessionRef::Id {
+                target: yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 },
                 turn_ids,
@@ -151,9 +151,9 @@ impl RemoteRepl {
         // inline 照旧：两行提示 + 用量。
         let fullscreen = crate::cli::in_fullscreen();
         let notice = |text: &str| -> String {
-            miyu_hosts::render::timeline::indent_body(&format!(
+            yunxi_hosts::render::timeline::indent_body(&format!(
                 "\x1b[2m{} {text}\x1b[0m\n",
-                miyu_hosts::render::timeline::glyph_notice()
+                yunxi_hosts::render::timeline::glyph_notice()
             ))
         };
         let compacting = t("compacting context…", "正在压缩上下文…");
@@ -192,7 +192,7 @@ impl RemoteRepl {
         let outcome = send_ipc_admin_streaming_ticked(
             &self.paths,
             IpcCommand::Compact {
-                target: miyu_core::ipc::SessionRef::Id {
+                target: yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 },
             },
@@ -283,12 +283,12 @@ impl RemoteRepl {
                 }
                 let mut frame = Vec::new();
                 // 这一块的起点埋个标记:`/undo` 撤压缩时按它把这一块截掉。
-                if miyu_hosts::render::blocks::enabled() {
+                if yunxi_hosts::render::blocks::enabled() {
                     frame.extend_from_slice(
-                        miyu_hosts::render::blocks::COMPACT_START_MARKER.as_bytes(),
+                        yunxi_hosts::render::blocks::COMPACT_START_MARKER.as_bytes(),
                     );
                 }
-                miyu_hosts::render::timeline::write_compact_summary(&mut frame, &head, &summary)?;
+                yunxi_hosts::render::timeline::write_compact_summary(&mut frame, &head, &summary)?;
                 self.live_repl.apply_output_frame(&frame)?;
             } else {
                 repl_note(
@@ -325,8 +325,8 @@ impl RemoteRepl {
             &mut self.live_repl,
             IpcCommand::ResetMemory {
                 mode: self.mode.is_dev().then(|| "dev".to_string()),
-                scope: miyu_core::ipc::MemoryResetScope::Session,
-                session: Some(miyu_core::ipc::SessionRef::Id {
+                scope: yunxi_core::ipc::MemoryResetScope::Session,
+                session: Some(yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 }),
             },
@@ -349,7 +349,7 @@ impl RemoteRepl {
             &mut self.live_repl,
             IpcCommand::ResetMemory {
                 mode: self.mode.is_dev().then(|| "dev".to_string()),
-                scope: miyu_core::ipc::MemoryResetScope::All,
+                scope: yunxi_core::ipc::MemoryResetScope::All,
                 session: None,
             },
         )
@@ -372,7 +372,7 @@ impl RemoteRepl {
             &self.paths,
             &mut self.live_repl,
             IpcCommand::ResetConversation {
-                target: miyu_core::ipc::SessionRef::Id {
+                target: yunxi_core::ipc::SessionRef::Id {
                     id: self.active_session_id.clone(),
                 },
             },

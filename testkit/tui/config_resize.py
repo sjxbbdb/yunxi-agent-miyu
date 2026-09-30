@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Config menus must repaint on resize and retain editing/dialog state.
 
-Uses an isolated MIYU_HOME, a real PTY, and no model requests or daemon.
+Uses an isolated YUNXI_HOME, a real PTY, and no model requests or daemon.
 
 2026-09-20: the config TUI paints through ratatui now, so a repaint is no
 longer announced by a full-screen erase (`ESC[2J`), and the starfield keeps
 painting a frame every 30ms -- "output went quiet" is no longer a signal
 either. The only usable signal is what the screen says.
 
-Run: python3 testkit/tui/config_resize.py --binary /absolute/path/to/miyu
+Run: python3 testkit/tui/config_resize.py --binary /absolute/path/to/yunxi
 """
 
 import argparse
@@ -28,7 +28,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sandbox_dir  # noqa: E402
 
-# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 miyu,
+# 跑测具的进程多半坐在某个 herdr pane 里(AI 会话的终端):它的 HERDR_* 漏给被测的 yunxi,
 # 被测进程就会往那个 pane 报状态、认领它,把人正在看的侧栏搅乱(09-23)。
 for _herdr_key in [key for key in os.environ if key.startswith("HERDR_")]:
     del os.environ[_herdr_key]
@@ -38,8 +38,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
     args = parser.parse_args()
-    sandbox = sandbox_dir.make("miyu-config-resize-")
-    out = Path(os.environ.get("OUT") or Path.home() / ".cache" / "miyu-config-resize")
+    sandbox = sandbox_dir.make("yunxi-config-resize-")
+    out = Path(os.environ.get("OUT") or Path.home() / ".cache" / "yunxi-config-resize")
     out.mkdir(parents=True, exist_ok=True)
     home = sandbox / "home"
     (home / "config").mkdir(parents=True)
@@ -63,7 +63,7 @@ def main():
     process = subprocess.Popen(
         [str(args.binary.resolve()), "config"], stdin=slave, stdout=slave, stderr=slave,
         cwd=sandbox,
-        env=dict(os.environ, MIYU_HOME=str(home), XDG_RUNTIME_DIR=str(sandbox / "run"),
+        env=dict(os.environ, YUNXI_HOME=str(home), XDG_RUNTIME_DIR=str(sandbox / "run"),
                  TERM="xterm-256color"),
         preexec_fn=setup,
     )
