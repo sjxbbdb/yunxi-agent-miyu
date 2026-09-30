@@ -80,11 +80,11 @@
 
 最小修复已落地：目录扫描统一使用 `symlink_metadata`；遇到 symlink 或非 regular file 时拒绝，SQLite source 也先确认 regular file。
 
-### P1-B：tier 矩阵目前只有代表性断言
+### P1-B：tier 矩阵与布局匹配（已落地）
 
-`registry` 目前共有 59 个 unit：Core 42、Heavy 1、Platform 2、Never 14。当前测试逐项覆盖四种 tier 开关组合、选择数量与 Never 单元，并验证 file/SQLite unit 不会错误认领子路径。
+`registry` 目前共有 61 个 unit：Core 44、Heavy 1、Platform 2、Never 14。当前测试逐项覆盖四种 tier 开关组合、选择数量与 Never 单元，并验证 file/SQLite unit 不会错误认领子路径；用量账本同时覆盖生产 `state/usage.db` 与两份 legacy 导入文件。为保持旧归档可读性，既有 `state.usage` manifest ID 仍指向 legacy `state/usage.json`，生产 DB 与 history 使用新增的 `state.usage_db`、`state.usage_history` ID，不改写历史身份。
 
-最小修复：增加一份由 registry 生成的审计矩阵，逐项断言：
+已落地：`tier_matrix_covers_every_registered_unit` 由 registry 逐项生成审计矩阵，并固定四种选择的数量；`home_and_persona_layout_wildcards_resolve_to_their_units` 覆盖旧/新 persona、`home/*` 和目录嵌套边界。矩阵语义为：
 
 | 选择 | 应包含 |
 | --- | --- |
@@ -94,7 +94,7 @@
 | `--all` | Core + Heavy + Platform |
 | 任意选择 | Never 永不包含 |
 
-测试同时验证 wildcard unit（多个 persona/admin 名称）和嵌套 unit 不被父目录重复声明。
+测试同时验证 wildcard unit 和嵌套 unit 不被父目录重复声明；file/SQLite 后代路径由 `file_and_sqlite_units_do_not_claim_descendants` 拒绝。严格的父目录句柄 TOCTOU 仍未关闭，不能由这些 registry 测试代替。
 
 ## 推荐测试名称与退出条件
 
@@ -119,7 +119,7 @@
 
 - `export_refuses_or_skips_symlinked_sources`
 - `tier_matrix_covers_every_registered_unit`
-- `wildcard_home_and_persona_units_round_trip_without_overlap`
+- `home_and_persona_layout_wildcards_resolve_to_their_units`
 - `import_rejects_archive_size_limit_exceeded`
 
 G0 的 transfer 退出条件：上述 P0 全部通过，P1-A/P1-B 有直接测试证据，且在 `cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 与完整工作区测试中复跑通过。当前归档校验/路径安全/资源上限/coverage-aware stale Core 清理/回滚（含清理后 marker 失败恢复）/new-home fixup 与 tier 矩阵已有证据；install 的父目录检查与后续文件操作之间仍存在需要更强 openat/目录句柄语义才能彻底消除的本地竞态，因此不能宣称 transfer 安全闭环完成。

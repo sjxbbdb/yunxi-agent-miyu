@@ -996,7 +996,9 @@ pub(crate) mod tests {
             "data/artifacts/sess_1/page.html",
             "state/conversation.db",
             "state/conversation.jsonl",
+            "state/usage.db",
             "state/usage.json",
+            "state/usage-history.jsonl",
             "state/profile.md",
             "state/alarms.json",
             "state/thinking-variants.json",
@@ -1043,6 +1045,43 @@ pub(crate) mod tests {
              Register each in src/transfer/registry.rs `UNITS` — or mark it \
              Tier::Never with the reason it must not travel."
         );
+    }
+
+    #[test]
+    fn home_and_persona_layout_wildcards_resolve_to_their_units() {
+        let cases = [
+            ("state/usage.db", "state.usage_db"),
+            ("state/usage.json", "state.usage"),
+            ("state/usage-history.jsonl", "state.usage_history"),
+            // The data/ layout is the original persona resource layout.
+            (
+                "data/personas/alice/memory/memory.db",
+                "data.persona_memory",
+            ),
+            ("data/personas/alice/meme.db", "data.persona_memes"),
+            ("data/personas/alice/persona.toml", "data.persona_manifest"),
+            // The personas/ layout is the shared home layout introduced later.
+            ("personas/alice/memory/memory.db", "personas.memory"),
+            ("personas/alice/meme.db", "personas.memes"),
+            ("personas/alice/persona.toml", "personas.manifest"),
+            // Owner-scoped home entries use one wildcard segment as well.
+            ("home/alice/profile.md", "home.profile"),
+            ("home/alice/identities/team/user.md", "home.identities"),
+            ("home/alice/conversation.db", "home.conversation"),
+            ("home/alice/pictures/render/output.png", "home.pictures"),
+            ("home/alice/documents/reports/summary.md", "home.documents"),
+            ("home/alice/ledger/ledger.db", "home.ledger"),
+            ("home/alice/shares/public/index.html", "home.shares"),
+            ("home/alice/artifacts/session/page.html", "home.artifacts"),
+        ];
+
+        for (rel, expected_id) in cases {
+            assert_eq!(
+                unit_for(rel).map(|unit| unit.id),
+                Some(expected_id),
+                "{rel}"
+            );
+        }
     }
 
     #[test]
@@ -1105,13 +1144,13 @@ pub(crate) mod tests {
     #[test]
     fn tier_matrix_covers_every_registered_unit() {
         let cases = [
-            ("default", false, false, false, 42, &[Tier::Core][..]),
+            ("default", false, false, false, 44, &[Tier::Core][..]),
             (
                 "index",
                 false,
                 true,
                 false,
-                43,
+                45,
                 &[Tier::Core, Tier::Heavy][..],
             ),
             (
@@ -1119,7 +1158,7 @@ pub(crate) mod tests {
                 false,
                 false,
                 true,
-                44,
+                46,
                 &[Tier::Core, Tier::Platform][..],
             ),
             (
@@ -1127,12 +1166,12 @@ pub(crate) mod tests {
                 true,
                 false,
                 false,
-                45,
+                47,
                 &[Tier::Core, Tier::Heavy, Tier::Platform][..],
             ),
         ];
 
-        assert_eq!(UNITS.len(), 59);
+        assert_eq!(UNITS.len(), 61);
         for (label, all, index, platforms, expected_count, included_tiers) in cases {
             let mut selected = 0;
             for unit in UNITS {

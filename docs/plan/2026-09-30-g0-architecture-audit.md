@@ -47,7 +47,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 | 数据域 | 当前真实位置 / 入口 | 已确认 schema 或内容 | embedding | 删除 / 恢复语义 | G0 判断与后续边界 |
 | --- | --- | --- | --- | --- | --- |
 | Profile | `YunXiPaths::profile_file()` → `home/<admin>/profile.md`；成员档案为 `home/<user>/profile.md`；旧布局 `identities/user-identity.md` | Markdown；由 `persona_paths.rs` 按 Owner 入口注入 `<current-user-profile>` | **否** | 文件写入/配置保存；transfer `home.profile` 为 Core；可导出明文 | 保持独立，不进入 `memory_embeddings`；G2 只增加 confirmed/source/timestamp 等结构，不改变向量边界 |
-| Persona / Soul | `data/prompts`、私有人格目录、`personas/`；入口 `crates/yunxi-core/src/config/persona_paths.rs` | `persona.md`、manifest、人格目录与 skills/scripts | **否** | transfer `data.prompts`、`data.persona_manifest`、`personas.manifest`；按现有路径迁移 | 与 Profile 分域；人格内容可以被提示注入，但不能变成长期记忆事实 |
+| Persona / Soul | `data/prompts`、私有人格目录、`personas/`；入口 `crates/yunxi-base/src/config/persona_paths.rs` | `persona.md`、manifest、人格目录与 skills/scripts | **否** | transfer `data.prompts`、`data.persona_manifest`、`personas.manifest`；按现有路径迁移 | 与 Profile 分域；人格内容可以被提示注入，但不能变成长期记忆事实 |
 | Conversation / session | `<home>/<admin>/conversation.db`；旧布局 `state/conversation.db`；`ConversationDb::open_at()` | SQLite WAL：`sessions`、`turns`、`queued_prompts`、`session_loaded_items`、附件、tool reports、journal、redo、goals、accounts、platform bindings 等 | **否** | `delete_session` 级联删除；reset 删除会话内容；redo 事务恢复；迁移前 `VACUUM INTO ...bak` | 是交互事实源；短期上下文不能另建 router/daemon/store |
 | Short / long memory | `active_persona_memory_data_dir(...)/memory`，通常 `personas/<scope>/memory/memory.db`；状态库 `state/personas/<scope>/memory/evicted_context.db` | data DB：`facts`、`episodes`、`pending_events`、`skill_records`、`memory_revisions`、`memory_meta`、`memory_embeddings`；state DB：`evicted_turns`、`evicted_embeddings`、FTS5 | **仅 memory 域内部派生**；不与 KB 共库 | `MemoryStore::reset_session()` / `reset_all()` 同事务清理正文与向量；衰减可标记 forgotten | 当前已有 short/long、promotion、expiry 字段；G3 必须补 transient→short→candidate→committed/rejected/expired 的显式 admission，只有 committed 可长期向量化 |
 | Memory access | `facts`/`episodes` 的 `visibility`、`owner_principal`、`subjects`；`MemoryAccess` 与 `migrate_memory_access_v1/v2` | 来源、平台、session 推导 ownership；不可信平台字段与 principal 分离 | 召回 SQL 复用同一 principal 过滤 | reset 与 embedding 删除同一事务 | 权限边界已存在；KB 不得复用 memory ownership 表或删除 API |
@@ -55,8 +55,8 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 | KB semantic index | `data/kb/semantic_index.db`；入口 `tools/knowledge_base/index.rs` / `search.rs` | `semantic_chunks(provider_id,model,file_name,content_sha256,chunk_index,start_char,end_char,text,embedding_json,embedding,created_at)` | **是，且只属于 KB namespace** | 删除文件按 `file_name` 删除 chunks；换模型重建旧 model；断索引保留 source | 可复用 embedder 算法，但不能共用 memory namespace、ACL、删除 API 或迁移账本 |
 | Embedding assets | `YUNXI_EMBEDDING_MODELS_DIR`、`~/.yunxi/models`、安装前缀 models；`embedding/manifest.rs` 与 worker | manifest、ONNX、tokenizer、frame/timeout 限制 | 模型资产，不是用户事实 | 可重新安装；不属于默认用户数据迁移 | G4 需按 namespace/model/dimension 校验，memory 与 KB 的模型配置仍要分开 |
 | Credentials / web secrets | `config/config.jsonc`；`state/web-passwords/`、`state/daemon-launch.json` | provider keys、access token、MCP/plugin env、voice/TTS keys、端口/密码状态 | **否** | `--no-secrets` 递归脱敏；Web password、daemon launch 为 Never；运行时生命周期清理 | 任何 secret/Never 不进公开归档、向量索引或 prompt 指纹；新增字段必须补扫描测试 |
-| Runtime / cache / usage | XDG runtime socket/lock；`paths.cache_dir` logs/cache/reindex；usage state/DB 入口 | socket、lock、可重建 JSON/log、用量账本 | **否** | 进程/重建生命周期清理；cache/runtime 为 Never；usage 按 registry 规则迁移 | 不得成为事实源；需继续核对 `state.usage` JSON 与 usage DB 的真实生产路径，避免 registry 漏项 |
-| Transfer backup / restore | `crates/yunxi-engine/src/transfer/{registry,manifest,export,import,fixups}.rs` | manifest + tar.gz；SQLite `VACUUM INTO`；tier、scope、`included_units` | 不改变域语义 | staging → validate → backup → install/prune → marker；失败 rollback；legacy manifest merge-only | 59 units 已覆盖 Core/Heavy/Platform/Never；父目录 TOCTOU 仍是未关闭风险 |
+| Runtime / cache / usage | XDG runtime socket/lock；`paths.cache_dir` logs/cache/reindex；生产账本 `state/usage.db`（`state::usage::ledger`） | socket、lock、可重建 JSON/log；usage DB 的 `usage_records`、`usage_totals`、`usage_meta`；旧 `usage.json` 与 `usage-history.jsonl` 仅作一次性导入源 | **否** | runtime/cache 为 Never；usage.db 与两份 legacy 输入均按独立 Core 单元迁移；legacy 导入由 `state/usage/legacy.rs` 幂等完成 | registry 必须覆盖生产 DB 与两份 legacy 输入，不能只登记旧 JSON；不能把用量账本混入 conversation DB |
+| Transfer backup / restore | `crates/yunxi-engine/src/transfer/{registry,manifest,export,import,fixups}.rs` | manifest + tar.gz；SQLite `VACUUM INTO`；tier、scope、`included_units` | 不改变域语义 | staging → validate → backup → install/prune → marker；失败 rollback；legacy manifest merge-only | 61 units 已覆盖 Core/Heavy/Platform/Never；父目录 TOCTOU 仍是未关闭风险 |
 
 #### G0-03 当前结论
 
@@ -90,12 +90,12 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 ## 6. 当前阶段门禁与未验证项
 
-已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2、IPC 定向 33/33 和 transfer 定向 35/35 已复现。transfer 还覆盖了 coverage-aware stale Core 清理、旧清单 merge-only、输入归档保护、清理后 marker 失败恢复和 rename 错误分类。
+已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2、IPC 定向 33/33 和 transfer 定向 36/36 已复现。transfer 还覆盖了 coverage-aware stale Core 清理、旧清单 merge-only、输入归档保护、清理后 marker 失败恢复、rename 错误分类、旧新 persona/home wildcard 和生产用量账本路径。
 
 仍未完成：
 
 1. TUI、工具执行的隔离黑盒实测记录（G0-09）；IPC 定向单测已完成，`testkit/g0-terminal-combo/run.py` 已在同一隔离 home/daemon 下先后验证真实 fish PTY 与 REPL PTY，并从 `turns.tool_flow` 校验两次工具输出；`testkit/repl-smoke/run.py` 也已自带工具调用并从 `turns.tool_flow` 校验输出，报告 `passed=true`；TUI 表单 PTY `testkit/tui/config_forms.py` 已在 WSL Ubuntu-24.04 pyte venv 下复跑为 16/16。组合黑盒子项已通过，但仍需保留故障注入与跨平台验证。
-2. 每条路径的隐私扫描证据索引与 transfer 单元逐项核对。个人路径与凭据形状扫描已完成分类；transfer registry 的 59 个 unit 已完成静态分类，当前定向测试 35/35 通过，manifest/hash/version、资源上限、tier 矩阵、恶意归档拒绝、失败回滚、coverage-aware stale Core 和 rename 错误分类证据已落地。仍缺少 install 父目录检查与后续操作之间的目录句柄级竞态消除，以及逐项平台句柄后端的恢复/删除证明。第三方 `APP_SEC` 已核验为公开客户端签名常量并列入 allowlist。
+2. 每条路径的隐私扫描证据索引与 transfer 单元逐项核对。个人路径与凭据形状扫描已完成分类；transfer registry 的 61 个 unit 已完成静态分类，当前定向测试 36/36 通过，manifest/hash/version、资源上限、tier 矩阵、旧新布局映射、恶意归档拒绝、失败回滚、coverage-aware stale Core 和 rename 错误分类证据已落地。仍缺少 install 父目录检查与后续操作之间的目录句柄级竞态消除，以及逐项平台句柄后端的恢复/删除证明。第三方 `APP_SEC` 已核验为公开客户端签名常量并列入 allowlist。
 3. Arch Linux 实机和 macOS M-series 编译/运行；当前只能标记为未验证。
 
 ### 6.1 可复现隐私门禁
@@ -117,7 +117,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 | 状态 | 范围 | 当前证据或缺口 |
 | --- | --- | --- |
 | 已证 | G0-01/G0-02/G0-04/G0-06 | 本文入口表、单运行时结论、prompt/cache 接缝记录，以及 `legacy_config_dir` 正负回归测试。 |
-| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 649/0/13；transfer 35/35；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
+| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 650/0/13；transfer 36/36；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
 | 已证 | G0-09 基线闭环 | fish 静态 17/17、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI config 16/16 已有报告；这些证据仍不替代故障注入。 |
 | 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；跨域删除/恢复、旧新布局 identity、usage 实际路径仍待运行时验证。 |
 | 仅定位 | G0-05/G0-08 | 权限真相源和测试入口已列出，但尚未形成完整耗时/失败原因、断连/权限组合和 request-shape 故障注入报告。 |

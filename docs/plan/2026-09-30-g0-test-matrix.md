@@ -12,8 +12,8 @@
 | M-01 | 格式与元数据 | `cargo fmt --all -- --check`；`cargo metadata --no-deps --format-version 1` | WSL Ubuntu-24.04 | 通过 | 不覆盖运行时行为 |
 | M-02 | 全工作区编译 | `cargo check --workspace --all-targets --locked` | WSL Ubuntu-24.04 | 通过 | Arch/macOS 未验证 |
 | M-03 | 分 crate 单测 | `cargo test -p yunxi-base --lib --locked -- --test-threads=1`；`yunxi-core`、`yunxi-hosts`、`yunxi --lib` 同格式命令 | WSL Ubuntu-24.04 | base 395/0/6；core 642/0/8；hosts 919/0/10；root 504/0/4 | 这些是既有基线，未覆盖故障注入 |
-| M-04 | engine 与 transfer | `YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1`；`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` | WSL Ubuntu-24.04 | engine 649/0/13；transfer 35/35 | 父目录 TOCTOU 仍未消除 |
-| M-05 | workspace 单测 | `cargo test --workspace --no-fail-fast --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 最近一次记录为 0 失败，doctest 通过 | 需在 G0 退出前按同一环境复跑并留完整日志 |
+| M-04 | engine 与 transfer | `YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1`；`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` | WSL Ubuntu-24.04 | engine 650/0/13；transfer 36/36 | 父目录 TOCTOU 仍未消除 |
+| M-05 | workspace 单测 | `YUNXI_LANG=zh cargo test --workspace --no-fail-fast --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 本轮复跑 0 失败，所有 doctest 通过 | 未覆盖 Arch/macOS |
 | M-06 | 架构依赖 | `python test_scripts/arch_dep_check.py` | 工作区 Python | 退出码 0 | 只检查跨层引用，不替代运行时测试 |
 | M-07 | fish 普通语法/接管 | `python3 testkit/fish-accept-line/run.py`；真实 fish `pty_run.py` | WSL Ubuntu-24.04 | 静态 17/17；PTY 通过 | 尚未注入断连、SIGINT、父进程替换 |
 | M-08 | daemon reload 与 IPC | `cargo test --test daemon_reload --locked -- --test-threads=1`；`cargo test -p yunxi-core ipc --lib --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 2/2；IPC 33/33 | 需补跨进程断连、残留 lease、半写恢复黑盒 |

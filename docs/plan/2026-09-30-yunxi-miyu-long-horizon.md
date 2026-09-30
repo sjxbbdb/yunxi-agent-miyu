@@ -71,7 +71,7 @@
 
 #### G0 尚未完成的验证
 
-- 工作区编译与主要分批测试已复现；入口、调用方向、所有者、不变量和测试映射见 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)，命令级证据见 [`2026-09-30-g0-test-matrix.md`](2026-09-30-g0-test-matrix.md)。fish 分流静态判定 17/17、真实 fish PTY、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI 16/16 和 transfer 35/35 已复现；仍需系统化故障注入、逐项删除/恢复矩阵、完整权限组合证据和最终公开文件扫描。IPC lease/frame/协议/回放、session/compact/evicted context、KB write-through、MCP/Skills、host capability/guard、scheduler/background job、goal 持久化与 Codex active goal 的区分已完成定位，但尚未宣称全部运行时门禁通过。
+- 工作区编译与主要分批测试已复现；入口、调用方向、所有者、不变量和测试映射见 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)，命令级证据见 [`2026-09-30-g0-test-matrix.md`](2026-09-30-g0-test-matrix.md)。fish 分流静态判定 17/17、真实 fish PTY、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI 16/16 和 transfer 36/36 已复现；仍需系统化故障注入、逐项删除/恢复矩阵、完整权限组合证据和最终公开文件扫描。IPC lease/frame/协议/回放、session/compact/evicted context、KB write-through、MCP/Skills、host capability/guard、scheduler/background job、goal 持久化与 Codex active goal 的区分已完成定位，但尚未宣称全部运行时门禁通过。
 - macOS M-series 只能在对应环境或 CI 上验证，当前本机没有该运行环境；需在 G0 状态中保留为未验证项。
 - Arch Linux 实机尚未验证；WSL Ubuntu 已确认 `/usr/bin/fish`、Rust/Cargo 和 systemd user scope 可用。
 
