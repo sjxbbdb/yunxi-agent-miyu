@@ -225,6 +225,315 @@ pub(crate) mod tests {
         assert!(error.contains("9999"), "got: {error}");
     }
 
+    #[test]
+    fn an_unknown_archive_format_is_refused_before_import() {
+        let source = tempfile::tempdir().unwrap();
+        let paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("format.tar.gz");
+        super::export::export(&paths, &archive, &super::export::ExportOptions::default()).unwrap();
+
+        let raw = std::fs::read(&archive).unwrap();
+        let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(&raw[..]));
+        let mut manifest: super::manifest::Manifest = tar
+            .entries()
+            .unwrap()
+            .filter_map(Result::ok)
+            .find(|entry| {
+                entry
+                    .path()
+                    .map(|path| path.to_string_lossy() == "manifest.json")
+                    .unwrap_or(false)
+            })
+            .map(|entry| serde_json::from_reader(entry).unwrap())
+            .unwrap();
+        manifest.format_version = super::manifest::MANIFEST_FORMAT_VERSION + 1;
+        let doctored = out.path().join("future-format.tar.gz");
+        rewrite_manifest(&archive, &doctored, &manifest);
+
+        let target = tempfile::tempdir().unwrap();
+        let restored = test_paths(target.path());
+        let error = super::import::import(
+            &restored,
+            &doctored,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("2 != 1"), "got: {error}");
+        assert!(
+            !restored.config_file.exists(),
+            "validation must precede writes"
+        );
+    }
+
+    #[test]
+    fn manifest_size_and_hash_must_match_archive_bytes() {
+        let source = tempfile::tempdir().unwrap();
+        let paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(&paths, &archive, &super::export::ExportOptions::default()).unwrap();
+
+        let raw = std::fs::read(&archive).unwrap();
+        let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(&raw[..]));
+        let mut manifest: super::manifest::Manifest = tar
+            .entries()
+            .unwrap()
+            .filter_map(Result::ok)
+            .find(|entry| {
+                entry
+                    .path()
+                    .map(|path| path.to_string_lossy() == "manifest.json")
+                    .unwrap_or(false)
+            })
+            .map(|entry| serde_json::from_reader(entry).unwrap())
+            .unwrap();
+
+        manifest.entries[0].size += 1;
+        let wrong_size = out.path().join("wrong-size.tar.gz");
+        rewrite_manifest(&archive, &wrong_size, &manifest);
+        let target = tempfile::tempdir().unwrap();
+        let error = super::import::import(
+            &test_paths(target.path()),
+            &wrong_size,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("size mismatch"), "got: {error}");
+
+        manifest.entries[0].size -= 1;
+        manifest.entries[0].blake3 = "0".repeat(64);
+        let wrong_hash = out.path().join("wrong-hash.tar.gz");
+        rewrite_manifest(&archive, &wrong_hash, &manifest);
+        let target = tempfile::tempdir().unwrap();
+        let error = super::import::import(
+            &test_paths(target.path()),
+            &wrong_hash,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("blake3 mismatch"), "got: {error}");
+    }
+
+    #[test]
+    fn manifest_paths_are_portable_and_entries_must_exist() {
+        let source = tempfile::tempdir().unwrap();
+        let paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(&paths, &archive, &super::export::ExportOptions::default()).unwrap();
+
+        let raw = std::fs::read(&archive).unwrap();
+        let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(&raw[..]));
+        let original: super::manifest::Manifest = tar
+            .entries()
+            .unwrap()
+            .filter_map(Result::ok)
+            .find(|entry| {
+                entry
+                    .path()
+                    .map(|path| path.to_string_lossy() == "manifest.json")
+                    .unwrap_or(false)
+            })
+            .map(|entry| serde_json::from_reader(entry).unwrap())
+            .unwrap();
+
+        for (index, path) in [
+            "../outside",
+            "home\\secret",
+            "C:\\Windows\\x",
+            "/etc/passwd",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let mut manifest = original.clone();
+            manifest.entries[0].path = path.trim_start_matches("home/").to_string();
+            let doctored = out.path().join(format!("path-{index}.tar.gz"));
+            rewrite_manifest(&archive, &doctored, &manifest);
+            let target = tempfile::tempdir().unwrap();
+            let error = super::import::import(
+                &test_paths(target.path()),
+                &doctored,
+                &super::import::ImportOptions::default(),
+            )
+            .unwrap_err()
+            .to_string();
+            assert!(
+                error.contains("invalid manifest path") || error.contains("missing"),
+                "got: {error}"
+            );
+        }
+
+        let mut manifest = original;
+        manifest.entries[0].path = "missing/entry.txt".to_string();
+        let doctored = out.path().join("missing.tar.gz");
+        rewrite_manifest(&archive, &doctored, &manifest);
+        let target = tempfile::tempdir().unwrap();
+        let error = super::import::import(
+            &test_paths(target.path()),
+            &doctored,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("missing from archive"), "got: {error}");
+    }
+
+    #[test]
+    fn duplicate_or_extra_archive_entries_are_refused() {
+        let source = tempfile::tempdir().unwrap();
+        let paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(&paths, &archive, &super::export::ExportOptions::default()).unwrap();
+
+        let raw = std::fs::read(&archive).unwrap();
+        let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(&raw[..]));
+        let first_path = tar
+            .entries()
+            .unwrap()
+            .filter_map(Result::ok)
+            .find(|entry| {
+                entry
+                    .path()
+                    .map(|path| path.to_string_lossy() != "manifest.json")
+                    .unwrap_or(false)
+            })
+            .unwrap()
+            .path()
+            .unwrap()
+            .to_path_buf();
+
+        let duplicate = out.path().join("duplicate.tar.gz");
+        copy_archive_with_entry(&archive, &duplicate, &first_path, b"duplicate");
+        let target = tempfile::tempdir().unwrap();
+        let error = super::import::import(
+            &test_paths(target.path()),
+            &duplicate,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("duplicate path"), "got: {error}");
+
+        let extra = out.path().join("extra.tar.gz");
+        copy_archive_with_entry(&archive, &extra, Path::new("home/extra.txt"), b"extra");
+        let target = tempfile::tempdir().unwrap();
+        let error = super::import::import(
+            &test_paths(target.path()),
+            &extra,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("undeclared path"), "got: {error}");
+    }
+
+    #[test]
+    fn known_manifest_paths_cannot_claim_another_unit() {
+        let source = tempfile::tempdir().unwrap();
+        let paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(&paths, &archive, &super::export::ExportOptions::default()).unwrap();
+
+        let raw = std::fs::read(&archive).unwrap();
+        let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(&raw[..]));
+        let mut manifest: super::manifest::Manifest = tar
+            .entries()
+            .unwrap()
+            .filter_map(Result::ok)
+            .find(|entry| {
+                entry
+                    .path()
+                    .map(|path| path.to_string_lossy() == "manifest.json")
+                    .unwrap_or(false)
+            })
+            .map(|entry| serde_json::from_reader(entry).unwrap())
+            .unwrap();
+        manifest.entries[0].unit = "not-the-registered-unit".to_string();
+        let doctored = out.path().join("wrong-unit.tar.gz");
+        rewrite_manifest(&archive, &doctored, &manifest);
+
+        let target = tempfile::tempdir().unwrap();
+        let error = super::import::import(
+            &test_paths(target.path()),
+            &doctored,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("unit mismatch"), "got: {error}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn export_refuses_symlinked_sources() {
+        use std::os::unix::fs::symlink;
+
+        let source = tempfile::tempdir().unwrap();
+        let paths = populated_home(source.path());
+        symlink(
+            paths.data_dir.join("prompts/system-prompt.md"),
+            paths.data_dir.join("prompts/alias.md"),
+        )
+        .unwrap();
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("symlink.tar.gz");
+        let error =
+            super::export::export(&paths, &archive, &super::export::ExportOptions::default())
+                .unwrap_err()
+                .to_string();
+        assert!(error.contains("symlink"), "got: {error}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn import_refuses_non_regular_archive_entries() {
+        let source = tempfile::tempdir().unwrap();
+        let paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(&paths, &archive, &super::export::ExportOptions::default()).unwrap();
+
+        let doctored = out.path().join("symlink.tar.gz");
+        let file = std::fs::File::create(&doctored).unwrap();
+        let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        let raw = std::fs::read(&archive).unwrap();
+        let mut source = tar::Archive::new(flate2::read::GzDecoder::new(&raw[..]));
+        for entry in source.entries().unwrap().filter_map(Result::ok) {
+            let mut header = entry.header().clone();
+            header.set_cksum();
+            builder.append(&header, entry).unwrap();
+        }
+        let mut header = tar::Header::new_gnu();
+        header.set_entry_type(tar::EntryType::symlink());
+        header.set_link_name("../outside").unwrap();
+        header.set_size(0);
+        header.set_mode(0o600);
+        header.set_cksum();
+        builder
+            .append_data(&mut header, "home/escape", std::io::empty())
+            .unwrap();
+        builder.into_inner().unwrap().finish().unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let error = super::import::import(
+            &test_paths(target.path()),
+            &doctored,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("regular file"), "got: {error}");
+        assert!(!test_paths(target.path()).config_file.exists());
+    }
+
     /// Copies an archive, replacing only its manifest.
     fn rewrite_manifest(from: &Path, to: &Path, manifest: &super::manifest::Manifest) {
         let file = std::fs::File::create(to).unwrap();
@@ -250,6 +559,27 @@ pub(crate) mod tests {
             header.set_cksum();
             builder.append(&header, entry).unwrap();
         }
+        builder.into_inner().unwrap().finish().unwrap();
+    }
+
+    /// Copies an archive and appends one regular entry without changing its
+    /// manifest. Used to prove that the importer checks the exact entry set.
+    fn copy_archive_with_entry(from: &Path, to: &Path, path: &Path, bytes: &[u8]) {
+        let file = std::fs::File::create(to).unwrap();
+        let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        let raw = std::fs::read(from).unwrap();
+        let mut source = tar::Archive::new(flate2::read::GzDecoder::new(&raw[..]));
+        for entry in source.entries().unwrap().filter_map(Result::ok) {
+            let mut header = entry.header().clone();
+            header.set_cksum();
+            builder.append(&header, entry).unwrap();
+        }
+        let mut header = tar::Header::new_gnu();
+        header.set_size(bytes.len() as u64);
+        header.set_mode(0o600);
+        header.set_cksum();
+        builder.append_data(&mut header, path, bytes).unwrap();
         builder.into_inner().unwrap().finish().unwrap();
     }
 

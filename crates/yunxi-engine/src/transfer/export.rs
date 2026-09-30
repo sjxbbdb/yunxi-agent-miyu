@@ -51,15 +51,28 @@ pub struct ExportReport {
 
 pub fn export(paths: &YunXiPaths, output: &Path, options: &ExportOptions) -> Result<ExportReport> {
     let root = yunxi_home(paths)?;
-    if !options.dry_run && output.exists() && !options.force {
-        bail!(
-            "{}: {}",
-            t(
-                "output already exists; pass --force to overwrite",
-                "输出文件已存在；如需覆盖请传 --force"
-            ),
-            output.display()
-        );
+    if !options.dry_run {
+        if let Ok(metadata) = std::fs::symlink_metadata(output) {
+            if metadata.file_type().is_symlink() {
+                bail!(
+                    "refusing to write an archive through a symlink: {}",
+                    output.display()
+                );
+            }
+            if !metadata.is_file() {
+                bail!("archive output is not a regular file: {}", output.display());
+            }
+            if !options.force {
+                bail!(
+                    "{}: {}",
+                    t(
+                        "output already exists; pass --force to overwrite",
+                        "输出文件已存在；如需覆盖请传 --force"
+                    ),
+                    output.display()
+                );
+            }
+        }
     }
 
     // Snapshots outlive the planning step, so the temp dir must too.
@@ -158,18 +171,33 @@ fn plan_unit(
     planned: &mut Vec<Planned>,
     schema_versions: &mut BTreeMap<String, i64>,
 ) -> Result<()> {
-    for rel in expand(root, unit.rel) {
+    for rel in expand(root, unit.rel)? {
         let absolute = root.join(&rel);
-        if !absolute.exists() {
-            continue;
+        let metadata = match std::fs::symlink_metadata(&absolute) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => {
+                return Err(error).with_context(|| format!("reading {}", absolute.display()))
+            }
+        };
+        if metadata.file_type().is_symlink() {
+            bail!("refusing to export a symlink: {}", absolute.display());
         }
         match unit.kind {
-            UnitKind::File => planned.push(Planned {
-                unit: unit.id,
-                rel,
-                source: absolute,
-            }),
+            UnitKind::File => {
+                if !metadata.is_file() {
+                    bail!("export unit is not a regular file: {}", absolute.display());
+                }
+                planned.push(Planned {
+                    unit: unit.id,
+                    rel,
+                    source: absolute,
+                });
+            }
             UnitKind::Dir => {
+                if !metadata.is_dir() {
+                    bail!("export unit is not a directory: {}", absolute.display());
+                }
                 let mut files = Vec::new();
                 collect_dir(&absolute, &rel, &mut files)?;
                 for (rel, source) in files {
@@ -181,6 +209,12 @@ fn plan_unit(
                 }
             }
             UnitKind::Sqlite => {
+                if !metadata.is_file() {
+                    bail!(
+                        "export database is not a regular file: {}",
+                        absolute.display()
+                    );
+                }
                 let snapshot = snapshots.join(rel.replace('/', "_"));
                 let version = snapshot_sqlite(&absolute, &snapshot)?;
                 schema_versions.insert(unit.id.to_string(), version);
@@ -196,7 +230,7 @@ fn plan_unit(
 }
 
 /// Resolves a `*` segment against the directories actually present.
-fn expand(root: &Path, pattern: &str) -> Vec<String> {
+fn expand(root: &Path, pattern: &str) -> Result<Vec<String>> {
     let mut results = vec![String::new()];
     for segment in pattern.split('/') {
         let mut next = Vec::new();
@@ -207,10 +241,22 @@ fn expand(root: &Path, pattern: &str) -> Vec<String> {
                 } else {
                     root.join(prefix)
                 };
-                let Ok(children) = std::fs::read_dir(&dir) else {
-                    continue;
+                let children = match std::fs::read_dir(&dir) {
+                    Ok(children) => children,
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+                    Err(error) => {
+                        return Err(error).with_context(|| format!("reading {}", dir.display()));
+                    }
                 };
-                for child in children.flatten() {
+                for child in children {
+                    let child = child?;
+                    let metadata = std::fs::symlink_metadata(child.path())?;
+                    if metadata.file_type().is_symlink() {
+                        bail!(
+                            "refusing to traverse a symlink while expanding {}",
+                            dir.display()
+                        );
+                    }
                     let Ok(name) = child.file_name().into_string() else {
                         continue;
                     };
@@ -223,7 +269,7 @@ fn expand(root: &Path, pattern: &str) -> Vec<String> {
         results = next;
     }
     results.retain(|rel| !rel.is_empty());
-    results
+    Ok(results)
 }
 
 fn join_rel(prefix: &str, segment: &str) -> String {
@@ -236,7 +282,8 @@ fn join_rel(prefix: &str, segment: &str) -> String {
 
 fn collect_dir(dir: &Path, rel: &str, out: &mut Vec<(String, PathBuf)>) -> Result<()> {
     let children = std::fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))?;
-    for child in children.flatten() {
+    for child in children {
+        let child = child?;
         let Ok(name) = child.file_name().into_string() else {
             continue;
         };
@@ -244,6 +291,10 @@ fn collect_dir(dir: &Path, rel: &str, out: &mut Vec<(String, PathBuf)>) -> Resul
             continue;
         }
         let path = child.path();
+        let metadata = std::fs::symlink_metadata(&path)?;
+        if metadata.file_type().is_symlink() {
+            bail!("refusing to export a symlink: {}", path.display());
+        }
         let child_rel = join_rel(rel, &name);
         // A nested unit wins over the directory that contains it: this is how
         // `data/kb/semantic_index.db` stays out of a default export even
@@ -253,10 +304,12 @@ fn collect_dir(dir: &Path, rel: &str, out: &mut Vec<(String, PathBuf)>) -> Resul
                 continue;
             }
         }
-        if path.is_dir() {
+        if metadata.is_dir() {
             collect_dir(&path, &child_rel, out)?;
-        } else if path.is_file() {
+        } else if metadata.is_file() {
             out.push((child_rel, path));
+        } else {
+            bail!("refusing to export a non-regular file: {}", path.display());
         }
     }
     Ok(())
