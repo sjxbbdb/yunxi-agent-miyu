@@ -40,6 +40,28 @@ G3/G9 必须分别证明 transient、short、evicted、long 四种数据在 comp
 
 G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权限；KB 删除/reindex 不触碰 memory；secret/Never 单元不进入公开归档；schema downgrade 被拒绝；恢复失败不会留下半安装状态。
 
+### 3.1 G0-03 数据边界矩阵（as-built）
+
+下表把当前代码中的物理目录、事实表、派生索引、embedding 入口和删除/恢复路径落到同一张矩阵。表中的“否”是硬边界：后续阶段不得因为复用算法而把事实域、权限域或迁移账本合并。embedding 是派生索引，不是任何域的事实源。
+
+| 数据域 | 当前真实位置 / 入口 | 已确认 schema 或内容 | embedding | 删除 / 恢复语义 | G0 判断与后续边界 |
+| --- | --- | --- | --- | --- | --- |
+| Profile | `YunXiPaths::profile_file()` → `home/<admin>/profile.md`；成员档案为 `home/<user>/profile.md`；旧布局 `identities/user-identity.md` | Markdown；由 `persona_paths.rs` 按 Owner 入口注入 `<current-user-profile>` | **否** | 文件写入/配置保存；transfer `home.profile` 为 Core；可导出明文 | 保持独立，不进入 `memory_embeddings`；G2 只增加 confirmed/source/timestamp 等结构，不改变向量边界 |
+| Persona / Soul | `data/prompts`、私有人格目录、`personas/`；入口 `crates/yunxi-core/src/config/persona_paths.rs` | `persona.md`、manifest、人格目录与 skills/scripts | **否** | transfer `data.prompts`、`data.persona_manifest`、`personas.manifest`；按现有路径迁移 | 与 Profile 分域；人格内容可以被提示注入，但不能变成长期记忆事实 |
+| Conversation / session | `<home>/<admin>/conversation.db`；旧布局 `state/conversation.db`；`ConversationDb::open_at()` | SQLite WAL：`sessions`、`turns`、`queued_prompts`、`session_loaded_items`、附件、tool reports、journal、redo、goals、accounts、platform bindings 等 | **否** | `delete_session` 级联删除；reset 删除会话内容；redo 事务恢复；迁移前 `VACUUM INTO ...bak` | 是交互事实源；短期上下文不能另建 router/daemon/store |
+| Short / long memory | `active_persona_memory_data_dir(...)/memory`，通常 `personas/<scope>/memory/memory.db`；状态库 `state/personas/<scope>/memory/evicted_context.db` | data DB：`facts`、`episodes`、`pending_events`、`skill_records`、`memory_revisions`、`memory_meta`、`memory_embeddings`；state DB：`evicted_turns`、`evicted_embeddings`、FTS5 | **仅 memory 域内部派生**；不与 KB 共库 | `MemoryStore::reset_session()` / `reset_all()` 同事务清理正文与向量；衰减可标记 forgotten | 当前已有 short/long、promotion、expiry 字段；G3 必须补 transient→short→candidate→committed/rejected/expired 的显式 admission，只有 committed 可长期向量化 |
+| Memory access | `facts`/`episodes` 的 `visibility`、`owner_principal`、`subjects`；`MemoryAccess` 与 `migrate_memory_access_v1/v2` | 来源、平台、session 推导 ownership；不可信平台字段与 principal 分离 | 召回 SQL 复用同一 principal 过滤 | reset 与 embedding 删除同一事务 | 权限边界已存在；KB 不得复用 memory ownership 表或删除 API |
+| KB source / metadata | source：`data/kb/files` 或 `home/<user>/kb/files`；入口 `tools/knowledge_base/{store,files}.rs`；metadata `data/kb/kb_meta.db` | source 文本；`files(name,path,size_bytes,mtime,content_sha256,updated_at)` | **否** | `KnowledgeBase::remove()` / `remove_prefix()` 删除 source、metadata 和对应 chunks；可从 source/hash 重建 | 独立于 memory；禁止导入 `memory.db`、`conversation.db`、persona/skill/config |
+| KB semantic index | `data/kb/semantic_index.db`；入口 `tools/knowledge_base/index.rs` / `search.rs` | `semantic_chunks(provider_id,model,file_name,content_sha256,chunk_index,start_char,end_char,text,embedding_json,embedding,created_at)` | **是，且只属于 KB namespace** | 删除文件按 `file_name` 删除 chunks；换模型重建旧 model；断索引保留 source | 可复用 embedder 算法，但不能共用 memory namespace、ACL、删除 API 或迁移账本 |
+| Embedding assets | `YUNXI_EMBEDDING_MODELS_DIR`、`~/.yunxi/models`、安装前缀 models；`embedding/manifest.rs` 与 worker | manifest、ONNX、tokenizer、frame/timeout 限制 | 模型资产，不是用户事实 | 可重新安装；不属于默认用户数据迁移 | G4 需按 namespace/model/dimension 校验，memory 与 KB 的模型配置仍要分开 |
+| Credentials / web secrets | `config/config.jsonc`；`state/web-passwords/`、`state/daemon-launch.json` | provider keys、access token、MCP/plugin env、voice/TTS keys、端口/密码状态 | **否** | `--no-secrets` 递归脱敏；Web password、daemon launch 为 Never；运行时生命周期清理 | 任何 secret/Never 不进公开归档、向量索引或 prompt 指纹；新增字段必须补扫描测试 |
+| Runtime / cache / usage | XDG runtime socket/lock；`paths.cache_dir` logs/cache/reindex；usage state/DB 入口 | socket、lock、可重建 JSON/log、用量账本 | **否** | 进程/重建生命周期清理；cache/runtime 为 Never；usage 按 registry 规则迁移 | 不得成为事实源；需继续核对 `state.usage` JSON 与 usage DB 的真实生产路径，避免 registry 漏项 |
+| Transfer backup / restore | `crates/yunxi-engine/src/transfer/{registry,manifest,export,import,fixups}.rs` | manifest + tar.gz；SQLite `VACUUM INTO`；tier、scope、`included_units` | 不改变域语义 | staging → validate → backup → install/prune → marker；失败 rollback；legacy manifest merge-only | 59 units 已覆盖 Core/Heavy/Platform/Never；父目录 TOCTOU 仍是未关闭风险 |
+
+#### G0-03 当前结论
+
+已确认四个独立事实域：`Profile/Persona → Conversation/Session → Memory → Knowledge Base`；各域的 source、metadata、embedding 和 transfer 分类已经能在代码中定位。尚未完成的是跨域运行时验证矩阵：Profile 不入 memory embedding、memory reset 不触碰 KB、KB remove/reindex 不触碰 memory、旧新布局 identity、usage 实际路径以及故障注入/恢复证据。因而 G0-03 由“仅定位”提升为“静态边界已证、运行时边界待验”，不视为完成。
+
 ## 4. Skills、MCP 与权限真相源
 
 ### 扩展生命周期
@@ -97,7 +119,8 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 | 已证 | G0-01/G0-02/G0-04/G0-06 | 本文入口表、单运行时结论、prompt/cache 接缝记录，以及 `legacy_config_dir` 正负回归测试。 |
 | 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 649/0/13；transfer 35/35；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
 | 已证 | G0-09 基线闭环 | fish 静态 17/17、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI config 16/16 已有报告；这些证据仍不替代故障注入。 |
-| 仅定位 | G0-03/G0-05/G0-08 | 所有入口、SQLite/embedding/删除恢复边界、权限真相源和测试入口已列出，但尚未形成逐项运行矩阵、完整耗时/失败原因和断连/权限组合故障注入报告。 |
+| 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；跨域删除/恢复、旧新布局 identity、usage 实际路径仍待运行时验证。 |
+| 仅定位 | G0-05/G0-08 | 权限真相源和测试入口已列出，但尚未形成完整耗时/失败原因、断连/权限组合和 request-shape 故障注入报告。 |
 | 未验证 | G0-05/G0-09 跨平台 | Arch Linux 实机和 macOS M-series 尚未运行；只能保留为环境缺口。 |
 | 未关闭 | transfer 安全硬化 | 路径检查兼容后端仍存在父目录 TOCTOU；严格安全语义需要 Linux/macOS `openat`/`renameat` 与 Windows handle-relative backend，当前不能宣称竞态已消除。 |
 
