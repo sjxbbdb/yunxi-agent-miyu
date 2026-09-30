@@ -10,8 +10,8 @@
 
 | 材料 | 位置 |
 |---|---|
-| DSH 官方 Minimal 预设 | `/home/shorin/Downloads/deepseek-harness/apps/cli/config/agent-presets/minimal/agent.cordis.yml` |
-| Anchored Standard 插件（用户指定参考） | `/home/shorin/.dsh/.agent-presets/anchored-standard/`，核心：`agent.cordis.yml`、`tool-bootstrap.mjs`、`compaction-epoch.mjs`、`instruction-hint.mjs` |
+| DSH 官方 Minimal 预设 | `$HOME/Downloads/deepseek-harness/apps/cli/config/agent-presets/minimal/agent.cordis.yml` |
+| Anchored Standard 插件（用户指定参考） | `$HOME/.dsh/.agent-presets/anchored-standard/`，核心：`agent.cordis.yml`、`tool-bootstrap.mjs`、`compaction-epoch.mjs`、`instruction-hint.mjs` |
 | DSH `str_replace_editor` 完整 schema | `packages/fs/tool-str-replace-editor/src/index.ts`（参数、描述、view/create/str_replace/insert 语义） |
 | DSH persistent `bash` schema | `packages/shell/tool-bash-persistent/src/index.ts` |
 

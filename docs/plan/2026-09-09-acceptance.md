@@ -5,7 +5,7 @@
 先准备一个不碰你现有环境的沙箱：
 
 ```sh
-cd /home/shorin/Documents/github/Miyu/.claude/worktrees/opt-2026-09-09
+cd <repo-root>/<worktree>
 systemd-run --user --scope -p MemoryMax=12G cargo build     # 约 1 分钟（增量）
 ```
 

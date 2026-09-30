@@ -203,7 +203,7 @@ const PLATFORM_INSTRUCTION: &str = "The image was saved to disk at the returned 
 ///
 /// 在 stub 加载模式下模型看到的只有一句摘要和宽松参数壳，没取契约就调用时
 /// 很容易把数组写成"数组的 JSON 字符串"——实测 mimo-v2.5 传的就是
-/// `"[\"/home/shorin/Pictures/3.png\"]"`。此前这里只认真数组，其余一律
+/// `"[\"<absolute-path>\"]"`。此前这里只认真数组，其余一律
 /// `as_array()` 拿到 None 后**静默**退回纯文生图：用户连传了三次才从返回体
 /// 的 `reference_images: 0` 看出没生效。
 ///

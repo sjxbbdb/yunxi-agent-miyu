@@ -45,7 +45,7 @@ cd ~/Projects/hotel-deals
 
 ```
 python      3.14.7
-历史库      /home/shorin/.local/share/hotel-deals/history.db
+历史库      $HOME/.local/share/hotel-deals/history.db
 google      ✅ 可用，抓到 18 条（零依赖）
 booking     ✅ playwright 就绪（浏览器：chrome）
 帮助文本    ✅ 提到的参数都真实存在

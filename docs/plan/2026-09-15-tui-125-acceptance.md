@@ -6,7 +6,7 @@
 
 ## 构建
 
-- worktree：`/home/shorin/Documents/github/Miyu-tui-fixes-125-2026-09-15`
+- worktree：`<repo-root>/<worktree>`
 - 分支：`fix/tui-125-2026-09-15`
 - 二进制：`target/debug/miyu`，dev profile，未优化，保留调试信息。
 - 自报版本：`miyu 0.6.0`。
@@ -19,9 +19,9 @@
 模型调用由用户启动后发生。可在 herdr 或连到这台机器的 SSH 终端内执行：
 
 ```bash
-MIYU_HOME=/home/shorin/Documents/github/Miyu-tui-fixes-125-2026-09-15/target/manual-tui-home \
+MIYU_HOME=target/manual-tui-home \
 MIYU_TUI=1 \
-/home/shorin/Documents/github/Miyu-tui-fixes-125-2026-09-15/target/debug/miyu
+target/debug/miyu
 ```
 
 需要测试直连事件路径时，在以上命令中另加 `MIYU_DIRECT=1`。直连核心与 daemon
@@ -30,8 +30,8 @@ MIYU_TUI=1 \
 测试结束后可停止独立 daemon：
 
 ```bash
-MIYU_HOME=/home/shorin/Documents/github/Miyu-tui-fixes-125-2026-09-15/target/manual-tui-home \
-/home/shorin/Documents/github/Miyu-tui-fixes-125-2026-09-15/target/debug/miyu daemon stop
+MIYU_HOME=target/manual-tui-home \
+target/debug/miyu daemon stop
 ```
 
 ## 人工检查
@@ -63,7 +63,7 @@ MIYU_HOME=/home/shorin/Documents/github/Miyu-tui-fixes-125-2026-09-15/target/man
 复跑协议与布局探针：
 
 ```bash
-cd /home/shorin/Documents/github/Miyu-tui-fixes-125-2026-09-15
+cd <repo-root>/<worktree>
 python3 testkit/tui/cursor_sync.py
 python3 testkit/tui/cursor_sync.py --direct
 python3 testkit/tui/question_body.py --binary "$PWD/target/debug/miyu"

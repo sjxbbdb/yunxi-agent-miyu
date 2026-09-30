@@ -161,7 +161,7 @@ runner 上做了什么：锁文件里的 Xcode（`sudo xcode-select`，SDK 对�
 python3 packaging/ci/verify.py --manifest out/distribution/release-0.6.1/release-input.json \
   --packages out/distribution/release-0.6.1/packages --target-id debian13-x86_64 \
   --report-dir out/distribution/release-0.6.1/reports/debian13-x86_64 \
-  --provider-config /home/shorin/.yunxi/config/config.jsonc
+  --provider-config $MIYU_HOME/config/config.jsonc
 ```
 
 这条本机配置路径仅用于本次用户已授权的本地验收。脚本只临时复制 opencodego provider，

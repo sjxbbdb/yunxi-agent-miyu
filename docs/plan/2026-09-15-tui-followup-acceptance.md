@@ -23,9 +23,9 @@
 ## 启动
 
 ```bash
-MIYU_HOME=/home/shorin/Documents/github/Miyu-tui-quick-2026-09-15/target/manual-tui-home \
+MIYU_HOME=target/manual-tui-home \
 MIYU_TUI=1 \
-/home/shorin/Documents/github/Miyu-tui-quick-2026-09-15/target/debug/miyu
+target/debug/miyu
 ```
 
 该 home 沿用上轮测试配置。本轮不重置用户已产生的测试会话，不连接生产平台。

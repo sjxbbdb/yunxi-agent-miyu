@@ -131,6 +131,6 @@ mimalloc / AppConfig→Arc / 资源外置 / panic=abort（low-footprint）；P5 
 
 ## 调研来源
 
-- AstrBot 原型：`/home/shorin/Documents/Astrbot/data/plugins/*/pages/dashboard/`，挂载机制在 `/home/shorin/Downloads/AstrBot/astrbot/dashboard/services/plugin_page_service.py`。
+- AstrBot 原型：`$HOME/Documents/Astrbot/data/plugins/*/pages/dashboard/`，挂载机制在 `$HOME/Downloads/AstrBot/astrbot/dashboard/services/plugin_page_service.py`。
 - Miyu WebUI 地形：`src/web/server.rs:263-383` 路由表、`web/app.js:9860-9890` 控制台面板、`web/shared.js` 独立面板范本、`styles.css:1-113` 令牌层。
 - 已有裁定：`docs/plan/2026-09-03-optimization-survey.md`、`docs/plan/low-footprint.md`、`docs/fixed/2026-08-18-性能优化.md`。

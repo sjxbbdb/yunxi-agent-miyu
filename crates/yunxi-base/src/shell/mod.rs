@@ -477,7 +477,7 @@ fn is_shell_keyword_or_builtin(command: &str, shell_name: &str) -> bool {
 /// 原先只看形状(以 `/`、`./`、`../`、`~/` 开头就算),而紧挨着的
 /// `command_exists_in_path` 对光名字反倒要验 `is_executable_file`——裸名字
 /// 严格、显式路径反而照单全收,这个不对称正是病灶:把
-/// `/home/shorin/Downloads/1.png` 粘在多行输入的头一行,整段就被判成 shell
+/// `/home/user/Downloads/1.png` 粘在多行输入的头一行,整段就被判成 shell
 /// 命令交给 fish 逐行执行,图片路径各报一次"存在,但不是一个可执行文件",
 /// 只有末尾那句中文漏进 YunXi,图全丢了(08-26 用户实测)。
 ///

@@ -27,15 +27,15 @@
 
 ## 手动验收
 
-独立 worktree：`/home/shorin/Documents/github/Miyu-tui-quick-2026-09-15`。
+独立 worktree：`<repo-root>/<worktree>`。
 测试 home 仅沿用上一批测试的模型与显示配置，不复制会话或平台数据。
 debug 构建保留调试信息、不启用优化，自报版本 `miyu 0.6.0`。
 二进制 SHA-256：`cb4ca289531721f9f837eef8338fa9548dfb0bedc8bffd703b1021835dcbbbb2`。
 
 ```bash
-MIYU_HOME=/home/shorin/Documents/github/Miyu-tui-quick-2026-09-15/target/manual-tui-home \
+MIYU_HOME=target/manual-tui-home \
 MIYU_TUI=1 \
-/home/shorin/Documents/github/Miyu-tui-quick-2026-09-15/target/debug/miyu
+target/debug/miyu
 ```
 
 1. 空会话输入 `/session`：列表完整可见，不与大厅或输入框叠在一起。
@@ -68,7 +68,7 @@ MIYU_TUI=1 \
 - `cargo fmt --check`、`git diff --check` 通过。
 
 ```bash
-cd /home/shorin/Documents/github/Miyu-tui-quick-2026-09-15
+cd <repo-root>/<worktree>
 python3 testkit/tui/toast_expiry.py --binary "$PWD/target/debug/miyu"
 python3 testkit/tui/toast_expiry.py --binary "$PWD/target/debug/miyu" --direct
 python3 testkit/tui/session_picker.py --binary "$PWD/target/debug/miyu"

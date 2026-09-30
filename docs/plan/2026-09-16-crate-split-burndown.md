@@ -6,7 +6,7 @@
 
 ## 硬约束(每批都适用)
 
-- 工作树:`/home/shorin/Documents/github/Miyu/.claude/worktrees/core-normal-2026-09-16`,所有路径写绝对路径,
+- 工作树:`<repo-root>/<worktree>`,所有路径写绝对路径,
   不要 `cd` 到主检出,不要碰 8300 端口的线上 daemon。
 - **cargo 一次只跑一个**,而且必须套内存上限:
   `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0 cargo <…>`。
