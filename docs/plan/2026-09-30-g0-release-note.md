@@ -28,6 +28,7 @@
 - daemon reload 定向黑盒：`cargo test --test daemon_reload --locked -- --test-threads=1` 2/2 通过。
 - WSL Ubuntu-24.04 IPC 定向测试：`cargo test -p yunxi-core ipc --lib --locked -- --test-threads=1` 33/33 通过，覆盖 lease、frame、协议版本、半帧、超限、断连和同 home 单例。
 - TUI PTY 黑盒 `testkit/tui/config_forms.py` 在隔离 home 下运行结果为 8/16；主菜单与部分表单断言通过，但编辑模型/新增模型导航和保存断言失败。该失败已记录为 G0-09 待修项，不能用 workspace 单测替代。
+- 隐私扫描复跑：公开 `docs/`、发布说明与生产注释中的个人绝对路径命中为 0；剩余 `<upstream-home>` 只在测试 fixture/测试字面量中，另有 `bilibili_live` 第三方 `APP_SEC` 待核验。完整迁移/删除路径审计仍未关闭。
 - 权限位测试改用 WSL 原生 Linux 文件系统临时目录，不再把 `/mnt` DrvFs 的 0777 映射误当作生产语义；bundled script、registry fixture、TUI changed-prefix、renderer event、tool-summary 和回放编辑测试均已按当前 YunXi 产品输出修正或补强。
 
 ## 未完成项
