@@ -68,11 +68,11 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 ## 6. 当前阶段门禁与未验证项
 
-已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管和 daemon reload 2/2 已复现。
+已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2 和 IPC 定向 33/33 已复现。
 
 仍未完成：
 
-1. IPC/TUI、工具执行的隔离黑盒实测记录（G0-09）；fish 分流与 daemon reload 子项已完成，但不能替代整个终端闭环。
+1. TUI、工具执行的隔离黑盒实测记录（G0-09）；IPC 定向单测已完成，TUI 表单 PTY 当前 8/16，fish 分流与 daemon reload 子项已完成，但不能替代整个终端闭环。
 2. 每条路径的隐私扫描证据索引与 transfer 单元逐项核对。全仓扫描仍命中历史 `<upstream-home>` 等绝对路径（52 行、30 个文件），并发现待确认的第三方 `APP_SEC`，需在发布前分类处理。
 3. Arch Linux 实机和 macOS M-series 编译/运行；当前只能标记为未验证。
 
