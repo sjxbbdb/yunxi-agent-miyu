@@ -71,7 +71,7 @@
 
 #### G0 尚未完成的验证
 
-- 全工作区测试已全绿，但 G0 的架构审计尚未完成。还需补齐每个入口的调用关系、所有者、不变量和测试映射；特别是 daemon/IPC lease/frame/协议/回放、session/compact/evicted context、transfer 隐私分类、KB write-through、MCP/Skills、host capability/guard、persona/profile 迁移、scheduler/background job、goal 持久化与 Codex active goal 的区分，以及 `docs/interfaces/subsystems.md` 的挂接契约。
+- 全工作区测试已全绿；入口、调用方向、所有者、不变量和测试映射的逐项取证见 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)。fish 分流静态判定 17/17、真实 fish PTY 接管和 daemon reload 2/2 已复现，但仍需完成其余隔离黑盒闭环、transfer 单元隐私索引和最终公开文件扫描；特别是 IPC lease/frame/协议/回放、session/compact/evicted context、KB write-through、MCP/Skills、host capability/guard、scheduler/background job、goal 持久化与 Codex active goal 的区分已完成定位，但尚未宣称全部运行时门禁通过。
 - macOS M-series 只能在对应环境或 CI 上验证，当前本机没有该运行环境；需在 G0 状态中保留为未验证项。
 - Arch Linux 实机尚未验证；WSL Ubuntu 已确认 `/usr/bin/fish`、Rust/Cargo 和 systemd user scope 可用。
 
@@ -84,6 +84,8 @@
 - 下一步 G0 只需补齐 fish/daemon/IPC/TUI、KB、host/tool、migration 的入口表和重复运行时检查；在此之前不创建 `CompanionContext` 或 Laya 代码。
 
 #### G0 入口表（首版）
+
+逐项的调用方向、所有者、数据不变量、恢复边界和对应测试文件已独立固化在 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)。本节保留产品计划中的导航表，避免把审计证据和未来设计混在一起。
 
 | 领域 | 当前真实入口 | 约束/复用结论 |
 | --- | --- | --- |

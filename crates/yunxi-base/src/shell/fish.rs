@@ -206,9 +206,10 @@ function __yunxi_first_command
 end
 
 # 只看首词长什么样,所以取未展开的原文:--tokens-expanded 会真的跑命令替换,
-# 放在每次回车上按不得。老版本 fish 不认 --tokens-raw,拿不到就当判不出来。
+# 放在每次回车上按不得。fish 的 commandline 没有稳定的 --tokens-raw 公共选项;
+# 用当前 process + tokenize 只做语法分词,不执行通配符/命令替换。
 function __yunxi_first_token_raw
-    set -l tokens (commandline --input="$argv[1]" --tokens-raw 2>/dev/null)
+    set -l tokens (commandline --input="$argv[1]" --current-process --tokenize 2>/dev/null)
     while test (count $tokens) -gt 0
         set -l token $tokens[1]
         if string match -qr '^[A-Za-z_][A-Za-z0-9_]*=' -- "$token"
@@ -379,7 +380,8 @@ mod tests {
     fn fish_hook_routes_single_line_prose_before_fish_expands_globs() {
         let hook = hook();
         // 取未展开的原文:--tokens-expanded 会真的跑命令替换,放在每次回车上按不得。
-        assert!(hook.contains("commandline --input=\"$argv[1]\" --tokens-raw"));
+        // `--current-process --tokenize` 是跨 fish 版本可用的语法分词入口。
+        assert!(hook.contains("commandline --input=\"$argv[1]\" --current-process --tokenize"));
         // 真正调用 --tokens-expanded 的只剩原来那一处(多行分支/兜底走它),新路
         // 没再加一处。只数代码行:hook 里的注释也提到这个名字,连注释一起数会
         // 把「改了一句注释」变成红测。
@@ -456,6 +458,7 @@ mod tests {
         assert!(hook.contains("test (string split \\n -- \"$argv[1]\" | count) -gt 1"));
         assert!(hook.contains("__yunxi_first_command"));
         assert!(hook.contains("commandline --input=\"$argv[1]\" --tokens-expanded"));
+        assert!(hook.contains("commandline --input=\"$argv[1]\" --current-process --tokenize"));
         assert!(hook.contains("type -q -- \"$first_command\""));
         assert!(hook.contains("set -g __yunxi_pending_buffer \"$argv[1]\""));
         assert!(hook.contains("history append -- \"$argv[1]\""));

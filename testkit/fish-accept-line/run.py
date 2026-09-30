@@ -24,7 +24,7 @@ import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-SOURCE = REPO / "src" / "shell" / "fish.rs"
+SOURCE = REPO / "crates" / "yunxi-base" / "src" / "shell" / "fish.rs"
 FUNCTIONS = ["__yunxi_first_token_raw", "__yunxi_head_is_plain_word"]
 
 # (输入, 期望去向)。SHELL = 照旧交给 fish 执行;AI = 交给 YunXi。
