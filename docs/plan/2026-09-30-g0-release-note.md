@@ -54,7 +54,7 @@
 
 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/privacy/g0_scan.py`
 
-本轮结果：扫描 1852 个已跟踪文本文件，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开 `APP_KEY`/`APP_SEC` 归类为 1 个 `public_allowlist` 文件，2 个合成测试值归类为 `fixture_allowlist`。脚本只输出类别、计数和路径，不输出匹配内容。
+本轮结果：扫描 1857 个已跟踪文本文件，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开 `APP_KEY`/`APP_SEC` 归类为 1 个 `public_allowlist` 文件，2 个合成测试值归类为 `fixture_allowlist`。脚本只输出类别、计数和路径，不输出匹配内容。
 
 ## 发布约束
 

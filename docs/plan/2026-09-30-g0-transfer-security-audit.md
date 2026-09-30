@@ -4,7 +4,7 @@
 阶段：YXM-G0，未退出
 范围：`crates/yunxi-engine/src/transfer/{manifest,registry,export,import,fixups,mod}.rs`
 
-本文只记录当前实现的审计结果和下一轮最小 patch 设计，不代表这些 patch 已经落地。审计对象是 `yunxi export` / `yunxi import` 的归档完整性、路径安全、覆盖语义和跨机器修复。
+本文记录当前实现的审计结果、已落地修复和仍需平台化的边界。审计对象是 `yunxi export` / `yunxi import` 的归档完整性、路径安全、覆盖语义和跨机器修复；未列为“已落地”的项目不能视为完成。
 
 ## 结论
 
