@@ -20,6 +20,7 @@ import re
 import select
 import shutil
 import signal
+import sqlite3
 import struct
 import subprocess
 import sys
@@ -45,7 +46,8 @@ BASE = f"http://127.0.0.1:{PORT}"
 ENV = dict(os.environ, YUNXI_HOME=str(HOME), XDG_RUNTIME_DIR=RUNTIME)
 
 PASTED_LINES = ["第一行走查", "第二行走查", "第三行走查", "第四行走查"]
-PLACEHOLDER = "粘贴 1"
+PLACEHOLDER_RE = re.compile(r"(?:粘贴|Pasted)\s*1")
+TOOL_MARKER = "G0_09_TOOL_OK"
 
 
 def write_config():
@@ -135,6 +137,34 @@ def strip_ansi(raw):
     return text.decode("utf-8", "replace")
 
 
+def tool_flow_has_marker():
+    """从真实回合记录确认 run_command 成功，而不是只看 TUI 文本。"""
+    db_path = HOME / "state" / "conversation.db"
+    if not db_path.exists():
+        return False
+    try:
+        with sqlite3.connect(db_path) as connection:
+            rows = connection.execute(
+                "SELECT status, tool_flow FROM turns "
+                "WHERE status = 'completed' AND tool_flow IS NOT NULL"
+            ).fetchall()
+    except sqlite3.Error:
+        return False
+    for _, raw_flow in rows:
+        try:
+            flow = json.loads(raw_flow or "[]")
+        except (TypeError, ValueError):
+            continue
+        for event in flow if isinstance(flow, list) else []:
+            for call in event.get("calls", []) if isinstance(event, dict) else []:
+                if (
+                    call.get("name") == "run_command"
+                    and TOOL_MARKER in str(call.get("output", ""))
+                ):
+                    return True
+    return False
+
+
 def main():
     if not BIN.exists():
         print(f"! 先 cargo build:{BIN} 不存在", file=sys.stderr)
@@ -147,7 +177,12 @@ def main():
 
     stub = subprocess.Popen(
         [sys.executable, str(Path(__file__).parent / "stub_llm.py")],
-        env=dict(os.environ, STUB_PORT=str(STUB_PORT)),
+        env=dict(
+            os.environ,
+            STUB_PORT=str(STUB_PORT),
+            STUB_TOOL="1",
+            STUB_TOOL_COMMAND=f"printf {TOOL_MARKER}",
+        ),
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     daemon = None
@@ -172,8 +207,9 @@ def main():
 
         paste = ("\x1b[200~" + "\r".join(PASTED_LINES) + "\x1b[201~").encode()
         os.write(master, paste)
-        pasted, _ = drain_until(master, sink, PLACEHOLDER, 3.0)
-        report["placeholder_on_paste"] = PLACEHOLDER in strip_ansi(pasted)
+        pasted, _ = drain_until(master, sink, "Pasted", 3.0)
+        pasted_text = strip_ansi(pasted)
+        report["placeholder_on_paste"] = bool(PLACEHOLDER_RE.search(pasted_text))
 
         os.write(master, b"\r")
         answered, reply_seconds = drain_until(master, sink, "走查的回复", 30.0)
@@ -188,7 +224,7 @@ def main():
         os.write(master, b"\x1b[A")
         recalled = drain(master, 2.0, sink)
         recalled_text = strip_ansi(recalled)
-        report["placeholder_on_recall"] = PLACEHOLDER in recalled_text
+        report["placeholder_on_recall"] = bool(PLACEHOLDER_RE.search(recalled_text))
         report["raw_text_on_recall"] = any(line in recalled_text for line in PASTED_LINES)
 
         os.write(master, b"\x03")
@@ -196,13 +232,25 @@ def main():
         os.write(master, b"\x03")
         drain(master, 0.5, sink)
         report["repl_alive"] = repl.poll() is None
+        report["tool_flow_marker"] = tool_flow_has_marker()
+        report["tool_output_marker"] = report["tool_flow_marker"]
+
+        report["passed"] = all([
+            report["placeholder_on_paste"],
+            report["reply_seen"],
+            bool(report["footer_speed"]),
+            report["placeholder_on_recall"],
+            not report["raw_text_on_recall"],
+            report["repl_alive"],
+            report["tool_flow_marker"],
+        ])
 
         (OUT / "raw.bin").write_bytes(bytes(sink))
         (OUT / "report.json").write_text(
             json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         print(json.dumps(report, ensure_ascii=False))
-        return 0
+        return 0 if report["passed"] else 1
     finally:
         for process in (repl, daemon, stub):
             if process is None:

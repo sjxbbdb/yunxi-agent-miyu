@@ -65,7 +65,8 @@ def main():
         "providers": [
             {"id": "stub", "display_name": "Stub",
              "base_url": "http://127.0.0.1:1/v1", "protocol": "openai-chat",
-             "api_key": "stub", "models": ["stub-model"]},
+             "api_key": "stub", "models": ["stub-model"],
+             "custom_models": ["stub-model"]},
         ],
         "display": {"language": "zh"},
         "memory": {"enabled": False},
@@ -94,6 +95,9 @@ def main():
         to_main(driver)
         text = driver.send(b"\r", "供应商", "组织", "模型")
         check(text is not None, "进得了供应商/模型三列")
+        # 先在供应商列定位到 Stub，再进入模型列选择 stub-model；这样 fixture
+        # 不依赖进入配置时的初始列/索引状态。
+        driver.send(b"j", "Stub", settle=0.4)
         driver.send(b"ll", "stub-model", settle=0.4)
         text = driver.send(b"\r", "编辑模型", "上下文窗口")
         check(text is not None, "进得了编辑模型")

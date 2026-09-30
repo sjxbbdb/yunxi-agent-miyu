@@ -72,8 +72,8 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 仍未完成：
 
-1. TUI、工具执行的隔离黑盒实测记录（G0-09）；IPC 定向单测已完成，工具执行隔离探针能实际跑通命令并保活 REPL，但 TUI 表单 PTY 当前 8/16，fish 分流与 daemon reload 子项已完成，仍不能替代整个终端闭环。
-2. 每条路径的隐私扫描证据索引与 transfer 单元逐项核对。公开文档路径命中已清零；transfer registry 的 59 个 unit 已完成静态分类，但仅 11 个代表性测试通过，逐项恢复/删除、manifest/hash/version、失败回滚和恶意归档证据仍缺；另有待确认的第三方 `APP_SEC`，需在发布前分类处理。
+1. TUI、工具执行的隔离黑盒实测记录（G0-09）；IPC 定向单测已完成，`testkit/repl-smoke/run.py` 已自带工具调用并从 `turns.tool_flow` 校验输出，报告 `passed=true`；TUI 表单 PTY `testkit/tui/config_forms.py` 已在 WSL Ubuntu-24.04 pyte venv 下复跑为 16/16，fish 分流与 daemon reload 子项已完成；这些子项仍不能替代整个终端闭环。
+2. 每条路径的隐私扫描证据索引与 transfer 单元逐项核对。公开文档路径命中已清零；transfer registry 的 59 个 unit 已完成静态分类，当前定向测试 14/14 通过，但逐项恢复/删除、manifest/hash/version、失败回滚和恶意归档证据仍缺；另有待确认的第三方 `APP_SEC`，需在发布前分类处理。
 3. Arch Linux 实机和 macOS M-series 编译/运行；当前只能标记为未验证。
 
 在上述门禁完成前，不创建 `CompanionContext`、Laya provider、向量 admission 或新的调度器；G1 仍保持未开始。
