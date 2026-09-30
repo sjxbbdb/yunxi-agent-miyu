@@ -586,6 +586,12 @@ pub fn unit_for(rel: &str) -> Option<&'static DataUnit> {
         if parts.len() < pattern.len() {
             return false;
         }
+        // Only directory units may claim descendants. A file/SQLite unit is
+        // an exact path; accepting `conversation.db/child` would classify a
+        // malformed archive entry as the database itself.
+        if parts.len() > pattern.len() && unit.kind != UnitKind::Dir {
+            return false;
+        }
         pattern
             .iter()
             .zip(parts.iter())

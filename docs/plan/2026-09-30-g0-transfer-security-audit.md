@@ -8,7 +8,7 @@
 
 ## 结论
 
-在本轮加固前，`cargo test -p yunxi-engine transfer` 的 14 个匹配测试只覆盖代表性的 round-trip、secret redaction、schema 拒绝、registry 分类和 fixup；不能证明恶意归档、manifest 完整性、失败回滚或新 home 布局的会话库安全。当前 HEAD 已新增 25 个 transfer 匹配测试，并把下面标记为“已落地”的校验与回滚证据纳入测试。
+在本轮加固前，`cargo test -p yunxi-engine transfer` 的 14 个匹配测试只覆盖代表性的 round-trip、secret redaction、schema 拒绝、registry 分类和 fixup；不能证明恶意归档、manifest 完整性、失败回滚或新 home 布局的会话库安全。当前 HEAD 已新增 29 个 transfer 匹配测试，并把下面标记为“已落地”的校验、资源上限、tier 矩阵与回滚证据纳入测试。
 
 在 G0 退出前，优先级顺序应为：
 
@@ -82,7 +82,7 @@
 
 ### P1-B：tier 矩阵目前只有代表性断言
 
-`registry` 目前共有 59 个 unit：Core 42、Heavy 1、Platform 2、Never 14。已有测试只断言 `state.conversation`、`kb.files`、`kb.semantic_index` 和 `platform.message_history` 等少量样本，不能证明每个 unit 的四种选择结果。
+`registry` 目前共有 59 个 unit：Core 42、Heavy 1、Platform 2、Never 14。当前测试逐项覆盖四种 tier 开关组合、选择数量与 Never 单元，并验证 file/SQLite unit 不会错误认领子路径。
 
 最小修复：增加一份由 registry 生成的审计矩阵，逐项断言：
 
@@ -122,4 +122,4 @@
 - `wildcard_home_and_persona_units_round_trip_without_overlap`
 - `import_rejects_archive_size_limit_exceeded`
 
-G0 的 transfer 退出条件：上述 P0 全部通过，P1-A/P1-B 有直接测试证据，且在 `cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 与完整工作区测试中复跑通过。当前 P0 归档校验/路径安全/回滚/new-home fixup 与 P1-A 已有证据；stale Core 删除、归档大小上限和完整 tier matrix 仍未完成，不能宣称 transfer 安全闭环完成。
+G0 的 transfer 退出条件：上述 P0 全部通过，P1-A/P1-B 有直接测试证据，且在 `cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 与完整工作区测试中复跑通过。当前归档校验/路径安全/资源上限/回滚/new-home fixup 与 tier 矩阵已有证据；stale Core 删除仍未实现，且 install 的父目录检查与后续文件操作之间仍存在需要更强 openat/目录句柄语义才能彻底消除的本地竞态，因此不能宣称 transfer 安全闭环完成。

@@ -12,6 +12,59 @@ use std::path::{Path, PathBuf};
 use yunxi_base::i18n::text as t;
 use yunxi_base::paths::YunXiPaths;
 
+/// Hard limits for untrusted import archives. These are deliberately kept out
+/// of configuration and the archive format: changing them is a code-level
+/// security policy change, not a per-installation tuning knob.
+pub(super) const MAX_ARCHIVE_ENTRIES: u64 = 100_000;
+pub(super) const MAX_ARCHIVE_UNCOMPRESSED_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+pub(super) const MAX_MANIFEST_BYTES: u64 = 16 * 1024 * 1024;
+
+#[derive(Debug, Default)]
+struct ArchiveBudget {
+    entries: u64,
+    uncompressed_bytes: u64,
+}
+
+impl ArchiveBudget {
+    fn observe_entry(&mut self, header_bytes: u64) -> Result<()> {
+        self.entries = self
+            .entries
+            .checked_add(1)
+            .ok_or_else(|| anyhow::anyhow!("archive entry count overflow"))?;
+        if self.entries > MAX_ARCHIVE_ENTRIES {
+            bail!(
+                "archive contains too many entries: {} (limit {})",
+                self.entries,
+                MAX_ARCHIVE_ENTRIES
+            );
+        }
+
+        self.uncompressed_bytes = self
+            .uncompressed_bytes
+            .checked_add(header_bytes)
+            .ok_or_else(|| anyhow::anyhow!("archive uncompressed byte count overflow"))?;
+        if self.uncompressed_bytes > MAX_ARCHIVE_UNCOMPRESSED_BYTES {
+            bail!(
+                "archive declares too many uncompressed bytes: {} (limit {})",
+                self.uncompressed_bytes,
+                MAX_ARCHIVE_UNCOMPRESSED_BYTES
+            );
+        }
+        Ok(())
+    }
+
+    fn check_manifest_size(header_bytes: u64) -> Result<()> {
+        if header_bytes > MAX_MANIFEST_BYTES {
+            bail!(
+                "archive manifest is too large: {} bytes (limit {})",
+                header_bytes,
+                MAX_MANIFEST_BYTES
+            );
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct ImportOptions {
     pub force: bool,
@@ -144,10 +197,12 @@ fn occupied(paths: &YunXiPaths) -> Option<String> {
 fn read_manifest(archive: &Path) -> Result<Manifest> {
     let file = File::open(archive).with_context(|| format!("opening {}", archive.display()))?;
     let mut tar = tar::Archive::new(GzDecoder::new(file));
+    let mut budget = ArchiveBudget::default();
     let mut manifest = None;
     let mut archive_entries = BTreeMap::new();
     for entry in tar.entries().context("reading the archive")? {
         let mut entry = entry?;
+        budget.observe_entry(entry.size())?;
         let path = entry
             .path()?
             .to_str()
@@ -158,6 +213,7 @@ fn read_manifest(archive: &Path) -> Result<Manifest> {
                 bail!("archive contains duplicate {MANIFEST_NAME} entries");
             }
             require_regular_file(&entry, &path)?;
+            ArchiveBudget::check_manifest_size(entry.size())?;
             let bytes = read_entry_bytes(&mut entry, &path)?;
             manifest =
                 Some(serde_json::from_slice(&bytes).context("parsing the archive manifest")?);
@@ -345,8 +401,10 @@ fn extract(archive: &Path, into: &Path) -> Result<()> {
     std::fs::create_dir_all(into.join("home"))?;
     let file = File::open(archive).with_context(|| format!("opening {}", archive.display()))?;
     let mut tar = tar::Archive::new(GzDecoder::new(file));
+    let mut budget = ArchiveBudget::default();
     for entry in tar.entries().context("reading the archive")? {
         let mut entry = entry?;
+        budget.observe_entry(entry.size())?;
         let path = entry
             .path()?
             .to_str()
@@ -354,6 +412,9 @@ fn extract(archive: &Path, into: &Path) -> Result<()> {
             .ok_or_else(|| anyhow::anyhow!("archive entry path is not valid UTF-8"))?;
         if !entry.header().entry_type().is_file() {
             bail!("archive entry is not a regular file: {path}");
+        }
+        if path == MANIFEST_NAME {
+            ArchiveBudget::check_manifest_size(entry.size())?;
         }
         if path != MANIFEST_NAME {
             let rel = path
@@ -655,4 +716,28 @@ fn backup_current(paths: &YunXiPaths, archive: &Path) -> Result<PathBuf> {
     super::export::export(paths, &destination, &options)
         .context("backing up the current installation before overwriting it")?;
     Ok(destination)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        ArchiveBudget, MAX_ARCHIVE_ENTRIES, MAX_ARCHIVE_UNCOMPRESSED_BYTES, MAX_MANIFEST_BYTES,
+    };
+
+    #[test]
+    fn archive_budget_rejects_entry_and_expansion_limits() {
+        let mut budget = ArchiveBudget::default();
+        budget.entries = MAX_ARCHIVE_ENTRIES;
+        assert!(budget.observe_entry(0).is_err());
+
+        let mut budget = ArchiveBudget::default();
+        budget.uncompressed_bytes = MAX_ARCHIVE_UNCOMPRESSED_BYTES;
+        assert!(budget.observe_entry(1).is_err());
+    }
+
+    #[test]
+    fn archive_budget_rejects_manifest_before_parsing() {
+        assert!(ArchiveBudget::check_manifest_size(MAX_MANIFEST_BYTES).is_ok());
+        assert!(ArchiveBudget::check_manifest_size(MAX_MANIFEST_BYTES + 1).is_err());
+    }
 }

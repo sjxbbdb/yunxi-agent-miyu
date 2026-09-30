@@ -909,6 +909,88 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn tier_matrix_covers_every_registered_unit() {
+        let cases = [
+            ("default", false, false, false, 42, &[Tier::Core][..]),
+            (
+                "index",
+                false,
+                true,
+                false,
+                43,
+                &[Tier::Core, Tier::Heavy][..],
+            ),
+            (
+                "platforms",
+                false,
+                false,
+                true,
+                44,
+                &[Tier::Core, Tier::Platform][..],
+            ),
+            (
+                "all",
+                true,
+                false,
+                false,
+                45,
+                &[Tier::Core, Tier::Heavy, Tier::Platform][..],
+            ),
+        ];
+
+        assert_eq!(UNITS.len(), 59);
+        for (label, all, index, platforms, expected_count, included_tiers) in cases {
+            let mut selected = 0;
+            for unit in UNITS {
+                let expected = included_tiers.contains(&unit.tier);
+                assert_eq!(
+                    unit.included(all, index, platforms),
+                    expected,
+                    "{label}: unexpected inclusion for {} ({:?})",
+                    unit.id,
+                    unit.tier
+                );
+                selected += usize::from(expected);
+            }
+            assert_eq!(selected, expected_count, "{label}: selected count");
+        }
+
+        let never = UNITS
+            .iter()
+            .filter(|unit| unit.tier == Tier::Never)
+            .collect::<Vec<_>>();
+        assert_eq!(never.len(), 14);
+        for unit in never {
+            assert!(
+                !unit.included(true, true, true),
+                "{} became exportable",
+                unit.id
+            );
+        }
+    }
+
+    #[test]
+    fn file_and_sqlite_units_do_not_claim_descendants() {
+        for rel in [
+            "home/alice/profile.md/child",
+            "home/alice/conversation.db/child",
+            "data/personas/alice/memory/memory.db/child",
+            "personas/alice/meme.db/child",
+            "state/personas/alice/memory/evicted_context.db/child",
+        ] {
+            assert!(unit_for(rel).is_none(), "non-directory unit claimed {rel}");
+        }
+        assert_eq!(
+            unit_for("data/kb/files/nested/source.md").map(|unit| unit.id),
+            Some("kb.files")
+        );
+        assert_eq!(
+            unit_for("data/platforms/onebot/real_context/nested/state.json").map(|unit| unit.id),
+            Some("platform.plugin_data")
+        );
+    }
+
+    #[test]
     fn machine_specific_paths_resolve_to_never() {
         for rel in [
             "cache/logs/yunxi.log",
