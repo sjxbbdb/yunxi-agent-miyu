@@ -29,12 +29,14 @@
 - WSL Ubuntu-24.04 IPC 定向测试：`cargo test -p yunxi-core ipc --lib --locked -- --test-threads=1` 33/33 通过，覆盖 lease、frame、协议版本、半帧、超限、断连和同 home 单例。
 - TUI PTY 黑盒 `testkit/tui/config_forms.py` 在隔离 home 下运行结果为 8/16；主菜单与部分表单断言通过，但编辑模型/新增模型导航和保存断言失败。该失败已记录为 G0-09 待修项，不能用 workspace 单测替代。
 - 隐私扫描复跑：公开 `docs/`、发布说明与生产注释中的个人绝对路径命中为 0；剩余 `<upstream-home>` 只在测试 fixture/测试字面量中，另有 `bilibili_live` 第三方 `APP_SEC` 待核验。完整迁移/删除路径审计仍未关闭。
+- G0-09 工具执行黑盒：隔离 `testkit/repl-smoke/run.py` 运行成功，stub 工具实际执行 `printf G0_09_TOOL_OK`，原始输出包含 `Run command` 与 `Ran 1 command`，REPL 保持存活；同一探针的中文 placeholder 断言为 0/2，已作为测试语义差异单独记录，不能宣称该探针全绿。
 - 权限位测试改用 WSL 原生 Linux 文件系统临时目录，不再把 `/mnt` DrvFs 的 0777 映射误当作生产语义；bundled script、registry fixture、TUI changed-prefix、renderer event、tool-summary 和回放编辑测试均已按当前 YunXi 产品输出修正或补强。
 
 ## 未完成项
 
 - G0 的入口与边界审计主体已完成，证据见 `2026-09-30-g0-architecture-audit.md`；fish 分流与 daemon reload 的黑盒子项已通过，但当前测试全绿仍不等于 G0 已退出。
 - 仍需完成 TUI/工具执行的隔离黑盒闭环记录、transfer 单元隐私扫描索引和公开文件最终扫描。IPC 子项已通过；TUI 表单黑盒仍为 8/16。全仓扫描仍发现测试 fixture 中 `<upstream-home>` 等历史绝对路径，以及 `bilibili_live` 中待确认的第三方 `APP_SEC`；在完成 fixture 分类并确认公开性或改为运行时配置前，不得宣称发布面隐私门禁关闭。
+- transfer 审计发现 59 个 registry unit 目前只有部分代表性 round-trip/secret/fixup 测试；manifest/hash/version 校验、逐项恢复/删除、失败回滚、恶意归档和完整 tier 覆盖仍缺直接证据，需在 G0-07/G0-09 后续补测。
 - daemon/IPC 的 lease、frame、协议协商、事件回放和问题问答链；session/conversation/compact/evicted context；transfer 的导出/导入/迁移/隐私分类；default KB write-through；MCP/Skills 快照与断连回退；host capability/command/net guard；persona/profile 的重命名、删除和作用域迁移；调度/background job；产品 `goal` 持久化与 Codex active goal 的区分；以及 `docs/interfaces/subsystems.md` 的挂接契约已完成代码定位，但运行时门禁仍按 G0-05/G0-09 逐项执行。
 - Arch Linux 实机和 macOS M-series 仍未在本机验证；必须保留为明确的环境缺口。
 - G1 及之后的 CompanionContext、结构化 profile、记忆 admission、独立 KB/RAG、Laya、自动总结、终端自然语言层和 TUI 原生化均未开始。
