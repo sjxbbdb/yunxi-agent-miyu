@@ -23,7 +23,7 @@
 - WSL Ubuntu-24.04 `cargo test -p yunxi-core --lib --locked -- --test-threads=1`：642 passed、0 failed、8 ignored。
 - WSL Ubuntu-24.04 `cargo test -p yunxi-engine --lib --locked -- --test-threads=1`：628 passed、0 failed、13 ignored。
 - WSL Ubuntu-24.04 上一轮复跑（归档资源上限、tier 矩阵和 registry 子路径边界之后）：`cargo test -p yunxi-engine --lib --locked -- --test-threads=1` 为 643 passed、0 failed、13 ignored；未设置 `YUNXI_LANG=zh` 时仅复现既有 locale 选择导致的中文显示名断言失败，设置后通过。
-- WSL Ubuntu-24.04 本轮覆盖感知导入复跑：`YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1` 为 648 passed、0 failed、13 ignored；其中 transfer 定向测试为 34/34，包含 stale Core 移动后 marker 失败恢复。
+- WSL Ubuntu-24.04 本轮覆盖感知导入与 rename 错误分类复跑：`YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1` 为 649 passed、0 failed、13 ignored；其中 transfer 定向测试为 35/35，包含 stale Core 移动后 marker 失败恢复和仅 EXDEV 允许 copy fallback。
 - WSL Ubuntu-24.04 `cargo test -p yunxi-hosts --lib --locked -- --test-threads=1`：919 passed、0 failed、10 ignored。
 - WSL Ubuntu-24.04 `cargo test -p yunxi --lib --locked -- --test-threads=1`：504 passed、0 failed、4 ignored。
 - WSL Ubuntu-24.04 全工作区 `cargo test --workspace --no-fail-fast --locked -- --test-threads=1`：四个下层 crate 与根包的最终复跑结果均为 0 失败；此前汇总中根包的 1 个失败已由回放编辑断言的错误过滤条件复现并修正。Doctest 全部通过。
@@ -35,7 +35,7 @@
 - WSL Ubuntu-24.04 pyte venv 的 TUI PTY 黑盒 `testkit/tui/config_forms.py` 在隔离 home 下复跑为 16/16；fixture 显式提供 `custom_models`，并在选择 `stub-model` 前定位到 `Stub` 供应商，覆盖主菜单、全局设置、编辑模型、新增模型和保存退出路径。该证据仍只代表表单闭环，不能用它替代整个终端闭环。
 - 隐私扫描复跑：仓库中的个人绝对路径与上游本机路径已替换为 `<user>`、`/home/tester`、仓库相对路径或运行时环境变量；公开 `docs/`、发布说明与生产注释未发现真实个人路径。`bilibili_live` 的 `APP_KEY`/`APP_SEC` 已核验与公开的 `Rsplwe/bili-live-hime` `src/lib/app-sign.ts` 一致，属于第三方客户端公开签名常量，不是用户凭据，已列入 allowlist。完整迁移/删除路径审计仍未关闭。
 - G0-09 工具执行黑盒：`testkit/repl-smoke/run.py` 现已自带 `STUB_TOOL=1` 和 `printf G0_09_TOOL_OK`，对中英文占位符统一判定，并从真实 `turns.tool_flow` 校验 `run_command` 输出。隔离运行报告 `placeholder_on_paste=true`、`reply_seen=true`、`footer_speed=78 tok/s`、`placeholder_on_recall=true`、`raw_text_on_recall=false`、`repl_alive=true`、`tool_flow_marker=true`、`passed=true`；该探针自身闭环通过，但仍不能替代 fish/daemon/REPL 组合终端闭环。
-- transfer 定向测试：`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 34/34 通过；新增未知 manifest、size/hash、entry 集合、Windows 路径、非 regular tar、Never unit、symlink 导出、new home conversation、staged fixup、marker rollback、归档资源上限、coverage-aware stale Core 清理、legacy merge-only、输入归档保护、stale 清理失败恢复、tier 矩阵和 file/SQLite 子路径边界测试。registry 当前 59 个 unit（Core 42、Heavy 1、Platform 2、Never 14）的静态分类已逐项核对。剩余风险是 install 父目录检查与后续操作之间的本地竞态消除。
+- transfer 定向测试：`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 35/35 通过；新增未知 manifest、size/hash、entry 集合、Windows 路径、非 regular tar、Never unit、symlink 导出、new home conversation、staged fixup、marker rollback、归档资源上限、coverage-aware stale Core 清理、legacy merge-only、输入归档保护、stale 清理失败恢复、rename 错误分类、tier 矩阵和 file/SQLite 子路径边界测试。registry 当前 59 个 unit（Core 42、Heavy 1、Platform 2、Never 14）的静态分类已逐项核对。剩余风险是 install 父目录检查与后续操作之间的本地竞态消除。
 - 权限位测试改用 WSL 原生 Linux 文件系统临时目录，不再把 `/mnt` DrvFs 的 0777 映射误当作生产语义；bundled script、registry fixture、TUI changed-prefix、renderer event、tool-summary 和回放编辑测试均已按当前 YunXi 产品输出修正或补强。
 
 
@@ -56,7 +56,7 @@
 
 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/privacy/g0_scan.py`
 
-本轮结果：扫描 1857 个已跟踪文本文件，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开 `APP_KEY`/`APP_SEC` 归类为 1 个 `public_allowlist` 文件，2 个合成测试值归类为 `fixture_allowlist`。脚本只输出类别、计数和路径，不输出匹配内容。
+本轮结果：扫描 1858 个已跟踪文本文件，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开 `APP_KEY`/`APP_SEC` 归类为 1 个 `public_allowlist` 文件，2 个合成测试值归类为 `fixture_allowlist`。脚本只输出类别、计数和路径，不输出匹配内容。
 
 ## 发布约束
 

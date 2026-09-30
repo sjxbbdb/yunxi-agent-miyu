@@ -12,7 +12,7 @@
 | M-01 | 格式与元数据 | `cargo fmt --all -- --check`；`cargo metadata --no-deps --format-version 1` | WSL Ubuntu-24.04 | 通过 | 不覆盖运行时行为 |
 | M-02 | 全工作区编译 | `cargo check --workspace --all-targets --locked` | WSL Ubuntu-24.04 | 通过 | Arch/macOS 未验证 |
 | M-03 | 分 crate 单测 | `cargo test -p yunxi-base --lib --locked -- --test-threads=1`；`yunxi-core`、`yunxi-hosts`、`yunxi --lib` 同格式命令 | WSL Ubuntu-24.04 | base 395/0/6；core 642/0/8；hosts 919/0/10；root 504/0/4 | 这些是既有基线，未覆盖故障注入 |
-| M-04 | engine 与 transfer | `YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1`；`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` | WSL Ubuntu-24.04 | engine 648/0/13；transfer 34/34 | 父目录 TOCTOU 仍未消除 |
+| M-04 | engine 与 transfer | `YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1`；`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` | WSL Ubuntu-24.04 | engine 649/0/13；transfer 35/35 | 父目录 TOCTOU 仍未消除 |
 | M-05 | workspace 单测 | `cargo test --workspace --no-fail-fast --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 最近一次记录为 0 失败，doctest 通过 | 需在 G0 退出前按同一环境复跑并留完整日志 |
 | M-06 | 架构依赖 | `python test_scripts/arch_dep_check.py` | 工作区 Python | 退出码 0 | 只检查跨层引用，不替代运行时测试 |
 | M-07 | fish 普通语法/接管 | `python3 testkit/fish-accept-line/run.py`；真实 fish `pty_run.py` | WSL Ubuntu-24.04 | 静态 17/17；PTY 通过 | 尚未注入断连、SIGINT、父进程替换 |
@@ -20,7 +20,7 @@
 | M-09 | fish → daemon → REPL → tool | `python3 testkit/g0-terminal-combo/run.py` | WSL Ubuntu-24.04 隔离 home/daemon/stub | `passed=true`，已重复两次 | 不能替代真实模型/权限故障注入 |
 | M-10 | REPL 工具执行 | `python3 testkit/repl-smoke/run.py` | WSL Ubuntu-24.04 隔离 home | `passed=true`，tool flow marker 存在 | 只验证 stub tool，不覆盖真实命令危险边界 |
 | M-11 | TUI 表单 | `python3 testkit/tui/config_forms.py` | WSL Ubuntu-24.04 + pyte venv | 16/16 | 不代表窄屏、ANSI/kitty、并发重绘全覆盖 |
-| M-12 | 隐私门禁 | `python testkit/privacy/g0_scan.py --repo .` | 工作区 Python | 1857 tracked files；personal/private-key/credential 为 0 | 不替代 transfer 恢复/删除审计 |
+| M-12 | 隐私门禁 | `python testkit/privacy/g0_scan.py --repo .` | 工作区 Python | 1858 tracked text files；personal/private-key/credential 为 0 | 不替代 transfer 恢复/删除审计 |
 
 ## 2. 尚未满足的 G0 证据
 

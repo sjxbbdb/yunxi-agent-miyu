@@ -683,11 +683,16 @@ fn install(
                 ensure_destination_parent(root, parent)?;
             }
             move_existing(&destination, root, rollback, undo)?;
-            // Rename first (same filesystem, atomic); fall back to a copy when
-            // the staging dir landed elsewhere.
-            if std::fs::rename(&path, &destination).is_err() {
+            // Rename first (same filesystem, atomic); fall back to a copy
+            // only when the staging dir landed on another filesystem. Other
+            // errors must remain errors instead of widening the operation to
+            // a path-based copy after a permission or destination race.
+            if let Err(error) = std::fs::rename(&path, &destination) {
+                if !is_cross_device_error(&error) {
+                    return Err(error).with_context(|| format!("installing {}", rel.display()));
+                }
                 copy_into_place(&path, &destination)
-                    .with_context(|| format!("installing {}", rel.display()))?;
+                    .with_context(|| format!("installing {} across filesystems", rel.display()))?;
             }
             installed += 1;
         }
@@ -829,6 +834,24 @@ fn copy_into_place(source: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
+fn is_cross_device_error(error: &std::io::Error) -> bool {
+    #[cfg(unix)]
+    {
+        error.raw_os_error() == Some(libc::EXDEV)
+    }
+    #[cfg(windows)]
+    {
+        // Win32 ERROR_NOT_SAME_DEVICE. Keep this local rather than importing
+        // a Windows-only crate into the portable transfer module.
+        error.raw_os_error() == Some(17)
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = error;
+        false
+    }
+}
+
 /// Marks the restored tree as already using the current layout, so
 /// `YunXiPaths::new` does not try to migrate it from a legacy one.
 fn stamp_layout_markers(root: &Path, rollback: &Path, undo: &mut Vec<UndoEntry>) -> Result<()> {
@@ -856,7 +879,8 @@ fn backup_current(paths: &YunXiPaths, archive: &Path) -> Result<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::{
-        ArchiveBudget, MAX_ARCHIVE_ENTRIES, MAX_ARCHIVE_UNCOMPRESSED_BYTES, MAX_MANIFEST_BYTES,
+        is_cross_device_error, ArchiveBudget, MAX_ARCHIVE_ENTRIES, MAX_ARCHIVE_UNCOMPRESSED_BYTES,
+        MAX_MANIFEST_BYTES,
     };
 
     #[test]
@@ -874,5 +898,23 @@ mod tests {
     fn archive_budget_rejects_manifest_before_parsing() {
         assert!(ArchiveBudget::check_manifest_size(MAX_MANIFEST_BYTES).is_ok());
         assert!(ArchiveBudget::check_manifest_size(MAX_MANIFEST_BYTES + 1).is_err());
+    }
+
+    #[test]
+    fn only_cross_device_errors_allow_copy_fallback() {
+        #[cfg(unix)]
+        assert!(is_cross_device_error(&std::io::Error::from_raw_os_error(
+            libc::EXDEV,
+        )));
+        #[cfg(windows)]
+        assert!(is_cross_device_error(&std::io::Error::from_raw_os_error(
+            17
+        )));
+        assert!(!is_cross_device_error(&std::io::Error::from_raw_os_error(
+            13
+        )));
+        assert!(!is_cross_device_error(&std::io::Error::from_raw_os_error(
+            2
+        )));
     }
 }
