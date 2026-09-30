@@ -470,6 +470,133 @@ pub(crate) mod tests {
         assert!(error.contains("unit mismatch"), "got: {error}");
     }
 
+    #[test]
+    fn never_units_cannot_be_imported_from_a_handcrafted_manifest() {
+        let source = tempfile::tempdir().unwrap();
+        let paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(&paths, &archive, &super::export::ExportOptions::default()).unwrap();
+
+        let raw = std::fs::read(&archive).unwrap();
+        let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(&raw[..]));
+        let mut manifest: super::manifest::Manifest = tar
+            .entries()
+            .unwrap()
+            .filter_map(Result::ok)
+            .find(|entry| {
+                entry
+                    .path()
+                    .map(|path| path.to_string_lossy() == "manifest.json")
+                    .unwrap_or(false)
+            })
+            .map(|entry| serde_json::from_reader(entry).unwrap())
+            .unwrap();
+        manifest.entries[0].path = ".home-layout-v1.journal.json".to_string();
+        manifest.entries[0].unit = "layout.home_journal".to_string();
+        let doctored = out.path().join("never-unit.tar.gz");
+        rewrite_manifest(&archive, &doctored, &manifest);
+
+        let target = tempfile::tempdir().unwrap();
+        let error = super::import::import(
+            &test_paths(target.path()),
+            &doctored,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("non-transferable"), "got: {error}");
+    }
+
+    #[test]
+    fn new_home_layout_conversation_is_occupied_and_fixed_up() {
+        let target = tempfile::tempdir().unwrap();
+        let paths = test_paths(target.path());
+        std::fs::write(target.path().join(".home-layout-v1"), "tester").unwrap();
+        let home = target.path().join("home/tester");
+        std::fs::create_dir_all(&home).unwrap();
+        let db_path = home.join("conversation.db");
+        {
+            let conn = rusqlite::Connection::open(&db_path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE sessions (session_id TEXT PRIMARY KEY, workspace TEXT);
+                 CREATE TABLE turns (turn_id TEXT PRIMARY KEY, workspace TEXT,
+                                     tool_footprint TEXT, owner_pid INTEGER);
+                 CREATE TABLE queued_prompts (prompt_id TEXT PRIMARY KEY, owner_pid INTEGER);
+                 INSERT INTO sessions VALUES ('s1', '/missing/on/target');
+                 INSERT INTO turns VALUES ('t1', '/missing/on/target', 'old-footprint', 42);
+                 INSERT INTO queued_prompts VALUES ('q1', 42);",
+            )
+            .unwrap();
+        }
+
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+        let error =
+            super::import::import(&paths, &archive, &super::import::ImportOptions::default())
+                .unwrap_err()
+                .to_string();
+        assert!(
+            error.contains("会话历史") || error.contains("conversation history"),
+            "got: {error}"
+        );
+
+        assert_eq!(super::fixups::apply(&paths).unwrap(), 1);
+        let conn = rusqlite::Connection::open(db_path).unwrap();
+        let workspace: Option<String> = conn
+            .query_row("SELECT workspace FROM sessions", [], |row| row.get(0))
+            .unwrap();
+        assert!(workspace.is_none());
+        let footprint: Option<String> = conn
+            .query_row("SELECT tool_footprint FROM turns", [], |row| row.get(0))
+            .unwrap();
+        assert!(footprint.is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn marker_failure_rolls_back_every_installed_file() {
+        use std::os::unix::fs::symlink;
+
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let restored = test_paths(target.path());
+        let outside = tempfile::tempdir().unwrap();
+        symlink(outside.path(), target.path().join(".layout-v1")).unwrap();
+        let error = super::import::import(
+            &restored,
+            &archive,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("symlink"), "got: {error}");
+        assert!(
+            !restored.config_file.exists(),
+            "live files must be rolled back"
+        );
+        assert!(!outside.path().join("config.jsonc").exists());
+        assert!(std::fs::symlink_metadata(target.path().join(".layout-v1")).is_ok());
+    }
+
     #[cfg(unix)]
     #[test]
     fn export_refuses_symlinked_sources() {

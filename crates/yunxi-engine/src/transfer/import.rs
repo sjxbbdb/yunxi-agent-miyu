@@ -2,7 +2,7 @@
 
 use super::export::yunxi_home;
 use super::manifest::{Manifest, MANIFEST_FORMAT_VERSION, MANIFEST_NAME};
-use super::registry::unit_for;
+use super::registry::{unit_for, Tier};
 use anyhow::{bail, Context, Result};
 use flate2::read::GzDecoder;
 use std::collections::{BTreeMap, BTreeSet};
@@ -62,6 +62,22 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
         .context("creating a staging directory")?;
     let staged = staging.path().join("home");
     extract(archive, staging.path())?;
+    validate_staged(&staged, &manifest)?;
+
+    // Rewrite machine-specific fields while the restored databases are still
+    // in staging, so a SQLite failure cannot leave the live tree half changed.
+    let staged_databases = manifest
+        .entries
+        .iter()
+        .filter(|entry| {
+            matches!(
+                unit_for(&entry.path).map(|unit| unit.id),
+                Some("state.conversation" | "home.conversation")
+            )
+        })
+        .map(|entry| staged.join(&entry.path))
+        .collect::<Vec<_>>();
+    let cleared_workspaces = super::fixups::apply_database_paths(&staged_databases)?;
 
     let mut unknown_units = BTreeSet::new();
     for entry in &manifest.entries {
@@ -72,9 +88,24 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
         }
     }
 
-    let restored = install(&staged, &root)?;
-    stamp_layout_markers(&root)?;
-    let cleared_workspaces = super::fixups::apply(paths)?;
+    let rollback = tempfile::tempdir_in(root.parent().unwrap_or(&root))
+        .context("creating an import rollback directory")?;
+    let mut undo = Vec::new();
+    let restored = match install(&staged, &root, rollback.path(), &mut undo).and_then(|restored| {
+        stamp_layout_markers(&root, rollback.path(), &mut undo)?;
+        Ok(restored)
+    }) {
+        Ok(restored) => restored,
+        Err(error) => {
+            let rollback_error = rollback_install(&undo);
+            return match rollback_error {
+                Ok(()) => Err(error),
+                Err(rollback_error) => Err(error.context(format!(
+                    "import failed and rollback also failed: {rollback_error}"
+                ))),
+            };
+        }
+    };
 
     Ok(ImportReport {
         restored,
@@ -96,8 +127,11 @@ fn occupied(paths: &YunXiPaths) -> Option<String> {
             paths.config_file.display()
         ));
     }
-    let conversations = paths.state_dir.join("conversation.db");
-    if conversations.exists() {
+    let databases = match super::fixups::conversation_db_paths(paths) {
+        Ok(databases) => databases,
+        Err(error) => return Some(format!("cannot inspect conversation databases: {error}")),
+    };
+    if let Some(conversations) = databases.into_iter().find(|path| path.exists()) {
         return Some(format!(
             "{}: {}",
             t("conversation history already exists", "目标已有会话历史"),
@@ -167,6 +201,9 @@ fn validate_manifest_entries(
             bail!("manifest contains duplicate path: {}", item.path);
         }
         if let Some(unit) = unit_for(&item.path) {
+            if unit.tier == Tier::Never {
+                bail!("manifest contains a non-transferable path: {}", item.path);
+            }
             if item.unit != unit.id {
                 bail!(
                     "manifest unit mismatch for {}: declared {}, expected {}",
@@ -305,6 +342,7 @@ fn check_versions(manifest: &Manifest) -> Result<()> {
 }
 
 fn extract(archive: &Path, into: &Path) -> Result<()> {
+    std::fs::create_dir_all(into.join("home"))?;
     let file = File::open(archive).with_context(|| format!("opening {}", archive.display()))?;
     let mut tar = tar::Archive::new(GzDecoder::new(file));
     for entry in tar.entries().context("reading the archive")? {
@@ -334,8 +372,91 @@ fn extract(archive: &Path, into: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Moves the staged tree into place, replacing whatever it covers.
-fn install(staged: &Path, root: &Path) -> Result<usize> {
+/// Re-hashes the extracted tree so replacing the archive between the initial
+/// manifest pass and extraction cannot install bytes that were never checked.
+fn validate_staged(staged: &Path, manifest: &Manifest) -> Result<()> {
+    let expected: BTreeMap<&str, (&str, u64)> = manifest
+        .entries
+        .iter()
+        .map(|entry| (entry.path.as_str(), (entry.blake3.as_str(), entry.size)))
+        .collect();
+    let mut seen = BTreeSet::new();
+    let mut stack = vec![staged.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for child in std::fs::read_dir(&dir)? {
+            let child = child?;
+            let path = child.path();
+            let metadata = std::fs::symlink_metadata(&path)?;
+            if metadata.file_type().is_symlink() {
+                bail!("staged archive contains a symlink: {}", path.display());
+            }
+            if metadata.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            if !metadata.is_file() {
+                bail!(
+                    "staged archive contains a non-regular file: {}",
+                    path.display()
+                );
+            }
+            let rel = path
+                .strip_prefix(staged)
+                .context("staged path outside the staging root")?
+                .to_str()
+                .ok_or_else(|| anyhow::anyhow!("staged path is not valid UTF-8"))?
+                .replace(std::path::MAIN_SEPARATOR, "/");
+            let Some((expected_hash, expected_size)) = expected.get(rel.as_str()) else {
+                bail!("staged archive contains an undeclared path: {rel}");
+            };
+            let (size, hash) = hash_file(&path)?;
+            if size != *expected_size || hash != *expected_hash {
+                bail!("staged content does not match manifest: {rel}");
+            }
+            seen.insert(rel);
+        }
+    }
+    if seen.len() != expected.len() {
+        let missing = expected
+            .keys()
+            .find(|path| !seen.contains(**path))
+            .copied()
+            .unwrap_or("<unknown>");
+        bail!("staged archive is missing a manifest entry: {missing}");
+    }
+    Ok(())
+}
+
+fn hash_file(path: &Path) -> Result<(u64, String)> {
+    let mut file = File::open(path).with_context(|| format!("opening {}", path.display()))?;
+    let mut hasher = blake3::Hasher::new();
+    let mut buffer = [0u8; 32 * 1024];
+    let mut size = 0u64;
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+        size += read as u64;
+    }
+    Ok((size, hasher.finalize().to_hex().to_string()))
+}
+
+#[derive(Debug)]
+struct UndoEntry {
+    destination: PathBuf,
+    backup: Option<PathBuf>,
+}
+
+/// Moves the staged tree into place, recording enough information to restore
+/// every touched file if marker stamping or a later import step fails.
+fn install(
+    staged: &Path,
+    root: &Path,
+    rollback: &Path,
+    undo: &mut Vec<UndoEntry>,
+) -> Result<usize> {
     ensure_real_dir(staged, false)?;
     ensure_real_dir(root, false)?;
     let mut installed = 0usize;
@@ -365,20 +486,7 @@ fn install(staged: &Path, root: &Path) -> Result<usize> {
             if let Some(parent) = destination.parent() {
                 ensure_destination_parent(root, parent)?;
             }
-            if let Ok(destination_metadata) = std::fs::symlink_metadata(&destination) {
-                if destination_metadata.file_type().is_symlink() {
-                    bail!(
-                        "refusing to replace a destination symlink: {}",
-                        destination.display()
-                    );
-                }
-                if !destination_metadata.is_file() {
-                    bail!(
-                        "destination is not a regular file: {}",
-                        destination.display()
-                    );
-                }
-            }
+            move_existing(&destination, root, rollback, undo)?;
             // Rename first (same filesystem, atomic); fall back to a copy when
             // the staging dir landed elsewhere.
             if std::fs::rename(&path, &destination).is_err() {
@@ -389,6 +497,85 @@ fn install(staged: &Path, root: &Path) -> Result<usize> {
         }
     }
     Ok(installed)
+}
+
+fn move_existing(
+    destination: &Path,
+    root: &Path,
+    rollback: &Path,
+    undo: &mut Vec<UndoEntry>,
+) -> Result<()> {
+    let metadata = match std::fs::symlink_metadata(destination) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            undo.push(UndoEntry {
+                destination: destination.to_path_buf(),
+                backup: None,
+            });
+            return Ok(());
+        }
+        Err(error) => {
+            return Err(error).with_context(|| format!("checking {}", destination.display()))
+        }
+    };
+    if metadata.file_type().is_symlink() {
+        bail!(
+            "refusing to replace a destination symlink: {}",
+            destination.display()
+        );
+    }
+    if !metadata.is_file() {
+        bail!(
+            "destination is not a regular file: {}",
+            destination.display()
+        );
+    }
+    let rel = destination
+        .strip_prefix(root)
+        .context("destination escaped the install root")?;
+    let backup = rollback.join(rel);
+    if let Some(parent) = backup.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::rename(destination, &backup).with_context(|| {
+        format!(
+            "moving {} to the import rollback directory",
+            destination.display()
+        )
+    })?;
+    undo.push(UndoEntry {
+        destination: destination.to_path_buf(),
+        backup: Some(backup),
+    });
+    Ok(())
+}
+
+fn rollback_install(undo: &[UndoEntry]) -> Result<()> {
+    for entry in undo.iter().rev() {
+        match std::fs::symlink_metadata(&entry.destination) {
+            Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_file() => {
+                bail!(
+                    "rollback destination is not a regular file: {}",
+                    entry.destination.display()
+                );
+            }
+            Ok(_) => std::fs::remove_file(&entry.destination)?,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(error)
+                    .with_context(|| format!("checking {}", entry.destination.display()))
+            }
+        }
+        if let Some(backup) = &entry.backup {
+            std::fs::rename(backup, &entry.destination).with_context(|| {
+                format!(
+                    "restoring {} from the import rollback directory",
+                    entry.destination.display()
+                )
+            })?;
+        }
+    }
+    Ok(())
 }
 
 fn ensure_real_dir(path: &Path, create: bool) -> Result<()> {
@@ -448,12 +635,11 @@ fn copy_into_place(source: &Path, destination: &Path) -> Result<()> {
 
 /// Marks the restored tree as already using the current layout, so
 /// `YunXiPaths::new` does not try to migrate it from a legacy one.
-fn stamp_layout_markers(root: &Path) -> Result<()> {
+fn stamp_layout_markers(root: &Path, rollback: &Path, undo: &mut Vec<UndoEntry>) -> Result<()> {
     for marker in [".layout-v1", ".resource-layout-v1"] {
         let path = root.join(marker);
-        if !path.exists() {
-            std::fs::write(&path, "1").with_context(|| format!("writing {}", path.display()))?;
-        }
+        move_existing(&path, root, rollback, undo)?;
+        std::fs::write(&path, "1").with_context(|| format!("writing {}", path.display()))?;
     }
     Ok(())
 }

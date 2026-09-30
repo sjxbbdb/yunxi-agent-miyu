@@ -7,16 +7,41 @@
 
 use anyhow::{Context, Result};
 use rusqlite::Connection;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use yunxi_base::paths::YunXiPaths;
 
 /// Applies every machine-specific rewrite to the restored state.
 /// Returns how many session workspaces had to be cleared.
 pub fn apply(paths: &YunXiPaths) -> Result<usize> {
-    let database = paths.state_dir.join("conversation.db");
-    if !database.exists() {
-        return Ok(0);
+    let databases = conversation_db_paths(paths)?;
+    apply_database_paths(&databases)
+}
+
+/// Applies fixups to an explicit set of restored databases. Import uses this
+/// on the staging tree so a malformed database cannot partially mutate the
+/// live installation.
+pub(crate) fn apply_database_paths(databases: &[PathBuf]) -> Result<usize> {
+    let mut cleared_total = 0usize;
+    for database in databases {
+        let metadata = match std::fs::symlink_metadata(database) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => {
+                return Err(error).with_context(|| format!("checking {}", database.display()))
+            }
+        };
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
+            anyhow::bail!(
+                "conversation database is not a regular file: {}",
+                database.display()
+            );
+        }
+        cleared_total += apply_database(database)?;
     }
+    Ok(cleared_total)
+}
+
+fn apply_database(database: &Path) -> Result<usize> {
     let mut conn =
         Connection::open(&database).with_context(|| format!("opening {}", database.display()))?;
     let tx = conn.transaction()?;
@@ -48,6 +73,51 @@ pub fn apply(paths: &YunXiPaths) -> Result<usize> {
 
     tx.commit()?;
     Ok(cleared)
+}
+
+/// Returns every conversation database in the current layout, without ever
+/// following a symlinked home directory. The legacy and new-admin paths are
+/// deduplicated because they are identical before the home migration.
+pub(crate) fn conversation_db_paths(paths: &YunXiPaths) -> Result<Vec<PathBuf>> {
+    let mut databases = Vec::new();
+    for database in [
+        paths.conversation_db_dir().join("conversation.db"),
+        paths.state_dir.join("conversation.db"),
+    ] {
+        if !databases.contains(&database) {
+            databases.push(database);
+        }
+    }
+
+    let homes = paths.homes_dir();
+    match std::fs::symlink_metadata(&homes) {
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            anyhow::bail!(
+                "refusing to inspect a symlinked homes directory: {}",
+                homes.display()
+            );
+        }
+        Ok(metadata) if metadata.is_dir() => {
+            for child in std::fs::read_dir(&homes)? {
+                let child = child?;
+                let path = child.path();
+                let metadata = std::fs::symlink_metadata(&path)?;
+                if metadata.file_type().is_symlink() {
+                    anyhow::bail!("refusing to inspect a symlinked home: {}", path.display());
+                }
+                if metadata.is_dir() {
+                    let database = path.join("conversation.db");
+                    if !databases.contains(&database) {
+                        databases.push(database);
+                    }
+                }
+            }
+        }
+        Ok(_) => anyhow::bail!("homes path is not a directory: {}", homes.display()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error).with_context(|| format!("checking {}", homes.display())),
+    }
+    Ok(databases)
 }
 
 /// Nulls `workspace` on rows whose directory is absent here.
