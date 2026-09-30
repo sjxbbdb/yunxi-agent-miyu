@@ -30,6 +30,7 @@
 - TUI PTY 黑盒 `testkit/tui/config_forms.py` 在隔离 home 下运行结果为 8/16；主菜单与部分表单断言通过，但编辑模型/新增模型导航和保存断言失败。该失败已记录为 G0-09 待修项，不能用 workspace 单测替代。
 - 隐私扫描复跑：公开 `docs/`、发布说明与生产注释中的个人绝对路径命中为 0；剩余 `<upstream-home>` 只在测试 fixture/测试字面量中，另有 `bilibili_live` 第三方 `APP_SEC` 待核验。完整迁移/删除路径审计仍未关闭。
 - G0-09 工具执行黑盒：隔离 `testkit/repl-smoke/run.py` 运行成功，stub 工具实际执行 `printf G0_09_TOOL_OK`，原始输出包含 `Run command` 与 `Ran 1 command`，REPL 保持存活；同一探针的中文 placeholder 断言为 0/2，已作为测试语义差异单独记录，不能宣称该探针全绿。
+- transfer 定向测试：`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 11/11 通过；registry 当前 59 个 unit（Core 42、Heavy 1、Platform 2、Never 14）的静态分类已核对。
 - 权限位测试改用 WSL 原生 Linux 文件系统临时目录，不再把 `/mnt` DrvFs 的 0777 映射误当作生产语义；bundled script、registry fixture、TUI changed-prefix、renderer event、tool-summary 和回放编辑测试均已按当前 YunXi 产品输出修正或补强。
 
 ## 未完成项
