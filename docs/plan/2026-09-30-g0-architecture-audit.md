@@ -18,6 +18,20 @@
 
 **结论**：当前未发现第二个 daemon 生命周期、第二个 shell router 或第二个 IPC 协议实现。未来 CompanionContext、Laya、自动总结均只能挂在上述回合/提示/事件边界，不能新建常驻链路。
 
+### 1.1 G0-02 重复运行时逐项搜索记录
+
+以下记录来自当前工作树的 `rg` 只读搜索和入口文件核对。`保留`表示该实现是权威 owner；`暂不处理`表示它不是重复运行时，不应为了命名相似而合并或删除。
+
+| 对象 | 搜索范围/关键词 | as-built 入口与调用方向 | 复用结论 |
+| --- | --- | --- | --- |
+| daemon | `rg -n "daemon::run|pub async fn run|acquire_home_singleton" src crates` | `src/cli/mod.rs` → `yunxi_hosts::daemon::run`；`crates/yunxi-hosts/src/daemon.rs` 先取得 `yunxi_core::ipc::acquire_home_singleton`，再进入 web/worker/runtime | 保留统一 daemon；未发现第二生命周期或第二 host runtime；CLI 只控制/调用，不另起 daemon |
+| shell capture/router | `rg -n "is_shell_command|shell_intercept|--shell-intercept" crates/yunxi-base/src/shell src/cli` | fish/bash/zsh hook 位于 `crates/yunxi-base/src/shell/{fish,bash,zsh}.rs`，统一使用 `shell/mod.rs::is_shell_command`；CLI 进入 `src/cli/shell_bridge.rs::run_shell_intercept` | 保留一套 capture/router；三种 shell hook 是适配层，不是三套 router；暂不处理 |
+| prompt assembler/cache | `rg -n "system_prompt_with|persona_system_prompt|PrefixChain|prompt_cache_key|compare_and_store" crates src` | persona source 在 `yunxi-base/config/persona_paths.rs`；回合组装/append/fossilization 在 `yunxi-engine/src/agent/prompt.rs`；LLM prefix tracking 在 `yunxi-core/src/llm/cache_prefix.rs`，由 provider wire adapter 转发 | 复用并保留分层职责；base source、agent prompt、LLM prefix 和 provider adapter 不是第二 prompt 链，不合并 |
+| scheduler | `rg -n "Scheduler|scheduling|spawn_scheduled_message_worker|scheduled_messages|SEARCH_SCHEDULER" crates src` | 会话并发/限流：`yunxi-hosts/src/platforms/scheduling.rs`；搜索 provider 冷却：`yunxi-engine/src/tools/web/scheduler.rs`；定时消息：`yunxi-hosts/src/platforms/plugins/scheduled_messages/`；后台 job 有独立 job owner | 多个 scheduler 是不同领域 owner，不是重复总调度器；保留，暂不合并。`MemoryOrganizer` 是 memory store 的 worker，不是第二 store |
+| memory store | `rg -n "struct MemoryStore|MemoryStore::new|pub fn .*memory|knowledge_base" crates src` | 唯一核心为 `yunxi-core/src/memory/mod.rs::MemoryStore`，recall/browse/semantic/dedup/organizer 是同一 store 的拆分；KB 为 `tools/knowledge_base/{mod,store,search,dashboard}.rs` 独立入口 | 保留唯一 MemoryStore；KB 使用独立 source/metadata/semantic schema。测试中构造 MemoryStore 只用于跨域隔离断言，不是共库或第二实现 |
+
+本表的关键词搜索只回答“是否存在重复入口”，不替代后续阶段的故障注入、删除恢复和权限组合验收；未来新增模块必须先挂在这些 owner/seam 上。
+
 ## 2. session、compact 与内容三分
 
 | 责任 | 真实入口 | 关键边界 |
