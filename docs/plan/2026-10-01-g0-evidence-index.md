@@ -2,7 +2,7 @@
 
 本索引把当前 G0 退出审计引用的命令、环境、提交和稳定摘要绑定起来。原始终端输出不写入仓库，避免把本机路径、环境变量或日志内容发布到公开仓库；`observed session` 是本次 Codex 运行中对应的终端会话标识，结果摘要只记录退出码、计数和边界结论。
 
-生成时间：`2026-10-01 07:01:20 UTC`；本轮黑盒复核时间：`2026-10-01 07:18:33 UTC`
+生成时间：`2026-10-01 07:01:20 UTC`；本轮黑盒复核时间：`2026-10-01 07:25:11 UTC`
 
 测试基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`；当前复核提交：`249b67f5`
 环境：WSL `Ubuntu-24.04`，仓库 `<repo-root>`，`CARGO_BUILD_JOBS=1`，cargo 进程使用 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0`；需要中文 golden 的命令使用 `YUNXI_LANG=zh`。
@@ -20,6 +20,7 @@
 | `G0-20261001-repl-01` | current shell (completed) | `python3 testkit/repl-smoke/run.py` | 0 | 修复测试夹具读取过时 `YUNXI_HOME/state/conversation.db` 后，placeholder/reply/footer/history/alive/tool-flow 全部通过；`reply_seconds=1.57`、`78 tok/s` |
 | `G0-20261001-daemon-orphan-01` | current shell (completed) | `python3 testkit/daemon-orphan/run.py --binary target/debug/yunxi` | 0 | 6/6 passed；覆盖启动者 SIGKILL/正常退出、真实 daemon 存活/停止及无孤儿 |
 | `G0-20261001-mcp-persistent-01` | current shell (completed) | `python3 testkit/mcp-persistent/run.py target/debug/yunxi` | 0 | 5/5 passed；覆盖同会话状态、跨会话隔离、system prompt、删除会话回收和 daemon 停止清理 |
+| `G0-20261001-tui-01` | current shell (completed) | `PYTE_VENV/bin/python testkit/tui/config_forms.py --binary target/debug/yunxi`（临时 pyte 0.8.2 venv） | 0 | 16/16 passed；覆盖主菜单、供应商/模型表单、Esc 回退和保存退出 |
 
 ### 本轮失败与修复记录
 
@@ -42,6 +43,5 @@
 2. M-14/M-16 的非 test binary 构建尚未在本索引记录二进制 SHA-256；不得把 testkit feature 产物当作生产 daemon 黑盒输入。
 3. M-18 只证明匹配调用快速失败，不独立证明 PID 退出；非法 JSON、半写 stdout 和 method+result 畸形对象仍是 G0-08 覆盖缺口。
 4. Arch Linux 实机、macOS M-series、transfer 目录句柄竞态、完整跨域恢复和组合故障注入保持在后续阶段风险登记中。
-5. `testkit/tui/config_forms.py` 的历史 16/16 证据依赖 pyte 环境；当前 WSL 基础 Python 未安装 pyte，本轮未重复安装依赖，不能把该历史记录误报为本轮复跑。
 
 该文件是证据索引，不是 G0 完成声明；G1 仍未开始。
