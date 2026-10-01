@@ -104,7 +104,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 ## 6. 当前阶段门禁与未验证项
 
-已完成证据包括入口定位、重复运行时初查、数据边界清单、prompt/cache 接缝、Skills/MCP 与权限真相源。WSL fish 静态 17/17、真实 PTY、daemon reload 2/2、IPC 33/33、transfer 37/37、terminal-combo、repl-smoke、TUI 表单 16/16、daemon orphan 6/6、MCP persistent 5/5 均有通过记录。最新 engine 定向全量为 658/0/13，包含启动隔离、KB 双向删除和进度损坏回归；逐次命令证据以测试矩阵和 release note 为准。
+已完成证据包括入口定位、重复运行时初查、数据边界清单、prompt/cache 接缝、Skills/MCP 与权限真相源。WSL fish 静态 17/17、真实 PTY、daemon reload 2/2、IPC 33/33、transfer 37/37、terminal-combo、repl-smoke、TUI 表单 16/16、daemon orphan 6/6、MCP persistent 5/5 均有通过记录。当前提交 workspace 复跑为 root 508、base 396、core 651、engine 663、hosts 920，均无失败；engine 计数包含启动隔离、KB 双向删除、进度损坏和 MCP 断连边界回归；逐次命令证据以测试矩阵和 release note 为准。
 
 G0 退出复核尚需完成：
 

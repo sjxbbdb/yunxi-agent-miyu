@@ -13,7 +13,7 @@
 | M-02 | 全工作区编译 | `cargo check --workspace --all-targets --locked` | WSL Ubuntu-24.04 | 通过 | Arch/macOS 未验证 |
 | M-03 | 分 crate 单测 | `cargo test -p yunxi-base --lib --locked -- --test-threads=1`；`yunxi-core`、`yunxi-hosts`、`yunxi --lib` 同格式命令 | WSL Ubuntu-24.04 | base 396/0/6；core 643/0/8（含 profile prompt-only 边界）；hosts 920/0/10；root 504/0/4 | 仍未覆盖故障注入 |
 | M-04 | engine 与 transfer | `YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1`；`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` | WSL Ubuntu-24.04 | engine 658/0/13（含 MCP 启动隔离、KB 双向删除隔离与 embedding 进度损坏边界）；transfer 37/37（含 usage.db SQLite 快照/导入、成员路径缺口护栏） | 父目录 TOCTOU 仍未消除 |
-| M-05 | workspace 单测 | `YUNXI_LANG=zh cargo test --workspace --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 退出码 0；root 504/0/4、base 396/0/6、core 643/0/8、engine 658/0/13、hosts 920/0/10；所有 doctest 通过 | 未覆盖 Arch/macOS |
+| M-05 | workspace 单测 | `CARGO_TARGET_DIR=/tmp/yunxi-g0-final-target CARGO_BUILD_JOBS=1 YUNXI_LANG=zh systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0 cargo test --workspace --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 绑定当前提交 `dc012f3c`；退出码 0；root 508/0/8、base 396/0/6、core 651/0/8、engine 663/0/13、hosts 920/0/10；所有 doctest 通过；测试后已删除临时 target | 未覆盖 Arch/macOS |
 | M-06 | 架构依赖 | `python test_scripts/arch_dep_check.py` | 工作区 Python | 退出码 0 | 只检查跨层引用，不替代运行时测试 |
 | M-07 | fish 普通语法/接管 | `python3 testkit/fish-accept-line/run.py`；真实 fish `pty_run.py` | WSL Ubuntu-24.04 | 静态 17/17；PTY 通过 | 尚未注入断连、SIGINT、父进程替换 |
 | M-08 | daemon reload 与 IPC | `cargo test --test daemon_reload --locked -- --test-threads=1`；`cargo test -p yunxi-core ipc --lib --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 2/2；IPC 33/33 | 需补跨进程断连、残留 lease、半写恢复黑盒 |

@@ -4,7 +4,7 @@
 
 生成时间：`2026-10-01 07:01:20 UTC`；本轮黑盒复核时间：`2026-10-01 07:25:11 UTC`；v4 当前复跑：`2026-10-01`（本地时间）
 
-测试基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`；历史复核提交：`3d16ef4a`；v4 当前 workspace 复跑提交：`c8573e26f8e9849ab0a51f0b1af8ee5088eb8f70`；生产黑盒复跑提交：`8f8af396a19bf695efc5badd9d9359b10293d2d7`；MCP 协议修复提交：`ae1a8e56`；MCP 故障边界测试提交：`0e4f9d40`；MCP 断连重启修复提交：`65deb53d`
+测试基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`；历史复核提交：`3d16ef4a`；v4 当前 workspace 复跑提交：`c8573e26f8e9849ab0a51f0b1af8ee5088eb8f70`；最新 workspace 复跑提交：`dc012f3c`；生产黑盒复跑提交：`8f8af396a19bf695efc5badd9d9359b10293d2d7`；MCP 协议修复提交：`ae1a8e56`；MCP 故障边界测试提交：`0e4f9d40`；MCP 断连重启修复提交：`65deb53d`
 环境：WSL `Ubuntu-24.04`，仓库 `<repo-root>`，`CARGO_BUILD_JOBS=1`，cargo 进程使用 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0`；需要中文 golden 的命令使用 `YUNXI_LANG=zh`。
 
 ## 可复核运行
@@ -15,6 +15,7 @@
 | `G0-20261001-engine-01` | `50927` | `YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1` | 0 | 658 passed、0 failed、13 ignored |
 | `G0-20261001-workspace-01` | `36559` | `YUNXI_LANG=zh cargo test --workspace --locked -- --test-threads=1` | 0 | root 504/0/4；base 396/0/6；core 643/0/8；engine 658/0/13；hosts 920/0/10；所有 doctest 通过 |
 | `G0-20261001-workspace-02` | `87611` | `CARGO_BUILD_JOBS=1 YUNXI_LANG=zh systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0 cargo test --workspace --locked -- --test-threads=1` | 0 | 绑定当前提交 `c8573e26` 的新鲜复跑；root 508、base 396、core 651、engine 与 hosts 测试均完成且无失败；所有 doctest 通过。测试后仅清理了未跟踪的 `target/` 构建产物 |
+| `G0-20261001-workspace-03` | `7014` | `CARGO_TARGET_DIR=/tmp/yunxi-g0-final-target CARGO_BUILD_JOBS=1 YUNXI_LANG=zh systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0 cargo test --workspace --locked -- --test-threads=1` | 0 | 绑定当前提交 `dc012f3c`（MCP 生产修复为 `65deb53d`）；root 508、base 396、core 651、engine 663、hosts 920 均无失败，所有 doctest 通过；测试结束后已删除 `/tmp/yunxi-g0-final-target` |
 | `G0-20261001-prod-build-01` | `57186` | `CARGO_BUILD_JOBS=1 systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0 cargo build --locked` | 0 | 绑定提交 `8f8af396`；版本 `yunxi 0.7.0`；`target/debug/yunxi` SHA-256 `707c8c15517f7c4f8546dd27f620ca4df99535bcdcbf8438ca14cda17b5e8d3b` |
 | `G0-20261001-daemon-orphan-02` | current shell (completed) | `PYTHONDONTWRITEBYTECODE=1 python3 testkit/daemon-orphan/run.py --binary target/debug/yunxi` | 0 | 使用上行 SHA-256 对应的非 testkit 生产 binary；6/6 passed；覆盖启动者 SIGKILL/正常退出、真实 daemon 存活/停止；测试后无 YunXi daemon 孤儿 |
 | `G0-20261001-mcp-persistent-02` | current shell (completed) | `PYTHONDONTWRITEBYTECODE=1 python3 testkit/mcp-persistent/run.py target/debug/yunxi` | 0 | 使用同一生产 binary；5/5 passed；覆盖同 session 状态、跨 session 隔离、system prompt、删除回收和 daemon stop；测试后无 YunXi/MCP 孤儿 |
