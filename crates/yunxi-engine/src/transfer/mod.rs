@@ -68,6 +68,38 @@ pub(crate) mod tests {
         .unwrap();
         // Leave the write sitting in the WAL: a plain file copy would miss it.
         std::mem::forget(conn);
+
+        let usage = rusqlite::Connection::open(paths.state_dir.join("usage.db")).unwrap();
+        usage
+            .execute_batch(
+                "PRAGMA journal_mode=WAL;
+                 PRAGMA user_version=1;
+                 CREATE TABLE usage_records (
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     ts INTEGER NOT NULL,
+                     src TEXT NOT NULL,
+                     provider TEXT NOT NULL,
+                     model TEXT NOT NULL,
+                     prompt INTEGER NOT NULL,
+                     completion INTEGER NOT NULL,
+                     total INTEGER NOT NULL,
+                     cache_read INTEGER NOT NULL,
+                     cache_write INTEGER NOT NULL,
+                     aux INTEGER NOT NULL,
+                     kind TEXT NOT NULL,
+                     acct TEXT NOT NULL
+                 );
+                 CREATE TABLE usage_totals (id INTEGER PRIMARY KEY CHECK (id = 1), state TEXT NOT NULL);
+                 CREATE TABLE usage_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                 INSERT INTO usage_totals VALUES (1, '{\"requests\":1,\"total_tokens\":42}');
+                 INSERT INTO usage_records
+                     (ts, src, provider, model, prompt, completion, total, cache_read, cache_write, aux, kind, acct)
+                     VALUES (1, 'agent', 'stub', 'stub-model', 20, 22, 42, 0, 0, 0, '', '');",
+            )
+            .unwrap();
+        // Keep the committed ledger row in the WAL so the export must use its
+        // SQLite snapshot path rather than a plain file copy.
+        std::mem::forget(usage);
         paths
     }
 
@@ -104,6 +136,24 @@ pub(crate) mod tests {
             std::fs::read_to_string(restored.data_dir.join("prompts/system-prompt.md")).unwrap(),
             "persona"
         );
+
+        // The machine-wide usage ledger is a Core SQLite unit. Its committed
+        // row must survive the snapshot/import path together with the totals.
+        let usage = rusqlite::Connection::open(restored.state_dir.join("usage.db")).unwrap();
+        let total: i64 = usage
+            .query_row(
+                "SELECT total FROM usage_records WHERE provider='stub' AND model='stub-model'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(total, 42);
+        let totals: String = usage
+            .query_row("SELECT state FROM usage_totals WHERE id=1", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert!(totals.contains("total_tokens"));
 
         // The database came through SQLite, so the row that was still in the
         // WAL is present — and its dead workspace was cleared on the way in.
