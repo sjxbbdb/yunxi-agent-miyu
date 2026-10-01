@@ -6,6 +6,16 @@ pub(in crate::tools::mcp) fn live_count() -> usize {
     pool().lock().unwrap().entries.len()
 }
 
+pub(in crate::tools::mcp) fn dead_count() -> usize {
+    pool()
+        .lock()
+        .unwrap()
+        .entries
+        .iter()
+        .filter(|entry| !entry.connection.is_alive())
+        .count()
+}
+
 pub(in crate::tools::mcp) fn reset_for_test() {
     let mut pool = pool().lock().unwrap();
     pool.entries.clear();

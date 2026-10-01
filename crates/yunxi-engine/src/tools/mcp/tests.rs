@@ -113,6 +113,8 @@ for line in sys.stdin:
         send_faulted(response)
     else:
         send(response)
+    if method == 'tools/call' and os.environ.get('EXIT_AFTER_RESPONSE'):
+        os._exit(0)
 "#;
 
 fn fake_server(id: &str, marker: &Path) -> McpServerConfig {
@@ -324,6 +326,34 @@ async fn a_crashed_persistent_server_pid_is_reaped() {
         "crashed connection must leave the pool"
     );
     forget_session("crashy-pid");
+}
+
+/// 两次调用之间服务器自行断连时，下一次重启必须在同一轮返回状态丢失提示。
+#[tokio::test]
+async fn a_disconnected_persistent_server_restarts_with_a_notice() {
+    let _pool = pool_lock();
+    let dir = tempfile::tempdir().unwrap();
+    let mut server = fake_server("disconnecting", &dir.path().join("marker"));
+    server
+        .env
+        .insert("EXIT_AFTER_RESPONSE".to_string(), "1".to_string());
+
+    assert_eq!(
+        call_in(Some("s1"), &server, "count").await.unwrap(),
+        "count 1"
+    );
+    assert!(
+        wait_until(|| pool::dead_count() == 1).await,
+        "the persistent connection must observe the server disconnect"
+    );
+
+    let after = call_in(Some("s1"), &server, "count").await.unwrap();
+    assert!(
+        after.contains("restarted") && after.contains("state from earlier calls is gone"),
+        "a disconnect restart must explain the lost state: {after}"
+    );
+    assert!(after.ends_with("count 1"), "{after}");
+    forget_session("s1");
 }
 
 /// 非法 JSON-RPC 响应不能静默等到调用超时；连接仍可在会话清理时完整回收。

@@ -128,13 +128,16 @@ pub(super) async fn call(
     let (connection, notice) = match live_connection(&key) {
         Some(connection) => (connection, None),
         None => {
+            // 先 sweep 一次：读端可能已经观察到断连，但还没把死连接记入
+            // retired。若先取 notice，第一次重启会静默丢掉“状态已丢失”提示。
+            let room = has_room(Instant::now());
             let notice = take_retired(&key).map(|reason| {
                 format!(
                     "MCP server {} was restarted ({reason}); state from earlier calls is gone.",
                     server.id
                 )
             });
-            if !has_room(Instant::now()) {
+            if !room {
                 drop(started);
                 let full = "MCP connection pool is full; this call used a fresh server process, so earlier state is not available.";
                 let notice = match notice {
