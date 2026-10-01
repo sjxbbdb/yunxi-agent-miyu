@@ -82,10 +82,22 @@ pub(super) fn classify(line: &str) -> Option<Incoming> {
     }
     let method = value.get("method").and_then(Value::as_str);
     match (value.get("id"), method) {
-        (Some(id), Some(method)) => Some(Incoming::Request {
-            id: id.clone(),
-            method: method.to_string(),
-        }),
+        (Some(id), Some(method)) => {
+            // JSON-RPC requests may carry `method`/`params`, while responses may
+            // carry `result` or `error`; the two shapes must never be merged.
+            // Treat the mixed shape as an invalid response so a matching call
+            // fails immediately instead of waiting for its timeout.
+            if value.get("result").is_some() || value.get("error").is_some() {
+                return Some(Incoming::InvalidResponse {
+                    id: id.as_u64(),
+                    reason: "response contains method and result/error".to_string(),
+                });
+            }
+            Some(Incoming::Request {
+                id: id.clone(),
+                method: method.to_string(),
+            })
+        }
         (None, Some(_)) => Some(Incoming::Notification),
         (Some(id), None) => {
             let id = match id.as_u64() {

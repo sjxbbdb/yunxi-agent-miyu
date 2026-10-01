@@ -18,6 +18,11 @@ fn malformed_responses_are_classified_for_fast_failure() {
             Some(7),
             "response error object is invalid",
         ),
+        (
+            r#"{"jsonrpc":"2.0","id":7,"method":"tools/call","result":{}}"#,
+            Some(7),
+            "response contains method and result/error",
+        ),
     ];
 
     for (line, expected_id, expected_reason) in cases {

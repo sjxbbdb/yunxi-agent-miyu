@@ -47,6 +47,9 @@ for line in sys.stdin:
             elif mode == 'bad-error':
                 response = {'jsonrpc': '2.0', 'id': request['id'],
                             'error': {'code': 'bad', 'message': 'invalid code'}}
+            elif mode == 'method-result':
+                response['jsonrpc'] = '2.0'
+                response['method'] = 'tools/call'
             send(response)
             continue
         if name == 'count':
@@ -255,18 +258,23 @@ async fn a_crashed_server_is_restarted_with_a_notice() {
 async fn malformed_mcp_response_fails_the_matching_call_immediately() {
     let _pool = pool_lock();
     let dir = tempfile::tempdir().unwrap();
-    let mut server = fake_server("malformed", &dir.path().join("marker"));
-    server.timeout_seconds = 5;
-    server.env.insert(
-        "MALFORMED_RESPONSE".to_string(),
-        "missing-jsonrpc".to_string(),
-    );
-    let error = call_in(Some("s1"), &server, "echo")
-        .await
-        .expect_err("malformed response must not be accepted");
-    assert!(error.to_string().contains("invalid response"), "{error:#}");
-    assert!(!error.to_string().contains("did not answer"), "{error:#}");
-    forget_session("s1");
+    for (index, mode) in ["missing-jsonrpc", "method-result"].into_iter().enumerate() {
+        let session = format!("malformed-{index}");
+        let mut server = fake_server(
+            &format!("malformed-{index}"),
+            &dir.path().join(format!("marker-{index}")),
+        );
+        server.timeout_seconds = 5;
+        server
+            .env
+            .insert("MALFORMED_RESPONSE".to_string(), mode.to_string());
+        let error = call_in(Some(&session), &server, "echo")
+            .await
+            .expect_err("malformed response must not be accepted");
+        assert!(error.to_string().contains("invalid response"), "{error:#}");
+        assert!(!error.to_string().contains("did not answer"), "{error:#}");
+        forget_session(&session);
+    }
 }
 
 /// 服务器在回话之前反过来 ping 我们：得回，不然它等不到。
