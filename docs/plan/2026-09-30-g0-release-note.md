@@ -16,6 +16,7 @@
 - 修复 G0-09 daemon 黑盒在 WSL/CI 中的测试隔离：`testkit/daemon-orphan/run.py` 为每个临时 home 建立独立 `XDG_RUNTIME_DIR`，避免 IPC socket 目录缺失或误连真实用户 daemon；使用非 test binary 进行 parent/orphan 生命周期复跑，6/6 连续两次通过。
 - 将决策模型主线显式固化为 `DecisionPort`/可选 Laya provider：先 deterministic、再 shadow；模型只能提供 salience/admission/rerank/intent/主动候选建议，不能执行工具、鉴权或写删数据。G0 只记录 seam 与验收契约，G5 才实现模型。
 - 将长线 goal 重构为可执行 v3 合同：增加阶段边界、G0 退出审计、证据计数/失败原因/后续 owner 和“登记不等于通过”的规则；明确 G1～G9 的任务编号和 G5-00～G5-06 的可行性门、`DecisionPort`、deterministic provider、shadow Laya、逐消费者接入、故障评测与实际建议采纳/回滚。当前活动 goal 不结束、不重建，仓库计划文件作为可审计细化版本，活动 objective 文本未原地改写。
+- 按 v5 goal 合同补齐 MCP 权限矩阵：fixture 增加只读 `read` 工具，并覆盖 owner/member × `None`/`Inherit` 的读取与写入边界；member 会话无论服务器声明何种 sandbox 都不能逃逸调用方沙盒。该切片提交为 `1b8d44e3`，WSL Ubuntu-24.04 MCP 套件 37/37 通过。
 - 当前 goal 已暂停并准备替换为 v4：[`2026-10-01-goal-command-v4.md`](2026-10-01-goal-command-v4.md) 保留原 G0–G9 交付范围，同时把 Laya/DecisionPort 拆成 D0–D8 的可执行主线；重新启动后以 v4 为唯一执行合同。
 
 ## 验证状态
