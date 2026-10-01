@@ -441,14 +441,35 @@ async fn forgetting_a_session_reaps_the_whole_process_group() {
 async fn two_timeouts_in_a_row_retire_the_process() {
     let _pool = pool_lock();
     let dir = tempfile::tempdir().unwrap();
+    let pid_file = dir.path().join("pid");
     let mut server = fake_server("stuck", &dir.path().join("marker"));
+    server
+        .env
+        .insert("PID_FILE".to_string(), pid_file.display().to_string());
     server.timeout_seconds = 1;
-    for _ in 0..2 {
-        let error = call_in(Some("s1"), &server, "slow").await.unwrap_err();
-        assert!(error.to_string().contains("did not answer"), "{error:#}");
-    }
+    let first = call_in(Some("s1"), &server, "slow").await.unwrap_err();
+    assert!(first.to_string().contains("did not answer"), "{first:#}");
+    let pid = server_pid(&pid_file).expect("persistent MCP server must write its pid");
+    assert!(
+        !process_gone(pid),
+        "the first timeout must keep the server alive"
+    );
+    assert_eq!(pool::live_count(), 1);
+
+    let second = call_in(Some("s1"), &server, "slow").await.unwrap_err();
+    assert!(second.to_string().contains("did not answer"), "{second:#}");
+    assert!(
+        wait_until(|| process_gone(pid)).await,
+        "timed-out MCP server pid {pid} was not reaped"
+    );
+    assert_eq!(pool::live_count(), 0, "retired timeout must leave the pool");
+
     let after = call_in(Some("s1"), &server, "count").await.unwrap();
     assert!(after.contains("stopped answering"), "{after}");
+    assert!(
+        after.contains("count 1"),
+        "the next call must use a fresh process: {after}"
+    );
     forget_session("s1");
 }
 
