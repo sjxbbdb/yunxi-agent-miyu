@@ -90,11 +90,11 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 ## 6. 当前阶段门禁与未验证项
 
-已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2、IPC 定向 33/33 和 transfer 定向 37/37 已复现；`yunxi-core` 全量单测 643/0/8（含 Profile prompt-only 边界）、`yunxi-engine` 全量单测 652/0/13（含 KB 删除隔离边界）、`yunxi-hosts` 全量单测 920/0/10，新增 actor 会话重置隔离回归。transfer 还覆盖了 coverage-aware stale Core 清理、旧清单 merge-only、输入归档保护、清理后 marker 失败恢复、rename 错误分类、旧新 persona/home wildcard、成员路径缺口护栏、生产用量账本路径以及 SQLite usage snapshot/import 回归。
+已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2、IPC 定向 33/33 和 transfer 定向 37/37 已复现；`yunxi-core` 全量单测 643/0/8（含 Profile prompt-only 边界）、`yunxi-engine` 全量单测 653/0/13（含 KB 双向删除隔离边界）、`yunxi-hosts` 全量单测 920/0/10，新增 actor 会话重置隔离回归。非 test binary 的 daemon parent/orphan 黑盒已 6/6 连续两次通过。transfer 还覆盖了 coverage-aware stale Core 清理、旧清单 merge-only、输入归档保护、清理后 marker 失败恢复、rename 错误分类、旧新 persona/home wildcard、成员路径缺口护栏、生产用量账本路径以及 SQLite usage snapshot/import 回归。
 
 仍未完成：
 
-1. TUI、工具执行的隔离黑盒实测记录（G0-09）；IPC 定向单测已完成，`testkit/g0-terminal-combo/run.py` 已在同一隔离 home/daemon 下先后验证真实 fish PTY 与 REPL PTY，并从 `turns.tool_flow` 校验两次工具输出；`testkit/repl-smoke/run.py` 也已自带工具调用并从 `turns.tool_flow` 校验输出，报告 `passed=true`；TUI 表单 PTY `testkit/tui/config_forms.py` 已在 WSL Ubuntu-24.04 pyte venv 下复跑为 16/16。组合黑盒子项已通过，但仍需保留故障注入与跨平台验证。
+1. TUI、工具执行的隔离黑盒实测记录（G0-09）；IPC 定向单测已完成，`testkit/g0-terminal-combo/run.py` 已在同一隔离 home/daemon 下先后验证真实 fish PTY 与 REPL PTY，并从 `turns.tool_flow` 校验两次工具输出；`testkit/repl-smoke/run.py` 也已自带工具调用并从 `turns.tool_flow` 校验输出，报告 `passed=true`；TUI 表单 PTY `testkit/tui/config_forms.py` 已在 WSL Ubuntu-24.04 pyte venv 下复跑为 16/16；daemon parent/orphan 黑盒已 6/6 连续两次通过。组合黑盒子项已通过，但仍需保留权限、断连、延迟故障注入与跨平台验证。
 2. 每条路径的隐私扫描证据索引与 transfer 单元逐项核对。个人路径与凭据形状扫描已完成分类；transfer registry 的 61 个 unit 已完成静态分类，当前定向测试 37/37 通过，manifest/hash/version、资源上限、tier 矩阵、旧新布局映射、恶意归档拒绝、失败回滚、coverage-aware stale Core 和 rename 错误分类证据已落地；成员 `home/<user>/kb` 与 `home/<user>/personas` 的未分类状态已由护栏测试显式固定。仍缺少 install 父目录检查与后续操作之间的目录句柄级竞态消除，以及逐项平台句柄后端的恢复/删除证明。第三方 `APP_SEC` 已核验为公开客户端签名常量并列入 allowlist。
 3. Arch Linux 实机和 macOS M-series 编译/运行；当前只能标记为未验证。
 
@@ -117,8 +117,8 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 | 状态 | 范围 | 当前证据或缺口 |
 | --- | --- | --- |
 | 已证 | G0-01/G0-02/G0-04/G0-06 | 本文入口表、单运行时结论、prompt/cache 接缝记录，以及 `legacy_config_dir` 正负回归测试。 |
-| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 652/0/13；transfer 37/37；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
-| 已证 | G0-09 基线闭环 | fish 静态 17/17、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI config 16/16 已有报告；这些证据仍不替代故障注入。 |
+| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 653/0/13；transfer 37/37；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
+| 已证 | G0-09 基线闭环 | fish 静态 17/17、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI config 16/16、daemon orphan 6/6（重复两次）已有报告；这些证据仍不替代故障注入。 |
 | 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；Profile prompt-only、KB remove 不触碰 memory、Memory reset 不触碰 KB、actor 会话 reset 的跨 session 误删均有回归覆盖，跨域删除/恢复、旧新布局 identity、usage 实际路径仍待运行时验证。 |
 | 仅定位 | G0-05/G0-08 | 权限真相源和测试入口已列出，但尚未形成完整耗时/失败原因、断连/权限组合和 request-shape 故障注入报告。 |
 | 未验证 | G0-05/G0-09 跨平台 | Arch Linux 实机和 macOS M-series 尚未运行；只能保留为环境缺口。 |

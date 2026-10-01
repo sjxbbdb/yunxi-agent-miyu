@@ -66,7 +66,14 @@ def wait_gone(pid, timeout):
 
 
 def daemon_env(home, extra=None):
-    env = dict(os.environ, YUNXI_HOME=str(home))
+    # `daemon start` needs an IPC socket directory even when the test uses a
+    # throwaway YUNXI_HOME.  Relying on the caller's XDG_RUNTIME_DIR made the
+    # detached branch fail with ENOENT on WSL/CI (and could accidentally see a
+    # real user's daemon).  Keep the runtime namespace alongside the sandbox
+    # home and create it before the child is launched.
+    runtime = home / "runtime"
+    runtime.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ, YUNXI_HOME=str(home), XDG_RUNTIME_DIR=str(runtime))
     env.pop("YUNXI_DAEMON_DETACHED", None)
     if extra:
         env.update(extra)
@@ -122,6 +129,15 @@ def main():
         launcher.wait(timeout=5)
         report["启动者被 SIGKILL 后 daemon 跟着退"] = wait_gone(daemon_pid, 15)
         if alive(daemon_pid):
+            try:
+                status = Path(f"/proc/{daemon_pid}/status").read_text(errors="replace")
+                parent = next(
+                    (line.split(":", 1)[1].strip() for line in status.splitlines() if line.startswith("PPid:")),
+                    "?",
+                )
+                print(f"  （SIGKILL 后 daemon 仍在：pid={daemon_pid}, ppid={parent}）")
+            except OSError:
+                pass
             leaked.append(daemon_pid)
 
         # 2. 启动者正常退出
