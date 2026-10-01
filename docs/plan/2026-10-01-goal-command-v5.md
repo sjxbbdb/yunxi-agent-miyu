@@ -145,8 +145,8 @@ STOP_RULES
 ## 3. 当前交接基线（供新模型压缩后恢复）
 
 - 当前分支：`codex/yunxi-product-rename`。
-- 当前 HEAD/远端：`287a6bde`（当前代码基线仍为 `8710652e`，其后为证据文档提交）。
-- 最近已推送：`287a6bde`（最新黑盒证据）、`e7bcfaf1`（最新 workspace 证据）、`e12ffa74`（G0 残余校正）、`8710652e`（KB 前缀删除批量回滚）、`6fd3eb49`（KB 删除回滚证据）、`243481ae`（KB 单文件删除回滚）、`e7ecae61`（transfer staging fixup 隔离）、`de0e389b`（非法 manifest 回归）、`eda02d33`（transfer 父目录竞态）、`1b8d44e3`（MCP 权限矩阵）、`e5366eaf`（MCP request-shape 测试）。
+- 当前 HEAD/远端：`320b39a5`（当前代码基线仍为 `8710652e`，其后为证据与退出审计文档提交）。
+- 最近已推送：`320b39a5`（残余风险 owner 校正）、`287a6bde`（最新黑盒证据）、`e7bcfaf1`（最新 workspace 证据）、`e12ffa74`（G0 残余校正）、`8710652e`（KB 前缀删除批量回滚）、`6fd3eb49`（KB 删除回滚证据）、`243481ae`（KB 单文件删除回滚）、`e7ecae61`（transfer staging fixup 隔离）、`de0e389b`（非法 manifest 回归）、`eda02d33`（transfer 父目录竞态）、`1b8d44e3`（MCP 权限矩阵）、`e5366eaf`（MCP request-shape 测试）。
 - MCP 当前完整套件：37/37；最新 HEAD 代码门禁 `e12ffa74` 已通过，root 504/0/4、base 396/0/6、core 651/0/8、engine 673/0/13、hosts 920/0/10，doctest 全过；当前 HEAD 的 fish/daemon/IPC/REPL/MCP/TUI 黑盒也已有证据；相关临时 target、日志和进程已清理。
 - 当前 G0 残余：transfer export 输出/source/SQLite 路径 TOCTOU、锁/磁盘满/权限撤销/组合故障矩阵、跨 SQLite 文件提交非原子性、legacy `state/profile.md` 迁移策略、Arch 实机和 macOS M-series 证据。最新 HEAD workspace 与 fish/daemon/IPC/REPL/MCP/TUI 黑盒已有证据；MCP 权限、既有断连/超时、Unix import 父目录竞态和非法 manifest 已有对应证据，不再重复列为未覆盖项。
 - 当前绝不能写成已实现：`DecisionPort` trait/provider、Laya provider、G1-G9 业务模块；G0 只做 seam/边界盘点和 deterministic/fallback 合同。
