@@ -95,7 +95,7 @@ G0_TASKS_AND_ACCEPTANCE
   G0-02 duplicate-runtime audit：核对 fish→daemon→IPC→REPL→tool、memory、KB、MCP pool 是否各一套；测试 testkit/g0-terminal-combo/run.py、repl-smoke/run.py、mcp-persistent/run.py。不能用“两个兼容适配器”掩盖第二运行时。
   G0-03 data boundary：核对 MemoryStore、profile paths、KnowledgeBase、transfer DataUnit；复跑 profile prompt-only、memory/KB 双向删除隔离、marker 联合回滚。profile/secret 进入 embedding 或跨库即 HARD_STOP。
   G0-04 prompt/cache contract：核对 persona_paths、prompt/setup、InstructionSource、PrefixChain、compact；改动前后跑 request_shape_probe、两轮 cache/fossil/replay。任何 system 前缀逐字节漂移或 profile 泄漏即停。
-  G0-05 test matrix：继续补当前证据缺口：MCP 剩余断连/超时与权限组合、transfer 父目录 TOCTOU、锁/权限/磁盘满/父目录替换/半写/非法 manifest 故障表；每项 run-id/SHA/UTC/env/命令/退出码/未验证项。不能把历史摘要混作当前证据。
+  G0-05 test matrix：继续补当前证据缺口：最新 HEAD workspace/黑盒复跑、transfer export TOCTOU、锁/权限/磁盘满/父目录替换/半写/跨库提交故障表；MCP 权限、既有断连/超时、Unix import 父目录竞态和非法 manifest 已有独立证据，但仍必须在退出审计中区分历史证据与当前 HEAD。每项 run-id/SHA/UTC/env/命令/退出码/未验证项。不能把历史摘要混作当前证据。
   G0-06 rename compatibility：只修复 Miyu→YunXi 产品层兼容/提示/资源命名，不改变底座行为；跑全量 grep、cargo fmt、workspace tests、privacy scan。发现源代码仍存在产品命名歧义要记录路径和是否属于历史兼容，不盲目替换协议/数据库字段。
   G0-07 privacy/docs：运行 testkit/privacy/g0_scan.py、自检和公开仓库扫描；更新 evidence index/release note/README 中真实状态。任何 token、个人路径、profile、生成索引或未脱敏日志进入 diff 即停。
   G0-08 MCP/Skills/permissions：核对 MCP protocol/connection/pool/scope、Skills discovery/registration、host_grants/turn_restrictions；补 request-shape、启动失败隔离、断连/超时、权限矩阵的真实测试。不得用 prompt 替代权限。
@@ -145,10 +145,10 @@ STOP_RULES
 ## 3. 当前交接基线（供新模型压缩后恢复）
 
 - 当前分支：`codex/yunxi-product-rename`。
-- 当前 HEAD/远端：`f2de6316`。
-- 最近已推送：`e5366eaf`（MCP request-shape 测试）、`f2de6316`（对应证据文档）、`44783c40`（workspace 回归证据）、`23283029`（KB 重建回滚证据）、`9ed8579d`（KB 每文件 SQLite 原子替换）。
-- MCP 当前完整套件：37/37；workspace 最近回归：root 508、base 396、core 651、engine 665、hosts 920，doctest 全过；相关临时 target 已清理。
-- 当前 G0 残余：MCP 权限组合和部分断连/超时、transfer 父目录 TOCTOU、锁/磁盘满/父目录替换/非法 manifest 统一故障矩阵、完整跨域删除/恢复、legacy `state/profile.md` 迁移策略、Arch 实机和 macOS M-series 证据。
+- 当前 HEAD/远端：`8710652e`。
+- 最近已推送：`8710652e`（KB 前缀删除批量回滚）、`6fd3eb49`（KB 删除回滚证据）、`243481ae`（KB 单文件删除回滚）、`e7ecae61`（transfer staging fixup 隔离）、`de0e389b`（非法 manifest 回归）、`eda02d33`（transfer 父目录竞态）、`1b8d44e3`（MCP 权限矩阵）、`e5366eaf`（MCP request-shape 测试）。
+- MCP 当前完整套件：37/37；最近 workspace 证据绑定在 `23283029`，root 508、base 396、core 651、engine 665、hosts 920，doctest 全过；后续代码切片仍需在最新 HEAD 上完成最终 workspace 门禁；相关临时 target 已清理。
+- 当前 G0 残余：transfer export 输出/source/SQLite 路径 TOCTOU、锁/磁盘满/权限撤销/组合故障矩阵、跨 SQLite 文件提交非原子性、legacy `state/profile.md` 迁移策略、Arch 实机和 macOS M-series 证据，以及最新 HEAD 上的完整黑盒复跑。MCP 权限、既有断连/超时、Unix import 父目录竞态和非法 manifest 已有对应证据，不再重复列为未覆盖项。
 - 当前绝不能写成已实现：`DecisionPort` trait/provider、Laya provider、G1-G9 业务模块；G0 只做 seam/边界盘点和 deterministic/fallback 合同。
 
 ## 4. 启动新 Goal 前的验收

@@ -22,6 +22,7 @@
 - G0-05 新增非法 manifest 回归测试 `malformed_manifest_json_is_refused_before_import`（`de0e389b`，证据 `G0-20261001-transfer-manifest-01`）：导入只含 `{not-json` 的 `manifest.json` 时在解析阶段拒绝，既有 config 与布局未被修改；WSL 精确测试 1/1 通过，临时 target 已清理。
 - G0-05 新增 staging fixup 失败隔离回归测试 `import_fixup_failure_leaves_live_tree_untouched`（`e7ecae61`，证据 `G0-20261001-transfer-fixup-01`）：缺少 `sessions` 表的可打开 SQLite 在安装前失败，live config、conversation、memory、KB 元数据/源文件/索引均保持原字节；定向 1/1、完整 transfer 40/40 通过，临时 target 已清理。
 - G0-03/G0-05 修复 KB 删除半失败：`KnowledgeBase::remove`（`243481ae`，证据 `G0-20261001-kb-remove-01`）先将源文件移入同目录临时 tomb，再在 metadata/semantic 各自事务中执行删除；semantic 触发器失败时源文件、两库行均恢复，定向 1/1、KB 全套 16/16 通过。两个独立 SQLite commit 的跨库原子性仍登记为残余风险。
+- G0-03/G0-05 补齐 KB 前缀批量删除回滚：`KnowledgeBase::remove_prefix`（`8710652e`，证据 `G0-20261001-kb-prefix-remove-01`）把同一 prefix 下的源文件统一移入同目录 tomb，再执行 metadata/semantic 删除事务；semantic 触发器失败时所有文件、目录项和两库行均恢复，定向 1/1、KB 全套 17/17 通过。两个独立 SQLite commit 的跨库原子性、磁盘满和权限撤销仍是残余风险。
 - 历史记录：此前 goal 曾暂停并准备替换为 v4（[`2026-10-01-goal-command-v4.md`](2026-10-01-goal-command-v4.md)）；当前活动合同已由 v5 文档重新激活，本文件的旧暂停描述不代表现状。
 
 ## 验证状态
@@ -49,21 +50,21 @@
 - WSL Ubuntu-24.04 IPC 定向测试：`cargo test -p yunxi-core ipc --lib --locked -- --test-threads=1` 33/33 通过，覆盖 lease、frame、协议版本、半帧、超限、断连和同 home 单例。
 - WSL Ubuntu-24.04 终端组合黑盒 `testkit/g0-terminal-combo/run.py`：同一隔离 home/daemon/stub 先走真实 fish PTY + `fish-init`/accept-line，再走真实 REPL PTY；两条 IPC 客户端都在 `turns.tool_flow` 中留下 `run_command` marker，fish 无 wildcard error，报告 `passed=true`，已重复运行两次通过。
 - WSL Ubuntu-24.04 pyte venv 的 TUI PTY 黑盒 `testkit/tui/config_forms.py` 在隔离 home 下复跑为 16/16；fixture 显式提供 `custom_models`，并在选择 `stub-model` 前定位到 `Stub` 供应商，覆盖主菜单、全局设置、编辑模型、新增模型和保存退出路径。该证据仍只代表表单闭环，不能用它替代整个终端闭环。
-- 隐私扫描复跑：1861 个 Git 跟踪文本文件；个人绝对路径与上游本机路径已替换为 `<user>`、`/home/tester`、仓库相对路径或运行时环境变量；`personal_path=0`、`private_key=0`、`credential_shape=0`。完整迁移/删除路径审计仍未关闭。
+- 隐私扫描复跑：1862 个 Git 跟踪文本文件；个人绝对路径与上游本机路径已替换为 `<user>`、`/home/tester`、仓库相对路径或运行时环境变量；`personal_path=0`、`private_key=0`、`credential_shape=0`。完整迁移/删除路径审计仍未关闭。
 - G0-09 工具执行黑盒：`testkit/repl-smoke/run.py` 现已自带 `STUB_TOOL=1` 和 `printf G0_09_TOOL_OK`，对中英文占位符统一判定，并从真实 `turns.tool_flow` 校验 `run_command` 输出。隔离运行报告 `placeholder_on_paste=true`、`reply_seen=true`、`footer_speed=78 tok/s`、`placeholder_on_recall=true`、`raw_text_on_recall=false`、`repl_alive=true`、`tool_flow_marker=true`、`passed=true`；该探针自身闭环通过，但仍不能替代 fish/daemon/REPL 组合终端闭环。
 - transfer 定向测试：`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 38/38 通过；新增未知 manifest、size/hash、entry 集合、Windows 路径、非 regular tar、Never unit、symlink 导出、new home conversation、staged fixup、marker rollback、memory + KB 联合回滚、归档资源上限、coverage-aware stale Core 清理、legacy merge-only、输入归档保护、stale 清理失败恢复、rename 错误分类、tier 矩阵、旧新 persona/home wildcard、生产 `state/usage.db` SQLite 快照/导入回归、file/SQLite 子路径边界和成员 Persona/KB 路径缺口护栏测试。registry 当前 61 个 unit（Core 44、Heavy 1、Platform 2、Never 14）的静态分类已逐项核对，并覆盖生产 usage DB 与 legacy 用量输入。成员 `home/<user>/kb` 与 `home/<user>/personas` 当前仍未纳入导出策略，测试只负责显式暴露缺口；剩余风险还包括 import 安装/回滚/stale/marker 的父目录竞态，以及 export 输出/source 检查与实际使用之间的路径竞态。
 - KB embedding 重建故障已修复：每个文件的 semantic_chunks 删除与全部 chunk 插入现在在同一 SQLite transaction 内；中途写入失败会整体回滚，重试不会因残留单 chunk 被永久跳过。真实远程 Embedder + SQLite trigger 回归 1/1 通过，KB 套件 15 passed、2 ignored、0 failed。
 - KB 修复后的完整 workspace 回归已复跑：root 508、base 396、core 651、engine 665、hosts 920，所有 doctest 通过；临时 target 已删除。
 - daemon orphan 黑盒：先用 `cargo build --locked` 构建非 test binary，再在仓库根运行 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/daemon-orphan/run.py --binary target/debug/yunxi`，6/6 连续两次通过；覆盖直接 daemon 随启动者 SIGKILL/正常退出而退出、detached daemon 跨启动命令存活及显式 stop。testkit 构建产物按设计拒绝自启动，因此该黑盒使用非 test binary；权限、延迟、断连和其它平台仍未覆盖。
 - daemon orphan 构建边界已复核：若在 `cargo test --workspace` 之后直接复用 `target/debug/yunxi`，其 `testkit` feature 会把自重启 executable 指向不存在的占位路径，造成 detached 分支假失败；M-14 固定先执行独立 `cargo build --locked`，不得把 testkit 产物当作生产 daemon 黑盒输入。
-- MCP/Skills 生命周期黑盒：在独立 `cargo build --locked` 后运行 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/mcp-persistent/run.py target/debug/yunxi`，5/5 通过；确认同 session 复用、跨 session 隔离、system prompt instructions、session 删除回收和 daemon stop 无孤儿。MCP server 启动失败、断连、超时、非法 request-shape 与权限组合仍未覆盖。
+- MCP/Skills 生命周期黑盒：在独立 `cargo build --locked` 后运行 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/mcp-persistent/run.py target/debug/yunxi`，5/5 通过；确认同 session 复用、跨 session 隔离、system prompt instructions、session 删除回收和 daemon stop 无孤儿。启动失败、非法 response/request shape、连续超时和两次调用之间断连回收已有 M-18/M-19 证据；最新 HEAD 的最终 workspace/黑盒门禁仍待复跑。
 - MCP 非法 JSON-RPC 响应：新增 `protocol_tests` 的 2 个分类回归与 `malformed_mcp_response_fails_the_matching_call_immediately` 运行时回归（2/2 + 1/1）；缺失 `jsonrpc`、非数值 id、畸形 `error` 会被标记为协议错误，能关联请求 id 时立即结束对应调用，不再等到超时；该运行时测试调用现有 session cleanup 路径，但未独立证明 PID 退出。
 - MCP response-shape 修复复跑（提交 `ae1a8e56`）：`cargo test -p yunxi-engine tools::mcp --lib --locked -- --test-threads=1` 为 28/28；新增覆盖 `method + result` 混合对象的协议分类和运行时快速失败，避免把响应误当作服务器请求而等到调用超时。测试完成后删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
 - MCP 故障边界复跑（提交 `0e4f9d40`）：同一 MCP 定向命令为 32/32；新增非法 JSON 噪声、分段 flush、半写 EOF 和异常退出 PID/连接池回收证据。测试结束后已删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
 - MCP 连续超时回收复跑（提交 `e17e06fb`）：同一 MCP 定向命令为 32/32；新增首次超时保留进程、第二次超时回收旧 PID/连接池、下一次调用新起进程并报告状态丢失的证据。测试结束后已删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
 - MCP 断连重启提示复跑（提交 `65deb53d`）：同一 MCP 定向命令为 33/33；新增服务器在两次调用之间自行退出时，连接池先 sweep 再取 retired notice，首次重启即带“状态已丢失”提示，且新进程状态从 `count 1` 开始。测试结束后已删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
 - MCP request-shape 复跑（提交 `e5366eaf`）：`cargo test -p yunxi-engine tools::mcp --lib --locked -- --test-threads=1` 为 37/37；新增 `initialize`、`tools/list`、`tools/call`、notification 的 JSON-RPC 请求线字段与无 id 约束，测试结束后已删除 WSL `/tmp/yunxi-g0-mcp-suite-final` 临时构建目录。
-- 当前提交 workspace 复跑（提交 `dc012f3c`）：WSL Ubuntu-24.04、`CARGO_BUILD_JOBS=1`、20 GiB cgroup；root 508、base 396、core 651、engine 663、hosts 920 全部通过，所有 doctest 通过。构建使用 `/tmp/yunxi-g0-final-target`，测试结束后已删除该临时目录。
+- 当前提交 workspace 复跑（提交 `dc012f3c`）：WSL Ubuntu-24.04、`CARGO_BUILD_JOBS=1`、20 GiB cgroup；root 508、base 396、core 651、engine 663、hosts 920 全部通过，所有 doctest 通过。该复跑早于当前 HEAD `8710652e`，构建使用 `/tmp/yunxi-g0-final-target`，测试结束后已删除该临时目录；不得作为最新 HEAD 的最终门禁证据。
 - MCP 启动失败隔离：新增 `a_failed_mcp_startup_does_not_hide_a_healthy_server`（1/1）；不存在的 MCP 可执行文件只使自身 listing 失败，健康服务器仍注册工具，重复 registry 构建复用健康 listing 缓存。
 - 修复并固定 G0 故障注入：KB embedding 的 `embedding-reindex.json` 被截断或写入非法 JSON 时，不再静默回退为空进度；状态明确为 `failed`，遗留锁可清理，损坏文件保留为取证。`cargo test -p yunxi-engine tools::knowledge_base::dashboard::tests --locked -- --test-threads=1` 为 6/6。
 - 权限位测试改用 WSL 原生 Linux 文件系统临时目录，不再把 `/mnt` DrvFs 的 0777 映射误当作生产语义；bundled script、registry fixture、TUI changed-prefix、renderer event、tool-summary 和回放编辑测试均已按当前 YunXi 产品输出修正或补强。
@@ -73,7 +74,7 @@
 
 - G0 的入口与边界审计主体已完成，证据见 `2026-09-30-g0-architecture-audit.md`；fish 分流与 daemon reload 的黑盒子项已通过，但当前测试全绿仍不等于 G0 已退出。退出审计必须先核对最低合同，再决定哪些缺口移交后续阶段。
 - 仍需完成更广的终端闭环记录和 transfer 单元逐项安全证据。IPC 子项已通过；TUI 表单黑盒 `testkit/tui/config_forms.py` 已为 16/16，终端组合黑盒已通过，但故障注入、跨平台验证和 transfer P0/P1 仍未完成。隐私门禁已纳入 `testkit/privacy/g0_scan.py` 并报告通过。
-- transfer 审计发现安装阶段仍有目录句柄级竞态待平台化消除；manifest/hash/version、路径/类型安全、归档资源上限、coverage-aware stale Core 清理、new home fixup、导出 symlink 拒绝、marker 失败回滚和完整 tier 覆盖已有直接测试。
+- transfer 审计发现 export 输出/source/SQLite 路径链仍有目录句柄级竞态待平台化消除；Unix import 的父目录竞态已由 `eda02d33` 修复。manifest/hash/version、路径/类型安全、归档资源上限、coverage-aware stale Core 清理、new home fixup、导出 symlink 拒绝、marker 失败回滚和完整 tier 覆盖已有直接测试。
 - 跨会话记忆重置的 actor 入口已修复并由 920 个 hosts 单测覆盖；Profile/KB/Persona 删除恢复矩阵、成员路径迁移策略和更广故障注入仍未完成。
 - daemon/IPC 的 lease、frame、协议协商、事件回放和问题问答链；session/conversation/compact/evicted context；transfer 的导出/导入/迁移/隐私分类；default KB write-through；MCP/Skills 快照与断连回退；host capability/command/net guard；persona/profile 的重命名、删除和作用域迁移；调度/background job；产品 `goal` 持久化与 Codex active goal 的区分；以及 `docs/interfaces/subsystems.md` 的挂接契约已完成代码定位，但运行时门禁仍按 G0-05/G0-09 逐项执行。
 - Arch Linux 实机和 macOS M-series 仍未在本机验证；必须保留为明确的环境缺口。
