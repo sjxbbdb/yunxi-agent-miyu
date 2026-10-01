@@ -51,6 +51,7 @@
 - MCP/Skills 生命周期黑盒：在独立 `cargo build --locked` 后运行 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/mcp-persistent/run.py target/debug/yunxi`，5/5 通过；确认同 session 复用、跨 session 隔离、system prompt instructions、session 删除回收和 daemon stop 无孤儿。MCP server 启动失败、断连、超时、非法 request-shape 与权限组合仍未覆盖。
 - MCP 非法 JSON-RPC 响应：新增 `protocol_tests` 的 2 个分类回归与 `malformed_mcp_response_fails_the_matching_call_immediately` 运行时回归（2/2 + 1/1）；缺失 `jsonrpc`、非数值 id、畸形 `error` 会被标记为协议错误，能关联请求 id 时立即结束对应调用，不再等到超时；该运行时测试调用现有 session cleanup 路径，但未独立证明 PID 退出。
 - MCP response-shape 修复复跑（提交 `ae1a8e56`）：`cargo test -p yunxi-engine tools::mcp --lib --locked -- --test-threads=1` 为 28/28；新增覆盖 `method + result` 混合对象的协议分类和运行时快速失败，避免把响应误当作服务器请求而等到调用超时。测试完成后删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
+- MCP 故障边界复跑（提交 `0e4f9d40`）：同一 MCP 定向命令为 32/32；新增非法 JSON 噪声、分段 flush、半写 EOF 和异常退出 PID/连接池回收证据。测试结束后已删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
 - MCP 启动失败隔离：新增 `a_failed_mcp_startup_does_not_hide_a_healthy_server`（1/1）；不存在的 MCP 可执行文件只使自身 listing 失败，健康服务器仍注册工具，重复 registry 构建复用健康 listing 缓存。
 - 修复并固定 G0 故障注入：KB embedding 的 `embedding-reindex.json` 被截断或写入非法 JSON 时，不再静默回退为空进度；状态明确为 `failed`，遗留锁可清理，损坏文件保留为取证。`cargo test -p yunxi-engine tools::knowledge_base::dashboard::tests --locked -- --test-threads=1` 为 6/6。
 - 权限位测试改用 WSL 原生 Linux 文件系统临时目录，不再把 `/mnt` DrvFs 的 0777 映射误当作生产语义；bundled script、registry fixture、TUI changed-prefix、renderer event、tool-summary 和回放编辑测试均已按当前 YunXi 产品输出修正或补强。
