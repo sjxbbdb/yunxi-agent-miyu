@@ -12,8 +12,8 @@
 | M-01 | 格式与元数据 | `cargo fmt --all -- --check`；`cargo metadata --no-deps --format-version 1` | WSL Ubuntu-24.04 | 通过 | 不覆盖运行时行为 |
 | M-02 | 全工作区编译 | `cargo check --workspace --all-targets --locked` | WSL Ubuntu-24.04 | 通过 | Arch/macOS 未验证 |
 | M-03 | 分 crate 单测 | `cargo test -p yunxi-base --lib --locked -- --test-threads=1`；`yunxi-core`、`yunxi-hosts`、`yunxi --lib` 同格式命令 | WSL Ubuntu-24.04 | base 396/0/6；core 643/0/8（含 profile prompt-only 边界）；hosts 920/0/10；root 504/0/4 | 仍未覆盖故障注入 |
-| M-04 | engine 与 transfer | `YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1`；`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` | WSL Ubuntu-24.04 | engine 653/0/13（含 KB 双向删除隔离边界）；transfer 37/37（含 usage.db SQLite 快照/导入、成员路径缺口护栏） | 父目录 TOCTOU 仍未消除 |
-| M-05 | workspace 单测 | `YUNXI_LANG=zh cargo test --workspace --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 最新完整工作区复跑：root 504/0/4；base 396/0/6；core 643/0/8；engine 653/0/13；hosts 920/0/10；所有 doctest 通过 | 未覆盖 Arch/macOS |
+| M-04 | engine 与 transfer | `YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1`；`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` | WSL Ubuntu-24.04 | engine 654/0/13（含 KB 双向删除隔离与 embedding 进度损坏边界）；transfer 37/37（含 usage.db SQLite 快照/导入、成员路径缺口护栏） | 父目录 TOCTOU 仍未消除 |
+| M-05 | workspace 单测 | `YUNXI_LANG=zh cargo test --workspace --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 最新完整工作区复跑：root 504/0/4；base 396/0/6；core 643/0/8；engine 654/0/13；hosts 920/0/10；所有 doctest 通过 | 未覆盖 Arch/macOS |
 | M-06 | 架构依赖 | `python test_scripts/arch_dep_check.py` | 工作区 Python | 退出码 0 | 只检查跨层引用，不替代运行时测试 |
 | M-07 | fish 普通语法/接管 | `python3 testkit/fish-accept-line/run.py`；真实 fish `pty_run.py` | WSL Ubuntu-24.04 | 静态 17/17；PTY 通过 | 尚未注入断连、SIGINT、父进程替换 |
 | M-08 | daemon reload 与 IPC | `cargo test --test daemon_reload --locked -- --test-threads=1`；`cargo test -p yunxi-core ipc --lib --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 2/2；IPC 33/33 | 需补跨进程断连、残留 lease、半写恢复黑盒 |
@@ -25,6 +25,7 @@
 | M-14 | daemon parent/orphan 生命周期 | `cargo build --locked`；`PYTHONDONTWRITEBYTECODE=1 python3 testkit/daemon-orphan/run.py --binary target/debug/yunxi`（在仓库根运行） | WSL Ubuntu-24.04 | 先构建非 testkit 生产调试 binary 后黑盒 6/6，通过两次复跑；直接 daemon 在启动者被 SIGKILL/正常退出后退出，detached daemon 在启动命令退出后保持并可停止；测试隔离 `XDG_RUNTIME_DIR` | 不能用 `cargo test` 产物替代：testkit feature 会故意禁用自重启路径；未覆盖其它 binary、权限/延迟/断连故障注入与跨平台 |
 | M-15 | 新旧 profile 路径事实边界 | `cargo test -p yunxi-base --lib config::tests::paths::home_layout_prompt_ignores_legacy_state_profile --locked -- --exact --test-threads=1`；`cargo test -p yunxi-engine transfer::tests::home_and_persona_layout_wildcards_resolve_to_their_units --locked -- --exact --test-threads=1` | WSL Ubuntu-24.04 | 1/1 + 1/1 通过；新布局 prompt 读取 `home/<user>/profile.md`，`state/profile.md` 仅作为 legacy/transfer 兼容单元；transfer wildcard 入口保持可定位 | 尚未决定 legacy state profile 的删除/迁移时机；不改变当前产品行为 |
 | M-16 | MCP/Skills 会话生命周期 | `cargo build --locked`；`PYTHONDONTWRITEBYTECODE=1 python3 testkit/mcp-persistent/run.py target/debug/yunxi` | WSL Ubuntu-24.04 | 5/5 通过；同 session 复用 MCP 进程、跨 session 隔离、system prompt 注入 instructions、删除 session 回收进程、daemon stop 无 MCP 孤儿 | 未覆盖 MCP server 启动失败、断连、超时、非法 request-shape 与权限组合 |
+| M-17 | KB embedding 进度损坏/半写恢复 | `cargo test -p yunxi-engine tools::knowledge_base::dashboard::tests --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 6/6 通过；非法 JSON 明确显示 failed、停止误报 running，清理 stale lock 时保留损坏进度文件供取证；正常写入仍是临时文件 rename | 未覆盖磁盘满、权限不足、重建进程断连及 SQLite/embedding 全量恢复矩阵 |
 
 ## 2. 尚未满足的 G0 证据
 
@@ -35,4 +36,4 @@
 
 ## 3. 退出前复跑要求
 
-G0 退出前必须在同一 WSL 环境重新执行 M-01、M-02、M-04、M-05、M-06、M-07、M-08、M-09、M-10、M-11、M-12、M-13、M-14、M-15、M-16，并把完整输出或稳定摘要写入 release note；任何新失败都留在 G0 修复，不能用“启动成功”替代矩阵证据。
+G0 退出前必须在同一 WSL 环境重新执行 M-01、M-02、M-04、M-05、M-06、M-07、M-08、M-09、M-10、M-11、M-12、M-13、M-14、M-15、M-16、M-17，并把完整输出或稳定摘要写入 release note；任何新失败都留在 G0 修复，不能用“启动成功”替代矩阵证据。

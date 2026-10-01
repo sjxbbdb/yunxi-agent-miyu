@@ -46,13 +46,28 @@ impl KnowledgeBase {
         self.root.join("embedding-reindex.rerun")
     }
 
-    pub(in crate::tools::knowledge_base) fn read_reindex_progress(&self) -> Option<Value> {
-        let text = std::fs::read_to_string(self.reindex_progress_path()).ok()?;
-        serde_json::from_str(&text).ok()
+    pub(in crate::tools::knowledge_base) fn read_reindex_progress(&self) -> Result<Option<Value>> {
+        let path = self.reindex_progress_path();
+        let text = match std::fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(error.into()),
+        };
+        let progress: Value = serde_json::from_str(&text).map_err(|error| {
+            anyhow::anyhow!("invalid reindex progress file {}: {error}", path.display())
+        })?;
+        if !progress.is_object() {
+            return Err(anyhow::anyhow!(
+                "invalid reindex progress file {}: expected a JSON object",
+                path.display()
+            ));
+        }
+        Ok(Some(progress))
     }
 
-    /// 写临时文件再 rename。面板每秒读一次，读到半截 JSON 会被当成「没有进度」，
-    /// 于是进度条自己闪；rename 是原子的，读侧要么看到旧的一份、要么看到新的。
+    /// 写临时文件再 rename。面板每秒读一次；正常写入是原子的，读侧要么看到
+    /// 旧的一份、要么看到新的一份。若外部留下损坏 JSON，读取侧会明确报告失败，
+    /// 不再静默伪装成「没有进度」。
     pub(in crate::tools::knowledge_base) fn write_reindex_progress(&self, value: &Value) {
         write_reindex_progress_at(&self.reindex_progress_path(), value);
     }

@@ -90,7 +90,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 ## 6. 当前阶段门禁与未验证项
 
-已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2、IPC 定向 33/33 和 transfer 定向 37/37 已复现；`yunxi-core` 全量单测 643/0/8（含 Profile prompt-only 边界）、`yunxi-engine` 全量单测 653/0/13（含 KB 双向删除隔离边界）、`yunxi-hosts` 全量单测 920/0/10，新增 actor 会话重置隔离回归。非 test binary 的 daemon parent/orphan 黑盒已 6/6 连续两次通过。transfer 还覆盖了 coverage-aware stale Core 清理、旧清单 merge-only、输入归档保护、清理后 marker 失败恢复、rename 错误分类、旧新 persona/home wildcard、成员路径缺口护栏、生产用量账本路径以及 SQLite usage snapshot/import 回归。
+已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2、IPC 定向 33/33 和 transfer 定向 37/37 已复现；`yunxi-core` 全量单测 643/0/8（含 Profile prompt-only 边界）、`yunxi-engine` 全量单测 654/0/13（含 KB 双向删除与 embedding 进度损坏边界）、`yunxi-hosts` 全量单测 920/0/10，新增 actor 会话重置隔离回归。非 test binary 的 daemon parent/orphan 黑盒已 6/6 连续两次通过。transfer 还覆盖了 coverage-aware stale Core 清理、旧清单 merge-only、输入归档保护、清理后 marker 失败恢复、rename 错误分类、旧新 persona/home wildcard、成员路径缺口护栏、生产用量账本路径以及 SQLite usage snapshot/import 回归。
 
 仍未完成：
 
@@ -117,9 +117,9 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 | 状态 | 范围 | 当前证据或缺口 |
 | --- | --- | --- |
 | 已证 | G0-01/G0-02/G0-04/G0-06 | 本文入口表、单运行时结论、prompt/cache 接缝记录，以及 `legacy_config_dir` 正负回归测试。 |
-| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 653/0/13；transfer 37/37；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
+| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 654/0/13；transfer 37/37；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
 | 已证 | G0-09 基线闭环 | fish 静态 17/17、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI config 16/16、daemon orphan 6/6（重复两次）已有报告；这些证据仍不替代故障注入。 |
-| 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；Profile prompt-only、新旧 profile 路径边界、KB remove 不触碰 memory、Memory reset 不触碰 KB、actor 会话 reset 的跨 session 误删均有回归覆盖，跨域删除/恢复、usage 实际路径仍待运行时验证。 |
+| 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；Profile prompt-only、新旧 profile 路径边界、KB remove 不触碰 memory、Memory reset 不触碰 KB、embedding 进度损坏状态均有回归覆盖，跨域删除/恢复、usage 实际路径仍待运行时验证。 |
 | 部分已证 | G0-08 | MCP/Skills 会话生命周期黑盒 5/5 已证同 session 复用、跨 session 隔离、system prompt instructions、session 删除回收和 daemon stop 无孤儿；权限真相源、启动失败/断连/超时、request-shape 组合故障注入仍待补齐。 |
 | 仅定位 | G0-05 | 权限真相源和测试入口已列出，但尚未形成完整耗时/失败原因、断连/权限组合和 request-shape 故障注入报告。 |
 | 未验证 | G0-05/G0-09 跨平台 | Arch Linux 实机和 macOS M-series 尚未运行；只能保留为环境缺口。 |

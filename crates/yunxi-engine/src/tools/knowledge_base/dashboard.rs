@@ -234,12 +234,21 @@ impl KnowledgeBase {
                     .map(|age| age.as_secs());
             }
         }
-        let progress = self.read_reindex_progress().unwrap_or_else(|| json!({}));
-        let phase = progress
-            .get("phase")
-            .and_then(Value::as_str)
-            .unwrap_or("idle")
-            .to_string();
+        let (progress, progress_error) = match self.read_reindex_progress() {
+            Ok(Some(progress)) => (progress, None),
+            Ok(None) => (json!({}), None),
+            Err(error) => (json!({}), Some(format!("{error:#}"))),
+        };
+        let corrupt_progress = progress_error.is_some();
+        let phase = if corrupt_progress {
+            "failed".to_string()
+        } else {
+            progress
+                .get("phase")
+                .and_then(Value::as_str)
+                .unwrap_or("idle")
+                .to_string()
+        };
         let active = matches!(phase.as_str(), "starting" | "running");
         let idle_secs = progress
             .get("updated_at")
@@ -252,8 +261,9 @@ impl KnowledgeBase {
         // 靠这个上限收尸。
         let stall_after = if phase == "starting" { 60.0 } else { 300.0 };
         let stalled = active && idle_secs.is_some_and(|idle| idle > stall_after);
-        let stale_lock = lock_present && (lock_age_secs.is_some_and(|age| age > 3600) || stalled);
-        let running = (lock_present && !stale_lock) || (active && !stalled);
+        let stale_lock = lock_present
+            && (corrupt_progress || lock_age_secs.is_some_and(|age| age > 3600) || stalled);
+        let running = !corrupt_progress && ((lock_present && !stale_lock) || (active && !stalled));
         let mut status = json!({
             "running": running,
             "stale_lock": stale_lock,
@@ -273,7 +283,9 @@ impl KnowledgeBase {
             "log_path": self.reindex_log_path().display().to_string(),
         });
         // 失败原因只在真失败时给:平时挂一条旧报错在卡片上会让人以为又坏了。
-        status["last_error"] = if stalled {
+        status["last_error"] = if let Some(error) = progress_error {
+            json!(error)
+        } else if stalled {
             json!(format!(
                 "reindex process is gone (no progress for {} seconds)",
                 idle_secs.unwrap_or_default() as u64
@@ -304,9 +316,13 @@ impl KnowledgeBase {
         if !status["stale_lock"].as_bool().unwrap_or(false) {
             return Ok(false);
         }
-        std::fs::remove_file(self.reindex_lock_path())?;
+        match std::fs::remove_file(self.reindex_lock_path()) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
         // 进度也一并落定,否则卡片会继续举着一条永远走不完的进度条。
-        if let Some(mut progress) = self.read_reindex_progress() {
+        if let Ok(Some(mut progress)) = self.read_reindex_progress() {
             if matches!(
                 progress.get("phase").and_then(Value::as_str),
                 Some("starting") | Some("running")
@@ -573,6 +589,41 @@ mod tests {
         let status = kb.dashboard_reindex_status().unwrap();
         assert_eq!(status["phase"], "failed", "清完锁进度还举着半截进度条");
         assert_eq!(status["running"], false);
+    }
+
+    #[test]
+    fn corrupt_progress_is_failed_and_stale_lock_can_be_cleared_without_overwrite() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = paths(&temp);
+        let kb = KnowledgeBase::new(AppConfig::default(), paths).unwrap();
+        kb.dashboard_import("notes/a.md", "hello world".as_bytes())
+            .unwrap();
+
+        touch_lock(&kb);
+        let corrupt = r#"{"phase":"running""#;
+        std::fs::write(kb.dashboard_root().join("embedding-reindex.json"), corrupt).unwrap();
+
+        let status = kb.dashboard_reindex_status().unwrap();
+        assert_eq!(status["running"], false);
+        assert_eq!(status["phase"], "failed");
+        assert_eq!(status["stale_lock"], true);
+        assert!(status["last_error"]
+            .as_str()
+            .unwrap()
+            .contains("invalid reindex progress file"));
+
+        assert!(kb.dashboard_clear_stale_lock().unwrap());
+        assert!(!kb.reindex_lock_path().exists());
+        assert_eq!(
+            std::fs::read_to_string(kb.reindex_progress_path()).unwrap(),
+            corrupt,
+            "损坏进度要保留为取证,不能被清理动作静默覆盖"
+        );
+
+        let status = kb.dashboard_reindex_status().unwrap();
+        assert_eq!(status["running"], false);
+        assert_eq!(status["stale_lock"], false);
+        assert_eq!(status["phase"], "failed");
     }
 }
 
