@@ -40,11 +40,11 @@
 
 下列项目必须在证据索引中保留，但不自动扩张 G0 的业务范围。若它们违反本阶段最低退出合同，停在 G0；若只是后续阶段的硬化能力，则登记 owner 和阶段后移。
 
-1. **目录句柄安全**：当前 transfer 使用路径检查兼容后端；import 的 `ensure_destination_parent` 与后续 `rename`/rollback、stale prune、marker stamp 之间仍存在本地 TOCTOU，export 的输出路径和 source `symlink_metadata`→读取之间也存在同类竞态。M-22 的只读审计进一步确认 SQLite `rusqlite` path-only 打开无法直接变成跨 Linux/macOS 的稳定 FD 语义，Windows 还需独立 reparse-point 句柄实现。必须保留该风险，不能写成“已修复”。
-2. **故障注入**：尚未形成覆盖锁、权限、磁盘满、父目录替换、断连、SIGINT、半写缓存和非法 manifest 的统一矩阵。已有 transfer 单测只覆盖其中一部分。
-3. **跨平台**：Arch Linux 实机和 macOS M-series 尚未运行；当前 WSL 证据不能替代它们，但按 G0 合同标记为环境缺口，不阻塞 Linux 阶段推进。
+1. **目录句柄安全**：Unix import 的父目录 TOCTOU 已由 M-21 修复；export 的输出路径和 source `symlink_metadata`→读取之间仍存在竞态。M-22 的只读审计进一步确认 SQLite `rusqlite` path-only 打开无法直接变成跨 Linux/macOS 的稳定 FD 语义，Windows 还需独立 reparse-point 句柄实现。该项登记为 G9 hardening owner，必须保留风险，不能写成“已修复”。
+2. **故障注入**：尚未形成覆盖锁、权限、磁盘满、父目录替换、断连、SIGINT、半写缓存和非法 manifest 的统一矩阵；当前已覆盖的 MCP/transfer/KB 故障分别有 M-18～M-26 证据。完整组合矩阵登记为 G9 hardening owner。
+3. **跨平台**：Arch Linux 实机和 macOS M-series 尚未运行；当前 WSL 证据不能替代它们，登记为 G9 release owner，不阻塞 Linux 阶段推进，但不得在 G0 结束报告中写成已验证。
 4. **细化证据**：Profile prompt-only 与新旧路径事实边界已有 M-13/M-15 运行时证据，KB/Memory 双向删除隔离已有 M-13 证据，daemon parent/orphan 基本生命周期已有 M-14 黑盒证据，MCP/Skills 会话生命周期、非法 response-shape 和启动失败隔离已有 M-16/M-18/M-19 证据；SQLite 全表/索引、embedding、删除/恢复、权限组合和耗时/失败原因的逐项报告分别归入 G3/G4/G7/G9 的门禁，不在 G0 偷换成业务实现。
 
 ## 3. 退出前复跑要求
 
-G0 退出前必须在同一 WSL 环境重新执行 M-01、M-02、M-04、M-05、M-06、M-07、M-08、M-09、M-10、M-11、M-12、M-13、M-14、M-15、M-16、M-17、M-18、M-19，并把完整输出或稳定摘要写入 release note；任何新失败都留在 G0 修复，不能用“启动成功”替代矩阵证据。
+G0 退出前必须在同一 WSL 环境重新执行 M-01、M-02、M-04、M-05、M-06、M-07、M-08、M-09、M-10、M-11、M-12、M-13、M-14、M-15、M-16、M-17、M-18、M-19、M-25、M-26，并把 workspace/black-box 的完整输出或稳定摘要写入 release note；任何新失败都留在 G0 修复，不能用“启动成功”替代矩阵证据。Arch/macOS 与 G9 owner 风险必须保持显式未验证。
