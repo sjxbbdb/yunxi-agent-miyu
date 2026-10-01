@@ -1,6 +1,6 @@
 # YunXi × Miyu Linux 原生化长期 Goal Command v5
 
-状态：待用户替换当前 goal 后启用。本文是可直接复制给长期任务的执行合同，不是 G0 完成声明。
+状态：已接入当前活动 goal，按 G0→G9 执行中。本文是可审计、可复制的长期执行合同，不是 G0 完成声明。
 
 ## 1. 用户目标的完整提取
 
@@ -17,7 +17,7 @@
 
 ## 2. 可复制的长期 Goal Command
 
-把下面代码块作为新的长期 goal objective。当前 goal 删除后，必须从 `CURRENT_STAGE=G0` 重新启动，不得直接跳到 G1 或 Laya。
+下面代码块是当前活动 goal 的详细执行合同；活动状态由 Codex goal 跟踪，阶段细节、证据和残余风险以本文为准。必须从 `CURRENT_STAGE=G0` 开始，不得直接跳到 G1 或 Laya。
 
 ```text
 GOAL_ID
@@ -42,7 +42,7 @@ REPOSITORY
   base: shorin/miyu
   historical_reference: sjxbbdb/YunXi-Native
   branch: codex/yunxi-product-rename
-  current_head_at_draft: f2de6316
+  current_head_at_activation: fcd89d63
 
 OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
