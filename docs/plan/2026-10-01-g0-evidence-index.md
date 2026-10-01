@@ -25,7 +25,7 @@
 
 本轮首次复跑 `testkit/repl-smoke/run.py` 退出码为 1：终端交互、回复速度、历史占位符和进程存活均通过，但 `tool_flow_marker=false`。调查确认不是生产回合失败：真实记录已写入当前成员布局 `YUNXI_HOME/home/<member>/conversation.db`，其中 `tool_flow` 含 `run_command` 和 `G0_09_TOOL_OK`；测试夹具仍只读取已废弃的 `YUNXI_HOME/state/conversation.db`。
 
-修复提交 [`249b67f5`](https://github.com/sjxbbdb/yunxi-agent-miyu/commit/249b67f5) 让夹具按稳定布局依次检查 legacy `state/conversation.db` 与当前 `home/*/conversation.db`，不硬编码成员名，也不递归打开任意 SQLite 文件。修复后同一命令退出码 0，`tool_flow_marker=true`、`passed=true`。这是 G0 黑盒证据夹具的兼容修复，不改变生产运行时。
+修复提交 [`249b67f5`](https://github.com/sjxbbdb/yunxi-agent-miyu/commit/249b67f5) 让夹具优先检查当前 `home/*/conversation.db`，只有当前布局不存在时才回退到 legacy `state/conversation.db`；它不硬编码成员名，也不递归打开任意 SQLite 文件。修复后同一命令退出码 0，`tool_flow_marker=true`、`passed=true`。这是 G0 黑盒证据夹具的兼容修复，不改变生产运行时。
 
 ## 只读架构证据
 
