@@ -21,6 +21,30 @@ time.sleep(float(os.environ.get('DELAY', '0')))
 count = 0
 def send(message):
     print(json.dumps(message), flush=True)
+def send_faulted(message):
+    mode = os.environ.get('STDOUT_MODE')
+    if mode == 'illegal-json':
+        # A server may accidentally log plain text to stdout. It has no
+        # request id, so the client must ignore it and continue framing.
+        sys.stdout.write('not-json stdout noise\n')
+        sys.stdout.flush()
+        send(message)
+    elif mode == 'half-write':
+        encoded = json.dumps(message)
+        split = max(1, len(encoded) // 2)
+        sys.stdout.write(encoded[:split])
+        sys.stdout.flush()
+        time.sleep(0.05)
+        sys.stdout.write(encoded[split:] + '\n')
+        sys.stdout.flush()
+    elif mode == 'half-write-eof':
+        encoded = json.dumps(message)
+        split = max(1, len(encoded) // 2)
+        sys.stdout.write(encoded[:split])
+        sys.stdout.flush()
+        sys.exit(0)
+    else:
+        send(message)
 for line in sys.stdin:
     request = json.loads(line)
     if 'id' not in request or 'method' not in request:
@@ -81,7 +105,11 @@ for line in sys.stdin:
         result = {'content': [{'type': 'text', 'text': text}]}
     else:
         result = {}
-    send({'jsonrpc': '2.0', 'id': request['id'], 'result': result})
+    response = {'jsonrpc': '2.0', 'id': request['id'], 'result': result}
+    if method == 'tools/call' and os.environ.get('STDOUT_MODE') and name == 'echo':
+        send_faulted(response)
+    else:
+        send(response)
 "#;
 
 fn fake_server(id: &str, marker: &Path) -> McpServerConfig {
@@ -275,6 +303,62 @@ async fn malformed_mcp_response_fails_the_matching_call_immediately() {
         assert!(!error.to_string().contains("did not answer"), "{error:#}");
         forget_session(&session);
     }
+}
+
+/// 无法关联请求 id 的纯 stdout 噪声不能吞掉后面的合法 MCP 响应。
+#[tokio::test]
+async fn invalid_json_stdout_noise_does_not_hide_a_valid_response() {
+    let _pool = pool_lock();
+    let dir = tempfile::tempdir().unwrap();
+    let mut server = fake_server("stdout-noise", &dir.path().join("marker"));
+    server
+        .env
+        .insert("STDOUT_MODE".to_string(), "illegal-json".to_string());
+    assert_eq!(
+        call_in(Some("stdout-noise"), &server, "echo")
+            .await
+            .unwrap(),
+        "echo: "
+    );
+    forget_session("stdout-noise");
+}
+
+/// BufReader 必须把同一行分两次 flush 的 stdout 拼回一条 JSON-RPC 响应。
+#[tokio::test]
+async fn a_half_written_mcp_response_is_reassembled() {
+    let _pool = pool_lock();
+    let dir = tempfile::tempdir().unwrap();
+    let mut server = fake_server("half-write", &dir.path().join("marker"));
+    server
+        .env
+        .insert("STDOUT_MODE".to_string(), "half-write".to_string());
+    assert_eq!(
+        call_in(Some("half-write"), &server, "echo").await.unwrap(),
+        "echo: "
+    );
+    forget_session("half-write");
+}
+
+/// 半写行后 EOF 必须结束挂起请求，而不是等到配置的 request timeout。
+#[tokio::test]
+async fn a_half_written_mcp_response_followed_by_eof_fails_without_timeout() {
+    let _pool = pool_lock();
+    let dir = tempfile::tempdir().unwrap();
+    let mut server = fake_server("half-write-eof", &dir.path().join("marker"));
+    server.timeout_seconds = 5;
+    server
+        .env
+        .insert("STDOUT_MODE".to_string(), "half-write-eof".to_string());
+    let outcome = tokio::time::timeout(
+        Duration::from_secs(3),
+        call_in(Some("half-write-eof"), &server, "echo"),
+    )
+    .await
+    .expect("EOF must resolve the pending call before the request timeout");
+    let error = outcome.expect_err("a partial response followed by EOF must fail");
+    assert!(error.to_string().contains("closed stdout"), "{error:#}");
+    assert!(!error.to_string().contains("did not answer"), "{error:#}");
+    forget_session("half-write-eof");
 }
 
 /// 服务器在回话之前反过来 ping 我们：得回，不然它等不到。
