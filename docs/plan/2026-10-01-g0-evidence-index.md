@@ -4,7 +4,7 @@
 
 生成时间：`2026-10-01 07:01:20 UTC`；本轮黑盒复核时间：`2026-10-01 07:25:11 UTC`；v4 当前复跑：`2026-10-01`（本地时间）
 
-测试基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`；历史复核提交：`3d16ef4a`；v4 当前 workspace 复跑提交：`c8573e26f8e9849ab0a51f0b1af8ee5088eb8f70`；历史 workspace 复跑提交：`dc012f3c`；最新 workspace 复跑提交：`23283029`；生产黑盒复跑提交：`8f8af396a19bf695efc5badd9d9359b10293d2d7`；MCP 协议修复提交：`ae1a8e56`；MCP 故障边界测试提交：`0e4f9d40`；MCP 断连重启修复提交：`65deb53d`；MCP request-shape 测试提交：`e5366eaf`；MCP 权限矩阵测试提交：`1b8d44e3`；transfer 跨域回滚测试提交：`77ff1ffe`；KB embedding 原子重建提交：`9ed8579d`
+测试基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`；历史复核提交：`3d16ef4a`；v4 当前 workspace 复跑提交：`c8573e26f8e9849ab0a51f0b1af8ee5088eb8f70`；历史 workspace 复跑提交：`dc012f3c`；最新 workspace 复跑提交：`23283029`；生产黑盒复跑提交：`8f8af396a19bf695efc5badd9d9359b10293d2d7`；MCP 协议修复提交：`ae1a8e56`；MCP 故障边界测试提交：`0e4f9d40`；MCP 断连重启修复提交：`65deb53d`；MCP request-shape 测试提交：`e5366eaf`；MCP 权限矩阵测试提交：`1b8d44e3`；transfer 父目录竞态修复提交：`eda02d33`；transfer 跨域回滚测试提交：`77ff1ffe`；KB embedding 原子重建提交：`9ed8579d`
 环境：WSL `Ubuntu-24.04`，仓库 `<repo-root>`，`CARGO_BUILD_JOBS=1`，cargo 进程使用 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0`；需要中文 golden 的命令使用 `YUNXI_LANG=zh`。
 
 ## 可复核运行
@@ -27,6 +27,7 @@
 | `G0-20261001-workspace-04` | current shell (completed) | `CARGO_TARGET_DIR=/tmp/yunxi-g0-final-kb-target CARGO_BUILD_JOBS=1 YUNXI_LANG=zh systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0 cargo test --workspace --locked -- --test-threads=1` | 0 | 绑定提交 `23283029`；root 508、base 396、core 651、engine 665、hosts 920 均无失败，所有 doctest 通过；测试后已删除 `/tmp/yunxi-g0-final-kb-target` |
 | `G0-20261001-mcp-06` | current shell (completed) | `CARGO_TARGET_DIR=/tmp/yunxi-g0-mcp-suite-final CARGO_BUILD_JOBS=1 cargo test -p yunxi-engine tools::mcp --lib --locked -- --test-threads=1` | 0 | 绑定提交 `e5366eaf`；37 passed、0 failed；本次编译耗时约 7m44s，测试本身 6.15s；新增 `initialize`、`tools/list`、`tools/call`、notification 请求线 shape 单测；测试后已删除 `/tmp/yunxi-g0-mcp-suite-final` |
 | `G0-20261001-mcp-07` | current shell (completed) | `CARGO_TARGET_DIR=/tmp/yunxi-g0-mcp-perm-target cargo test -p yunxi-engine tools::mcp --lib --locked -- --test-threads=1` | 0 | 绑定提交 `1b8d44e3`；37 passed、0 failed；新增 fixture `read` 工具与 owner/member × `None`/`Inherit` 的读写权限矩阵，确认 member + `Inherit` 不能通过 MCP 写出调用方沙盒；测试结束后已删除 `/tmp/yunxi-g0-mcp-perm-target` |
+| `G0-20261001-transfer-02` | current shell (completed) | `CARGO_TARGET_DIR=/tmp/yunxi-g0-transfer-toctou-target CARGO_BUILD_JOBS=1 cargo test -p yunxi-engine transfer::tests --no-default-features --lib` | 0 | 绑定提交 `eda02d33`；32 passed、0 failed；Unix import 的 install、stale prune、rollback、marker stamp 使用持有 `O_NOFOLLOW` 目录 FD 的 `openat`/`renameat`/`unlinkat`；测试耗时约 7m41s，结束后已删除 `/tmp/yunxi-g0-transfer-toctou-target`，仓库 `target/` 也已清理 |
 | `G0-20261001-locale-01` | current shell (completed) | `YUNXI_LANG=zh cargo test -p yunxi-engine tools::readable_names::display_name_tests::both_token_usage_tools_have_a_readable_name --locked -- --exact --test-threads=1` | 0 | 1 passed；未设置 `YUNXI_LANG=zh` 的同一既有测试曾因 locale 失败，未修改生产代码 |
 | `G0-20261001-static-01` | 当前 shell | `cargo fmt --all -- --check`；`cargo metadata --no-deps --format-version 1`；`python test_scripts/arch_dep_check.py`；`git diff --check` | 0 | 格式、metadata、层序和 diff 检查通过；架构脚本的中文摘要受终端编码影响，但判定为通过 |
 | `G0-20261001-privacy-01` | 当前 shell | `python testkit/privacy/g0_scan.py --self-test`；`python testkit/privacy/g0_scan.py` | 0 | 1861 tracked text files；`personal_path=0`、`private_key=0`、`credential_shape=0`；allowlist 为 1 public + 2 fixture |
@@ -55,6 +56,6 @@
 1. 历史黑盒命令的原始 stdout 未归档，M-07～M-16 的摘要仍依赖此前终端记录；下一次完整 G0 门禁应输出脱敏、稳定的摘要文件并绑定 run-id。
 2. M-14/M-16 的非 test binary 已在 `G0-20261001-prod-build-01` 绑定版本与 SHA-256，并由 `*-02` 黑盒复跑使用；不得把 testkit feature 产物当作生产 daemon 黑盒输入。
 3. M-18 现已覆盖可关联 id 的缺失 `jsonrpc`、非法 id、畸形 error、`method + result` 混合响应、非法 JSON 噪声、分段/半写 stdout、`initialize`/`tools/list`/`tools/call`/notification 请求线 shape，并证明异常退出、连续超时及断连后首次重启提示的 PID 与连接池回收；仍未覆盖 MCP 断连/超时剩余场景。
-4. Arch Linux 实机、macOS M-series、transfer 目录句柄竞态、完整跨域恢复和组合故障注入保持在后续阶段风险登记中。
+4. Arch Linux 实机、macOS M-series、export 目录句柄竞态、完整跨域恢复和组合故障注入保持在后续阶段风险登记中；Unix import 的竞态修复已有 M-21 证据。
 
 该文件是证据索引，不是 G0 完成声明；G1 仍未开始。
