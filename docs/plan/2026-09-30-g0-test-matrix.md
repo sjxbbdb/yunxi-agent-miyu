@@ -21,14 +21,14 @@
 | M-10 | REPL 工具执行 | `python3 testkit/repl-smoke/run.py` | WSL Ubuntu-24.04 隔离 home | `passed=true`，tool flow marker 存在 | 只验证 stub tool，不覆盖真实命令危险边界 |
 | M-11 | TUI 表单 | `python3 testkit/tui/config_forms.py` | WSL Ubuntu-24.04 + pyte venv | 16/16 | 不代表窄屏、ANSI/kitty、并发重绘全覆盖 |
 | M-12 | 隐私门禁 | `python testkit/privacy/g0_scan.py --repo .` | 工作区 Python | 1858 tracked text files；personal/private-key/credential 为 0 | 不替代 transfer 恢复/删除审计 |
-| M-13 | Profile/KB 跨域边界 | `cargo test -p yunxi-core memory::tests::store::user_profile_is_prompt_only_and_never_enters_memory_tables --locked -- --exact --test-threads=1`；`YUNXI_LANG=zh cargo test -p yunxi-engine tools::knowledge_base::tests::removing_a_knowledge_file_does_not_touch_memory_or_memory_embeddings --locked -- --exact --test-threads=1` | WSL Ubuntu-24.04 | 1/1 + 1/1 通过；profile 只进入 prompt，KB 删除不触碰 facts/episodes/embeddings | 仍需补完整删除/恢复、崩溃和故障注入矩阵 |
+| M-13 | Profile/KB 跨域边界 | `cargo test -p yunxi-core memory::tests::store::user_profile_is_prompt_only_and_never_enters_memory_tables --locked -- --exact --test-threads=1`；`YUNXI_LANG=zh cargo test -p yunxi-engine tools::knowledge_base::tests::removing_a_knowledge_file_does_not_touch_memory_or_memory_embeddings --locked -- --exact --test-threads=1`；`YUNXI_LANG=zh cargo test -p yunxi-engine tools::knowledge_base::tests::resetting_memory_does_not_touch_knowledge_base_source_or_indexes --locked -- --exact --test-threads=1` | WSL Ubuntu-24.04 | 1/1 + 1/1 + 1/1 通过；profile 只进入 prompt，KB 删除不触碰 memory，memory reset 不触碰 KB 源文件、元数据或语义索引 | 仍需补完整删除/恢复、崩溃和故障注入矩阵 |
 
 ## 2. 尚未满足的 G0 证据
 
 1. **目录句柄安全**：当前 transfer 使用路径检查兼容后端；import 的 `ensure_destination_parent` 与后续 `rename`/rollback、stale prune、marker stamp 之间仍存在本地 TOCTOU，export 的输出路径和 source `symlink_metadata`→读取之间也存在同类竞态。必须保留该风险，不能写成“已修复”。
 2. **故障注入**：尚未形成覆盖锁、权限、磁盘满、父目录替换、断连、SIGINT、半写缓存和非法 manifest 的统一矩阵。已有 transfer 单测只覆盖其中一部分。
 3. **跨平台**：Arch Linux 实机和 macOS M-series 尚未运行；当前 WSL 证据不能替代它们。
-4. **完整 G0-03/G0-05/G0-08**：Profile prompt-only 与 KB 删除隔离已有 M-13 运行时证据；仍缺 SQLite 全表/索引、embedding、删除/恢复、权限组合和耗时/失败原因的逐项可执行报告。
+4. **完整 G0-03/G0-05/G0-08**：Profile prompt-only 与 KB/Memory 双向删除隔离已有 M-13 运行时证据；仍缺 SQLite 全表/索引、embedding、删除/恢复、权限组合和耗时/失败原因的逐项可执行报告。
 
 ## 3. 退出前复跑要求
 

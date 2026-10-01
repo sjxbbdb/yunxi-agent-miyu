@@ -11,6 +11,7 @@
 - 记录 Miyu 的 fish 接管、daemon、IPC、REPL/TUI、prompt/cache、memory、独立 KB、tools/hosts、MCP/Skills、迁移和 transfer registry 入口；后续实现必须复用这些入口，不能再造第二套运行时。
 - 产品层改名后，修复 `legacy_config_dir` 在测试/迁移 root 与默认 config 路径不一致时的兼容回归；匹配真实的 `.yunxi` 与 `.miyu` 默认根后再映射 XDG namespace，保留两套历史路径兼容。
 - 修复 G0-03 发现的会话边界回归：Web actor 重置改用现有 `MemoryStore::reset_session(session_id)`，不再把同一人格下其它会话的 pending events、evicted context、facts、episodes 或 embeddings 一并清掉；新增真实 actor 入口的 A/B 会话回归测试。
+- 补充 G0-03 反向跨域护栏：`MemoryStore::reset_all()` 后，知识库源文件、`kb_meta.db` 元数据和 `semantic_index.db` 的 `semantic_chunks` 均保持不变；memory 与 knowledge base 的删除边界已有双向运行时证据。
 - 将决策模型主线显式固化为 `DecisionPort`/可选 Laya provider：先 deterministic、再 shadow；模型只能提供 salience/admission/rerank/intent/主动候选建议，不能执行工具、鉴权或写删数据。G0 只记录 seam 与验收契约，G5 才实现模型。
 - 将长线 goal 重构为可执行 v2 合同：明确 G1～G9 的任务编号和 G5-00～G5-06 的可行性门、`DecisionPort`、deterministic provider、shadow Laya、逐消费者接入、故障评测与实际建议采纳/回滚；区分 G5 当前消费者与 G6/G7 后续消费者的依赖，模型 worker 受现有 daemon 管理。当前活动 goal 不结束、不重建，仓库计划文件作为可审计细化版本，活动 objective 文本未原地改写。
 

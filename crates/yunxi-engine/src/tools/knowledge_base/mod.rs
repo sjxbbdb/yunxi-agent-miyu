@@ -494,6 +494,73 @@ mod tests {
         );
     }
 
+    /// G0-03 反向边界护栏：记忆库的全量清理不能触碰知识库的源文件、元数据
+    /// 或语义索引；两个域必须可以独立恢复。
+    #[test]
+    fn resetting_memory_does_not_touch_knowledge_base_source_or_indexes() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = false;
+
+        let kb = KnowledgeBase::new(config.clone(), paths.clone()).unwrap();
+        kb.init().unwrap();
+        let source = temp.path().join("reference.md");
+        std::fs::write(&source, "memory and knowledge are separate").unwrap();
+        kb.import_file(&source, "notes/reference.md").unwrap();
+        kb.semantic_conn()
+            .unwrap()
+            .execute(
+                "INSERT INTO semantic_chunks
+                    (provider_id, model, file_name, content_sha256, chunk_index,
+                     start_char, end_char, text, embedding_json, created_at)
+                 VALUES ('g0-test', 'g0-test', 'notes/reference.md', 'kb-sha', 0,
+                         0, 33, 'memory and knowledge are separate', '[]', 0)",
+                [],
+            )
+            .unwrap();
+        let kb_file = kb.files_dir.join("notes/reference.md");
+        let before_bytes = std::fs::read(&kb_file).unwrap();
+        let before_names = kb
+            .list()
+            .unwrap()
+            .into_iter()
+            .map(|record| record.name)
+            .collect::<Vec<_>>();
+        let before_semantic_count: i64 = kb
+            .semantic_conn()
+            .unwrap()
+            .query_row("SELECT COUNT(*) FROM semantic_chunks", [], |row| row.get(0))
+            .unwrap();
+
+        let memory = yunxi_core::memory::MemoryStore::new(&config, &paths);
+        memory
+            .remember_fact("这条记忆会被 reset_all 清掉", "g0-test")
+            .unwrap();
+        memory.reset_all().unwrap();
+
+        assert_eq!(std::fs::read(&kb_file).unwrap(), before_bytes);
+        assert_eq!(
+            kb.list()
+                .unwrap()
+                .into_iter()
+                .map(|record| record.name)
+                .collect::<Vec<_>>(),
+            before_names,
+            "memory reset changed KB metadata"
+        );
+        assert_eq!(
+            kb.semantic_conn()
+                .unwrap()
+                .query_row("SELECT COUNT(*) FROM semantic_chunks", [], |row| {
+                    row.get::<_, i64>(0)
+                })
+                .unwrap(),
+            before_semantic_count,
+            "memory reset changed KB semantic index"
+        );
+    }
+
     pub(super) fn test_paths(root: &Path) -> YunXiPaths {
         YunXiPaths {
             root_dir: root.to_path_buf(),
