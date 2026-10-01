@@ -60,7 +60,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 #### G0-03 当前结论
 
-已确认四个独立事实域：`Profile/Persona → Conversation/Session → Memory → Knowledge Base`；各域的 source、metadata、embedding 和 transfer 分类已经能在代码中定位。尚未完成的是跨域运行时验证矩阵：Profile 不入 memory embedding、memory reset 不触碰 KB、KB remove/reindex 不触碰 memory、旧新布局 identity、usage 实际路径以及故障注入/恢复证据。因而 G0-03 由“仅定位”提升为“静态边界已证、运行时边界待验”，不视为完成。
+已确认四个独立事实域：`Profile/Persona → Conversation/Session → Memory → Knowledge Base`；各域的 source、metadata、embedding 和 transfer 分类已经能在代码中定位。Profile prompt-only 与 KB 删除隔离已有运行时边界证据；尚未完成的是完整跨域删除/恢复矩阵：memory reset 不触碰 KB、KB reindex 不触碰 memory、旧新布局 identity、usage 实际路径以及故障注入/恢复证据。因而 G0-03 由“仅定位”提升为“部分运行时边界已证、完整删除/恢复与故障注入待验”，不视为完成。
 
 ## 4. Skills、MCP 与权限真相源
 
@@ -90,7 +90,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 ## 6. 当前阶段门禁与未验证项
 
-已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2、IPC 定向 33/33 和 transfer 定向 37/37 已复现；`yunxi-hosts` 全量单测 920/0/10，新增 actor 会话重置隔离回归。transfer 还覆盖了 coverage-aware stale Core 清理、旧清单 merge-only、输入归档保护、清理后 marker 失败恢复、rename 错误分类、旧新 persona/home wildcard、成员路径缺口护栏、生产用量账本路径以及 SQLite usage snapshot/import 回归。
+已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2、IPC 定向 33/33 和 transfer 定向 37/37 已复现；`yunxi-core` 全量单测 643/0/8（含 Profile prompt-only 边界）、`yunxi-engine` 全量单测 652/0/13（含 KB 删除隔离边界）、`yunxi-hosts` 全量单测 920/0/10，新增 actor 会话重置隔离回归。transfer 还覆盖了 coverage-aware stale Core 清理、旧清单 merge-only、输入归档保护、清理后 marker 失败恢复、rename 错误分类、旧新 persona/home wildcard、成员路径缺口护栏、生产用量账本路径以及 SQLite usage snapshot/import 回归。
 
 仍未完成：
 
@@ -119,7 +119,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 | 已证 | G0-01/G0-02/G0-04/G0-06 | 本文入口表、单运行时结论、prompt/cache 接缝记录，以及 `legacy_config_dir` 正负回归测试。 |
 | 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 651/0/13；transfer 37/37；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
 | 已证 | G0-09 基线闭环 | fish 静态 17/17、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI config 16/16 已有报告；这些证据仍不替代故障注入。 |
-| 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；actor 会话 reset 的跨 session 误删已修复并由 hosts 全量测试覆盖，跨域删除/恢复、旧新布局 identity、usage 实际路径仍待运行时验证。 |
+| 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；Profile prompt-only、KB remove 不触碰 memory、actor 会话 reset 的跨 session 误删均有回归覆盖，跨域删除/恢复、旧新布局 identity、usage 实际路径仍待运行时验证。 |
 | 仅定位 | G0-05/G0-08 | 权限真相源和测试入口已列出，但尚未形成完整耗时/失败原因、断连/权限组合和 request-shape 故障注入报告。 |
 | 未验证 | G0-05/G0-09 跨平台 | Arch Linux 实机和 macOS M-series 尚未运行；只能保留为环境缺口。 |
 | 未关闭 | transfer 安全硬化 | import 的路径检查兼容后端仍存在父目录 TOCTOU；export 的 output/source 检查与实际写入/读取之间也存在路径竞态。严格安全语义需要 Linux/macOS `openat`/`renameat` 与 Windows handle-relative backend，当前不能宣称竞态已消除。 |

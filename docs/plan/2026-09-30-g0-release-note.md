@@ -11,6 +11,8 @@
 - 记录 Miyu 的 fish 接管、daemon、IPC、REPL/TUI、prompt/cache、memory、独立 KB、tools/hosts、MCP/Skills、迁移和 transfer registry 入口；后续实现必须复用这些入口，不能再造第二套运行时。
 - 产品层改名后，修复 `legacy_config_dir` 在测试/迁移 root 与默认 config 路径不一致时的兼容回归；匹配真实的 `.yunxi` 与 `.miyu` 默认根后再映射 XDG namespace，保留两套历史路径兼容。
 - 修复 G0-03 发现的会话边界回归：Web actor 重置改用现有 `MemoryStore::reset_session(session_id)`，不再把同一人格下其它会话的 pending events、evicted context、facts、episodes 或 embeddings 一并清掉；新增真实 actor 入口的 A/B 会话回归测试。
+- 将决策模型主线显式固化为 `DecisionPort`/可选 Laya provider：先 deterministic、再 shadow；模型只能提供 salience/admission/rerank/intent/主动候选建议，不能执行工具、鉴权或写删数据。G0 只记录 seam 与验收契约，G5 才实现模型。
+- 将长线 goal 重构为可执行 v2 合同：明确 G1～G9 的任务编号和 G5-00～G5-06 的可行性门、`DecisionPort`、deterministic provider、shadow Laya、逐消费者接入、故障评测与实际建议采纳/回滚；区分 G5 当前消费者与 G6/G7 后续消费者的依赖，模型 worker 受现有 daemon 管理。当前活动 goal 不结束、不重建，仓库计划文件作为可审计细化版本，活动 objective 文本未原地改写。
 
 ## 验证状态
 
@@ -21,13 +23,15 @@
 - `python test_scripts/arch_dep_check.py`：退出码 0。
 - WSL Ubuntu-24.04 `cargo check --workspace --all-targets --locked`：通过。
 - WSL Ubuntu-24.04 `cargo test -p yunxi-base --lib --locked -- --test-threads=1`：395 passed、0 failed、6 ignored。
-- WSL Ubuntu-24.04 `cargo test -p yunxi-core --lib --locked -- --test-threads=1`：642 passed、0 failed、8 ignored。
+- WSL Ubuntu-24.04 `cargo test -p yunxi-core --lib --locked -- --test-threads=1`：642 passed、0 failed、8 ignored（改动前基线）。
+- WSL Ubuntu-24.04 最新复跑：`cargo test -p yunxi-core --lib --locked -- --test-threads=1`：643 passed、0 failed、8 ignored；新增 Profile prompt-only 边界回归，确认 profile marker 只进入 prompt，不进入 facts、episodes 或 `memory_embeddings`。
 - WSL Ubuntu-24.04 `cargo test -p yunxi-engine --lib --locked -- --test-threads=1`：628 passed、0 failed、13 ignored。
 - WSL Ubuntu-24.04 上一轮复跑（归档资源上限、tier 矩阵和 registry 子路径边界之后）：`cargo test -p yunxi-engine --lib --locked -- --test-threads=1` 为 643 passed、0 failed、13 ignored；未设置 `YUNXI_LANG=zh` 时仅复现既有 locale 选择导致的中文显示名断言失败，设置后通过。
 - WSL Ubuntu-24.04 本轮覆盖感知导入与 rename 错误分类复跑：`YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1` 为 651 passed、0 failed、13 ignored；其中 transfer 定向测试为 37/37，包含 stale Core 移动后 marker 失败恢复、仅 EXDEV 允许 copy fallback、旧新 persona/home wildcard、生产用量账本路径覆盖和成员路径缺口护栏。
+- WSL Ubuntu-24.04 最新复跑：`YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1` 为 652 passed、0 failed、13 ignored；新增 KB 删除隔离回归，确认删除 KB source/chunks 不会触碰 memory facts、episodes 或 `memory_embeddings`。
 - WSL Ubuntu-24.04 `cargo test -p yunxi-hosts --lib --locked -- --test-threads=1`：920 passed、0 failed、10 ignored；新增 `resetting_a_conversation_clears_only_the_named_session_memory`，证明 actor 重置不会误伤同人格的其它会话。
 - WSL Ubuntu-24.04 `cargo test -p yunxi --lib --locked -- --test-threads=1`：504 passed、0 failed、4 ignored。
-- WSL Ubuntu-24.04 全工作区 `YUNXI_LANG=zh cargo test --workspace --no-fail-fast --locked -- --test-threads=1`：本轮复跑根包与四个下层 crate 均为 0 失败；所有 doctest 通过。未固定 `YUNXI_LANG` 的旧复跑会触发英文/中文 golden 与可读名称断言，属于环境不一致，已在本轮用固定中文环境复核。
+- WSL Ubuntu-24.04 全工作区 `YUNXI_LANG=zh cargo test --workspace --no-fail-fast --locked -- --test-threads=1`：新增 Profile/KB 边界测试前的完整复跑根包与四个下层 crate 均为 0 失败，所有 doctest 通过；本轮新增测试后只复跑了 core/engine 全量 crate 和 workspace check，未再次声称完整 workspace 已复跑。未固定 `YUNXI_LANG` 的旧复跑会触发英文/中文 golden 与可读名称断言，已用固定中文环境复核。
 - WSL Ubuntu-24.04 `cargo check --workspace --all-targets --locked`：通过；`cargo fmt --all -- --check`、`cargo metadata --no-deps --format-version 1`、`git diff --check`、`python test_scripts/arch_dep_check.py`：均通过。
 - WSL Ubuntu-24.04 fish 黑盒基线：`python3 testkit/fish-accept-line/run.py` 17/17 通过；真实 fish PTY `pty_run.py` 通过，未出现通配符报错且 YunXi 成功接管。为兼容 fish 3.7，hook 的原文分词改用 `commandline --input=... --current-process --tokenize`，并修正 testkit 对 `crates/yunxi-base/src/shell/fish.rs` 的路径引用。
 - daemon reload 定向黑盒：`cargo test --test daemon_reload --locked -- --test-threads=1` 2/2 通过。
@@ -62,4 +66,4 @@
 
 ## 发布约束
 
-本记录不代表阶段完成，也不触发 G1。只有 G0 退出条件全部满足后，才按阶段号提交并推送；失败证据必须留在本计划中，不能用“可以启动”替代验收。
+本记录不代表阶段完成，也不触发 G1。验证通过的独立切片按阶段号提交并推送；只有 G0 退出条件全部满足后才推进 G1。失败证据必须留在本计划中，不能用“可以启动”替代验收。

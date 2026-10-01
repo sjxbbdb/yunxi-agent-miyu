@@ -376,6 +376,124 @@ mod tests {
         assert_eq!(roots[0], roots[1], "库根跟着人格走了");
     }
 
+    /// G0-03 边界护栏：知识库文件及其语义索引删除只能触碰 KB 两个库，
+    /// 不得误删当前人格的 facts、episodes 或 memory_embeddings。
+    #[test]
+    fn removing_a_knowledge_file_does_not_touch_memory_or_memory_embeddings() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = false;
+
+        let memory = yunxi_core::memory::MemoryStore::new(&config, &paths);
+        memory.init().unwrap();
+        let fact_id = memory
+            .remember_fact("删除知识库文件时必须保留的事实", "g0-test")
+            .unwrap();
+        let (database_id, generation) = memory.identity().unwrap();
+        assert!(memory
+            .process_after_turn(
+                "删除边界测试的问题",
+                "删除边界测试的回答",
+                &yunxi_core::memory::MemoryOrigin::local("g0-kb-boundary"),
+                &database_id,
+                generation,
+            )
+            .unwrap());
+
+        let memory_db = config
+            .active_persona_memory_data_dir(&paths)
+            .join("memory/memory.db");
+        let memory_conn = rusqlite::Connection::open(&memory_db).unwrap();
+        let episode_id: i64 = memory_conn
+            .query_row(
+                "SELECT id FROM episodes ORDER BY id DESC LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        // 模拟已生成的长期向量；这里只验证删除边界，不依赖本地模型。
+        memory_conn
+            .execute(
+                "INSERT INTO memory_embeddings (kind, id, model, content_sha256, embedding, created_at)
+                 VALUES ('fact', ?1, 'g0-test', 'fact-sha', x'00000000', '2026-09-30T00:00:00Z'),
+                        ('episode', ?2, 'g0-test', 'episode-sha', x'00000000', '2026-09-30T00:00:00Z')",
+                rusqlite::params![fact_id, episode_id],
+            )
+            .unwrap();
+        let before_memory_counts = memory_conn
+            .query_row(
+                "SELECT
+                    (SELECT COUNT(*) FROM facts),
+                    (SELECT COUNT(*) FROM episodes),
+                    (SELECT COUNT(*) FROM memory_embeddings)",
+                [],
+                |row| Ok((row.get::<_, i64>(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(before_memory_counts, (1, 1, 2));
+        drop(memory_conn);
+
+        let kb = KnowledgeBase::new(config, paths).unwrap();
+        kb.init().unwrap();
+        let source = temp.path().join("reference.md");
+        std::fs::write(&source, "knowledge boundary fixture").unwrap();
+        kb.import_file(&source, "notes/reference.md").unwrap();
+        kb.semantic_conn()
+            .unwrap()
+            .execute(
+                "INSERT INTO semantic_chunks
+                    (provider_id, model, file_name, content_sha256, chunk_index,
+                     start_char, end_char, text, embedding_json, created_at)
+                 VALUES ('g0-test', 'g0-test', 'notes/reference.md', 'kb-sha', 0,
+                         0, 26, 'knowledge boundary fixture', '[]', 0)",
+                [],
+            )
+            .unwrap();
+        assert_eq!(kb.list().unwrap().len(), 1);
+        assert_eq!(
+            kb.semantic_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM semantic_chunks WHERE file_name='notes/reference.md'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            1
+        );
+
+        kb.remove("notes/reference.md").unwrap();
+        assert!(kb.list().unwrap().is_empty());
+        assert_eq!(
+            kb.semantic_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM semantic_chunks WHERE file_name='notes/reference.md'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            0
+        );
+
+        let memory_conn = rusqlite::Connection::open(&memory_db).unwrap();
+        let after_memory_counts = memory_conn
+            .query_row(
+                "SELECT
+                    (SELECT COUNT(*) FROM facts),
+                    (SELECT COUNT(*) FROM episodes),
+                    (SELECT COUNT(*) FROM memory_embeddings)",
+                [],
+                |row| Ok((row.get::<_, i64>(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            after_memory_counts, before_memory_counts,
+            "知识库删除误伤了记忆库或记忆向量"
+        );
+    }
+
     pub(super) fn test_paths(root: &Path) -> YunXiPaths {
         YunXiPaths {
             root_dir: root.to_path_buf(),

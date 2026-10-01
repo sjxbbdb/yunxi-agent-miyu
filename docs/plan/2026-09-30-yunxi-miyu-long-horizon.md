@@ -1,11 +1,83 @@
 # YunXi × Miyu 长线原生化升级计划
 
 > 计划编号：YXM-G0
-> 版本：2026-09-30
+> 版本：v2 / 2026-10-01
 > 当前基线：仓库 `sjxbbdb/yunxi-agent-miyu`
 > 上游参考：shorin/miyu
 
 这不是一份“把功能加上去”的愿望清单，而是一份可以逐阶段执行、测试、回滚和验收的工程合同。每个阶段都有明确的代码边界、入口、依赖、测试证据和退出条件；当前阶段没有通过时，不进入下一阶段。
+
+## 0. 可执行 Goal 合同（v2）
+
+下面这段是本项目长线 goal 的唯一执行口径。它把“加入一个决策模型”从普通功能需求提升为跨阶段架构主线；任何阶段都不得绕过它另起模型链、调度器或权限链。
+
+```text
+OBJECTIVE
+  在 Miyu 的 Linux 原生底座上，把 YunXi 的人格/灵魂、用户画像/关系、分层记忆、独立知识库、陪伴与决策模型以内生方式接入，
+  最终让用户用自然语言与 fish 终端交互；当前只执行 G0，不进入 G1。
+
+RUN
+  locate -> write invariants/failing tests -> minimal slice -> fmt/check/targeted tests
+  -> fault injection/replay -> WSL (Arch when available) -> update evidence -> commit/push
+
+HARD STOP
+  任何测试、隐私、权限、回放、迁移或跨域边界失败，都停在当前阶段修复；“能启动”不算通过。
+
+PHASE_CONTRACT
+  G0-01~09: 真实入口/单运行时/数据边界/prompt-cache/测试/兼容修复/隐私/扩展权限/终端闭环。
+  G1-01: 在 persona_hint/prompt/PersonaLane 上设计最小 CompanionContext，不增加拼装链。
+  G1-02: 接入人格与灵魂的来源/版本/作用域，缺文件/损坏/旧版本回退。
+  G1-03: 验证请求字节、工具面、化石回放、两轮缓存和隐私；更新阶段证据并推送。
+  G2-01: 在现有 profile/state 中记录 confirmed/inferred、来源、时间与关系事件。
+  G2-02: 追加迁移、并发/幂等/重启/旧数据读取、导出和删除；profile 永不向量化。
+  G2-03: 验证不同用户/人格/会话隔离及撤销恢复，不让推断伪装成用户确认。
+  G3-01: 明确 transient/short/candidate/committed/rejected/expired 和每次转移的 owner。
+  G3-02: 先用确定性规则筛选未来价值、稳定偏好、项目约束、敏感度；并保留 DecisionPort 消费接缝。
+  G3-03: 只有 committed 进入长期向量；短期只承接语气/情景，拒绝/过期候选不入索引。
+  G3-04: 验证去重、撤销、过期、删除正文/向量/关联/缓存/摘要引用、旧数据和崩溃恢复。
+  G4-01: 复用现有 KB，把 Linux 命令知识的 source/版本/切片/引用和 namespace 明确化。
+  G4-02: 保持 KB/memory 的数据库、索引、检索/权限/迁移/删除独立，未来支持授权私有知识。
+  G4-03: 验证增量更新、重建、失效、断索引/换模型恢复和跨库隔离；预留排序接缝。
+  G5-00~06: 完成下方 DECISION_MAINLINE 的模型验证、端口、基线、shadow、接入、评测和实际启用。
+  G6-01: 复用现有 idle/closing/job owner，设计可取消、不抢前台、重启幂等的总结任务。
+  G6-02: 分别输出短期摘要/长期记忆候选/知识候选/profile 提案/关系事件，各走自己的存储规则。
+  G6-03: 决策模型参与候选价值和主动时机排序；可选陪伴信箱不影响终端主链。
+  G7-01: 复用 fish/daemon/IPC 的接管入口，不新增 router/parser；普通命令原语义不变。
+  G7-02: 自然语言 -> 必要澄清 -> 现有工具/权限执行 -> 解释/回放；不新增通用审批层。
+  G7-03: 验证 SIGINT、TTY resize、断连、重启、交互式程序、长 Unicode 和失败回退 fish。
+  G8-01: 用 Miyu 原生状态机/渲染/输入显示人格、运行阶段、记忆/知识引用、决策回退状态。
+  G8-02: 验证键盘、窄屏、ANSI/kitty、滚动、并发重绘和窗口恢复，截图补充视觉验收。
+  G9-01: 建立启动/CPU/RAM/首 token/检索/决策延迟、质量和退化基线。
+  G9-02: 注入数据库锁/损坏、磁盘满、权限/网络/模型缺失、半写、重启、缓存与非法输出。
+  G9-03: 完成安装/升级/卸载/恢复、迁移、文档、公开秘密扫描和 WSL/Arch 验收。
+  G9-04: 独立复核所有退出条件和未验证项，只有整体目标完成才能结束长线 goal。
+
+DECISION_MAINLINE
+  G0: 只盘点 DecisionPort 的 seam、数据脱敏边界、fallback 和评测约束，不加载模型。
+  G3/G4/G6/G7: 只保留 deterministic 调用点，不把模型结果当权限/事实。
+  G5-00: 验证 Laya 候选的 artifact、许可证、runtime、Linux/macOS ARM/CPU、中文/Linux 评测、延迟/RAM。
+  G5-01: 定义版本化 DecisionPort（request/result/choice/abstain/reason/confidence/timeout/capabilities）。
+  G5-02: 实现 deterministic provider，关闭模型时行为与基线逐字/逐序一致。
+  G5-03: 以 shadow、可关闭、无副作用方式接入 Laya/ONNX/sidecar。
+  G5-04: 按 context salience -> memory admission -> recall/rerank -> terminal intent
+        -> proactive ranking 逐消费者接入，每个消费者独立开关、预算、回放集和 fallback。
+  G5-05: 用脱敏评测集验证拒绝率、混淆矩阵、p50/p95、RAM、超时/非法输出/缺模型/断连回退。
+  G5-06: 通过每个消费者的质量/延迟门后启用建议采纳模式；验证实际影响、可解释性和一键退回基线。
+
+DECISION_BOUNDARY
+  模型只能返回建议和原因，不能执行工具、鉴权/提权、写删 memory/KB/profile、改变 scheduler 或直接发送主动消息。
+  输入为最小化脱敏元数据和必要的授权文本片段，不能只给模型丢失语义的计数。
+  secret、credential、完整 profile、未授权原文不得进入日志或模型索引。
+  缺模型、超时、低置信度、schema 非法、sidecar 断连统一回退 deterministic；模型不可用不能阻塞终端主链路。
+
+EVIDENCE_AND_SYNC
+  每个切片记录阶段/任务号/文件/实际命令与结果/风险/未验证项；不猜完成比例，不把测试零失败写成产品全完成。
+  验证通过的切片立即按阶段提交并推送；阶段退出审计与提交切片是两件事，不攒到整个阶段结束才同步。
+  独立子任务可委派，写明绝对路径/读写边界/验收/不提交；同一时刻只跑一个受 cgroup 限制的 cargo。
+  阶段未通过继续定位、修复、复测；不要通过新增严格审批、第二运行时或虚假完成来绕过用户目标。
+```
+
+当前活动的 Codex goal 已经在运行，goal API 不支持在未结束状态下原地改写 objective；本文件的 v2 合同因此作为可审计、可提交、可复现的细化版本，不通过结束旧 goal 再伪造新 goal 来改变长线状态。
 
 ## 1. 固定产品背景
 
@@ -26,6 +98,27 @@
 7. 数据本地优先、最小日志、可查看、可导出、可删除、可恢复；公开仓库不得出现令牌、个人档案、绝对本机路径和测试索引。
 8. Rust 2021（当前 `Cargo.toml` 的真实值，不能把计划写成不存在的 2024）；模块小而专一；数据库迁移只能追加且必须命名；不能用一个巨型模块承载多个领域。
 9. Linux 是产品主平台，但项目规则还要求保持 macOS M-series 兼容性；G0/G9 必须留下对应的编译/定向测试证据，不能静默把范围缩成 Linux-only。
+
+### 2.1 决策模型主线（跨阶段约束）
+
+决策模型不是另一个 Agent，也不是第二个调度器；它是挂在现有运行时 seam 上的可选建议器。项目中以 `DecisionPort` 表示稳定接口，`Laya` 只是一个可替换 provider 名称。它必须贯穿但不侵入以下决策点：
+
+1. **上下文压缩**：判断哪些上下文值得保留，不能改写 append-only/fossilization 或回放顺序。
+2. **记忆准入**：判断 transient/short 事件是否成为 candidate；只有现有 admission 流程明确 commit 后才允许写入长期向量库。
+3. **召回与知识排序**：只能对已经通过权限和边界检查的 memory/KB 候选排序，不能跨库合并或扩大可见范围。
+4. **终端意图与主动候选**：提供 intent/salience/主动陪伴排序建议，不能直接执行命令、改变权限、写删数据或触发调度。
+
+固定执行合同：先 deterministic baseline，再接入可关闭的 Laya/ONNX/sidecar shadow provider，评测通过后按消费者启用建议采纳模式，不永久停在 shadow。默认关闭时行为必须与基线一致。所有结果都要经过 schema 校验、置信度/超时/非法输出检查；缺模型、超时、低置信度、解析失败统一回退确定性规则。输入使用最小化脱敏元数据及必要授权文本片段，不能为了脱敏让语义判断失效；秘密、凭据、完整 profile 和未经授权的原文不得进入模型日志或模型索引。模型输出只产生判断建议和原因；现有 compact/admission/检索/终端/job owner 负责验证与应用，模型本身不拥有工具、权限、记忆写删或调度权。常规记忆准入不因此增加逐条人工审批，沿用用户的“记住/忘记”语义和既有存储规则。
+
+该主线的实现顺序为：G0 只盘点 seam 与约束；G3/G4 先完成领域规则和 deterministic 接缝；G5 实现 `DecisionPort`、可选 provider、shadow 评测及 context/admission/rerank 的实际接入；G6/G7 再分别实现 proactive/intent 的消费者并复用 G5 验收合同。尚未存在的消费者只做协议测试，不能提前宣称端到端通过。Laya 的具体项目/模型标识、官方来源、可用权重和接口尚待 G5-00 核实，不能预设它能完成所有任务或捏造字段。
+
+**接口与生命周期验收合同**：
+
+- 请求携带任务种类、版本、候选 id、作用域、输入指纹和 deadline；响应使用版本化、任务特定的有限选择与候选 id，包含 provider、reason code、可选置信度及明确的 `abstain`。模型不支持原生置信度时不能伪造或把相似度当概率；由 adapter 显式记录能力并使用已评测的采纳规则。
+- 未知 schema 版本、非法 choice/id、非有限或越界 score、缺少必要字段、已超时/取消的响应一律不采纳；取消后不得写入，重放只读已记录的采用结果，不能重新采样改变旧上下文。日志只记录 id、指纹、结果分类、耗时和 fallback reason，不落原文。
+- G5-00 输出模型来源/版本与 SHA、许可证、部署依赖、最小 CPU 推理命令、脱敏 fixture 格式、baseline 和资源实测；G5-05 在启用之前写定每项质量/延迟预算并冻结评测集。没有模型、阈值或复现实验，不算通过。
+- 必测样例覆盖重要约束保留、闲聊拒绝长期收录、矛盾/低置信度弃权、敏感输入拒绝、重复记忆和领域隔离；另外用同一真实输入验证“模型建议被采纳”和“模型关闭回退”，不是只检查日志字段。阈值来源和样本局限必须记录，不能以全仓单测代替模型质量评测。
+- sidecar 只是推理 worker，由现有 daemon/host 管理按需启动、退出、取消、超时、资源上限与重启退避；没有独立终端接管、权限、调度、数据 store 或自主循环。无 sidecar 仍能运行；不为部署模型再造第二个 Agent。
 
 ## 3. 阶段任务与执行边界
 
@@ -61,7 +154,7 @@
 - WSL Ubuntu-24.04：`CARGO_BUILD_JOBS=1 cargo check --workspace --all-targets --locked` 通过，约 1 分 07 秒。
 - WSL Ubuntu-24.04：`CARGO_BUILD_JOBS=1 cargo test -p yunxi-base --lib resource_path_remapping_includes_the_legacy_xdg_config_root --locked -- --test-threads=1` 通过；新增的自定义 root 负向路径测试也通过。
 - Windows 原生 `cargo check --workspace --all-targets --locked`：失败，原因是基线包含 `std::os::unix`、Unix socket、Unix 权限和 `AsRawFd` 等 Linux 专属实现；这确认本项目的构建验收必须以 WSL/Arch Linux 为主，不能为 Windows 编译通过而削弱 Linux 路径。
-- 受 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0` 保护的工作区分批测试最终为：根包 `yunxi` 504/0/4 ignored，`yunxi-base` 395/0/6 ignored，`yunxi-core` 642/0/8 ignored，`yunxi-engine` 628/0/13 ignored，`yunxi-hosts` 919/0/10 ignored；doctest 全部通过。
+- 受 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0` 保护的工作区分批测试最终为：根包 `yunxi` 504/0/4 ignored，`yunxi-base` 395/0/6 ignored，`yunxi-core` 642/0/8 ignored，`yunxi-engine` 628/0/13 ignored，`yunxi-hosts` 919/0/10 ignored；这是改动前的初始基线，doctest 全部通过。后续 G0 复跑结果见 release note 与测试矩阵。
 - 初次失败已逐项处理：TUI changed-prefix fixture 与回放编辑断言更新为当前 YunXi 输出；权限位测试改用 WSL 原生临时目录；bundled script 清单与 `douyin-dl` 描述同步；registry fixture 重生成；renderer event 与 tool-summary 断言改为检查本地化语义而非不稳定装饰符号。
 - 这些修复只校准测试夹具、环境选择和既有输出契约，没有新增业务能力；`legacy_config_dir` 另补了自定义 root 名称不应选择旧 namespace 的负向回归测试。
 
@@ -71,7 +164,7 @@
 
 #### G0 尚未完成的验证
 
-- 工作区编译与主要分批测试已复现；入口、调用方向、所有者、不变量和测试映射见 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)，命令级证据见 [`2026-09-30-g0-test-matrix.md`](2026-09-30-g0-test-matrix.md)。fish 分流静态判定 17/17、真实 fish PTY、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI 16/16 和 transfer 36/36 已复现；仍需系统化故障注入、逐项删除/恢复矩阵、完整权限组合证据和最终公开文件扫描。IPC lease/frame/协议/回放、session/compact/evicted context、KB write-through、MCP/Skills、host capability/guard、scheduler/background job、goal 持久化与 Codex active goal 的区分已完成定位，但尚未宣称全部运行时门禁通过。
+- 工作区编译与主要分批测试已复现；入口、调用方向、所有者、不变量和测试映射见 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)，命令级证据见 [`2026-09-30-g0-test-matrix.md`](2026-09-30-g0-test-matrix.md)。fish 分流静态判定 17/17、真实 fish PTY、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI 16/16 和 transfer 37/37 已复现；仍需系统化故障注入、逐项删除/恢复矩阵、完整权限组合证据和最终公开文件扫描。IPC lease/frame/协议/回放、session/compact/evicted context、KB write-through、MCP/Skills、host capability/guard、scheduler/background job、goal 持久化与 Codex active goal 的区分已完成定位，但尚未宣称全部运行时门禁通过。
 - macOS M-series 只能在对应环境或 CI 上验证，当前本机没有该运行环境；需在 G0 状态中保留为未验证项。
 - Arch Linux 实机尚未验证；WSL Ubuntu 已确认 `/usr/bin/fish`、Rust/Cargo 和 systemd user scope 可用。
 
@@ -169,12 +262,15 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 
 ### G5：DecisionPort 与 Laya 可选决策层
 
-- 定义低层 `DecisionPort`、请求/结果/原因类型；不把 Laya/ONNX 类型泄漏进核心领域。
-- 先做 G5-00 可行性门：核实可用 artifact/checkpoint、推理接口、许可证、ONNX/runtime、Linux 与 macOS ARM/CPU 部署、延迟/RAM，以及中文/Linux 术语数据；先建立 deterministic baseline，再决定是否使用具体输出字段。之后才是 shadow Laya provider；feature/config 默认关闭，任何字段都需 schema 校验，score 不等于事实。
-- 用于 context salience、memory admission、recall/rerank、terminal intent、主动陪伴候选排序；不能直接执行 shell 或写删数据。
-- 建立脱敏的中文/Linux 评测集、延迟预算、拒绝率、混淆矩阵和回放；失败统一 fallback。
+- **G5-00 可行性门**：先核实 Laya 的准确项目/模型标识、官方来源与版本，不凭名称猜模型能力。记录候选 artifact/checkpoint 与 SHA、接口、许可证、ONNX/runtime、Linux 与 macOS ARM/CPU 部署、最小推理命令、延迟/RAM、中文/Linux 术语评测集；未通过时只保留 deterministic baseline 并明确记录模型未部署。
+- **G5-01 DecisionPort 契约**：定义版本化请求/结果、有限 choice、abstain、原因、可选置信度、作用域/输入指纹、超时和 provider 能力；参照 2.1 的校验/生命周期合同，不把 Laya/ONNX 类型泄漏进核心领域。
+- **G5-02 deterministic provider**：先把压缩、admission、rerank、intent、主动候选统一接到可测试的确定性 provider，确保关闭模型时基线行为不变。
+- **G5-03 shadow Laya provider**：以可关闭、只读、无副作用的方式接入 Laya/ONNX/sidecar；模型只给建议，不能直接执行 shell、改变权限、写删 memory/KB/profile 或触发 scheduler。
+- **G5-04 逐消费者接入**：按 context salience → memory admission → recall/rerank → terminal intent → proactive ranking 的顺序接入，每个消费者单独开关、延迟预算、fallback 和回放集。
+- **G5-05 评测与故障注入**：建立脱敏中文/Linux 评测集、拒绝率、混淆矩阵、p50/p95 延迟、RAM 峰值和非法输出/超时/缺模型/sidecar 断连回退证据。
+- **G5-06 建议采纳与回滚**：逐消费者在质量/延迟门通过后启用实际采纳；context/admission/rerank 在 G5 验证，proactive/intent 随 G6/G7 分别验收。模型实际影响必须可观察，停用即可恢复确定性基线；不能以影子日志代替功能落地。
 
-**验收**：关闭 Laya 时与基线一致；shadow 零副作用；无模型可编译/运行；开关、延迟、fallback 可观测。
+**验收**：关闭模型时与基线一致；shadow 零副作用；启用建议采纳后保留重要上下文、拒绝无长期价值/敏感记忆的端到端测试通过；无模型可编译/运行；每个消费者的开关、延迟、fallback 与回滚可观测。模型制品无法通过 G5-00 时记录缺口，不能把只有 deterministic 的实现报告成“决策模型已部署”。
 
 ### G6：陪伴行为与自动总结
 
@@ -214,7 +310,7 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 3. `cargo fmt --all -- --check`、定向测试、相关 crate check、workspace check；资源不足时分批并记录证据。
 4. 做故障注入、重启/回放、隐私扫描和 WSL/Arch 实测；修复后重复同一命令。
 5. 更新本计划的状态、实际文件、命令结果、残留风险和对应的阶段 release note（当前为 `docs/plan/2026-09-30-g0-release-note.md`）。
-6. 只有退出条件全部满足才提交并推送当前分支，提交信息必须包含阶段编号；失败留在本阶段。
+6. 验证通过的独立切片立即提交并推送当前分支，提交信息包含阶段编号；只有阶段退出条件全部满足才推进下一阶段，失败留在本阶段。
 
 ## 5. 阶段状态表
 
@@ -225,7 +321,7 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 | G2 Profile/关系 | 未开始 | G1 通过后追加迁移 |
 | G3 分层记忆 | 未开始 | G2 通过后做 admission |
 | G4 独立知识库 | 未开始 | G3 边界验收后进行 |
-| G5 DecisionPort/Laya | 未开始 | G3/G4 接口稳定后 shadow |
+| G5 DecisionPort/Laya | 未开始（主线已固化，G0 不实现模型） | G3/G4 接口稳定后按 G5-00→G5-06 完成验证、shadow 和建议采纳 |
 | G6 陪伴/总结 | 未开始 | G1–G5 的保存入口稳定后 |
 | G7 终端自然语言层 | 未开始 | 复用 Miyu 终端路径 |
 | G8 TUI | 未开始 | 终端链路稳定后 |

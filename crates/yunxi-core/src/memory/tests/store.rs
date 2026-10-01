@@ -90,6 +90,56 @@ fn remembers_and_recalls_fact() {
 }
 
 #[test]
+fn user_profile_is_prompt_only_and_never_enters_memory_tables() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let profile_marker = "PROFILE_ONLY_BOUNDARY_MARKER";
+
+    // The profile is an identity prompt input. It is deliberately placed in
+    // the same temporary config root used by the memory fixture so this test
+    // exercises the real path resolver rather than a detached string.
+    config.prompt.user_identity_file = "profile.md".to_string();
+    std::fs::create_dir_all(&paths.config_dir).unwrap();
+    std::fs::write(
+        config.user_identity_path(&paths),
+        format!("# User profile\n\n{profile_marker}\n"),
+    )
+    .unwrap();
+    let prompt = config.system_prompt(&paths).unwrap();
+    assert!(prompt.contains(profile_marker));
+
+    // A normal memory write proves the boundary against a populated store:
+    // the profile marker may be present in the prompt, but only explicit
+    // memory inputs may reach facts/episodes. Vector rows are empty too,
+    // because no memory row containing the profile exists to embed.
+    let store = MemoryStore::new(&config, &paths);
+    store
+        .remember_fact("显式记忆：用户喜欢安静的终端", "test")
+        .unwrap();
+    assert!(record_turn(&store, "普通会话内容", "普通回复内容"));
+
+    let conn = store.data_conn().unwrap();
+    for table in ["facts", "episodes"] {
+        let sql = format!("SELECT COUNT(*) FROM {table} WHERE content LIKE ?1");
+        let count: i64 = conn
+            .query_row(&sql, [format!("%{profile_marker}%")], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 0, "profile marker leaked into {table}");
+    }
+    let vectors: i64 = conn
+        .query_row("SELECT COUNT(*) FROM memory_embeddings", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(vectors, 0, "profile-only input created a memory vector");
+
+    let recalled = store.recall_memories(profile_marker, 10, false).unwrap();
+    assert!(recalled["facts"].as_array().unwrap().is_empty());
+    assert!(recalled["episodes"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn evicted_context_uses_the_same_principal_filter() {
     let temp = tempfile::tempdir().unwrap();
     let config = AppConfig::default();
