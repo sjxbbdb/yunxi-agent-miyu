@@ -1039,6 +1039,48 @@ pub(crate) mod tests {
         assert!(!test_paths(target.path()).config_file.exists());
     }
 
+    #[test]
+    fn malformed_manifest_json_is_refused_before_import() {
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("malformed-manifest.tar.gz");
+        let file = std::fs::File::create(&archive).unwrap();
+        let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        let bytes = b"{not-json";
+        let mut header = tar::Header::new_gnu();
+        header.set_size(bytes.len() as u64);
+        header.set_mode(0o600);
+        header.set_cksum();
+        builder
+            .append_data(&mut header, "manifest.json", bytes.as_slice())
+            .unwrap();
+        builder.into_inner().unwrap().finish().unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let target_paths = test_paths(target.path());
+        std::fs::create_dir_all(&target_paths.config_dir).unwrap();
+        let original_config = b"existing configuration";
+        std::fs::write(&target_paths.config_file, original_config).unwrap();
+
+        let error = super::import::import(
+            &target_paths,
+            &archive,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(
+            error.contains("parsing the archive manifest"),
+            "got: {error}"
+        );
+        assert_eq!(
+            std::fs::read(&target_paths.config_file).unwrap(),
+            original_config
+        );
+        assert!(!target.path().join(".layout-v1").exists());
+    }
+
     /// Copies an archive, replacing only its manifest.
     fn rewrite_manifest(from: &Path, to: &Path, manifest: &super::manifest::Manifest) {
         let file = std::fs::File::create(to).unwrap();
