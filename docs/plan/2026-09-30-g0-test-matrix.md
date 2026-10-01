@@ -30,12 +30,13 @@
 | M-19 | MCP 启动失败隔离 | `cargo test -p yunxi-engine tools::mcp::tests::a_failed_mcp_startup_does_not_hide_a_healthy_server --locked -- --exact --test-threads=1` | WSL Ubuntu-24.04 | 1/1 通过；不存在的 MCP 可执行文件只使自身 listing 失败，健康服务器仍注册工具；重复 registry 构建命中健康 listing 缓存，不重复拉起 | 仍未覆盖 MCP 断连/超时剩余场景和权限组合；半写 stdout/EOF 与 request-shape 已由 M-18 覆盖 |
 | M-20 | MCP 沙盒权限组合 | `CARGO_TARGET_DIR=/tmp/yunxi-g0-mcp-perm-target cargo test -p yunxi-engine tools::mcp --lib --locked -- --test-threads=1` | WSL Ubuntu-24.04 | 绑定提交 `1b8d44e3`；37/37 通过；fixture 增加 `read` 工具，明确 owner/member × `None`/`Inherit` 的 read-only 读取与 write 拒绝/放行行为；member + `Inherit` 不得逃逸调用方沙盒；测试结束后临时 target 已清理 | 只覆盖当前 Linux sandbox backend 的组合；Arch 实机、macOS M-series、磁盘满/权限撤销等故障注入仍未验证 |
 | M-21 | transfer 父目录竞态 | `CARGO_TARGET_DIR=/tmp/yunxi-g0-transfer-toctou-target CARGO_BUILD_JOBS=1 cargo test -p yunxi-engine transfer::tests --no-default-features --lib` | WSL Ubuntu-24.04 | 绑定提交 `eda02d33`；32/32 通过；Unix import 的 install/stale prune/rollback/marker 改为持有 `O_NOFOLLOW` 目录 FD 后使用 `openat`/`renameat`/`unlinkat`，父目录替换不再把操作引向目录外；测试结束后临时 target 已清理 | export 的 source `symlink_metadata`→read 竞态仍未修；Windows 路径实现、Arch 实机、macOS M-series 和磁盘满/权限撤销故障仍未验证 |
+| M-22 | transfer export 路径竞态审计（只读） | `rg -n "symlink_metadata|File::create|File::open|set_permissions|snapshot_sqlite|read_to_string|std::fs::read" crates/yunxi-engine/src/transfer/export.rs` | 当前 Windows shell；Unix API 语义以源码/现有 import 实现交叉核对 | 仅审计：确认 output 检查→创建/权限、source metadata→读取、SQLite metadata→路径打开、redaction 路径读取之间均存在窗口；普通文件的 Unix FD 方案需完整目录句柄链，SQLite 与 Windows 不能复用同一语义；未改 Rust、未伪造竞态测试 | 保持残余风险；推荐后续独立 slice 分别设计 Unix regular-file/dir 读取、SQLite 快照和 Windows reparse-handle 方案，并为每个平台加入真实替换注入 |
 
 ## 2. G0 退出审计中的缺口与后续阶段风险
 
 下列项目必须在证据索引中保留，但不自动扩张 G0 的业务范围。若它们违反本阶段最低退出合同，停在 G0；若只是后续阶段的硬化能力，则登记 owner 和阶段后移。
 
-1. **目录句柄安全**：当前 transfer 使用路径检查兼容后端；import 的 `ensure_destination_parent` 与后续 `rename`/rollback、stale prune、marker stamp 之间仍存在本地 TOCTOU，export 的输出路径和 source `symlink_metadata`→读取之间也存在同类竞态。必须保留该风险，不能写成“已修复”。
+1. **目录句柄安全**：当前 transfer 使用路径检查兼容后端；import 的 `ensure_destination_parent` 与后续 `rename`/rollback、stale prune、marker stamp 之间仍存在本地 TOCTOU，export 的输出路径和 source `symlink_metadata`→读取之间也存在同类竞态。M-22 的只读审计进一步确认 SQLite `rusqlite` path-only 打开无法直接变成跨 Linux/macOS 的稳定 FD 语义，Windows 还需独立 reparse-point 句柄实现。必须保留该风险，不能写成“已修复”。
 2. **故障注入**：尚未形成覆盖锁、权限、磁盘满、父目录替换、断连、SIGINT、半写缓存和非法 manifest 的统一矩阵。已有 transfer 单测只覆盖其中一部分。
 3. **跨平台**：Arch Linux 实机和 macOS M-series 尚未运行；当前 WSL 证据不能替代它们，但按 G0 合同标记为环境缺口，不阻塞 Linux 阶段推进。
 4. **细化证据**：Profile prompt-only 与新旧路径事实边界已有 M-13/M-15 运行时证据，KB/Memory 双向删除隔离已有 M-13 证据，daemon parent/orphan 基本生命周期已有 M-14 黑盒证据，MCP/Skills 会话生命周期、非法 response-shape 和启动失败隔离已有 M-16/M-18/M-19 证据；SQLite 全表/索引、embedding、删除/恢复、权限组合和耗时/失败原因的逐项报告分别归入 G3/G4/G7/G9 的门禁，不在 G0 偷换成业务实现。

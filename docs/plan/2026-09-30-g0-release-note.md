@@ -18,7 +18,8 @@
 - 将长线 goal 重构为可执行 v3 合同：增加阶段边界、G0 退出审计、证据计数/失败原因/后续 owner 和“登记不等于通过”的规则；明确 G1～G9 的任务编号和 G5-00～G5-06 的可行性门、`DecisionPort`、deterministic provider、shadow Laya、逐消费者接入、故障评测与实际建议采纳/回滚。当前活动 goal 不结束、不重建，仓库计划文件作为可审计细化版本，活动 objective 文本未原地改写。
 - 按 v5 goal 合同补齐 MCP 权限矩阵：fixture 增加只读 `read` 工具，并覆盖 owner/member × `None`/`Inherit` 的读取与写入边界；member 会话无论服务器声明何种 sandbox 都不能逃逸调用方沙盒。该切片提交为 `1b8d44e3`，WSL Ubuntu-24.04 MCP 套件 37/37 通过。
 - 按 v5 goal 合同修复 Unix transfer import 的父目录替换竞态：安装、stale prune、回滚和 marker 写入现在沿已打开且 `O_NOFOLLOW` 的目录 FD 使用 `openat`/`renameat`/`unlinkat`；提交 `eda02d33`，WSL Ubuntu-24.04 transfer 套件 32/32 通过。export 的源文件路径竞态、Windows 兼容实现和未实机验证平台仍保留为残余风险。
-- 当前 goal 已暂停并准备替换为 v4：[`2026-10-01-goal-command-v4.md`](2026-10-01-goal-command-v4.md) 保留原 G0–G9 交付范围，同时把 Laya/DecisionPort 拆成 D0–D8 的可执行主线；重新启动后以 v4 为唯一执行合同。
+- G0-05 bounded worker 对 `crates/yunxi-engine/src/transfer/export.rs` 做只读 TOCTOU 审计（证据 `G0-20261001-transfer-export-audit-01`）：output 检查→创建/权限、source metadata→读取、SQLite metadata→rusqlite path open、redaction 路径读取均未闭合。普通文件的 Unix 方案需要完整 `openat`/`O_NOFOLLOW` 目录句柄链和 FD 读写；SQLite 的 path-only API、WAL sidecar 及 Linux `/proc/self/fd` / macOS `/dev/fd` 差异不能支撑跨平台结论，Windows 需独立 reparse-point handle 方案。本轮未改 Rust、未伪造竞态测试，风险登记为后续独立 slice。
+- 历史记录：此前 goal 曾暂停并准备替换为 v4（[`2026-10-01-goal-command-v4.md`](2026-10-01-goal-command-v4.md)）；当前活动合同已由 v5 文档重新激活，本文件的旧暂停描述不代表现状。
 
 ## 验证状态
 
