@@ -857,6 +857,82 @@ pub(crate) mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn marker_failure_restores_memory_and_kb_together() {
+        use std::os::unix::fs::symlink;
+
+        fn write_domain_state(paths: &YunXiPaths, value: &str) {
+            let memory = paths.data_dir.join("personas/default/memory/memory.db");
+            std::fs::create_dir_all(memory.parent().unwrap()).unwrap();
+            let memory_conn = rusqlite::Connection::open(memory).unwrap();
+            memory_conn
+                .execute_batch("CREATE TABLE facts (value TEXT NOT NULL);")
+                .unwrap();
+            memory_conn
+                .execute("INSERT INTO facts VALUES (?1)", [value])
+                .unwrap();
+
+            let kb_dir = paths.data_dir.join("kb");
+            std::fs::create_dir_all(kb_dir.join("files")).unwrap();
+            std::fs::write(kb_dir.join("files/source.md"), value).unwrap();
+            let kb = rusqlite::Connection::open(kb_dir.join("kb_meta.db")).unwrap();
+            kb.execute_batch("CREATE TABLE files (value TEXT NOT NULL);")
+                .unwrap();
+            kb.execute("INSERT INTO files VALUES (?1)", [value])
+                .unwrap();
+        }
+
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        write_domain_state(&source_paths, "source-domain");
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let target_paths = populated_home(target.path());
+        write_domain_state(&target_paths, "target-domain");
+        let outside = tempfile::tempdir().unwrap();
+        symlink(outside.path(), target.path().join(".layout-v1")).unwrap();
+
+        let error = super::import::import(
+            &target_paths,
+            &archive,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("symlink"), "got: {error}");
+
+        let memory = rusqlite::Connection::open(
+            target_paths
+                .data_dir
+                .join("personas/default/memory/memory.db"),
+        )
+        .unwrap();
+        let memory_value: String = memory
+            .query_row("SELECT value FROM facts", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(memory_value, "target-domain");
+
+        let kb = rusqlite::Connection::open(target_paths.data_dir.join("kb/kb_meta.db")).unwrap();
+        let kb_value: String = kb
+            .query_row("SELECT value FROM files", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(kb_value, "target-domain");
+        assert_eq!(
+            std::fs::read_to_string(target_paths.data_dir.join("kb/files/source.md")).unwrap(),
+            "target-domain"
+        );
+        assert!(std::fs::symlink_metadata(target.path().join(".layout-v1")).is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn stale_core_prune_rolls_back_when_marker_stamping_fails() {
         use std::os::unix::fs::symlink;
 
