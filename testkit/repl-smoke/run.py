@@ -139,29 +139,36 @@ def strip_ansi(raw):
 
 def tool_flow_has_marker():
     """从真实回合记录确认 run_command 成功，而不是只看 TUI 文本。"""
-    db_path = HOME / "state" / "conversation.db"
-    if not db_path.exists():
-        return False
-    try:
-        with sqlite3.connect(db_path) as connection:
-            rows = connection.execute(
-                "SELECT status, tool_flow FROM turns "
-                "WHERE status = 'completed' AND tool_flow IS NOT NULL"
-            ).fetchall()
-    except sqlite3.Error:
-        return False
-    for _, raw_flow in rows:
-        try:
-            flow = json.loads(raw_flow or "[]")
-        except (TypeError, ValueError):
+    # The current home layout stores each member's conversation DB under
+    # ``home/<member>/conversation.db``. Keep the legacy ``state`` path as a
+    # compatibility candidate because older sandboxes and imported homes may
+    # still use it. Restrict the search to these two known layouts rather than
+    # recursively opening arbitrary SQLite files in the test sandbox.
+    db_paths = [HOME / "state" / "conversation.db"]
+    db_paths.extend(sorted((HOME / "home").glob("*/conversation.db")))
+    for db_path in db_paths:
+        if not db_path.exists():
             continue
-        for event in flow if isinstance(flow, list) else []:
-            for call in event.get("calls", []) if isinstance(event, dict) else []:
-                if (
-                    call.get("name") == "run_command"
-                    and TOOL_MARKER in str(call.get("output", ""))
-                ):
-                    return True
+        try:
+            with sqlite3.connect(db_path) as connection:
+                rows = connection.execute(
+                    "SELECT status, tool_flow FROM turns "
+                    "WHERE status = 'completed' AND tool_flow IS NOT NULL"
+                ).fetchall()
+        except sqlite3.Error:
+            continue
+        for _, raw_flow in rows:
+            try:
+                flow = json.loads(raw_flow or "[]")
+            except (TypeError, ValueError):
+                continue
+            for event in flow if isinstance(flow, list) else []:
+                for call in event.get("calls", []) if isinstance(event, dict) else []:
+                    if (
+                        call.get("name") == "run_command"
+                        and TOOL_MARKER in str(call.get("output", ""))
+                    ):
+                        return True
     return False
 
 
