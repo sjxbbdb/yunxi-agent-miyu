@@ -13,3 +13,4 @@
 - G0 计划补充 Skills/MCP 生命周期、host 权限真相源、raw/display/context 三分、长期记忆删除不可召回、memory/KB 数据边界、Laya 可行性门、自动总结独立写入协议，以及不新增 YunXi 通用审批状态机的约束。
 - G0 MCP 启动失败隔离：健康 MCP 不会因另一服务器启动失败而消失，健康 listing 在重复 registry 构建中复用缓存；MCP 28/28 定向测试、启动隔离 1/1 通过。
 - G0 黑盒夹具兼容：`repl-smoke` 跟随当前 `YUNXI_HOME/home/<member>/conversation.db` 布局并保留 legacy fallback；TUI 配置表单在临时 pyte 0.8.2 环境复跑 16/16，daemon orphan 6/6、MCP 持久生命周期 5/5。
+- G0 生产黑盒身份链：在提交 `8f8af396` 上重新构建非 testkit `yunxi 0.7.0`，SHA-256 为 `707c8c15517f7c4f8546dd27f620ca4df99535bcdcbf8438ca14cda17b5e8d3b`；daemon orphan 6/6、MCP persistent 5/5 均使用该二进制并确认无残留进程。
