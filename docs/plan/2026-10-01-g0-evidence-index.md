@@ -2,9 +2,9 @@
 
 本索引把当前 G0 退出审计引用的命令、环境、提交和稳定摘要绑定起来。原始终端输出不写入仓库，避免把本机路径、环境变量或日志内容发布到公开仓库；`observed session` 是本次 Codex 运行中对应的终端会话标识，结果摘要只记录退出码、计数和边界结论。
 
-生成时间：`2026-10-01 07:01:20 UTC`；本轮黑盒复核时间：`2026-10-01 07:25:11 UTC`
+生成时间：`2026-10-01 07:01:20 UTC`；本轮黑盒复核时间：`2026-10-01 07:25:11 UTC`；v4 当前复跑：`2026-10-01`（本地时间）
 
-测试基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`；当前复核提交：`3d16ef4a`
+测试基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`；历史复核提交：`3d16ef4a`；v4 当前复跑提交：`c8573e26f8e9849ab0a51f0b1af8ee5088eb8f70`
 环境：WSL `Ubuntu-24.04`，仓库 `<repo-root>`，`CARGO_BUILD_JOBS=1`，cargo 进程使用 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0`；需要中文 golden 的命令使用 `YUNXI_LANG=zh`。
 
 ## 可复核运行
@@ -14,6 +14,7 @@
 | `G0-20261001-mcp-01` | `27257` | `cargo test -p yunxi-engine tools::mcp --locked -- --test-threads=1` | 0 | 28 passed、0 failed；MCP protocol、listing cache、启动隔离、超时/断连既有测试全部通过 |
 | `G0-20261001-engine-01` | `50927` | `YUNXI_LANG=zh cargo test -p yunxi-engine --lib --locked -- --test-threads=1` | 0 | 658 passed、0 failed、13 ignored |
 | `G0-20261001-workspace-01` | `36559` | `YUNXI_LANG=zh cargo test --workspace --locked -- --test-threads=1` | 0 | root 504/0/4；base 396/0/6；core 643/0/8；engine 658/0/13；hosts 920/0/10；所有 doctest 通过 |
+| `G0-20261001-workspace-02` | `87611` | `CARGO_BUILD_JOBS=1 YUNXI_LANG=zh systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0 cargo test --workspace --locked -- --test-threads=1` | 0 | 绑定当前提交 `c8573e26` 的新鲜复跑；root 508、base 396、core 651、engine 与 hosts 测试均完成且无失败；所有 doctest 通过。测试后仅清理了未跟踪的 `target/` 构建产物 |
 | `G0-20261001-locale-01` | current shell (completed) | `YUNXI_LANG=zh cargo test -p yunxi-engine tools::readable_names::display_name_tests::both_token_usage_tools_have_a_readable_name --locked -- --exact --test-threads=1` | 0 | 1 passed；未设置 `YUNXI_LANG=zh` 的同一既有测试曾因 locale 失败，未修改生产代码 |
 | `G0-20261001-static-01` | 当前 shell | `cargo fmt --all -- --check`；`cargo metadata --no-deps --format-version 1`；`python test_scripts/arch_dep_check.py`；`git diff --check` | 0 | 格式、metadata、层序和 diff 检查通过；架构脚本的中文摘要受终端编码影响，但判定为通过 |
 | `G0-20261001-privacy-01` | 当前 shell | `python testkit/privacy/g0_scan.py --self-test`；`python testkit/privacy/g0_scan.py` | 0 | 1861 tracked text files；`personal_path=0`、`private_key=0`、`credential_shape=0`；allowlist 为 1 public + 2 fixture |
