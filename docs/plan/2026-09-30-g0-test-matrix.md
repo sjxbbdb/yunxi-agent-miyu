@@ -24,7 +24,7 @@
 
 ## 2. 尚未满足的 G0 证据
 
-1. **目录句柄安全**：当前 transfer 使用路径检查兼容后端；`ensure_destination_parent` 与后续 `rename`/rollback 之间仍存在本地 TOCTOU。必须保留该风险，不能写成“已修复”。
+1. **目录句柄安全**：当前 transfer 使用路径检查兼容后端；import 的 `ensure_destination_parent` 与后续 `rename`/rollback、stale prune、marker stamp 之间仍存在本地 TOCTOU，export 的输出路径和 source `symlink_metadata`→读取之间也存在同类竞态。必须保留该风险，不能写成“已修复”。
 2. **故障注入**：尚未形成覆盖锁、权限、磁盘满、父目录替换、断连、SIGINT、半写缓存和非法 manifest 的统一矩阵。已有 transfer 单测只覆盖其中一部分。
 3. **跨平台**：Arch Linux 实机和 macOS M-series 尚未运行；当前 WSL 证据不能替代它们。
 4. **完整 G0-03/G0-05/G0-08**：入口已定位，但 SQLite 表/索引、embedding、删除/恢复、权限组合和耗时/失败原因还没有逐项可执行报告。

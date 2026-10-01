@@ -122,6 +122,6 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 | 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；跨域删除/恢复、旧新布局 identity、usage 实际路径仍待运行时验证。 |
 | 仅定位 | G0-05/G0-08 | 权限真相源和测试入口已列出，但尚未形成完整耗时/失败原因、断连/权限组合和 request-shape 故障注入报告。 |
 | 未验证 | G0-05/G0-09 跨平台 | Arch Linux 实机和 macOS M-series 尚未运行；只能保留为环境缺口。 |
-| 未关闭 | transfer 安全硬化 | 路径检查兼容后端仍存在父目录 TOCTOU；严格安全语义需要 Linux/macOS `openat`/`renameat` 与 Windows handle-relative backend，当前不能宣称竞态已消除。 |
+| 未关闭 | transfer 安全硬化 | import 的路径检查兼容后端仍存在父目录 TOCTOU；export 的 output/source 检查与实际写入/读取之间也存在路径竞态。严格安全语义需要 Linux/macOS `openat`/`renameat` 与 Windows handle-relative backend，当前不能宣称竞态已消除。 |
 
 该索引是 G0 的当前状态，不是阶段完成声明；G1 及后续阶段保持未开始。

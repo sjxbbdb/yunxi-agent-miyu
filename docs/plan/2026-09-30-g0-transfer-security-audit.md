@@ -96,6 +96,12 @@
 
 测试同时验证 wildcard unit 和嵌套 unit 不被父目录重复声明；file/SQLite 后代路径由 `file_and_sqlite_units_do_not_claim_descendants` 拒绝。严格的父目录句柄 TOCTOU 仍未关闭，不能由这些 registry 测试代替。
 
+### P1-C：export/import 路径句柄竞态（未关闭）
+
+静态审计确认 import 与 export 都存在检查后再使用的路径窗口：import 在 `ensure_destination_parent`、`move_existing`、`rollback_install` 和 marker 写入之间依赖路径重查；export 在输出目标的 symlink/存在检查与 `create_dir_all`/`File::create` 之间，以及 source 的 `symlink_metadata` 与实际 `read`/SQLite 打开之间依赖路径稳定。攻击者若能替换父目录或文件，可能把读写导向检查之外的位置。
+
+该风险不能用额外的 `canonicalize` 或立即二次检查宣称消除。完整修复需要把 Unix 的 `openat(O_NOFOLLOW)`/`fstatat`/`renameat`/`unlinkat` 和 Windows 的 reparse-point/handle-relative 操作封装为 transfer 后端，并分别做 fault-injection barrier 测试；当前 G0 只记录证据，不引入半套跨平台句柄抽象。
+
 ## 推荐测试名称与退出条件
 
 建议直接在 `crates/yunxi-engine/src/transfer/mod.rs` 或拆分到 `transfer/tests/`，按以下名称建测试；名称刻意对应风险，便于后续 issue/发布说明引用：
