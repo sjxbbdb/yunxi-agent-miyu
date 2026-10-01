@@ -819,6 +819,122 @@ pub(crate) mod tests {
         assert_eq!(owner, 0);
     }
 
+    #[test]
+    fn import_fixup_failure_leaves_live_tree_untouched() {
+        // Build a valid archive whose conversation database is openable but
+        // deliberately lacks the tables required by the staging fixup.
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = test_paths(source.path());
+        std::fs::create_dir_all(&source_paths.config_dir).unwrap();
+        std::fs::create_dir_all(&source_paths.state_dir).unwrap();
+        std::fs::write(&source_paths.config_file, b"{\"source\":true}").unwrap();
+        let malformed =
+            rusqlite::Connection::open(source_paths.state_dir.join("conversation.db")).unwrap();
+        malformed.execute_batch("PRAGMA user_version=17;").unwrap();
+        drop(malformed);
+
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("malformed-conversation.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        // Keep the target root in a private parent so staging/rollback
+        // directories can be proven to have been cleaned up after failure.
+        let target_parent = tempfile::tempdir().unwrap();
+        let target_root = target_parent.path().join("target");
+        std::fs::create_dir_all(&target_root).unwrap();
+        let target_paths = populated_home(&target_root);
+
+        let memory_path = target_paths
+            .data_dir
+            .join("personas/default/memory/memory.db");
+        std::fs::create_dir_all(memory_path.parent().unwrap()).unwrap();
+        let memory = rusqlite::Connection::open(&memory_path).unwrap();
+        memory
+            .execute_batch("CREATE TABLE facts (value TEXT NOT NULL);")
+            .unwrap();
+        memory
+            .execute("INSERT INTO facts VALUES (?1)", ["target-memory"])
+            .unwrap();
+        drop(memory);
+
+        let kb_dir = target_paths.data_dir.join("kb");
+        std::fs::create_dir_all(kb_dir.join("files")).unwrap();
+        let kb_file = kb_dir.join("files/source.md");
+        std::fs::write(&kb_file, b"target-kb-source").unwrap();
+        let kb_meta_path = kb_dir.join("kb_meta.db");
+        let kb_meta = rusqlite::Connection::open(&kb_meta_path).unwrap();
+        kb_meta
+            .execute_batch("CREATE TABLE files (value TEXT NOT NULL);")
+            .unwrap();
+        kb_meta
+            .execute("INSERT INTO files VALUES (?1)", ["target-kb-meta"])
+            .unwrap();
+        drop(kb_meta);
+
+        let index_path = kb_dir.join("semantic_index.db");
+        let index = rusqlite::Connection::open(&index_path).unwrap();
+        index
+            .execute_batch("CREATE TABLE embeddings (value TEXT NOT NULL);")
+            .unwrap();
+        index
+            .execute("INSERT INTO embeddings VALUES (?1)", ["target-kb-index"])
+            .unwrap();
+        drop(index);
+
+        let live_files = [
+            target_paths.config_file.clone(),
+            target_paths.state_dir.join("conversation.db"),
+            memory_path,
+            kb_file,
+            kb_meta_path,
+            index_path,
+        ];
+        let before: Vec<Vec<u8>> = live_files
+            .iter()
+            .map(|path| std::fs::read(path).unwrap())
+            .collect();
+        let target_children_before: BTreeSet<_> = std::fs::read_dir(target_parent.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+
+        let error = super::import::import(
+            &target_paths,
+            &archive,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(
+            error.contains("no such table") && error.contains("sessions"),
+            "fixup should fail on the staged malformed conversation DB: {error}"
+        );
+
+        for (path, expected) in live_files.iter().zip(before) {
+            assert_eq!(
+                std::fs::read(path).unwrap(),
+                expected,
+                "fixup failure must not modify live bytes: {}",
+                path.display()
+            );
+        }
+        assert!(!target_root.join(".layout-v1").exists());
+        assert!(!target_root.join(".resource-layout-v1").exists());
+        let target_children_after: BTreeSet<_> = std::fs::read_dir(target_parent.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(
+            target_children_after, target_children_before,
+            "staging and rollback temp directories must be cleaned up"
+        );
+    }
+
     #[cfg(unix)]
     #[test]
     fn marker_failure_rolls_back_every_installed_file() {
