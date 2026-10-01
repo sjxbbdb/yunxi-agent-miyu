@@ -320,7 +320,7 @@ impl KnowledgeBase {
         progress: &mut ReindexProgress,
     ) -> Result<usize> {
         let files = self.list()?;
-        let semantic = self.semantic_conn()?;
+        let mut semantic = self.semantic_conn()?;
         init_semantic_db(&semantic)?;
         let model = embedder.model_id().to_string();
         let mut indexed = 0usize;
@@ -392,17 +392,23 @@ impl KnowledgeBase {
                     continue;
                 }
             };
-            semantic.execute(
+            // Replace one file atomically.  Without a transaction, a SQLite
+            // error during a later INSERT commits the earlier chunks; the
+            // next pass then sees one current-model/content-hash row and
+            // incorrectly skips the file forever.
+            let transaction = semantic.transaction()?;
+            transaction.execute(
                 "DELETE FROM semantic_chunks WHERE file_name=?1",
                 params![record.name],
             )?;
             for (chunk, vector) in chunks.iter().zip(vectors) {
-                semantic.execute(
+                transaction.execute(
                     "INSERT INTO semantic_chunks (provider_id, model, file_name, content_sha256, chunk_index, start_char, end_char, text, embedding_json, embedding, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, '', ?9, ?10)",
                     params![embedder.describe(), model, record.name, record.content_sha256, chunk.index as i64, chunk.start as i64, chunk.end as i64, chunk.text, yunxi_base::embedding::vector_to_blob(&vector), now_secs()],
                 )?;
-                indexed += 1;
             }
+            transaction.commit()?;
+            indexed += chunks.len();
             progress.end_file(chunks.len());
         }
         // Vectors from other models are dead weight once the current model
@@ -629,6 +635,111 @@ mod progress_tests {
             (progress.done, progress.failed, progress.indexed),
             (2, 1, 2)
         );
+    }
+}
+
+#[cfg(test)]
+mod reindex_tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use yunxi_base::config::{EmbeddingBackend, ProviderConfig};
+
+    /// A mid-file SQLite write failure must not leave one chunk behind.  The
+    /// next pass uses the presence of a current-model/content-hash row as its
+    /// completion marker, so a partial write would otherwise make the file
+    /// look indexed forever and it would never be repaired.
+    #[tokio::test]
+    async fn failed_chunk_write_rolls_back_the_file_and_a_retry_rebuilds_it() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = super::super::tests::test_paths(temp.path());
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            for _ in 0..2 {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = [0_u8; 8192];
+                let _ = stream.read(&mut request).await.unwrap();
+                let body = r#"{"data":[{"index":0,"embedding":[1.0,0.0]},{"index":1,"embedding":[0.0,1.0]}]}"#;
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                stream.write_all(response.as_bytes()).await.unwrap();
+            }
+        });
+
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = true;
+        config.plugins.knowledge_base.semantic_chunk_chars = 128;
+        config.plugins.knowledge_base.semantic_chunk_overlap = 0;
+        config.embedding.enabled = true;
+        config.embedding.backend = EmbeddingBackend::Remote;
+        config.embedding.provider_id = "g0-test-embed".to_string();
+        config.embedding.model = "toy".to_string();
+        let mut provider = ProviderConfig::default_opencodezen();
+        provider.id = "g0-test-embed".to_string();
+        provider.base_url = format!("http://{}", address);
+        provider.api_key = Some("test-key".to_string());
+        provider.models = vec!["toy".to_string()];
+        provider.default_model = "toy".to_string();
+        config.providers.push(provider);
+
+        let kb = KnowledgeBase::new(config, paths).unwrap();
+        kb.init().unwrap();
+        let source = temp.path().join("two-chunks.md");
+        std::fs::write(&source, "x".repeat(220)).unwrap();
+        kb.import_file(&source, "notes/two-chunks.md").unwrap();
+
+        kb.semantic_conn()
+            .unwrap()
+            .execute_batch(
+                "CREATE TRIGGER fail_second_chunk
+                 BEFORE INSERT ON semantic_chunks
+                 WHEN NEW.chunk_index = 1
+                 BEGIN
+                   SELECT RAISE(ABORT, 'injected sqlite write failure');
+                 END;",
+            )
+            .unwrap();
+        let embedder = kb
+            .embedder()
+            .expect("remote test embedder should be configured");
+        let mut progress = ReindexProgress::new(&kb, embedder.model_id());
+        let first = kb
+            .reindex_embeddings_inner(&embedder, true, &mut progress)
+            .await;
+        assert!(first.is_err(), "triggered INSERT must fail");
+        let partial_count: i64 = kb
+            .semantic_conn()
+            .unwrap()
+            .query_row("SELECT COUNT(*) FROM semantic_chunks", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(
+            partial_count, 0,
+            "a failed file write must not leave a partial semantic index"
+        );
+
+        kb.semantic_conn()
+            .unwrap()
+            .execute_batch("DROP TRIGGER fail_second_chunk")
+            .unwrap();
+        let second = kb
+            .reindex_embeddings_inner(&embedder, true, &mut progress)
+            .await
+            .unwrap();
+        assert_eq!(second, 2, "the retry must rebuild both chunks");
+        let complete_count: i64 = kb
+            .semantic_conn()
+            .unwrap()
+            .query_row(
+                "SELECT COUNT(*) FROM semantic_chunks WHERE file_name='notes/two-chunks.md'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(complete_count, 2);
+        server.await.unwrap();
     }
 }
 
