@@ -19,6 +19,7 @@
 - 按 v5 goal 合同补齐 MCP 权限矩阵：fixture 增加只读 `read` 工具，并覆盖 owner/member × `None`/`Inherit` 的读取与写入边界；member 会话无论服务器声明何种 sandbox 都不能逃逸调用方沙盒。该切片提交为 `1b8d44e3`，WSL Ubuntu-24.04 MCP 套件 37/37 通过。
 - 按 v5 goal 合同修复 Unix transfer import 的父目录替换竞态：安装、stale prune、回滚和 marker 写入现在沿已打开且 `O_NOFOLLOW` 的目录 FD 使用 `openat`/`renameat`/`unlinkat`；提交 `eda02d33`，WSL Ubuntu-24.04 transfer 套件 32/32 通过。export 的源文件路径竞态、Windows 兼容实现和未实机验证平台仍保留为残余风险。
 - G0-05 bounded worker 对 `crates/yunxi-engine/src/transfer/export.rs` 做只读 TOCTOU 审计（证据 `G0-20261001-transfer-export-audit-01`）：output 检查→创建/权限、source metadata→读取、SQLite metadata→rusqlite path open、redaction 路径读取均未闭合。普通文件的 Unix 方案需要完整 `openat`/`O_NOFOLLOW` 目录句柄链和 FD 读写；SQLite 的 path-only API、WAL sidecar 及 Linux `/proc/self/fd` / macOS `/dev/fd` 差异不能支撑跨平台结论，Windows 需独立 reparse-point handle 方案。本轮未改 Rust、未伪造竞态测试，风险登记为后续独立 slice。
+- G0-05 新增非法 manifest 回归测试 `malformed_manifest_json_is_refused_before_import`（`de0e389b`，证据 `G0-20261001-transfer-manifest-01`）：导入只含 `{not-json` 的 `manifest.json` 时在解析阶段拒绝，既有 config 与布局未被修改；WSL 精确测试 1/1 通过，临时 target 已清理。
 - 历史记录：此前 goal 曾暂停并准备替换为 v4（[`2026-10-01-goal-command-v4.md`](2026-10-01-goal-command-v4.md)）；当前活动合同已由 v5 文档重新激活，本文件的旧暂停描述不代表现状。
 
 ## 验证状态
