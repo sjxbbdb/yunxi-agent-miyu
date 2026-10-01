@@ -7,10 +7,17 @@ use anyhow::{bail, Context, Result};
 use flate2::read::GzDecoder;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use yunxi_base::i18n::text as t;
 use yunxi_base::paths::YunXiPaths;
+
+#[cfg(unix)]
+use std::ffi::CString;
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
+#[cfg(unix)]
+use std::os::unix::io::{AsRawFd, FromRawFd};
 
 /// Hard limits for untrusted import archives. These are deliberately kept out
 /// of configuration and the archive format: changing them is a code-level
@@ -166,7 +173,7 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
         }) {
         Ok(restored) => restored,
         Err(error) => {
-            let rollback_error = rollback_install(&undo);
+            let rollback_error = rollback_install(&undo, &root);
             return match rollback_error {
                 Ok(()) => Err(error),
                 Err(rollback_error) => Err(error.context(format!(
@@ -556,6 +563,7 @@ fn stale_core_files(root: &Path, manifest: &Manifest, archive: &Path) -> Result<
     Ok(stale)
 }
 
+#[cfg(not(unix))]
 fn prune_stale_core(
     stale: &[PathBuf],
     root: &Path,
@@ -647,6 +655,7 @@ struct UndoEntry {
 
 /// Moves the staged tree into place, recording enough information to restore
 /// every touched file if marker stamping or a later import step fails.
+#[cfg(not(unix))]
 fn install(
     staged: &Path,
     root: &Path,
@@ -700,6 +709,7 @@ fn install(
     Ok(installed)
 }
 
+#[cfg(not(unix))]
 fn move_existing(
     destination: &Path,
     root: &Path,
@@ -751,7 +761,8 @@ fn move_existing(
     Ok(())
 }
 
-fn rollback_install(undo: &[UndoEntry]) -> Result<()> {
+#[cfg(not(unix))]
+fn rollback_install(undo: &[UndoEntry], _root: &Path) -> Result<()> {
     for entry in undo.iter().rev() {
         match std::fs::symlink_metadata(&entry.destination) {
             Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_file() => {
@@ -779,6 +790,7 @@ fn rollback_install(undo: &[UndoEntry]) -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(unix))]
 fn ensure_real_dir(path: &Path, create: bool) -> Result<()> {
     match std::fs::symlink_metadata(path) {
         Ok(metadata) => {
@@ -797,6 +809,7 @@ fn ensure_real_dir(path: &Path, create: bool) -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(unix))]
 fn ensure_destination_parent(root: &Path, parent: &Path) -> Result<()> {
     let relative = parent
         .strip_prefix(root)
@@ -820,6 +833,7 @@ fn ensure_destination_parent(root: &Path, parent: &Path) -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(unix))]
 fn copy_into_place(source: &Path, destination: &Path) -> Result<()> {
     let parent = destination
         .parent()
@@ -831,6 +845,326 @@ fn copy_into_place(source: &Path, destination: &Path) -> Result<()> {
     let temporary = temporary.into_temp_path();
     std::fs::rename(&temporary, destination)
         .with_context(|| format!("renaming temporary file to {}", destination.display()))?;
+    Ok(())
+}
+
+#[cfg(unix)]
+/// A destination basename held relative to an already-opened, no-follow
+/// parent directory. Keeping the descriptor across the check and mutation is
+/// what closes the parent-directory replacement window in force imports.
+struct DestinationParent {
+    directory: File,
+    name: CString,
+    display: PathBuf,
+}
+
+#[cfg(unix)]
+fn open_directory(path: &Path) -> Result<File> {
+    let path = CString::new(path.as_os_str().as_bytes())
+        .map_err(|_| anyhow::anyhow!("path contains NUL: {}", path.display()))?;
+    let fd = unsafe {
+        libc::open(
+            path.as_ptr(),
+            libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW,
+        )
+    };
+    if fd < 0 {
+        return Err(std::io::Error::last_os_error())
+            .with_context(|| format!("opening directory {}", path.to_string_lossy()));
+    }
+    Ok(unsafe { File::from_raw_fd(fd) })
+}
+
+#[cfg(unix)]
+fn open_child_directory(parent: &File, name: &std::ffi::OsStr, create: bool) -> Result<File> {
+    let name = CString::new(name.as_bytes())
+        .map_err(|_| anyhow::anyhow!("path component contains NUL"))?;
+    let open = || unsafe {
+        libc::openat(
+            parent.as_raw_fd(),
+            name.as_ptr(),
+            libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW,
+        )
+    };
+    let mut fd = open();
+    if fd < 0 && create && std::io::Error::last_os_error().kind() == std::io::ErrorKind::NotFound {
+        let rc = unsafe { libc::mkdirat(parent.as_raw_fd(), name.as_ptr(), 0o700) };
+        if rc < 0 {
+            let error = std::io::Error::last_os_error();
+            if error.kind() != std::io::ErrorKind::AlreadyExists {
+                return Err(error).with_context(|| "creating destination directory");
+            }
+        }
+        fd = open();
+    }
+    if fd < 0 {
+        return Err(std::io::Error::last_os_error())
+            .with_context(|| "opening destination directory without following symlinks");
+    }
+    Ok(unsafe { File::from_raw_fd(fd) })
+}
+
+#[cfg(unix)]
+fn destination_parent(root: &Path, destination: &Path) -> Result<DestinationParent> {
+    let root_dir = open_directory(root)?;
+    let parent = destination
+        .parent()
+        .context("destination has no parent directory")?;
+    let relative = parent
+        .strip_prefix(root)
+        .context("destination parent escaped the install root")?;
+    let mut directory = root_dir;
+    for component in relative.components() {
+        let std::path::Component::Normal(name) = component else {
+            bail!("destination parent contains a non-normal path component");
+        };
+        directory = open_child_directory(&directory, name, true)?;
+    }
+    let name = destination
+        .file_name()
+        .context("destination has no file name")?;
+    Ok(DestinationParent {
+        directory,
+        name: CString::new(name.as_bytes())
+            .map_err(|_| anyhow::anyhow!("destination name contains NUL"))?,
+        display: destination.to_path_buf(),
+    })
+}
+
+#[cfg(unix)]
+fn stat_destination(parent: &DestinationParent) -> Result<Option<libc::stat>> {
+    let mut stat = unsafe { std::mem::zeroed::<libc::stat>() };
+    let rc = unsafe {
+        libc::fstatat(
+            parent.directory.as_raw_fd(),
+            parent.name.as_ptr(),
+            &mut stat,
+            libc::AT_SYMLINK_NOFOLLOW,
+        )
+    };
+    if rc == 0 {
+        return Ok(Some(stat));
+    }
+    let error = std::io::Error::last_os_error();
+    if error.kind() == std::io::ErrorKind::NotFound {
+        Ok(None)
+    } else {
+        Err(error).with_context(|| format!("checking {}", parent.display.display()))
+    }
+}
+
+#[cfg(unix)]
+fn secure_move_existing(
+    parent: &DestinationParent,
+    root: &Path,
+    rollback: &Path,
+    undo: &mut Vec<UndoEntry>,
+) -> Result<()> {
+    let Some(stat) = stat_destination(parent)? else {
+        undo.push(UndoEntry {
+            destination: parent.display.clone(),
+            backup: None,
+        });
+        return Ok(());
+    };
+    let mode = stat.st_mode as libc::mode_t & libc::S_IFMT as libc::mode_t;
+    if mode == libc::S_IFLNK as libc::mode_t {
+        bail!(
+            "refusing to replace a destination symlink: {}",
+            parent.display.display()
+        );
+    }
+    if mode != libc::S_IFREG as libc::mode_t {
+        bail!(
+            "destination is not a regular file: {}",
+            parent.display.display()
+        );
+    }
+    let rel = parent
+        .display
+        .strip_prefix(root)
+        .context("destination escaped the install root")?;
+    let backup = rollback.join(rel);
+    if let Some(backup_parent) = backup.parent() {
+        std::fs::create_dir_all(backup_parent)?;
+    }
+    let backup_parent = open_directory(backup.parent().context("backup has no parent")?)?;
+    let backup_name = CString::new(
+        backup
+            .file_name()
+            .context("backup has no file name")?
+            .as_bytes(),
+    )
+    .map_err(|_| anyhow::anyhow!("backup name contains NUL"))?;
+    let rc = unsafe {
+        libc::renameat(
+            parent.directory.as_raw_fd(),
+            parent.name.as_ptr(),
+            backup_parent.as_raw_fd(),
+            backup_name.as_ptr(),
+        )
+    };
+    if rc < 0 {
+        return Err(std::io::Error::last_os_error()).with_context(|| {
+            format!(
+                "moving {} to the import rollback directory",
+                parent.display.display()
+            )
+        });
+    }
+    undo.push(UndoEntry {
+        destination: parent.display.clone(),
+        backup: Some(backup),
+    });
+    Ok(())
+}
+
+#[cfg(unix)]
+fn install(
+    staged: &Path,
+    root: &Path,
+    rollback: &Path,
+    undo: &mut Vec<UndoEntry>,
+) -> Result<usize> {
+    let _root_dir = open_directory(root)?;
+    let staged_metadata = std::fs::symlink_metadata(staged)?;
+    if staged_metadata.file_type().is_symlink() || !staged_metadata.is_dir() {
+        bail!("expected a real staging directory: {}", staged.display());
+    }
+    let mut installed = 0usize;
+    let mut stack = vec![staged.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for child in std::fs::read_dir(&dir)? {
+            let child = child?;
+            let path = child.path();
+            let metadata = std::fs::symlink_metadata(&path)?;
+            if metadata.file_type().is_symlink() {
+                bail!("staged archive contains a symlink: {}", path.display());
+            }
+            if metadata.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            if !metadata.is_file() {
+                bail!(
+                    "staged archive contains a non-regular file: {}",
+                    path.display()
+                );
+            }
+            let rel = path
+                .strip_prefix(staged)
+                .context("staged path outside the install root")?;
+            let destination = root.join(rel);
+            let parent = destination_parent(root, &destination)?;
+            secure_move_existing(&parent, root, rollback, undo)?;
+            let source = CString::new(path.as_os_str().as_bytes())
+                .map_err(|_| anyhow::anyhow!("staged path contains NUL"))?;
+            let rc = unsafe {
+                libc::renameat(
+                    libc::AT_FDCWD,
+                    source.as_ptr(),
+                    parent.directory.as_raw_fd(),
+                    parent.name.as_ptr(),
+                )
+            };
+            if rc < 0 {
+                let error = std::io::Error::last_os_error();
+                if error.raw_os_error() == Some(libc::EXDEV) {
+                    bail!("cross-device import install is not supported by secure directory operations");
+                }
+                return Err(error).with_context(|| format!("installing {}", rel.display()));
+            }
+            installed += 1;
+        }
+    }
+    Ok(installed)
+}
+
+#[cfg(unix)]
+fn prune_stale_core(
+    stale: &[PathBuf],
+    root: &Path,
+    rollback: &Path,
+    undo: &mut Vec<UndoEntry>,
+) -> Result<usize> {
+    for destination in stale {
+        let parent = destination_parent(root, destination)?;
+        secure_move_existing(&parent, root, rollback, undo)?;
+    }
+    Ok(stale.len())
+}
+
+#[cfg(unix)]
+fn secure_write_marker(parent: &DestinationParent) -> Result<()> {
+    let fd = unsafe {
+        libc::openat(
+            parent.directory.as_raw_fd(),
+            parent.name.as_ptr(),
+            libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC | libc::O_NOFOLLOW,
+            0o600,
+        )
+    };
+    if fd < 0 {
+        return Err(std::io::Error::last_os_error())
+            .with_context(|| format!("writing {}", parent.display.display()));
+    }
+    let mut file = unsafe { File::from_raw_fd(fd) };
+    file.write_all(b"1")?;
+    file.sync_all().ok();
+    Ok(())
+}
+
+#[cfg(unix)]
+fn stamp_layout_markers(root: &Path, rollback: &Path, undo: &mut Vec<UndoEntry>) -> Result<()> {
+    for marker in [".layout-v1", ".resource-layout-v1"] {
+        let path = root.join(marker);
+        let parent = destination_parent(root, &path)?;
+        secure_move_existing(&parent, root, rollback, undo)?;
+        secure_write_marker(&parent)?;
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn rollback_install(undo: &[UndoEntry], root: &Path) -> Result<()> {
+    for entry in undo.iter().rev() {
+        let parent = destination_parent(root, &entry.destination)?;
+        if let Some(stat) = stat_destination(&parent)? {
+            let mode = stat.st_mode as libc::mode_t & libc::S_IFMT as libc::mode_t;
+            if mode == libc::S_IFLNK as libc::mode_t || mode != libc::S_IFREG as libc::mode_t {
+                bail!(
+                    "rollback destination is not a regular file: {}",
+                    entry.destination.display()
+                );
+            }
+            let rc =
+                unsafe { libc::unlinkat(parent.directory.as_raw_fd(), parent.name.as_ptr(), 0) };
+            if rc < 0 {
+                return Err(std::io::Error::last_os_error())
+                    .with_context(|| format!("removing {}", entry.destination.display()));
+            }
+        }
+        if let Some(backup) = &entry.backup {
+            let source = CString::new(backup.as_os_str().as_bytes())
+                .map_err(|_| anyhow::anyhow!("rollback path contains NUL"))?;
+            let rc = unsafe {
+                libc::renameat(
+                    libc::AT_FDCWD,
+                    source.as_ptr(),
+                    parent.directory.as_raw_fd(),
+                    parent.name.as_ptr(),
+                )
+            };
+            if rc < 0 {
+                return Err(std::io::Error::last_os_error()).with_context(|| {
+                    format!(
+                        "restoring {} from the import rollback directory",
+                        entry.destination.display()
+                    )
+                });
+            }
+        }
+    }
     Ok(())
 }
 
@@ -854,6 +1188,7 @@ fn is_cross_device_error(error: &std::io::Error) -> bool {
 
 /// Marks the restored tree as already using the current layout, so
 /// `YunXiPaths::new` does not try to migrate it from a legacy one.
+#[cfg(not(unix))]
 fn stamp_layout_markers(root: &Path, rollback: &Path, undo: &mut Vec<UndoEntry>) -> Result<()> {
     for marker in [".layout-v1", ".resource-layout-v1"] {
         let path = root.join(marker);
