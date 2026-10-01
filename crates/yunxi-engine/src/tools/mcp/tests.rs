@@ -15,6 +15,9 @@ const FAKE_SERVER: &str = r#"
 import json, os, subprocess, sys, time
 with open(os.environ['MARKER'], 'a') as f:
     f.write('start\n')
+if os.environ.get('PID_FILE'):
+    with open(os.environ['PID_FILE'], 'w') as f:
+        f.write(str(os.getpid()))
 if os.environ.get('EXIT_EARLY'):
     sys.exit(0)
 time.sleep(float(os.environ.get('DELAY', '0')))
@@ -129,6 +132,14 @@ fn spawn_count(marker: &Path) -> usize {
     std::fs::read_to_string(marker)
         .map(|text| text.lines().count())
         .unwrap_or(0)
+}
+
+fn server_pid(path: &Path) -> Option<i32> {
+    std::fs::read_to_string(path)
+        .ok()?
+        .trim()
+        .parse::<i32>()
+        .ok()
 }
 
 fn config_with(servers: Vec<McpServerConfig>) -> AppConfig {
@@ -279,6 +290,40 @@ async fn a_crashed_server_is_restarted_with_a_notice() {
     );
     assert!(after.ends_with("count 1"), "{after}");
     forget_session("s1");
+}
+
+/// unexpected EOF 后 persistent MCP 进程必须被 retire 任务回收，而不是留下 zombie。
+#[tokio::test]
+async fn a_crashed_persistent_server_pid_is_reaped() {
+    let _pool = pool_lock();
+    let dir = tempfile::tempdir().unwrap();
+    let pid_file = dir.path().join("server.pid");
+    let mut server = fake_server("crashy-pid", &dir.path().join("marker"));
+    server
+        .env
+        .insert("PID_FILE".to_string(), pid_file.display().to_string());
+
+    assert_eq!(
+        call_in(Some("crashy-pid"), &server, "count").await.unwrap(),
+        "count 1"
+    );
+    let pid = server_pid(&pid_file).expect("persistent MCP server must write its pid");
+    assert!(!process_gone(pid), "MCP server must be alive before crash");
+
+    let error = call_in(Some("crashy-pid"), &server, "crash")
+        .await
+        .expect_err("the crashing server must fail the pending call");
+    assert!(error.to_string().contains("closed stdout"), "{error:#}");
+    assert!(
+        wait_until(|| process_gone(pid)).await,
+        "crashed MCP server pid {pid} was not reaped"
+    );
+    assert_eq!(
+        pool::live_count(),
+        0,
+        "crashed connection must leave the pool"
+    );
+    forget_session("crashy-pid");
 }
 
 /// 非法 JSON-RPC 响应不能静默等到调用超时；连接仍可在会话清理时完整回收。
