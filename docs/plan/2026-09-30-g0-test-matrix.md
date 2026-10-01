@@ -21,7 +21,7 @@
 | M-10 | REPL 工具执行 | `python3 testkit/repl-smoke/run.py` | WSL Ubuntu-24.04 隔离 home | `passed=true`，tool flow marker 存在 | 只验证 stub tool，不覆盖真实命令危险边界 |
 | M-11 | TUI 表单 | `python3 testkit/tui/config_forms.py` | WSL Ubuntu-24.04 + pyte venv | 16/16 | 不代表窄屏、ANSI/kitty、并发重绘全覆盖 |
 | M-12 | 隐私门禁 | `python testkit/privacy/g0_scan.py --repo .` | 工作区 Python | 1858 tracked text files；personal/private-key/credential 为 0 | 不替代 transfer 恢复/删除审计 |
-| M-13 | Profile/KB 跨域边界 | `cargo test -p yunxi-core memory::tests::store::user_profile_is_prompt_only_and_never_enters_memory_tables --locked -- --exact --test-threads=1`；`cargo test -p yunxi-engine tools::knowledge_base::tests::removing_a_knowledge_file_does_not_touch_memory_or_memory_embeddings --locked -- --exact --test-threads=1` | WSL Ubuntu-24.04 | 1/1 + 1/1 通过；profile 只进入 prompt，KB 删除不触碰 facts/episodes/embeddings | 仍需补完整删除/恢复、崩溃和故障注入矩阵 |
+| M-13 | Profile/KB 跨域边界 | `cargo test -p yunxi-core memory::tests::store::user_profile_is_prompt_only_and_never_enters_memory_tables --locked -- --exact --test-threads=1`；`YUNXI_LANG=zh cargo test -p yunxi-engine tools::knowledge_base::tests::removing_a_knowledge_file_does_not_touch_memory_or_memory_embeddings --locked -- --exact --test-threads=1` | WSL Ubuntu-24.04 | 1/1 + 1/1 通过；profile 只进入 prompt，KB 删除不触碰 facts/episodes/embeddings | 仍需补完整删除/恢复、崩溃和故障注入矩阵 |
 
 ## 2. 尚未满足的 G0 证据
 
