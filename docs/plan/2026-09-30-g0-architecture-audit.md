@@ -120,7 +120,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 | 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 654/0/13；transfer 37/37；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
 | 已证 | G0-09 基线闭环 | fish 静态 17/17、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI config 16/16、daemon orphan 6/6（重复两次）已有报告；这些证据仍不替代故障注入。 |
 | 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；Profile prompt-only、新旧 profile 路径边界、KB remove 不触碰 memory、Memory reset 不触碰 KB、embedding 进度损坏状态均有回归覆盖，跨域删除/恢复、usage 实际路径仍待运行时验证。 |
-| 部分已证 | G0-08 | MCP/Skills 会话生命周期黑盒 5/5 已证同 session 复用、跨 session 隔离、system prompt instructions、session 删除回收和 daemon stop 无孤儿；权限真相源、启动失败/断连/超时、request-shape 组合故障注入仍待补齐。 |
+| 部分已证 | G0-08 | MCP/Skills 会话生命周期黑盒 5/5 已证同 session 复用、跨 session 隔离、system prompt instructions、session 删除回收和 daemon stop 无孤儿；非法 JSON-RPC response-shape 已有 2/2 协议分类 + 1/1 运行时快速失败证据；权限真相源、启动失败/断连/超时、request-shape 组合故障注入仍待补齐。 |
 | 仅定位 | G0-05 | 权限真相源和测试入口已列出，但尚未形成完整耗时/失败原因、断连/权限组合和 request-shape 故障注入报告。 |
 | 未验证 | G0-05/G0-09 跨平台 | Arch Linux 实机和 macOS M-series 尚未运行；只能保留为环境缺口。 |
 | 未关闭 | transfer 安全硬化 | import 的路径检查兼容后端仍存在父目录 TOCTOU；export 的 output/source 检查与实际写入/读取之间也存在路径竞态。严格安全语义需要 Linux/macOS `openat`/`renameat` 与 Windows handle-relative backend，当前不能宣称竞态已消除。 |

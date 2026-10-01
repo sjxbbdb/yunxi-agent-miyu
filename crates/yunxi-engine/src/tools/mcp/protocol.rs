@@ -60,6 +60,8 @@ pub(super) enum Incoming {
         id: u64,
         outcome: Result<Value, JsonRpcError>,
     },
+    /// 看起来像响应但不符合 JSON-RPC 形状；若 id 可识别，连接层会立即结束对应请求。
+    InvalidResponse { id: Option<u64>, reason: String },
     /// 服务器反过来问我们（ping 之类）。
     Request { id: Value, method: String },
     /// 通知，不用回。
@@ -69,6 +71,15 @@ pub(super) enum Incoming {
 /// 认一行。不是 JSON、不是 JSON-RPC 的（有的服务器往 stdout 打日志）返回 None。
 pub(super) fn classify(line: &str) -> Option<Incoming> {
     let value: Value = serde_json::from_str(line.trim()).ok()?;
+    if value.get("jsonrpc").and_then(Value::as_str) != Some(JSONRPC_VERSION) {
+        if value.get("method").is_none() && value.get("id").is_some() {
+            return Some(Incoming::InvalidResponse {
+                id: value.get("id").and_then(Value::as_u64),
+                reason: "missing or invalid jsonrpc version".to_string(),
+            });
+        }
+        return None;
+    }
     let method = value.get("method").and_then(Value::as_str);
     match (value.get("id"), method) {
         (Some(id), Some(method)) => Some(Incoming::Request {
@@ -77,12 +88,39 @@ pub(super) fn classify(line: &str) -> Option<Incoming> {
         }),
         (None, Some(_)) => Some(Incoming::Notification),
         (Some(id), None) => {
-            let id = id.as_u64()?;
-            let outcome = match value.get("error") {
-                Some(error) => Err(serde_json::from_value(error.clone()).ok()?),
-                None => Ok(value.get("result").cloned().unwrap_or(Value::Null)),
+            let id = match id.as_u64() {
+                Some(id) => id,
+                None => {
+                    return Some(Incoming::InvalidResponse {
+                        id: None,
+                        reason: "response id is not an unsigned integer".to_string(),
+                    })
+                }
             };
-            Some(Incoming::Response { id, outcome })
+            match (value.get("result"), value.get("error")) {
+                (Some(result), None) => Some(Incoming::Response {
+                    id,
+                    outcome: Ok(result.clone()),
+                }),
+                (None, Some(error)) => match serde_json::from_value(error.clone()) {
+                    Ok(error) => Some(Incoming::Response {
+                        id,
+                        outcome: Err(error),
+                    }),
+                    Err(_) => Some(Incoming::InvalidResponse {
+                        id: Some(id),
+                        reason: "response error object is invalid".to_string(),
+                    }),
+                },
+                (Some(_), Some(_)) => Some(Incoming::InvalidResponse {
+                    id: Some(id),
+                    reason: "response contains both result and error".to_string(),
+                }),
+                (None, None) => Some(Incoming::InvalidResponse {
+                    id: Some(id),
+                    reason: "response contains neither result nor error".to_string(),
+                }),
+            }
         }
         (None, None) => None,
     }

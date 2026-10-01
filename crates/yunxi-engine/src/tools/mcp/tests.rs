@@ -36,6 +36,19 @@ for line in sys.stdin:
     elif method == 'tools/call':
         name = request['params']['name']
         args = request['params'].get('arguments', {})
+        if os.environ.get('MALFORMED_RESPONSE') and name == 'echo':
+            response = {'id': request['id'], 'result': {'content': [{'type': 'text', 'text': 'bad'}]}}
+            mode = os.environ['MALFORMED_RESPONSE']
+            if mode == 'missing-jsonrpc':
+                pass
+            elif mode == 'string-id':
+                response['jsonrpc'] = '2.0'
+                response['id'] = 'not-a-number'
+            elif mode == 'bad-error':
+                response = {'jsonrpc': '2.0', 'id': request['id'],
+                            'error': {'code': 'bad', 'message': 'invalid code'}}
+            send(response)
+            continue
         if name == 'count':
             count += 1
             text = f'count {count}'
@@ -234,6 +247,25 @@ async fn a_crashed_server_is_restarted_with_a_notice() {
         "{after}"
     );
     assert!(after.ends_with("count 1"), "{after}");
+    forget_session("s1");
+}
+
+/// 非法 JSON-RPC 响应不能静默等到调用超时；连接仍可在会话清理时完整回收。
+#[tokio::test]
+async fn malformed_mcp_response_fails_the_matching_call_immediately() {
+    let _pool = pool_lock();
+    let dir = tempfile::tempdir().unwrap();
+    let mut server = fake_server("malformed", &dir.path().join("marker"));
+    server.timeout_seconds = 5;
+    server.env.insert(
+        "MALFORMED_RESPONSE".to_string(),
+        "missing-jsonrpc".to_string(),
+    );
+    let error = call_in(Some("s1"), &server, "echo")
+        .await
+        .expect_err("malformed response must not be accepted");
+    assert!(error.to_string().contains("invalid response"), "{error:#}");
+    assert!(!error.to_string().contains("did not answer"), "{error:#}");
     forget_session("s1");
 }
 

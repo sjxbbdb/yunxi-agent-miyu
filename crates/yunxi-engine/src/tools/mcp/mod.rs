@@ -29,6 +29,8 @@ use serde_json::Value;
 use yunxi_base::config::{AppConfig, McpServerConfig};
 
 #[cfg(test)]
+mod protocol_tests;
+#[cfg(test)]
 mod result_tests;
 #[cfg(test)]
 mod tests;

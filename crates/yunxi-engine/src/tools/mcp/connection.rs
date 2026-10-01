@@ -360,6 +360,22 @@ async fn read_loop(state: ReadLoop) {
                     let _ = sender.send(outcome.map_err(|error| anyhow!(error.describe())));
                 }
             }
+            Some(Incoming::InvalidResponse { id, reason }) => {
+                if let Some(id) = id {
+                    if let Some(sender) = state.pending.lock().unwrap().remove(&id) {
+                        let _ = sender.send(Err(anyhow!(
+                            "MCP server {} sent an invalid response: {}",
+                            state.server_id,
+                            reason
+                        )));
+                    }
+                } else {
+                    tracing::warn!(
+                        server = %state.server_id,
+                        "MCP server sent an invalid response without a usable id: {reason}"
+                    );
+                }
+            }
             Some(Incoming::Request { id, method }) => {
                 if let Some(writer) = state.answers.upgrade() {
                     let _ = writer.send(Outgoing::Line(protocol::answer_line(&id, &method)));
