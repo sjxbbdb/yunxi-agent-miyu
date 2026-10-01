@@ -1,13 +1,13 @@
 # YunXi × Miyu 长线原生化升级计划
 
 > 计划编号：YXM-G0
-> 版本：v2 / 2026-10-01
+> 版本：v3 / 2026-10-01
 > 当前基线：仓库 `sjxbbdb/yunxi-agent-miyu`
 > 上游参考：shorin/miyu
 
 这不是一份“把功能加上去”的愿望清单，而是一份可以逐阶段执行、测试、回滚和验收的工程合同。每个阶段都有明确的代码边界、入口、依赖、测试证据和退出条件；当前阶段没有通过时，不进入下一阶段。
 
-## 0. 可执行 Goal 合同（v2）
+## 0. 可执行 Goal 合同（v3）
 
 下面这段是本项目长线 goal 的唯一执行口径。它把“加入一个决策模型”从普通功能需求提升为跨阶段架构主线；任何阶段都不得绕过它另起模型链、调度器或权限链。
 
@@ -20,11 +20,20 @@ RUN
   locate -> write invariants/failing tests -> minimal slice -> fmt/check/targeted tests
   -> fault injection/replay -> WSL (Arch when available) -> update evidence -> commit/push
 
+STAGE_BOUNDARY
+  先完成当前阶段的“可审计闭环”，再进入下一阶段；阶段退出只判断本阶段合同，
+  不把后续阶段的业务实现、全量故障硬化或未拥有的硬件环境伪装成当前阶段结果。
+  未实现阶段必须至少登记现有挂接 seam、未来代码落点和测试入口；“已登记”不等于“已通过”。
+  G0 退出后暂停在 G1 门前，除非用户明确继续，不提前创建 CompanionContext、DecisionPort provider、
+  向量 admission、自动总结或新的调度器。
+
 HARD STOP
   任何测试、隐私、权限、回放、迁移或跨域边界失败，都停在当前阶段修复；“能启动”不算通过。
+  已复现的边界破坏不能因为属于后续阶段而延后；仅尚未覆盖或未实现的硬化项可登记到所属阶段。
 
 PHASE_CONTRACT
-  G0-01~09: 真实入口/单运行时/数据边界/prompt-cache/测试/兼容修复/隐私/扩展权限/终端闭环。
+  G0-01~09: 真实入口/单运行时/数据边界/prompt-cache/测试/兼容修复/隐私/扩展权限/终端闭环；
+            只读审计和既有兼容回归，后续阶段的实现风险进入风险登记表。
   G1-01: 在 persona_hint/prompt/PersonaLane 上设计最小 CompanionContext，不增加拼装链。
   G1-02: 接入人格与灵魂的来源/版本/作用域，缺文件/损坏/旧版本回退。
   G1-03: 验证请求字节、工具面、化石回放、两轮缓存和隐私；更新阶段证据并推送。
@@ -52,6 +61,14 @@ PHASE_CONTRACT
   G9-03: 完成安装/升级/卸载/恢复、迁移、文档、公开秘密扫描和 WSL/Arch 验收。
   G9-04: 独立复核所有退出条件和未验证项，只有整体目标完成才能结束长线 goal。
 
+G0_EXIT_REVIEW
+  G0 退出的最低证据：无未解释的第二运行时/重复入口；G1-G9 各有已定位的 seam、未来落点和测试入口；
+  自然语言终端闭环有可复现实验；git diff --check、fmt、metadata、workspace check 和约定的基线测试可复现。
+  Arch/macOS 只能标记未验证；transfer 的 openat/renameat、磁盘满、权限组合、非法 JSON 全量矩阵等
+  属于 G4/G7/G9 的风险登记，不得为了“关闭 G0”偷偷实现，也不得把已登记风险写成通过。
+  G0 退出审计必须列出：证据命令、环境、实际计数、失败原因、未验证项、后续阶段 owner；
+  缺任何一项就停在 G0，但不扩大 G0 的业务范围。
+
 DECISION_MAINLINE
   G0: 只盘点 DecisionPort 的 seam、数据脱敏边界、fallback 和评测约束，不加载模型。
   G3/G4/G6/G7: 只保留 deterministic 调用点，不把模型结果当权限/事实。
@@ -75,9 +92,18 @@ EVIDENCE_AND_SYNC
   验证通过的切片立即按阶段提交并推送；阶段退出审计与提交切片是两件事，不攒到整个阶段结束才同步。
   独立子任务可委派，写明绝对路径/读写边界/验收/不提交；同一时刻只跑一个受 cgroup 限制的 cargo。
   阶段未通过继续定位、修复、复测；不要通过新增严格审批、第二运行时或虚假完成来绕过用户目标。
+
+NEXT_G0
+  1. 校准审计文档：区分 as-built/未来设计，纠正测试覆盖范围与过期计数。
+  2. 补 G0-01/02：五类运行时逐项定位 owner、调用方向、搜索范围与复用结论。
+  3. 补 G0-04/05：为基线和 prompt/cache 证据记录命令、语言环境、日期、耗时及失败原因。
+  4. 完成退出前复跑；当前切片相关测试只跑一次，代码未变时复用同版本已成功证据，
+     最终阶段门做一次全量复跑；出现失败只定向复现和修复，不无理由重复全仓。
+  5. 独立复核退出条件，输出通过/未通过及证据；更新风险所属阶段，提交推送。
+  6. G1-G9 尚未授权实施；保留长线 goal active，明确报出下一阶段而非标记整体完成。
 ```
 
-当前活动的 Codex goal 已经在运行，goal API 不支持在未结束状态下原地改写 objective；本文件的 v2 合同因此作为可审计、可提交、可复现的细化版本，不通过结束旧 goal 再伪造新 goal 来改变长线状态。
+当前活动的 Codex goal 已经在运行，goal API 不支持在未结束状态下原地改写 objective；本文件的 v3 合同因此作为可审计、可提交、可复现的细化版本，不通过结束旧 goal 再伪造新 goal 来改变长线状态。每次继续此 goal 时先读取本节，证据从下方链接按任务取用。
 
 ## 1. 固定产品背景
 
@@ -162,9 +188,9 @@ EVIDENCE_AND_SYNC
 
 产品层改名提交 `7698b643` 将 `legacy_config_dir` 泛化为从 `root_dir.file_name()` 推导命名空间；当测试/迁移构造的 `root_dir` 与真实默认 `config_dir` 不同名时，旧绝对身份路径无法识别，静默回退到旧路径。修复为在真实默认根 `~/.yunxi`/`~/.miyu` 中匹配 `config_dir` 后返回对应 XDG namespace，并保留迁移兼容。该修复不增加新能力，只恢复已有兼容契约；对应 `yunxi-base` 回归测试已通过。
 
-#### G0 尚未完成的验证
+#### G0 退出审计与后续验证
 
-- 工作区编译与主要分批测试已复现；入口、调用方向、所有者、不变量和测试映射见 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)，命令级证据见 [`2026-09-30-g0-test-matrix.md`](2026-09-30-g0-test-matrix.md)。fish 分流静态判定 17/17、真实 fish PTY、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI 16/16 和 transfer 37/37 已复现；仍需系统化故障注入、逐项删除/恢复矩阵、完整权限组合证据和最终公开文件扫描。IPC lease/frame/协议/回放、session/compact/evicted context、KB write-through、MCP/Skills、host capability/guard、scheduler/background job、goal 持久化与 Codex active goal 的区分已完成定位，但尚未宣称全部运行时门禁通过。
+- 工作区编译与主要分批测试已复现；入口、调用方向、所有者、不变量和测试映射见 [`2026-09-30-g0-architecture-audit.md`](2026-09-30-g0-architecture-audit.md)，命令级证据见 [`2026-09-30-g0-test-matrix.md`](2026-09-30-g0-test-matrix.md)。fish、daemon/IPC、终端组合、TUI、transfer 和隐私门禁已有通过记录，当前补充退出复核所需的逐项审计和时间锚点。G3/G4/G7/G9 仍须完成所属领域的删除/恢复、权限组合与系统化故障注入；当前证据不能替代那些阶段的验收。
 - macOS M-series 只能在对应环境或 CI 上验证，当前本机没有该运行环境；需在 G0 状态中保留为未验证项。
 - Arch Linux 实机尚未验证；WSL Ubuntu 已确认 `/usr/bin/fish`、Rust/Cargo 和 systemd user scope 可用。
 
@@ -222,6 +248,24 @@ KB files ─→ KB metadata/semantic DB ─→ knowledge tools/search（独立�
 当前没有发现第二个 daemon 生命周期；`crates/yunxi-hosts/src/daemon.rs` 是统一 host 入口，`src/cli/daemon_cmds.rs` 与 `crates/yunxi-core/src/ipc/{launch,lifecycle}.rs` 共同负责生命周期控制，fish 只通过既有 CLI/IPC 路径进入。后续若发现重复入口，必须先登记并解释，不能静默新增。
 
 G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/shell/` 单测；daemon/IPC 使用 `crates/yunxi-core/src/ipc/`、`tests/daemon_reload.rs` 与 runtime IPC tests；REPL/TUI 使用 `src/cli/tests/` 中的 `tui_*`、`turn_panel.rs`、`replay_*` 和 `testkit/tui/`；prompt/cache 使用 `crates/yunxi-engine/src/agent/tests/` 中的 `request_shape.rs`、`instruction_source.rs`、`tool_face_cache.rs`、`context.rs`、`compact_*.rs` 与 `testkit/cache-forensics/`；memory 使用 `crates/yunxi-core/src/memory/tests/` 与 `testkit/memory-quality/`；KB 使用 `crates/yunxi-engine/src/tools/knowledge_base/`、`default_kb.rs`、`tools/apply_patch/tests.rs`；MCP/Skills 使用 `testkit/oobe/mcp_probe.py`、`testkit/mcp-persistent/`；迁移/隐私使用 `transfer/`、`state/migrations/tests.rs`；job/调度使用 `tools/jobs/tests/`、`platforms/plugins/real_context/tests/` 和 `testkit/compact-concurrency/`。这些是后续阶段的验收入口，不表示本轮已经跑完全部套件。
+
+#### G1–G9 实现与验收导航
+
+下表登记未来工作的落点，不提前承诺尚未实现的接口形状。列出的 seam/测试文件已存在；“新增”项须在对应阶段先完成最小设计并验证层序，才能落代码。
+
+| 阶段 | 现有 seam / 拟落点 | 测试入口与需要新增的契约 |
+| --- | --- | --- |
+| G1 | `yunxi-core/src/persona_hint.rs`；`yunxi-engine/src/agent/prompt.rs` | `agent/tests/{prompt,request_shape,instruction_source,tool_face_cache,context}.rs`；新增缺失/损坏/版本回退与两轮缓存案例 |
+| G2 | `yunxi-base/src/config/persona_paths.rs`；`yunxi-core/src/state/migrations/named.rs` 与现有 conversation/state | `state/migrations/tests.rs`、`memory/tests/store.rs`、transfer tests；新增 profile 确认/推断、关系事件、隔离/删除/升级案例 |
+| G3 | `yunxi-core/src/memory/`；`yunxi-engine/src/agent/{compact,compact_extras}.rs` | `memory/tests/{store,access,dedup,reset,semantic,ranking}.rs`；新增 admission 状态转移与 committed-only 索引案例 |
+| G4 | `yunxi-engine/src/tools/knowledge_base/{store,index,search}.rs`；`default_kb.rs` | KB 模块 tests、`tools/apply_patch/tests.rs`；新增 namespace/source/version、断索引恢复与跨库重建案例 |
+| G5 | 消费者：`agent/compact.rs`、memory admission、KB/memory 排序；provider 生命周期复用 host runtime/ports | 拟新增窄 DecisionPort 协议模块及 tests（归属在 G5-01 层序审查后确定）；先 G5-00 来源/CPU/中文/资源评测，再 schema、deterministic 等价、shadow 无副作用和逐消费者采用/回退案例 |
+| G6 | `yunxi-hosts/src/runtime/{events,run}.rs`、`platforms/scheduling.rs`；`yunxi-engine/src/tools/jobs/` | `tools/jobs/tests/{lifecycle,output}.rs`、平台 real_context tests；新增 idle 取消/重启幂等、摘要分域、主动建议不抢前台案例 |
+| G7 | `yunxi-base/src/shell/fish.rs`；`src/cli/shell_bridge.rs`；host runtime/IPC | fish PTY、`testkit/g0-terminal-combo/run.py`、daemon reload/IPC tests；新增 SIGINT、断连、交互进程和回退案例 |
+| G8 | `src/cli/repl/{input,panel,input_layout}.rs` 与现有输出/事件状态 | `src/cli/tests/tui_*.rs`、`testkit/tui/`；新增人格/引用/decision 状态渲染、窄屏/Unicode/并发重绘与截图验收 |
+| G9 | 现有 transfer、state/migrations、daemon/IPC、embedding worker 与发布/安装入口 | workspace tests、架构/隐私门禁及现有 testkit；新增锁/损坏/磁盘满/半写/目录竞态、性能报告、安装升级恢复及 Arch/macOS 证据 |
+
+`yunxi-core` 等路径在上表均相对 `crates/`；G5 的新文件路径尚未定，不存在的消费者不能算端到端通过。
 
 ### G1：原生 CompanionContext 与人格/灵魂提示链
 

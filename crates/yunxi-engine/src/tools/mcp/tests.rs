@@ -452,6 +452,35 @@ fn failed_listing_is_not_retried_within_window() {
 }
 
 #[test]
+fn a_failed_mcp_startup_does_not_hide_a_healthy_server() {
+    let dir = tempfile::tempdir().unwrap();
+    let good_marker = dir.path().join("healthy-spawns");
+    let bad = McpServerConfig {
+        id: "startup-failure-isolated".to_string(),
+        command: "__yunxi_mcp_binary_that_does_not_exist__".to_string(),
+        ..Default::default()
+    };
+    let good = fake_server("startup-healthy", &good_marker);
+    let config = config_with(vec![bad, good]);
+
+    let mut first = ToolRegistry::new();
+    register(&mut first, config.clone(), None);
+    assert!(!first.contains("mcp_startup_failure_isolated_echo"));
+    assert!(first.contains("mcp_startup_healthy_echo"));
+    assert_eq!(spawn_count(&good_marker), 1);
+
+    let mut second = ToolRegistry::new();
+    register(&mut second, config, None);
+    assert!(!second.contains("mcp_startup_failure_isolated_echo"));
+    assert!(second.contains("mcp_startup_healthy_echo"));
+    assert_eq!(
+        spawn_count(&good_marker),
+        1,
+        "healthy listing should still use its cache after another server fails to start"
+    );
+}
+
+#[test]
 fn uncached_servers_are_listed_in_parallel() {
     let dir = tempfile::tempdir().unwrap();
     let marker = dir.path().join("spawns");

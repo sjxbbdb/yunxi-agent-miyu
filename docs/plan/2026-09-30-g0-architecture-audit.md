@@ -1,7 +1,7 @@
 # G0 架构入口与边界审计（as-built）
 
 日期：2026-09-30
-阶段：YXM-G0 进行中
+阶段：YXM-G0 退出审计中
 范围：`sjxbbdb/yunxi-agent-miyu` 当前产品基线
 
 本文是对 `2026-09-30-yunxi-miyu-long-horizon.md` 中 G0-01、G0-02、G0-03、G0-04、G0-08、G0-09 的逐项取证。它只描述当前代码已经存在的入口和后续必须守住的接缝，不提前实现 G1–G9 的业务能力。
@@ -22,10 +22,10 @@
 
 | 责任 | 真实入口 | 关键边界 |
 | --- | --- | --- |
-| session/turn 状态 | `crates/yunxi-core/src/state/conversation_db/{sessions,session_state,turns,turns/journal,turns/running,queue,restart,pages}.rs` | session 所有权、运行中回合、队列、journal 和重启恢复属于 state；不可由 memory 或 KB 复制 |
+| session/turn 状态 | `crates/yunxi-core/src/state/conversation_db/{sessions,session_state,turns,turns/journal,turns/running,queue/{mod,consume,redo},restart,pages}.rs` | session 所有权、运行中回合、队列、journal 和重启恢复属于 state；不可由 memory 或 KB 复制 |
 | compact | `crates/yunxi-engine/src/agent/{compact,compact_extras,compact_transcript}.rs` | compact 只单调折叠上下文；evicted context 可被召回，但不是长期记忆提交 |
 | 展示/原始/上下文 | web/CLI turn DTO 与 `turns.rs` 的 `raw_content`、`display_content`、`context_messages` | 原始用户内容只读保存；展示文本可本地化/脱敏；上下文注入走独立消息，不回写原始正文 |
-| persona/profile sidecar | `crates/yunxi-core/src/persona_hint.rs`、`src/config_tui/`、state/transfer | profile 与 persona 提案具有来源、版本和作用域；不进向量库 |
+| persona/profile sidecar | `crates/yunxi-core/src/persona_hint.rs`、`src/config_tui/`、state/transfer | 当前 profile 为 Markdown/persona 路径与提示接缝；提案的 confirmed/source/version 结构属于未来 G2，不能描述为已实现；profile 不进向量库 |
 
 G3/G9 必须分别证明 transient、short、evicted、long 四种数据在 compact、replay、export/import、删除后不会互相污染。真正删除必须同时处理正文、embedding、association、缓存、摘要引用以及可恢复归档；“隐藏”或“forgotten”不等于删除。
 
@@ -60,7 +60,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 #### G0-03 当前结论
 
-已确认四个独立事实域：`Profile/Persona → Conversation/Session → Memory → Knowledge Base`；各域的 source、metadata、embedding 和 transfer 分类已经能在代码中定位。Profile prompt-only、KB 删除不触碰 memory、memory reset 不触碰 KB，以及新布局 prompt 读取 `home/<user>/profile.md` 而不读取 legacy `state/profile.md` 均已有运行时边界证据；尚未完成的是完整跨域删除/恢复矩阵：KB reindex 不触碰 memory、usage 实际路径以及故障注入/恢复证据。因而 G0-03 由“仅定位”提升为“部分运行时边界已证、完整删除/恢复与故障注入待验”，不视为完成。
+已确认四个独立事实域：Profile/Persona、Conversation/Session、Memory、Knowledge Base；各域的 source、metadata、embedding 和 transfer 分类已经能在代码中定位。Profile prompt-only、KB/Memory 双向删除隔离、新旧 profile 读取边界已有运行时证据；生产 usage.db 路径与 SQLite 快照/导入已纳入 transfer 37/37。G0-03 的清单已有证据，完整跨域删除/恢复、KB 重建隔离和故障恢复仍属 G3/G4/G9 的后续验收，当前不能声称已通过。
 
 ## 4. Skills、MCP 与权限真相源
 
@@ -90,13 +90,14 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 ## 6. 当前阶段门禁与未验证项
 
-已完成：入口定位、重复运行时初查、核心数据边界、prompt/cache 接缝、Skills/MCP 与 host 权限真相源定位；工作区基线测试、格式/metadata/架构依赖检查已通过；WSL fish 静态判定 17/17、真实 fish PTY 接管、daemon reload 2/2、IPC 定向 33/33 和 transfer 定向 37/37 已复现；`yunxi-core` 全量单测 643/0/8（含 Profile prompt-only 边界）、`yunxi-engine` 全量单测 654/0/13（含 KB 双向删除与 embedding 进度损坏边界）、`yunxi-hosts` 全量单测 920/0/10，新增 actor 会话重置隔离回归。非 test binary 的 daemon parent/orphan 黑盒已 6/6 连续两次通过。transfer 还覆盖了 coverage-aware stale Core 清理、旧清单 merge-only、输入归档保护、清理后 marker 失败恢复、rename 错误分类、旧新 persona/home wildcard、成员路径缺口护栏、生产用量账本路径以及 SQLite usage snapshot/import 回归。
+已完成证据包括入口定位、重复运行时初查、数据边界清单、prompt/cache 接缝、Skills/MCP 与权限真相源。WSL fish 静态 17/17、真实 PTY、daemon reload 2/2、IPC 33/33、transfer 37/37、terminal-combo、repl-smoke、TUI 表单 16/16、daemon orphan 6/6、MCP persistent 5/5 均有通过记录。最新 engine 定向全量为 658/0/13，包含启动隔离、KB 双向删除和进度损坏回归；逐次命令证据以测试矩阵和 release note 为准。
 
-仍未完成：
+G0 退出复核尚需完成：
 
-1. TUI、工具执行的隔离黑盒实测记录（G0-09）；IPC 定向单测已完成，`testkit/g0-terminal-combo/run.py` 已在同一隔离 home/daemon 下先后验证真实 fish PTY 与 REPL PTY，并从 `turns.tool_flow` 校验两次工具输出；`testkit/repl-smoke/run.py` 也已自带工具调用并从 `turns.tool_flow` 校验输出，报告 `passed=true`；TUI 表单 PTY `testkit/tui/config_forms.py` 已在 WSL Ubuntu-24.04 pyte venv 下复跑为 16/16；daemon parent/orphan 黑盒已 6/6 连续两次通过。组合黑盒子项已通过，但仍需保留权限、断连、延迟故障注入与跨平台验证。
-2. 每条路径的隐私扫描证据索引与 transfer 单元逐项核对。个人路径与凭据形状扫描已完成分类；transfer registry 的 61 个 unit 已完成静态分类，当前定向测试 37/37 通过，manifest/hash/version、资源上限、tier 矩阵、旧新布局映射、恶意归档拒绝、失败回滚、coverage-aware stale Core 和 rename 错误分类证据已落地；成员 `home/<user>/kb` 与 `home/<user>/personas` 的未分类状态已由护栏测试显式固定。仍缺少 install 父目录检查与后续操作之间的目录句柄级竞态消除，以及逐项平台句柄后端的恢复/删除证明。第三方 `APP_SEC` 已核验为公开客户端签名常量并列入 allowlist。
-3. Arch Linux 实机和 macOS M-series 编译/运行；当前只能标记为未验证。
+1. 补齐五类重复实现的逐项搜索摘要、owner/调用方向及复用结论；按 v3 执行合同做退出前复跑和命令时间锚点记录。
+2. 独立复核 G1–G9 落点与测试导航；区分已存在 seam 和拟新增协议，不把未来接口当现有实现。
+3. 成员 `home/<user>/kb`/`home/<user>/personas` transfer 策略仍未决定；当前护栏仅暴露缺口。目录句柄 TOCTOU、完整删除恢复和组合故障注入登记为 G3/G4/G7/G9 风险，不表示已解决；已复现的权限/迁移边界破坏仍按 Hard Stop 修复。
+4. Arch/macOS 未验证按合同保留环境缺口；WSL 不替代它们，G9 发布前需单独决定和验证。
 
 ### 6.1 可复现隐私门禁
 
@@ -106,7 +107,7 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/privacy/g0_scan.py`
 
-本轮运行结果：1858 个 Git 跟踪文本文件通过扫描，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开第三方签名常量归类为 1 个 `public_allowlist` 文件，合成测试值归类为 2 个 `fixture_allowlist` 文件。输出只包含类别、计数和路径，不回显匹配内容。该门禁不替代 transfer 的逐项恢复/删除、manifest/hash/version、失败回滚和恶意归档审计。
+本轮运行结果：1859 个 Git 跟踪文本文件通过扫描，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开第三方签名常量归类为 1 个 `public_allowlist` 文件，合成测试值归类为 2 个 `fixture_allowlist` 文件。输出只包含类别、计数和路径，不回显匹配内容。该门禁不替代 transfer 的逐项恢复/删除、manifest/hash/version、失败回滚和恶意归档审计。
 
 在上述门禁完成前，不创建 `CompanionContext`、Laya provider、向量 admission 或新的调度器；G1 仍保持未开始。
 
@@ -116,13 +117,13 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 | 状态 | 范围 | 当前证据或缺口 |
 | --- | --- | --- |
-| 已证 | G0-01/G0-02/G0-04/G0-06 | 本文入口表、单运行时结论、prompt/cache 接缝记录，以及 `legacy_config_dir` 正负回归测试。 |
-| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 654/0/13；transfer 37/37；privacy 1858 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
+| 部分已证 | G0-01/G0-02/G0-04/G0-06 | 入口表、单运行时结论、prompt/cache 接缝和 `legacy_config_dir` 正负回归均已定位/测试；逐项搜索摘要、owner/调用方向和命令级时间锚点仍在退出审计中。 |
+| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 658/0/13；transfer 37/37；privacy 1859 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
 | 已证 | G0-09 基线闭环 | fish 静态 17/17、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI config 16/16、daemon orphan 6/6（重复两次）已有报告；这些证据仍不替代故障注入。 |
-| 部分已证 | G0-03 | 已补齐 Profile/Persona、Conversation/Session、Memory、KB、embedding、credentials、cache、transfer 的真实路径、schema、删除/恢复和向量边界矩阵；Profile prompt-only、新旧 profile 路径边界、KB remove 不触碰 memory、Memory reset 不触碰 KB、embedding 进度损坏状态均有回归覆盖，跨域删除/恢复、usage 实际路径仍待运行时验证。 |
-| 部分已证 | G0-08 | MCP/Skills 会话生命周期黑盒 5/5 已证同 session 复用、跨 session 隔离、system prompt instructions、session 删除回收和 daemon stop 无孤儿；非法 JSON-RPC response-shape 已有 2/2 协议分类 + 1/1 运行时快速失败证据；权限真相源、启动失败/断连/超时、request-shape 组合故障注入仍待补齐。 |
-| 仅定位 | G0-05 | 权限真相源和测试入口已列出，但尚未形成完整耗时/失败原因、断连/权限组合和 request-shape 故障注入报告。 |
+| 已登记，硬化待验 | G0-03 | 真实路径/schema/删除恢复/向量清单已有证据，profile、KB/Memory 双向删除、usage SQLite 快照/导入已测；完整跨域恢复与重建故障属后续 G3/G4/G9 验收。 |
+| 部分已证 | G0-08 | MCP/Skills 会话生命周期黑盒 5/5 已证同 session 复用、跨 session 隔离、system prompt instructions、session 删除回收和 daemon stop 无孤儿；非法 JSON-RPC response-shape 已有 2/2 协议分类 + 1/1 运行时快速失败证据（未独立证明该用例的 PID 退出），启动失败隔离已有 1/1 证据；非法 JSON/半写 stdout、权限与 request-shape 组合故障注入仍待补齐。 |
+| 部分已证 | G0-05 | 主要命令矩阵、WSL 结果、计数和失败原因已登记；仍缺每项 elapsed 锚点、断连/权限组合和 request-shape 故障注入报告。 |
 | 未验证 | G0-05/G0-09 跨平台 | Arch Linux 实机和 macOS M-series 尚未运行；只能保留为环境缺口。 |
-| 未关闭 | transfer 安全硬化 | import 的路径检查兼容后端仍存在父目录 TOCTOU；export 的 output/source 检查与实际写入/读取之间也存在路径竞态。严格安全语义需要 Linux/macOS `openat`/`renameat` 与 Windows handle-relative backend，当前不能宣称竞态已消除。 |
+| 未关闭 | transfer 安全硬化 | import/export 的路径检查与实际使用之间存在父目录 TOCTOU 风险；Linux/macOS 目录句柄后端与竞态验证属 G9，不宣称已消除；Windows 不是本仓库的目标平台。 |
 
 该索引是 G0 的当前状态，不是阶段完成声明；G1 及后续阶段保持未开始。
