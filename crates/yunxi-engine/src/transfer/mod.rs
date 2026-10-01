@@ -1142,6 +1142,33 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn member_path_transfer_gaps_are_explicit() {
+        // These are real member-owned paths, not hypothetical future files.
+        // Keep the current omissions visible until their transfer policy is
+        // designed: adding a member KB/persona file must not look covered
+        // merely because its parent home directory has other units.
+        for rel in [
+            "home/alice/kb/files/preferences.md",
+            "home/alice/kb/kb_meta.db",
+            "home/alice/personas/work/persona.md",
+            "home/alice/personas/work/memory/memory.db",
+        ] {
+            assert!(
+                unit_for(rel).is_none(),
+                "member transfer gap {rel} was silently classified; update the policy and this regression together"
+            );
+        }
+
+        // Evicted context already has an explicit state-side wildcard unit;
+        // exercise the actual member persona scope rather than only `default`.
+        assert_eq!(
+            unit_for("state/personas/home-alice-work/memory/evicted_context.db")
+                .map(|unit| unit.id),
+            Some("state.evicted_context")
+        );
+    }
+
+    #[test]
     fn unit_ids_and_paths_are_unique() {
         let ids: BTreeSet<&str> = UNITS.iter().map(|unit| unit.id).collect();
         assert_eq!(ids.len(), UNITS.len(), "duplicate DataUnit id");

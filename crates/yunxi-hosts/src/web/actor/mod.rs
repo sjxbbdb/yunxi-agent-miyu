@@ -563,9 +563,10 @@ pub(in crate::web) fn reset_actor_conversation(
             let _ = store.clear_goal(session_id, &goal.goal_id, goal.revision);
         }
         tools::goal::forget_session(session_id);
-        let memory = MemoryStore::new(config, paths);
-        memory.clear_evicted_context()?;
-        memory.clear_pending_events()?;
+        // 记忆库的短期事件与逐出上下文也必须跟着被点名的会话走。
+        // 这里不能调用无 session 的全局清理入口：WebUI 可以同时打开多个会话，
+        // 否则重置 A 会把 B 尚未整理的事件和可召回上下文一起抹掉。
+        MemoryStore::new(config, paths).reset_session(session_id)?;
         tools::clear_aur_review_state(paths)?;
         if &*state_store.session_id() == session_id {
             if let Some(agent) = agent.as_mut() {

@@ -8,7 +8,7 @@
 
 ## 结论
 
-在本轮加固前，`cargo test -p yunxi-engine transfer` 的 14 个匹配测试只覆盖代表性的 round-trip、secret redaction、schema 拒绝、registry 分类和 fixup；不能证明恶意归档、manifest 完整性、失败回滚或新 home 布局的会话库安全。当前 HEAD 已新增 35 个 transfer 匹配测试，并把下面标记为“已落地”的校验、资源上限、coverage、tier 矩阵与回滚证据纳入测试。
+在本轮加固前，`cargo test -p yunxi-engine transfer` 的 14 个匹配测试只覆盖代表性的 round-trip、secret redaction、schema 拒绝、registry 分类和 fixup；不能证明恶意归档、manifest 完整性、失败回滚或新 home 布局的会话库安全。当前 HEAD 已新增 37 个 transfer 匹配测试，并把下面标记为“已落地”的校验、资源上限、coverage、tier 矩阵、成员路径缺口护栏与回滚证据纳入测试。
 
 在 G0 退出前，优先级顺序应为：
 

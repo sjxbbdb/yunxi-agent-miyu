@@ -766,6 +766,64 @@ fn resetting_a_conversation_also_clears_its_todo_list() {
     }
 }
 
+/// actor 入口的对话重置必须保持记忆的会话边界。
+///
+/// `/reset-memory` 已经覆盖了底层 `MemoryStore::reset_session`，但 WebUI 的
+/// `reset_actor_conversation` 之前仍调用全局的 pending/evicted 清理，并且没有
+/// 直接覆盖长期记忆。这里从真实 actor reset 入口验证：点名 A 只能清掉 A，B
+/// 的长期记忆不能被误伤。
+#[test]
+fn resetting_a_conversation_clears_only_the_named_session_memory() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = test_paths(temp.path());
+    let state = DaemonState::for_test(paths.clone(), 8332).unwrap();
+    let config = state.manager.lock().unwrap().config.clone();
+    let persona = active_persona_scope(&state);
+    let session_a = state
+        .state_store
+        .create_session(&persona, "memory A", "user", None)
+        .unwrap();
+    let session_b = state
+        .state_store
+        .create_session(&persona, "memory B", "user", None)
+        .unwrap();
+
+    let store = yunxi_core::memory::MemoryStore::new(&config, &paths);
+    store
+        .clone()
+        .with_session_id(&session_a.session_id)
+        .remember_fact("A 会话的重置隔离事实", "test")
+        .unwrap();
+    store
+        .clone()
+        .with_session_id(&session_b.session_id)
+        .remember_fact("B 会话的重置隔离事实", "test")
+        .unwrap();
+
+    let recalled = || {
+        store
+            .recall_memories("重置隔离事实", 10, false)
+            .unwrap()
+            .to_string()
+    };
+    assert!(recalled().contains("A 会话"));
+    assert!(recalled().contains("B 会话"));
+
+    reset_actor_conversation(
+        &mut None,
+        &config,
+        &paths,
+        &state.state_store,
+        &state.manager,
+        &state.events,
+        &session_a.session_id,
+    )
+    .unwrap();
+
+    assert!(!recalled().contains("A 会话"), "点名 A 后 A 的记忆仍可召回");
+    assert!(recalled().contains("B 会话"), "重置 A 误删了 B 会话的记忆");
+}
+
 /// `session.created` 事件必须带上 mode。
 ///
 /// 会话模式有两个发布口：REST 的会话对象和这个事件。前端收到事件就把会话插
