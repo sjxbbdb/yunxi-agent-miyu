@@ -322,6 +322,9 @@ impl StateStore {
 
     pub fn init_files(&self) -> Result<()> {
         std::fs::create_dir_all(&self.state_dir)?;
+        // This state-side file is retained for the legacy layout and transfer
+        // compatibility. In the home layout, prompt assembly reads the
+        // owner/member `home/<user>/profile.md` through AppConfig instead.
         if !self.profile_file().exists() {
             std::fs::write(self.profile_file(), "# YunXi Profile\n\n")?;
         }

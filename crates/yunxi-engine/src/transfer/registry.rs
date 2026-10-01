@@ -268,7 +268,7 @@ pub const UNITS: &[DataUnit] = &[
         kind: UnitKind::File,
         tier: Tier::Core,
         secret: false,
-        why: "assistant profile notes",
+        why: "legacy state-side profile notes; home-layout prompts use home/*/profile.md",
     },
     DataUnit {
         id: "state.alarms",

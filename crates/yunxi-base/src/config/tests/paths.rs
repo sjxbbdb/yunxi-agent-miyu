@@ -297,3 +297,42 @@ fn home_layout_marker_redirects_identity_and_persona_paths() {
         "call me Alice"
     );
 }
+
+/// 新布局下,提示词只从 `home/<admin>/profile.md` 读档案。
+/// `state/profile.md` 仍由状态层保留为旧布局/迁移传输单元,但不能
+/// 反向覆盖当前属主档案,否则旧文件会悄悄污染新布局的提示词。
+#[test]
+fn home_layout_prompt_ignores_legacy_state_profile() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().to_path_buf();
+    let paths = YunXiPaths {
+        root_dir: root.clone(),
+        config_dir: root.join("config"),
+        config_file: root.join("config/config.jsonc"),
+        skills_dir: root.join("extensions/skills"),
+        data_dir: root.join("data"),
+        cache_dir: root.join("cache"),
+        state_dir: root.join("state"),
+        pictures_dir: root.join("home/tester/pictures"),
+        fish_hook_file: root.join("fish/yunxi.fish"),
+        bash_hook_file: root.join("config/shell/bash-hook.sh"),
+        zsh_hook_file: root.join("config/shell/zsh-hook.zsh"),
+        scripts_dir: root.join("extensions/scripts"),
+        system_scripts_dir: PathBuf::new(),
+    };
+    std::fs::write(root.join(".home-layout-v1"), "tester\n").unwrap();
+    std::fs::create_dir_all(root.join("home/tester")).unwrap();
+    std::fs::create_dir_all(&paths.state_dir).unwrap();
+    std::fs::write(root.join("home/tester/profile.md"), "current-owner-profile").unwrap();
+    std::fs::write(paths.state_dir.join("profile.md"), "legacy-state-profile").unwrap();
+
+    let config = AppConfig::default();
+    assert_eq!(
+        config.user_identity_path(&paths),
+        root.join("home/tester/profile.md")
+    );
+    assert_eq!(
+        config.user_identity_prompt(&paths).unwrap(),
+        "current-owner-profile"
+    );
+}
