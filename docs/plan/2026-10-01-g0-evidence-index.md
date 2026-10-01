@@ -5,7 +5,7 @@
 生成时间：`2026-10-01 07:01:20 UTC`；本轮黑盒复核时间：`2026-10-01 07:18:33 UTC`
 
 测试基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`；当前复核提交：`249b67f5`
-环境：WSL `Ubuntu-24.04`，仓库 `/mnt/d/YunXi-Miyu`，`CARGO_BUILD_JOBS=1`，cargo 进程使用 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0`；需要中文 golden 的命令使用 `YUNXI_LANG=zh`。
+环境：WSL `Ubuntu-24.04`，仓库 `<repo-root>`，`CARGO_BUILD_JOBS=1`，cargo 进程使用 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0`；需要中文 golden 的命令使用 `YUNXI_LANG=zh`。
 
 ## 可复核运行
 
