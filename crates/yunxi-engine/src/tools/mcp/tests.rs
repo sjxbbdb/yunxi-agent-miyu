@@ -59,7 +59,7 @@ for line in sys.stdin:
             result['instructions'] = os.environ['INSTRUCTIONS']
     elif method == 'tools/list':
         result = {'tools': [{'name': name, 'description': name, 'inputSchema': {'type': 'object'}}
-                            for name in ['echo', 'count', 'crash', 'slow', 'child', 'ping_first', 'write']]}
+                            for name in ['echo', 'count', 'crash', 'slow', 'child', 'ping_first', 'read', 'write']]}
     elif method == 'tools/call':
         name = request['params']['name']
         args = request['params'].get('arguments', {})
@@ -97,6 +97,12 @@ for line in sys.stdin:
                 with open(args['path'], 'w') as f:
                     f.write('x')
                 text = 'written'
+            except OSError as error:
+                text = 'denied: ' + type(error).__name__
+        elif name == 'read':
+            try:
+                with open(args['path']) as f:
+                    text = 'read: ' + f.read()
             except OSError as error:
                 text = 'denied: ' + type(error).__name__
         elif name == 'ping_first':
@@ -582,6 +588,7 @@ fn sandbox_none_never_frees_a_member() {
     );
     server.sandbox = yunxi_base::config::McpSandbox::Inherit;
     assert!(owner.policy_for(&server).is_some());
+    assert!(member.policy_for(&server).is_some());
 }
 
 /// 服务器声明的能力只认宿主词表；不认识的丢掉、认识的原样保留。
@@ -754,8 +761,19 @@ async fn a_server_runs_inside_the_callers_sandbox() {
             json!({"path": path}),
         )
     };
+    let read = |server: &McpServerConfig, path: std::path::PathBuf| {
+        call_tool(
+            McpToolBinding {
+                server: server.clone(),
+                tool_name: "read".to_string(),
+            },
+            json!({"path": path}),
+        )
+    };
     let mut server = fake_server("boxed", &allowed.join("marker"));
+    std::fs::write(outside.join("read.txt"), "outside").unwrap();
     let owner = policy(false);
+    let outside_read = outside.join("read.txt");
     let inside = with_sandbox(Some(owner.clone()), write(&server, allowed.join("in.txt")))
         .await
         .unwrap();
@@ -765,12 +783,24 @@ async fn a_server_runs_inside_the_callers_sandbox() {
         .unwrap();
     assert!(escaped.starts_with("denied"), "{escaped}");
     assert!(!outside.join("out.txt").exists());
+    assert_eq!(
+        with_sandbox(Some(owner.clone()), read(&server, outside_read.clone()))
+            .await
+            .unwrap(),
+        "read: outside"
+    );
 
     server.sandbox = yunxi_base::config::McpSandbox::None;
     let freed = with_sandbox(Some(owner), write(&server, outside.join("owner.txt")))
         .await
         .unwrap();
     assert_eq!(freed, "written", "the owner opted this server out");
+    assert_eq!(
+        with_sandbox(Some(policy(false)), read(&server, outside_read.clone()))
+            .await
+            .unwrap(),
+        "read: outside"
+    );
     let member = with_sandbox(
         Some(policy(true)),
         write(&server, outside.join("member.txt")),
@@ -779,4 +809,26 @@ async fn a_server_runs_inside_the_callers_sandbox() {
     .unwrap();
     assert!(member.starts_with("denied"), "{member}");
     assert!(!outside.join("member.txt").exists());
+    assert_eq!(
+        with_sandbox(Some(policy(true)), read(&server, outside_read.clone()))
+            .await
+            .unwrap(),
+        "read: outside"
+    );
+
+    server.sandbox = yunxi_base::config::McpSandbox::Inherit;
+    let member_inherit = with_sandbox(
+        Some(policy(true)),
+        write(&server, outside.join("member-inherit.txt")),
+    )
+    .await
+    .unwrap();
+    assert!(member_inherit.starts_with("denied"), "{member_inherit}");
+    assert!(!outside.join("member-inherit.txt").exists());
+    assert_eq!(
+        with_sandbox(Some(policy(true)), read(&server, outside_read))
+            .await
+            .unwrap(),
+        "read: outside"
+    );
 }
