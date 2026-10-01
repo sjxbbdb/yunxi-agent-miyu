@@ -21,6 +21,7 @@
 - G0-05 bounded worker 对 `crates/yunxi-engine/src/transfer/export.rs` 做只读 TOCTOU 审计（证据 `G0-20261001-transfer-export-audit-01`）：output 检查→创建/权限、source metadata→读取、SQLite metadata→rusqlite path open、redaction 路径读取均未闭合。普通文件的 Unix 方案需要完整 `openat`/`O_NOFOLLOW` 目录句柄链和 FD 读写；SQLite 的 path-only API、WAL sidecar 及 Linux `/proc/self/fd` / macOS `/dev/fd` 差异不能支撑跨平台结论，Windows 需独立 reparse-point handle 方案。本轮未改 Rust、未伪造竞态测试，风险登记为后续独立 slice。
 - G0-05 新增非法 manifest 回归测试 `malformed_manifest_json_is_refused_before_import`（`de0e389b`，证据 `G0-20261001-transfer-manifest-01`）：导入只含 `{not-json` 的 `manifest.json` 时在解析阶段拒绝，既有 config 与布局未被修改；WSL 精确测试 1/1 通过，临时 target 已清理。
 - G0-05 新增 staging fixup 失败隔离回归测试 `import_fixup_failure_leaves_live_tree_untouched`（`e7ecae61`，证据 `G0-20261001-transfer-fixup-01`）：缺少 `sessions` 表的可打开 SQLite 在安装前失败，live config、conversation、memory、KB 元数据/源文件/索引均保持原字节；定向 1/1、完整 transfer 40/40 通过，临时 target 已清理。
+- G0-03/G0-05 修复 KB 删除半失败：`KnowledgeBase::remove`（`243481ae`，证据 `G0-20261001-kb-remove-01`）先将源文件移入同目录临时 tomb，再在 metadata/semantic 各自事务中执行删除；semantic 触发器失败时源文件、两库行均恢复，定向 1/1、KB 全套 16/16 通过。两个独立 SQLite commit 的跨库原子性仍登记为残余风险。
 - 历史记录：此前 goal 曾暂停并准备替换为 v4（[`2026-10-01-goal-command-v4.md`](2026-10-01-goal-command-v4.md)）；当前活动合同已由 v5 文档重新激活，本文件的旧暂停描述不代表现状。
 
 ## 验证状态
