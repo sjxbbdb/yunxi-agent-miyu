@@ -2,8 +2,8 @@
 
 本索引把当前 G0 退出审计引用的命令、环境、提交和稳定摘要绑定起来。原始终端输出不写入仓库，避免把本机路径、环境变量或日志内容发布到公开仓库；`observed session` 是本次 Codex 运行中对应的终端会话标识，结果摘要只记录退出码、计数和边界结论。
 
-生成时间：`2026-10-01 07:01:20 UTC`  
-基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`  
+生成时间：`2026-10-01 07:01:20 UTC`；本轮黑盒复核时间：`2026-10-01 07:18:33 UTC`  
+测试基线提交：`cfe91a89db247a3d2e5a2507489fcf8d542fee8e`；当前复核提交：`249b67f5`  
 环境：WSL `Ubuntu-24.04`，仓库 `/mnt/d/YunXi-Miyu`，`CARGO_BUILD_JOBS=1`，cargo 进程使用 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0`；需要中文 golden 的命令使用 `YUNXI_LANG=zh`。
 
 ## 可复核运行
@@ -16,6 +16,15 @@
 | `G0-20261001-locale-01` | current shell (completed) | `YUNXI_LANG=zh cargo test -p yunxi-engine tools::readable_names::display_name_tests::both_token_usage_tools_have_a_readable_name --locked -- --exact --test-threads=1` | 0 | 1 passed；未设置 `YUNXI_LANG=zh` 的同一既有测试曾因 locale 失败，未修改生产代码 |
 | `G0-20261001-static-01` | 当前 shell | `cargo fmt --all -- --check`；`cargo metadata --no-deps --format-version 1`；`python test_scripts/arch_dep_check.py`；`git diff --check` | 0 | 格式、metadata、层序和 diff 检查通过；架构脚本的中文摘要受终端编码影响，但判定为通过 |
 | `G0-20261001-privacy-01` | 当前 shell | `python testkit/privacy/g0_scan.py --self-test`；`python testkit/privacy/g0_scan.py` | 0 | 1859 tracked text files；`personal_path=0`、`private_key=0`、`credential_shape=0`；allowlist 为 1 public + 2 fixture |
+| `G0-20261001-repl-01` | current shell (completed) | `python3 testkit/repl-smoke/run.py` | 0 | 修复测试夹具读取过时 `YUNXI_HOME/state/conversation.db` 后，placeholder/reply/footer/history/alive/tool-flow 全部通过；`reply_seconds=1.57`、`78 tok/s` |
+| `G0-20261001-daemon-orphan-01` | current shell (completed) | `python3 testkit/daemon-orphan/run.py --binary target/debug/yunxi` | 0 | 6/6 passed；覆盖启动者 SIGKILL/正常退出、真实 daemon 存活/停止及无孤儿 |
+| `G0-20261001-mcp-persistent-01` | current shell (completed) | `python3 testkit/mcp-persistent/run.py target/debug/yunxi` | 0 | 5/5 passed；覆盖同会话状态、跨会话隔离、system prompt、删除会话回收和 daemon 停止清理 |
+
+### 本轮失败与修复记录
+
+本轮首次复跑 `testkit/repl-smoke/run.py` 退出码为 1：终端交互、回复速度、历史占位符和进程存活均通过，但 `tool_flow_marker=false`。调查确认不是生产回合失败：真实记录已写入当前成员布局 `YUNXI_HOME/home/<member>/conversation.db`，其中 `tool_flow` 含 `run_command` 和 `G0_09_TOOL_OK`；测试夹具仍只读取已废弃的 `YUNXI_HOME/state/conversation.db`。
+
+修复提交 [`249b67f5`](https://github.com/sjxbbdb/yunxi-agent-miyu/commit/249b67f5) 让夹具按稳定布局依次检查 legacy `state/conversation.db` 与当前 `home/*/conversation.db`，不硬编码成员名，也不递归打开任意 SQLite 文件。修复后同一命令退出码 0，`tool_flow_marker=true`、`passed=true`。这是 G0 黑盒证据夹具的兼容修复，不改变生产运行时。
 
 ## 只读架构证据
 
@@ -32,5 +41,6 @@
 2. M-14/M-16 的非 test binary 构建尚未在本索引记录二进制 SHA-256；不得把 testkit feature 产物当作生产 daemon 黑盒输入。
 3. M-18 只证明匹配调用快速失败，不独立证明 PID 退出；非法 JSON、半写 stdout 和 method+result 畸形对象仍是 G0-08 覆盖缺口。
 4. Arch Linux 实机、macOS M-series、transfer 目录句柄竞态、完整跨域恢复和组合故障注入保持在后续阶段风险登记中。
+5. `testkit/tui/config_forms.py` 的历史 16/16 证据依赖 pyte 环境；当前 WSL 基础 Python 未安装 pyte，本轮未重复安装依赖，不能把该历史记录误报为本轮复跑。
 
 该文件是证据索引，不是 G0 完成声明；G1 仍未开始。

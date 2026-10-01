@@ -141,11 +141,13 @@ def tool_flow_has_marker():
     """从真实回合记录确认 run_command 成功，而不是只看 TUI 文本。"""
     # The current home layout stores each member's conversation DB under
     # ``home/<member>/conversation.db``. Keep the legacy ``state`` path as a
-    # compatibility candidate because older sandboxes and imported homes may
-    # still use it. Restrict the search to these two known layouts rather than
-    # recursively opening arbitrary SQLite files in the test sandbox.
-    db_paths = [HOME / "state" / "conversation.db"]
-    db_paths.extend(sorted((HOME / "home").glob("*/conversation.db")))
+    # compatibility fallback because older sandboxes and imported homes may
+    # still use it. Prefer the current layout when it exists so a stale legacy
+    # database cannot make a new-home run look successful. Restrict the search
+    # to these two known layouts rather than recursively opening arbitrary
+    # SQLite files in the test sandbox.
+    current_paths = sorted((HOME / "home").glob("*/conversation.db"))
+    db_paths = current_paths or [HOME / "state" / "conversation.db"]
     for db_path in db_paths:
         if not db_path.exists():
             continue
