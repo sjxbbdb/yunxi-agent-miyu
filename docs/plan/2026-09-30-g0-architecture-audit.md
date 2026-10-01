@@ -93,6 +93,18 @@ G4/G9 的证据必须覆盖：memory/KB 不共表、不共检索 API、不共权
 
 这些模块中的 principal、capability、turn restriction、command/net guard 和执行结果才是权限真相源。prompt 标签、Laya 结果和 YunXi 陪伴状态都不能鉴权、提权或另造 approval 状态机。
 
+### DecisionPort 规划接缝（G0 只登记，不实现）
+
+| 消费者 | 现有 owner / 未来挂接 seam | 最小化输入 | 有限输出与 deterministic fallback | 明确禁止 |
+| --- | --- | --- | --- | --- |
+| context salience | `yunxi-core` compact/context 与 prompt 组装 | 轮次 id、消息角色、长度、工具摘要、脱敏约束标签 | 保留/裁剪建议；回退现有 context budget 与顺序规则 | 读写 profile、记忆或 KB；改变 prompt 字节合同 |
+| memory admission | `yunxi-core/src/memory/{write,dedup,organizer}.rs` | candidate id、内容指纹、来源、作用域、敏感度标签、短期计数 | `committed`/`rejected`/`abstain` 建议；回退现有确定性 admission | 把建议当写入凭证；直接写删 memory 或向量 |
+| recall/rerank | `yunxi-core/src/memory/{recall,semantic}.rs` | query 指纹、候选 id、namespace、已有排序特征 | 候选排序/过滤建议；回退关键词与现有 semantic ranking | 扩大可见 namespace；读取 profile secret 或 KB 私域 |
+| terminal intent | `yunxi-base/src/shell` → daemon/IPC → `yunxi-engine` tools | 脱敏文本片段、工作目录类别、可用 capability、语法判定 | 命令类别/澄清/abstain；回退 fish 原语义和既有 tool guard | 执行命令、绕过 host grant、提权或改变 scheduler |
+| proactive ranking | 既有 background job / platform reply owner | 已授权候选摘要、冷却与 scope 元数据 | 排序/不主动建议；回退现有冷却、限额和 owner 判定 | 直接发消息、创建任务或修改关系/profile |
+
+这些行是 G0 的规划证据，不代表已经存在 `DecisionPort` trait、provider 或 sidecar。G5 前不得加载 Laya 权重；任何未来 provider 都必须满足输入脱敏、有限 schema、超时/非法输出/断连回退和无副作用合同。
+
 ## 5. 后台调度与产品 goal 的区别
 
 - 回合调度/限额/会话租约：`crates/yunxi-hosts/src/platforms/scheduling.rs`。
