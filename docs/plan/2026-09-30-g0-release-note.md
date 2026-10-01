@@ -16,6 +16,7 @@
 - 修复 G0-09 daemon 黑盒在 WSL/CI 中的测试隔离：`testkit/daemon-orphan/run.py` 为每个临时 home 建立独立 `XDG_RUNTIME_DIR`，避免 IPC socket 目录缺失或误连真实用户 daemon；使用非 test binary 进行 parent/orphan 生命周期复跑，6/6 连续两次通过。
 - 将决策模型主线显式固化为 `DecisionPort`/可选 Laya provider：先 deterministic、再 shadow；模型只能提供 salience/admission/rerank/intent/主动候选建议，不能执行工具、鉴权或写删数据。G0 只记录 seam 与验收契约，G5 才实现模型。
 - 将长线 goal 重构为可执行 v3 合同：增加阶段边界、G0 退出审计、证据计数/失败原因/后续 owner 和“登记不等于通过”的规则；明确 G1～G9 的任务编号和 G5-00～G5-06 的可行性门、`DecisionPort`、deterministic provider、shadow Laya、逐消费者接入、故障评测与实际建议采纳/回滚。当前活动 goal 不结束、不重建，仓库计划文件作为可审计细化版本，活动 objective 文本未原地改写。
+- 当前 goal 已暂停并准备替换为 v4：[`2026-10-01-goal-command-v4.md`](2026-10-01-goal-command-v4.md) 保留原 G0–G9 交付范围，同时把 Laya/DecisionPort 拆成 D0–D8 的可执行主线；重新启动后以 v4 为唯一执行合同。
 
 ## 验证状态
 
@@ -42,7 +43,7 @@
 - WSL Ubuntu-24.04 IPC 定向测试：`cargo test -p yunxi-core ipc --lib --locked -- --test-threads=1` 33/33 通过，覆盖 lease、frame、协议版本、半帧、超限、断连和同 home 单例。
 - WSL Ubuntu-24.04 终端组合黑盒 `testkit/g0-terminal-combo/run.py`：同一隔离 home/daemon/stub 先走真实 fish PTY + `fish-init`/accept-line，再走真实 REPL PTY；两条 IPC 客户端都在 `turns.tool_flow` 中留下 `run_command` marker，fish 无 wildcard error，报告 `passed=true`，已重复运行两次通过。
 - WSL Ubuntu-24.04 pyte venv 的 TUI PTY 黑盒 `testkit/tui/config_forms.py` 在隔离 home 下复跑为 16/16；fixture 显式提供 `custom_models`，并在选择 `stub-model` 前定位到 `Stub` 供应商，覆盖主菜单、全局设置、编辑模型、新增模型和保存退出路径。该证据仍只代表表单闭环，不能用它替代整个终端闭环。
-- 隐私扫描复跑：1859 个 Git 跟踪文本文件；个人绝对路径与上游本机路径已替换为 `<user>`、`/home/tester`、仓库相对路径或运行时环境变量；`personal_path=0`、`private_key=0`、`credential_shape=0`。完整迁移/删除路径审计仍未关闭。
+- 隐私扫描复跑：1861 个 Git 跟踪文本文件；个人绝对路径与上游本机路径已替换为 `<user>`、`/home/tester`、仓库相对路径或运行时环境变量；`personal_path=0`、`private_key=0`、`credential_shape=0`。完整迁移/删除路径审计仍未关闭。
 - G0-09 工具执行黑盒：`testkit/repl-smoke/run.py` 现已自带 `STUB_TOOL=1` 和 `printf G0_09_TOOL_OK`，对中英文占位符统一判定，并从真实 `turns.tool_flow` 校验 `run_command` 输出。隔离运行报告 `placeholder_on_paste=true`、`reply_seen=true`、`footer_speed=78 tok/s`、`placeholder_on_recall=true`、`raw_text_on_recall=false`、`repl_alive=true`、`tool_flow_marker=true`、`passed=true`；该探针自身闭环通过，但仍不能替代 fish/daemon/REPL 组合终端闭环。
 - transfer 定向测试：`cargo test -p yunxi-engine transfer --locked -- --test-threads=1` 37/37 通过；新增未知 manifest、size/hash、entry 集合、Windows 路径、非 regular tar、Never unit、symlink 导出、new home conversation、staged fixup、marker rollback、归档资源上限、coverage-aware stale Core 清理、legacy merge-only、输入归档保护、stale 清理失败恢复、rename 错误分类、tier 矩阵、旧新 persona/home wildcard、生产 `state/usage.db` SQLite 快照/导入回归、file/SQLite 子路径边界和成员 Persona/KB 路径缺口护栏测试。registry 当前 61 个 unit（Core 44、Heavy 1、Platform 2、Never 14）的静态分类已逐项核对，并覆盖生产 usage DB 与 legacy 用量输入。成员 `home/<user>/kb` 与 `home/<user>/personas` 当前仍未纳入导出策略，测试只负责显式暴露缺口；剩余风险还包括 import 安装/回滚/stale/marker 的父目录竞态，以及 export 输出/source 检查与实际使用之间的路径竞态。
 - daemon orphan 黑盒：先用 `cargo build --locked` 构建非 test binary，再在仓库根运行 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/daemon-orphan/run.py --binary target/debug/yunxi`，6/6 连续两次通过；覆盖直接 daemon 随启动者 SIGKILL/正常退出而退出、detached daemon 跨启动命令存活及显式 stop。testkit 构建产物按设计拒绝自启动，因此该黑盒使用非 test binary；权限、延迟、断连和其它平台仍未覆盖。
@@ -72,7 +73,7 @@
 
 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/privacy/g0_scan.py`
 
-本轮结果：扫描 1859 个已跟踪文本文件，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开 `APP_KEY`/`APP_SEC` 归类为 1 个 `public_allowlist` 文件，2 个合成测试值归类为 `fixture_allowlist`。脚本只输出类别、计数和路径，不输出匹配内容。
+本轮结果：扫描 1861 个已跟踪文本文件，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开 `APP_KEY`/`APP_SEC` 归类为 1 个 `public_allowlist` 文件，2 个合成测试值归类为 `fixture_allowlist`。脚本只输出类别、计数和路径，不输出匹配内容。
 
 ## 发布约束
 

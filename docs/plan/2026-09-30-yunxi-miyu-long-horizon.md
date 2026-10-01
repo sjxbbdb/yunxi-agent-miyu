@@ -1,5 +1,7 @@
 # YunXi × Miyu 长线原生化升级计划
 
+> 该文件是 v3 历史审计记录。重新启动长线 goal 时以 [`2026-10-01-goal-command-v4.md`](2026-10-01-goal-command-v4.md) 为唯一执行合同；v4 保留本文件的 G0–G9 工作范围，并补全 DecisionPort/Laya 决策模型主线。
+
 > 计划编号：YXM-G0
 > 版本：v3 / 2026-10-01
 > 当前基线：仓库 `sjxbbdb/yunxi-agent-miyu`

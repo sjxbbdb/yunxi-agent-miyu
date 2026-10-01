@@ -121,7 +121,7 @@ G0 退出复核尚需完成：
 
 `PYTHONDONTWRITEBYTECODE=1 python3 testkit/privacy/g0_scan.py`
 
-本轮运行结果：1859 个 Git 跟踪文本文件通过扫描，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开第三方签名常量归类为 1 个 `public_allowlist` 文件，合成测试值归类为 2 个 `fixture_allowlist` 文件。输出只包含类别、计数和路径，不回显匹配内容。该门禁不替代 transfer 的逐项恢复/删除、manifest/hash/version、失败回滚和恶意归档审计。
+本轮运行结果：1861 个 Git 跟踪文本文件通过扫描，`personal_path=0`、`private_key=0`、`credential_shape=0`；公开第三方签名常量归类为 1 个 `public_allowlist` 文件，合成测试值归类为 2 个 `fixture_allowlist` 文件。输出只包含类别、计数和路径，不回显匹配内容。该门禁不替代 transfer 的逐项恢复/删除、manifest/hash/version、失败回滚和恶意归档审计。
 
 在上述门禁完成前，不创建 `CompanionContext`、Laya provider、向量 admission 或新的调度器；G1 仍保持未开始。
 
@@ -132,7 +132,7 @@ G0 退出复核尚需完成：
 | 状态 | 范围 | 当前证据或缺口 |
 | --- | --- | --- |
 | 部分已证 | G0-01/G0-02/G0-04/G0-06 | 入口表、单运行时结论、prompt/cache 接缝和 `legacy_config_dir` 正负回归均已定位/测试；逐项搜索摘要、owner/调用方向和命令级时间锚点仍在退出审计中。 |
-| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 658/0/13；transfer 37/37；privacy 1859 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
+| 已证 | G0-05/G0-07 transfer 子集 | WSL Ubuntu-24.04 engine 658/0/13；transfer 37/37；privacy 1861 tracked text files，`personal_path=0`、`private_key=0`、`credential_shape=0`；架构依赖、metadata、fmt、workspace check 均通过。 |
 | 已证 | G0-09 基线闭环 | fish 静态 17/17、daemon reload 2/2、IPC 33/33、terminal-combo、repl-smoke、TUI config 16/16、daemon orphan 6/6（重复两次）已有报告；这些证据仍不替代故障注入。 |
 | 已登记，硬化待验 | G0-03 | 真实路径/schema/删除恢复/向量清单已有证据，profile、KB/Memory 双向删除、usage SQLite 快照/导入已测；完整跨域恢复与重建故障属后续 G3/G4/G9 验收。 |
 | 部分已证 | G0-08 | MCP/Skills 会话生命周期黑盒 5/5 已证同 session 复用、跨 session 隔离、system prompt instructions、session 删除回收和 daemon stop 无孤儿；非法 JSON-RPC response-shape 已有 2/2 协议分类 + 1/1 运行时快速失败证据（未独立证明该用例的 PID 退出），启动失败隔离已有 1/1 证据；非法 JSON/半写 stdout、权限与 request-shape 组合故障注入仍待补齐。 |
