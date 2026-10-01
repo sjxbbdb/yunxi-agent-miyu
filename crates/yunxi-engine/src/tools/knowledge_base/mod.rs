@@ -591,6 +591,128 @@ mod tests {
         );
     }
 
+    #[test]
+    fn remove_prefix_rolls_back_when_semantic_delete_fails() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = false;
+
+        let kb = KnowledgeBase::new(config, paths).unwrap();
+        kb.init().unwrap();
+        let first_source = temp.path().join("batch-first.md");
+        let second_source = temp.path().join("batch-second.md");
+        std::fs::write(&first_source, b"first batch fixture").unwrap();
+        std::fs::write(&second_source, b"second batch fixture").unwrap();
+        kb.import_file(&first_source, "notes/batch/first.md")
+            .unwrap();
+        kb.import_file(&second_source, "notes/batch/second.md")
+            .unwrap();
+        kb.semantic_conn()
+            .unwrap()
+            .execute_batch(
+                "INSERT INTO semantic_chunks
+                    (provider_id, model, file_name, content_sha256, chunk_index,
+                     start_char, end_char, text, embedding_json, created_at)
+                 VALUES ('g0-test', 'g0-test', 'notes/batch/first.md', 'first-sha', 0,
+                         0, 19, 'first batch fixture', '[]', 0),
+                        ('g0-test', 'g0-test', 'notes/batch/second.md', 'second-sha', 0,
+                         0, 20, 'second batch fixture', '[]', 0);",
+            )
+            .unwrap();
+
+        let first_file = kb.files_dir.join("notes/batch/first.md");
+        let second_file = kb.files_dir.join("notes/batch/second.md");
+        let first_bytes = std::fs::read(&first_file).unwrap();
+        let second_bytes = std::fs::read(&second_file).unwrap();
+        let mut before_entries = std::fs::read_dir(&kb.files_dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect::<Vec<_>>();
+        before_entries.sort_unstable();
+
+        kb.semantic_conn()
+            .unwrap()
+            .execute_batch(
+                "CREATE TRIGGER injected_semantic_prefix_delete_failure
+                 BEFORE DELETE ON semantic_chunks
+                 BEGIN
+                     SELECT RAISE(ABORT, 'injected semantic prefix delete failure');
+                 END;",
+            )
+            .unwrap();
+        let error = kb.remove_prefix("notes/batch/").unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("injected semantic prefix delete failure"),
+            "unexpected remove_prefix error: {error:#}"
+        );
+        assert_eq!(std::fs::read(&first_file).unwrap(), first_bytes);
+        assert_eq!(std::fs::read(&second_file).unwrap(), second_bytes);
+        let mut after_failure_entries = std::fs::read_dir(&kb.files_dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect::<Vec<_>>();
+        after_failure_entries.sort_unstable();
+        assert_eq!(
+            after_failure_entries, before_entries,
+            "rollback must not leave a tomb directory"
+        );
+        assert_eq!(
+            kb.meta_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM files WHERE name LIKE 'notes/batch/%'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            kb.semantic_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM semantic_chunks WHERE file_name LIKE 'notes/batch/%'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            2
+        );
+
+        kb.semantic_conn()
+            .unwrap()
+            .execute("DROP TRIGGER injected_semantic_prefix_delete_failure", [])
+            .unwrap();
+        kb.remove_prefix("notes/batch/").unwrap();
+        assert!(!first_file.exists());
+        assert!(!second_file.exists());
+        assert_eq!(
+            kb.meta_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM files WHERE name LIKE 'notes/batch/%'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            kb.semantic_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM semantic_chunks WHERE file_name LIKE 'notes/batch/%'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            0
+        );
+    }
+
     /// G0-03 反向边界护栏：记忆库的全量清理不能触碰知识库的源文件、元数据
     /// 或语义索引；两个域必须可以独立恢复。
     #[test]

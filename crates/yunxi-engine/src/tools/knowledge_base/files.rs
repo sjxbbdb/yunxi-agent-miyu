@@ -315,21 +315,79 @@ impl KnowledgeBase {
     }
 
     pub(in crate::tools::knowledge_base) fn remove_prefix(&self, prefix: &str) -> Result<()> {
-        let conn = self.meta_conn()?;
-        let mut stmt = conn.prepare("SELECT name FROM files WHERE name LIKE ?1")?;
-        let names = stmt
-            .query_map(params![format!("{prefix}%")], |row| row.get::<_, String>(0))?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        for name in names {
-            let path = self.safe_file_path(&name)?;
-            if path.exists() {
-                std::fs::remove_file(path)?;
+        let names = {
+            let conn = self.meta_conn()?;
+            let mut stmt = conn.prepare("SELECT name FROM files WHERE name LIKE ?1")?;
+            let names = stmt
+                .query_map(params![format!("{prefix}%")], |row| row.get::<_, String>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            names
+        };
+        // Keep the historical empty-prefix no-op: do not create a tomb when there
+        // is nothing to delete.
+        if names.is_empty() {
+            return Ok(());
+        }
+
+        // The tomb lives under files_dir, so every rename stays on the same file
+        // system.  A single tomb set covers the whole batch and is removed by
+        // TempDir after either a successful commit or rollback.
+        let tomb_dir = tempfile::tempdir_in(&self.files_dir)?;
+        let mut moved = Vec::new();
+        let result = (|| -> Result<()> {
+            for name in &names {
+                let path = self.safe_file_path(name)?;
+                match std::fs::symlink_metadata(&path) {
+                    Ok(metadata) => {
+                        if metadata.file_type().is_dir() {
+                            // Keep remove_file's old error semantics for a directory.
+                            std::fs::remove_file(&path)?;
+                        }
+                        let tomb_path = tomb_dir.path().join(name);
+                        if let Some(parent) = tomb_path.parent() {
+                            std::fs::create_dir_all(parent)?;
+                        }
+                        std::fs::rename(&path, &tomb_path)?;
+                        moved.push((path, tomb_path));
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => return Err(error.into()),
+                }
             }
-            conn.execute("DELETE FROM files WHERE name=?1", params![name])?;
-            self.semantic_conn()?.execute(
-                "DELETE FROM semantic_chunks WHERE file_name=?1",
-                params![name],
+
+            let mut meta = self.meta_conn()?;
+            let mut semantic = self.semantic_conn()?;
+            let meta_tx = meta.transaction()?;
+            let semantic_tx = semantic.transaction()?;
+            meta_tx.execute(
+                "DELETE FROM files WHERE name LIKE ?1",
+                params![format!("{prefix}%")],
             )?;
+            semantic_tx.execute(
+                "DELETE FROM semantic_chunks WHERE file_name LIKE ?1",
+                params![format!("{prefix}%")],
+            )?;
+            // These are separate SQLite files, so their commits are not
+            // cross-database atomic. All fallible statements run before commit;
+            // on statement/prepare failure both transactions drop and roll back.
+            meta_tx.commit()?;
+            semantic_tx.commit()?;
+            Ok(())
+        })();
+
+        if let Err(error) = result {
+            let mut restore_error = None;
+            for (path, tomb_path) in moved.iter().rev() {
+                if let Err(error) = std::fs::rename(tomb_path, path) {
+                    restore_error.get_or_insert(error);
+                }
+            }
+            if let Some(restore_error) = restore_error {
+                return Err(error.context(format!(
+                    "failed to restore knowledge base file after prefix deletion error: {restore_error}"
+                )));
+            }
+            return Err(error);
         }
         Ok(())
     }
