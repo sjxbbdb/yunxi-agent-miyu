@@ -494,6 +494,103 @@ mod tests {
         );
     }
 
+    #[test]
+    fn remove_rolls_back_when_semantic_delete_fails() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = false;
+
+        let kb = KnowledgeBase::new(config, paths).unwrap();
+        kb.init().unwrap();
+        let source = temp.path().join("rollback.md");
+        std::fs::write(&source, b"rollback fixture bytes").unwrap();
+        kb.import_file(&source, "notes/rollback.md").unwrap();
+        kb.semantic_conn()
+            .unwrap()
+            .execute(
+                "INSERT INTO semantic_chunks
+                    (provider_id, model, file_name, content_sha256, chunk_index,
+                     start_char, end_char, text, embedding_json, created_at)
+                 VALUES ('g0-test', 'g0-test', 'notes/rollback.md', 'kb-sha', 0,
+                         0, 21, 'rollback fixture bytes', '[]', 0)",
+                [],
+            )
+            .unwrap();
+        let kb_file = kb.files_dir.join("notes/rollback.md");
+        let before_bytes = std::fs::read(&kb_file).unwrap();
+
+        kb.semantic_conn()
+            .unwrap()
+            .execute_batch(
+                "CREATE TRIGGER injected_semantic_delete_failure
+                 BEFORE DELETE ON semantic_chunks
+                 BEGIN
+                     SELECT RAISE(ABORT, 'injected semantic delete failure');
+                 END;",
+            )
+            .unwrap();
+        let error = kb.remove("notes/rollback.md").unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("injected semantic delete failure"),
+            "unexpected remove error: {error:#}"
+        );
+        assert_eq!(std::fs::read(&kb_file).unwrap(), before_bytes);
+        assert_eq!(
+            kb.meta_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM files WHERE name='notes/rollback.md'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            kb.semantic_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM semantic_chunks WHERE file_name='notes/rollback.md'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            1
+        );
+
+        kb.semantic_conn()
+            .unwrap()
+            .execute("DROP TRIGGER injected_semantic_delete_failure", [])
+            .unwrap();
+        kb.remove("notes/rollback.md").unwrap();
+        assert!(!kb_file.exists());
+        assert_eq!(
+            kb.meta_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM files WHERE name='notes/rollback.md'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            kb.semantic_conn()
+                .unwrap()
+                .query_row(
+                    "SELECT COUNT(*) FROM semantic_chunks WHERE file_name='notes/rollback.md'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            0
+        );
+    }
+
     /// G0-03 反向边界护栏：记忆库的全量清理不能触碰知识库的源文件、元数据
     /// 或语义索引；两个域必须可以独立恢复。
     #[test]

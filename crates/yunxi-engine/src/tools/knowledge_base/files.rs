@@ -259,20 +259,57 @@ impl KnowledgeBase {
         self.init()?;
         let rel = normalize_relative_path(name)?;
         let path = self.safe_file_path(&rel)?;
-        let file_existed = path.exists();
-        if file_existed {
-            std::fs::remove_file(&path)?;
+        // `exists` follows symlinks (and reports a dangling link as absent), while
+        // remove_file historically removed the link itself.  Keep that behavior,
+        // but stage the directory entry with rename so a DB failure can restore it.
+        let file_existed = std::fs::symlink_metadata(&path).is_ok();
+        let tomb_dir = if file_existed {
+            Some(tempfile::tempdir_in(&self.files_dir)?)
+        } else {
+            None
+        };
+        let tomb_path = tomb_dir.as_ref().map(|dir| dir.path().join("payload"));
+        if let Some(tomb_path) = &tomb_path {
+            if std::fs::symlink_metadata(&path).is_ok_and(|metadata| metadata.file_type().is_dir())
+            {
+                // Match remove_file's error for directories instead of moving one
+                // into the tomb and changing the old API's behavior.
+                std::fs::remove_file(&path)?;
+            }
+            std::fs::rename(&path, tomb_path)?;
         }
-        let conn = self.meta_conn()?;
-        let deleted_rows = conn.execute("DELETE FROM files WHERE name=?1", params![rel])?;
-        let semantic = self.semantic_conn()?;
-        semantic.execute(
-            "DELETE FROM semantic_chunks WHERE file_name=?1",
-            params![rel],
-        )?;
-        // 目标本来就不存在时必须报错:静默返回 ok 会让模型以为删除成功。
-        if !file_existed && deleted_rows == 0 {
-            anyhow::bail!("knowledge base file not found: {rel}");
+
+        let result = (|| -> Result<()> {
+            let mut conn = self.meta_conn()?;
+            let mut semantic = self.semantic_conn()?;
+            let meta_tx = conn.transaction()?;
+            let semantic_tx = semantic.transaction()?;
+            let deleted_rows = meta_tx.execute("DELETE FROM files WHERE name=?1", params![rel])?;
+            let deleted_semantic_rows = semantic_tx.execute(
+                "DELETE FROM semantic_chunks WHERE file_name=?1",
+                params![rel],
+            )?;
+            // 目标本来就不存在时必须报错:静默返回 ok 会让模型以为删除成功。
+            // 若文件已丢失但仍有任一索引行，仍允许把孤儿索引清掉。
+            if !file_existed && deleted_rows == 0 && deleted_semantic_rows == 0 {
+                anyhow::bail!("knowledge base file not found: {rel}");
+            }
+            // 两个事务属于不同 SQLite 文件，提交不是跨库原子的；把所有可失败的
+            // execute 放在 commit 前，保证触发器/prepare 失败时两边都由 drop 回滚。
+            meta_tx.commit()?;
+            semantic_tx.commit()?;
+            Ok(())
+        })();
+
+        if let Err(error) = result {
+            if let (Some(tomb_path), true) = (tomb_path.as_ref(), file_existed) {
+                if let Err(restore_error) = std::fs::rename(tomb_path, &path) {
+                    return Err(error.context(format!(
+                        "failed to restore knowledge base file after deletion error: {restore_error}"
+                    )));
+                }
+            }
+            return Err(error);
         }
         Ok(())
     }
