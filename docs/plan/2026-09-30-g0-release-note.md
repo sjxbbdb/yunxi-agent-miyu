@@ -53,6 +53,7 @@
 - MCP response-shape 修复复跑（提交 `ae1a8e56`）：`cargo test -p yunxi-engine tools::mcp --lib --locked -- --test-threads=1` 为 28/28；新增覆盖 `method + result` 混合对象的协议分类和运行时快速失败，避免把响应误当作服务器请求而等到调用超时。测试完成后删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
 - MCP 故障边界复跑（提交 `0e4f9d40`）：同一 MCP 定向命令为 32/32；新增非法 JSON 噪声、分段 flush、半写 EOF 和异常退出 PID/连接池回收证据。测试结束后已删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
 - MCP 连续超时回收复跑（提交 `e17e06fb`）：同一 MCP 定向命令为 32/32；新增首次超时保留进程、第二次超时回收旧 PID/连接池、下一次调用新起进程并报告状态丢失的证据。测试结束后已删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
+- MCP 断连重启提示复跑（提交 `65deb53d`）：同一 MCP 定向命令为 33/33；新增服务器在两次调用之间自行退出时，连接池先 sweep 再取 retired notice，首次重启即带“状态已丢失”提示，且新进程状态从 `count 1` 开始。测试结束后已删除 WSL `/tmp/yunxi-g0-mcp-target` 临时构建目录。
 - MCP 启动失败隔离：新增 `a_failed_mcp_startup_does_not_hide_a_healthy_server`（1/1）；不存在的 MCP 可执行文件只使自身 listing 失败，健康服务器仍注册工具，重复 registry 构建复用健康 listing 缓存。
 - 修复并固定 G0 故障注入：KB embedding 的 `embedding-reindex.json` 被截断或写入非法 JSON 时，不再静默回退为空进度；状态明确为 `failed`，遗留锁可清理，损坏文件保留为取证。`cargo test -p yunxi-engine tools::knowledge_base::dashboard::tests --locked -- --test-threads=1` 为 6/6。
 - 权限位测试改用 WSL 原生 Linux 文件系统临时目录，不再把 `/mnt` DrvFs 的 0777 映射误当作生产语义；bundled script、registry fixture、TUI changed-prefix、renderer event、tool-summary 和回放编辑测试均已按当前 YunXi 产品输出修正或补强。
