@@ -188,6 +188,7 @@ impl MemoryStore {
             "UPDATE memory_meta SET generation=generation+1 WHERE id=1",
             [],
         )?;
+        tx.execute("DELETE FROM memory_embeddings", [])?;
         tx.execute("DELETE FROM facts", [])?;
         tx.execute("DELETE FROM episodes", [])?;
         tx.execute("DELETE FROM pending_events", [])?;
@@ -560,6 +561,13 @@ impl MemoryStore {
                                 timestamp
                             ],
                         )?;
+                        // Content and truth status changed in one transaction.  The
+                        // previous vector is no longer authoritative; leave the row
+                        // without a vector for the normal backfill path.
+                        tx.execute(
+                            "DELETE FROM memory_embeddings WHERE kind='fact' AND id=?1",
+                            [target],
+                        )?;
                         tx.execute(
                             "UPDATE facts SET content=?1, source='diary-organizer', status='active',
                                 confidence=?2, strength=1.0, updated_at=?3, memory_type=?4,
@@ -785,6 +793,19 @@ impl MemoryStore {
                 )?,
             )?;
         }
+        tx.execute(
+            "DELETE FROM memory_embeddings
+              WHERE kind='episode' AND id IN (
+                  SELECT id FROM episodes
+                   WHERE retention='short_term'
+                     AND status!='forgotten'
+                     AND promotion_pending=0
+                     AND expires_at IS NOT NULL
+                     AND unixepoch(expires_at) IS NOT NULL
+                     AND unixepoch(expires_at) <= unixepoch('now')
+              )",
+            [],
+        )?;
         tx.execute(
             "UPDATE episodes SET status='forgotten'
              WHERE retention='short_term'

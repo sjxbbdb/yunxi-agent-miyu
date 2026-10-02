@@ -341,11 +341,13 @@ impl MemoryStore {
         let timestamp = now();
         let mut sets: Vec<String> = Vec::new();
         let mut values: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        let mut drop_embedding = false;
         if let Some(content) = patch.content.as_deref().map(str::trim) {
             if content.is_empty() {
                 bail!("content must not be empty");
             }
             if content != current {
+                drop_embedding = true;
                 if table == BrowseTable::Facts {
                     tx.execute(
                         "INSERT INTO memory_revisions (
@@ -364,6 +366,9 @@ impl MemoryStore {
             }
             sets.push("status = ?".into());
             values.push(Box::new(status.to_string()));
+            // A status transition, including forgotten -> active recovery,
+            // must leave the row without a vector for backfill to rebuild.
+            drop_embedding = true;
             if status == "active" {
                 // 手工救回一条被遗忘的记忆:强度回满,否则下次衰减又忘掉。
                 sets.push("strength = 1.0".into());
@@ -406,6 +411,9 @@ impl MemoryStore {
                 }
                 sets.push("truth_status = ?".into());
                 values.push(Box::new(truth_status.to_string()));
+                // Rejected rows cannot retain a vector; accepted recovery also
+                // starts from an empty vector rather than reviving stale data.
+                drop_embedding = true;
             }
         }
         if sets.is_empty() {
@@ -423,6 +431,16 @@ impl MemoryStore {
             ),
             value_refs.as_slice(),
         )?;
+        if drop_embedding {
+            let kind = match table {
+                BrowseTable::Facts => "fact",
+                BrowseTable::Episodes => "episode",
+            };
+            tx.execute(
+                "DELETE FROM memory_embeddings WHERE kind=?1 AND id=?2",
+                params![kind, id],
+            )?;
+        }
         tx.commit()?;
         Ok(true)
     }
@@ -431,11 +449,23 @@ impl MemoryStore {
         if !self.data_db.exists() {
             return Ok(false);
         }
-        let conn = self.data_conn_existing()?;
-        let affected = conn.execute(
+        let mut conn = self.data_conn_existing()?;
+        let tx = conn.transaction()?;
+        let kind = match table {
+            BrowseTable::Facts => "fact",
+            BrowseTable::Episodes => "episode",
+        };
+        let affected = tx.execute(
             &format!("DELETE FROM {} WHERE id = ?1", table.name()),
             rusqlite::params![id],
         )?;
+        if affected == 1 {
+            tx.execute(
+                "DELETE FROM memory_embeddings WHERE kind=?1 AND id=?2",
+                params![kind, id],
+            )?;
+        }
+        tx.commit()?;
         Ok(affected == 1)
     }
 

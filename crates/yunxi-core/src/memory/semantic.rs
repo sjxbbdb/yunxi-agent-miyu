@@ -9,6 +9,7 @@
 //! `Send`，所以"查 → 嵌入 → 写"是三段各自开关连接。
 
 use crate::memory::*;
+use rusqlite::OptionalExtension;
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Mutex, OnceLock};
@@ -407,5 +408,81 @@ impl MemoryStore {
             }
         }
         Ok((done, missing))
+    }
+
+    /// Remove vectors that can no longer describe a valid memory row.
+    ///
+    /// This is intentionally a delete-only, idempotent maintenance pass.  It
+    /// never creates or rewrites vectors; active corpus rows with a matching
+    /// content digest are left untouched for normal retrieval/backfill.
+    pub fn prune_stale_embeddings(&self) -> Result<usize> {
+        if !self.data_db.is_file() {
+            return Ok(0);
+        }
+        let mut conn = self.data_conn_existing()?;
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let embeddings = {
+            let mut stmt = tx.prepare(
+                "SELECT kind, id, content_sha256 FROM memory_embeddings ORDER BY kind, id",
+            )?;
+            let rows = stmt.query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })?;
+            rows.collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        let mut deleted = 0;
+        for (kind, id, stored_sha) in embeddings {
+            let stale = match kind.as_str() {
+                "fact" => tx
+                    .query_row(
+                        "SELECT content, status, truth_status FROM facts WHERE id=?1",
+                        [id],
+                        |row| {
+                            Ok((
+                                row.get::<_, String>(0)?,
+                                row.get::<_, String>(1)?,
+                                row.get::<_, String>(2)?,
+                            ))
+                        },
+                    )
+                    .optional()?
+                    .is_none_or(|(content, status, truth_status)| {
+                        status == "forgotten"
+                            || truth_status == "rejected"
+                            || content_sha(&content) != stored_sha
+                    }),
+                "episode" => tx
+                    .query_row(
+                        "SELECT content, status, retention FROM episodes WHERE id=?1",
+                        [id],
+                        |row| {
+                            Ok((
+                                row.get::<_, String>(0)?,
+                                row.get::<_, String>(1)?,
+                                row.get::<_, String>(2)?,
+                            ))
+                        },
+                    )
+                    .optional()?
+                    .is_none_or(|(content, status, retention)| {
+                        status == "forgotten"
+                            || retention != "long_term"
+                            || content_sha(&content) != stored_sha
+                    }),
+                _ => true,
+            };
+            if stale {
+                deleted += tx.execute(
+                    "DELETE FROM memory_embeddings WHERE kind=?1 AND id=?2",
+                    params![kind, id],
+                )?;
+            }
+        }
+        tx.commit()?;
+        Ok(deleted)
     }
 }

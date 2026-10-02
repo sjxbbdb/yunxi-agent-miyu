@@ -6,6 +6,7 @@ mod association;
 mod browse;
 mod dedup;
 mod diary;
+mod embedding_lifecycle;
 mod lifecycle;
 mod ranking;
 mod reset;
