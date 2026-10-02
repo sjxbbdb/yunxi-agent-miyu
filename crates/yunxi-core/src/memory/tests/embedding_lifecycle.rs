@@ -24,7 +24,9 @@ fn embedding(store: &MemoryStore, kind: &str, id: i64, content_sha256: &str) {
             kind,
             id,
             content_sha256,
-            vec![0_u8, 1, 2],
+            // Minimal valid f32 payload; coverage tests must be able to
+            // distinguish a current vector from a missing/unparseable blob.
+            vec![0_u8; 4],
             chrono::Utc::now().to_rfc3339()
         ],
     )
@@ -170,6 +172,34 @@ fn deleting_an_episode_scrubs_summary_provenance_references() {
             .unwrap();
         assert_eq!(refs, "[]", "stale source reference remained in {table}");
     }
+}
+
+#[test]
+fn deleted_episode_is_absent_from_keyword_association_and_history_recall() {
+    let temp = tempfile::tempdir().unwrap();
+    let store = store(&temp);
+    let content = "删除后不可召回的唯一经历词";
+    let id = episode(&store, content, "long_term", "active");
+    embedding(&store, "episode", id, &digest(content));
+    assert_eq!(store.embedding_coverage("test-model").unwrap(), (1, 0));
+
+    let before = store.recall_memories_readonly(content, 10, false).unwrap();
+    assert!(before["episodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["id"].as_i64() == Some(id)));
+    let association = store.association(content, None).unwrap().unwrap();
+    assert!(association.episodes.iter().any(|hit| hit.id == id));
+
+    assert!(store.delete_item(BrowseTable::Episodes, id).unwrap());
+
+    let after = store.recall_memories_readonly(content, 10, false).unwrap();
+    assert!(after["episodes"].as_array().unwrap().is_empty());
+    let history = store.recall_past_events_readonly(content, 10).unwrap();
+    assert!(history["episodes"].as_array().unwrap().is_empty());
+    assert!(store.association(content, None).unwrap().is_none());
+    assert_eq!(store.embedding_coverage("test-model").unwrap(), (0, 0));
 }
 
 #[test]
@@ -336,4 +366,20 @@ fn prune_stale_embeddings_is_delete_only_and_idempotent() {
     assert_eq!(vector_count(&store, "episode", forgotten_episode), 0);
     assert_eq!(vector_count(&store, "fact", 999_999), 0);
     assert_eq!(vector_count(&store, "unknown", 888_888), 0);
+}
+
+#[test]
+fn prune_stale_embeddings_survives_store_reopen() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = test_paths(&temp);
+    let first = MemoryStore::new(&AppConfig::default(), &paths);
+    first.init().unwrap();
+    let fact_id = first.remember_fact("重启后仍需清理的事实", "test").unwrap();
+    embedding(&first, "fact", fact_id, "stale-hash");
+    drop(first);
+
+    let second = MemoryStore::new(&AppConfig::default(), &paths);
+    assert_eq!(second.prune_stale_embeddings().unwrap(), 1);
+    assert_eq!(second.prune_stale_embeddings().unwrap(), 0);
+    assert_eq!(vector_count(&second, "fact", fact_id), 0);
 }
