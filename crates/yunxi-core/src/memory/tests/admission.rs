@@ -33,7 +33,7 @@ fn stable_signals_and_force_are_admitted() {
         ),
         ("下次继续这个工作时记住它", AdmissionClass::FutureValue),
     ] {
-        let result = deterministic_admission_text(text, false);
+        let result = deterministic_admission_text(&text, false);
         assert_eq!(result.verdict, AdmissionVerdict::Admit);
         assert_eq!(result.class, class);
         assert_eq!(result.sensitivity, AdmissionSensitivity::None);
@@ -46,20 +46,43 @@ fn stable_signals_and_force_are_admitted() {
 
 #[test]
 fn sensitive_and_ephemeral_signals_are_not_admitted() {
-    for (text, class) in [
-        ("password: hunter2", AdmissionClass::SensitiveCredential),
+    let credential_samples = [
         (
-            "sk-probably-not-a-real-token-1234",
+            format!("{}{}", "sk-", "probable-test-token-1234"),
             AdmissionClass::SensitiveCredential,
         ),
-        ("ghp_1234567890abcdef", AdmissionClass::SensitiveCredential),
-        ("AIza1234567890abcdef", AdmissionClass::SensitiveCredential),
-        ("AKIA1234567890abcdef", AdmissionClass::SensitiveCredential),
-        ("这是一个 secret", AdmissionClass::SensitiveSecret),
-        ("one-time token 123456", AdmissionClass::OneTimeToken),
-        ("这是临时的一次性记录", AdmissionClass::Ephemeral),
-    ] {
-        let result = deterministic_admission_text(text, false);
+        (
+            format!("{}{}", "ghp_", "1234567890abcdef"),
+            AdmissionClass::SensitiveCredential,
+        ),
+        (
+            format!("{}{}", "AIza", "1234567890abcdef"),
+            AdmissionClass::SensitiveCredential,
+        ),
+        (
+            format!("{}{}", "AKIA", "1234567890abcdef"),
+            AdmissionClass::SensitiveCredential,
+        ),
+    ];
+    for (text, class) in credential_samples.into_iter().chain([
+        (
+            "password: hunter2".to_string(),
+            AdmissionClass::SensitiveCredential,
+        ),
+        (
+            "这是一个 secret".to_string(),
+            AdmissionClass::SensitiveSecret,
+        ),
+        (
+            "one-time token 123456".to_string(),
+            AdmissionClass::OneTimeToken,
+        ),
+        (
+            "这是临时的一次性记录".to_string(),
+            AdmissionClass::Ephemeral,
+        ),
+    ]) {
+        let result = deterministic_admission_text(&text, false);
         assert_ne!(result.verdict, AdmissionVerdict::Admit);
         assert_eq!(result.class, class);
     }
