@@ -9,6 +9,7 @@
 //! 守着这条）——它只影响要不要复用旧上下文。
 
 use crate::state::*;
+use yunxi_base::memory_types::MemoryRef;
 
 impl StateStore {
     pub fn background_report_replies_after(
@@ -237,6 +238,35 @@ impl StateStore {
             footprint_json,
             extras_json,
         )
+    }
+
+    pub fn replace_visible_with_summary_with_refs(
+        &self,
+        fold_turn_ids: &[String],
+        visible_turn_ids: &[String],
+        summary: &str,
+        tokens: TurnTokens,
+        token_usage_estimated: bool,
+        footprint_json: Option<&str>,
+        extras_json: Option<&str>,
+        refs: &[MemoryRef],
+    ) -> Result<()> {
+        self.conv_db.replace_visible_with_summary_with_refs(
+            &self.session(),
+            fold_turn_ids,
+            visible_turn_ids,
+            summary,
+            tokens,
+            token_usage_estimated,
+            footprint_json,
+            extras_json,
+            refs,
+        )
+    }
+
+    pub fn load_summary_memory_refs(&self, turn_id: &str) -> Result<Vec<MemoryRef>> {
+        self.conv_db
+            .load_summary_memory_refs(&self.session(), turn_id)
     }
 
     pub fn load_summary_extras_json(&self, turn_id: &str) -> Result<Option<String>> {

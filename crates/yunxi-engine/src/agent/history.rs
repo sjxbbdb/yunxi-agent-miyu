@@ -375,18 +375,25 @@ impl Agent {
     /// and the compact fork prefix go through it — two renderings of the
     /// checkpoint would diverge byte for byte and cost the whole prefix cache.
     fn checkpoint_message(&self, summary: &yunxi_core::state::Turn) -> Result<ChatMessage> {
-        let extras = self
-            .state
-            .load_summary_extras_json(&summary.turn_id)?
-            .and_then(|json| {
-                serde_json::from_str::<crate::agent::compact_extras::CompactExtras>(&json).ok()
-            })
-            .map(|extras| extras.render())
-            .filter(|text| !text.is_empty());
-        Ok(summary_checkpoint_message(
-            &summary.assistant_content,
-            extras.as_deref(),
-        ))
+        let refs = self.state.load_summary_memory_refs(&summary.turn_id)?;
+        let redacted = self.memory.store.memory_refs_are_tombstoned(&refs)?;
+        let summary_text = if redacted {
+            crate::agent::SUMMARY_REDACTION_MARKER
+        } else {
+            &summary.assistant_content
+        };
+        let extras = if redacted {
+            None
+        } else {
+            self.state
+                .load_summary_extras_json(&summary.turn_id)?
+                .and_then(|json| {
+                    serde_json::from_str::<crate::agent::compact_extras::CompactExtras>(&json).ok()
+                })
+                .map(|extras| extras.render())
+                .filter(|text| !text.is_empty())
+        };
+        Ok(summary_checkpoint_message(summary_text, extras.as_deref()))
     }
 
     /// Byte-identical prefix of the live conversation covering exactly the

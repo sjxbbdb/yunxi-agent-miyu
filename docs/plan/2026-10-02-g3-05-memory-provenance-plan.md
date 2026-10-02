@@ -43,6 +43,39 @@ passed `yunxi-core` memory store (12), browse (2), compact (21), and
 path test that checks the typed row and verifies that deleting the fact hides
 only the linked tool report while the ordinary user row remains searchable.
 
+## G3-05-02 implemented slice: summary carriers
+
+The second slice adds typed provenance to compact summary rows without changing
+the summary/checkpoint wire shape. A named migration creates the additive
+`conversation.db` table with `carrier_id TEXT`; this is intentionally separate
+from the existing evicted-context database table. Compaction now collects only
+typed `remember_fact` report references from folded turns, inherits references
+from the previous summary, de-duplicates them, and writes the rows in the same
+transaction as the new summary row. `reset`, persona-context reset, and both
+reversible-summary undo paths remove the summary carrier rows in their own state
+transaction.
+
+Checkpoint rendering consults the memory tombstone table by `(kind, id)`. If any
+linked fact or episode is deleted, the complete summary carrier is replaced by
+the fixed marker `[conversation summary redacted: linked memory was deleted]`
+and its extras are not rendered. This is a carrier-level barrier: it does not
+attempt unsafe substring surgery and it does not infer a link from prose. The
+same decision is used by the compaction anchor, so a deleted summary cannot be
+fed back into the next summarization request.
+
+Evidence for G3-05-02 (WSL Ubuntu ext4, one cargo job at a time):
+
+- `yunxi-core` `state::tests::compact`: 22 passed, including typed summary
+  provenance round-trip and undo cleanup.
+- `yunxi-core` `memory::tests::store`: 12 passed, including the tombstone query
+  API used by the summary barrier.
+- `yunxi-engine` `agent::tests::context`: 37 passed, including deletion of a
+  linked fact and fixed-marker checkpoint redaction.
+
+The transcript carrier remains deliberately out of this slice. Transcript
+paths are still legacy/unknown until a stable logical id and a read barrier are
+implemented together; no transcript text is guessed or scrubbed here.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,

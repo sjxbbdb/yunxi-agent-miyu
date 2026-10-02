@@ -403,6 +403,41 @@ pub(crate) struct LongDiaryDraft {
 }
 
 impl MemoryStore {
+    /// Return whether any typed reference points at a memory row that has been
+    /// tombstoned.  This is deliberately id-only: prompt/state carriers must
+    /// never be reinterpreted by matching their copied text.
+    pub fn memory_refs_are_tombstoned(&self, refs: &[MemoryRef]) -> Result<bool> {
+        let refs = refs
+            .iter()
+            .filter(|memory_ref| {
+                matches!(memory_ref.kind.as_str(), "fact" | "episode") && memory_ref.id > 0
+            })
+            .collect::<Vec<_>>();
+        if refs.is_empty() || !self.data_db.is_file() {
+            return Ok(false);
+        }
+        let conn = self.data_conn_existing()?;
+        let has_table: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='memory_tombstones')",
+            [],
+            |row| row.get(0),
+        )?;
+        if !has_table {
+            return Ok(false);
+        }
+        for memory_ref in refs {
+            let exists: bool = conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM memory_tombstones WHERE kind = ?1 AND id = ?2)",
+                params![memory_ref.kind, memory_ref.id],
+                |row| row.get(0),
+            )?;
+            if exists {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
     pub fn new(config: &AppConfig, paths: &YunXiPaths) -> Self {
         let data_dir = config.active_persona_memory_data_dir(paths).join("memory");
         let state_dir = config.active_persona_memory_state_dir(paths).join("memory");

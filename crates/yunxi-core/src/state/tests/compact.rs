@@ -73,6 +73,49 @@ fn summary_turn_insert_and_load() {
 }
 
 #[test]
+fn summary_provenance_is_typed_and_removed_by_undo() {
+    let (_temp, store) = test_store();
+    for id in ["t1", "t2"] {
+        store.start_turn(id, id, 999999).unwrap();
+        store.complete_turn(id, "reply", None).unwrap();
+    }
+    let (fold_ids, turn_ids) = visible_snapshot(&store);
+    let refs = vec![
+        yunxi_base::memory_types::MemoryRef {
+            kind: "episode".to_string(),
+            id: 11,
+        },
+        yunxi_base::memory_types::MemoryRef {
+            kind: "fact".to_string(),
+            id: 7,
+        },
+    ];
+    store
+        .replace_visible_with_summary_with_refs(
+            &fold_ids,
+            &turn_ids,
+            "summary",
+            TurnTokens::default(),
+            false,
+            None,
+            None,
+            &refs,
+        )
+        .unwrap();
+    let summary = store.load_last_summary().unwrap().unwrap();
+    assert_eq!(
+        store.load_summary_memory_refs(&summary.turn_id).unwrap(),
+        refs
+    );
+
+    assert_eq!(store.undo_last_turn().unwrap(), (1, None));
+    assert!(store
+        .load_summary_memory_refs(&summary.turn_id)
+        .unwrap()
+        .is_empty());
+}
+
+#[test]
 fn session_loaded_tools_persist_until_reset() {
     let (_temp, store) = test_store();
     store

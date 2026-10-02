@@ -165,6 +165,7 @@ impl Agent {
                 let compactor = compact::Compactor::new(
                     self.client.clone(),
                     self.state.clone(),
+                    self.memory.store.clone(),
                     window,
                     check.reserved_tokens,
                     self.compact_tail_budget(window),

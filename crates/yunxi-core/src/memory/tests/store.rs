@@ -297,6 +297,12 @@ fn tombstoned_fact_ref_hides_only_its_archived_tool_report() {
         )
     );
     store.delete_item(BrowseTable::Facts, fact_id).unwrap();
+    assert!(store
+        .memory_refs_are_tombstoned(&[MemoryRef {
+            kind: "fact".to_string(),
+            id: fact_id,
+        }])
+        .unwrap());
 
     let results = store.search_evicted_context("同一段记忆正文", 10).unwrap()["results"]
         .as_array()

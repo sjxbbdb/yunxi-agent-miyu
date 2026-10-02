@@ -86,6 +86,12 @@ use yunxi_core::state::{
     TurnFinishExtras, TurnRedoCheckpointPayload,
 };
 
+/// Stable prompt marker used when a compact summary is linked to a deleted
+/// durable memory row. The whole carrier is redacted rather than attempting
+/// unsafe text-level surgery.
+pub(crate) const SUMMARY_REDACTION_MARKER: &str =
+    "[conversation summary redacted: linked memory was deleted]";
+
 #[derive(Debug)]
 pub enum AgentEvent {
     TurnStarted {
@@ -468,6 +474,7 @@ impl Agent {
         let compactor = compact::Compactor::new(
             self.client.clone(),
             self.state.clone(),
+            self.memory.store.clone(),
             context_window,
             check.reserved_tokens,
             self.compact_tail_budget(context_window),

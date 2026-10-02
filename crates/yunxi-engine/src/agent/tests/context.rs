@@ -5,6 +5,7 @@ use crate::agent::*;
 use crate::tools::{empty_parameters, ToolSpec};
 use tokio::net::TcpListener;
 use yunxi_base::config::AppConfig;
+use yunxi_core::memory::browse::BrowseTable;
 
 fn search_round(args: &str, output: &str) -> yunxi_core::state::ToolFlowRound {
     yunxi_core::state::ToolFlowRound {
@@ -47,6 +48,76 @@ fn remembered_fact_provenance_only_accepts_typed_tool_report() {
         "<previous_tool_report name=\"remember_fact\">{\"remembered_fact\":{\"id\":0}}</previous_tool_report>"
     )
     .is_none());
+}
+
+#[test]
+fn deleted_summary_memory_is_redacted_from_checkpoint() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = test_paths(temp.path());
+    let config = AppConfig::default();
+    let state = StateStore::new(&paths).unwrap();
+    state.start_turn("t1", "old", 999_999).unwrap();
+    state.complete_turn("t1", "old reply", None).unwrap();
+    let client =
+        OpenAiCompatibleClient::new(config.provider(None).unwrap(), &config, &paths).unwrap();
+    let agent = Agent::new(
+        config,
+        &paths,
+        state,
+        client,
+        ToolRegistry::new(),
+        PersonaLane::Active,
+    )
+    .unwrap();
+    let fact_id = agent
+        .memory
+        .store
+        .remember_fact("仅用于摘要屏障测试的事实", "test")
+        .unwrap();
+    assert!(fact_id > 0);
+    let turns = agent.state.load_visible_turns().unwrap();
+    let fold_ids = turns
+        .iter()
+        .map(|turn| turn.turn_id.clone())
+        .collect::<Vec<_>>();
+    let visible_ids = fold_ids.clone();
+    let memory_ref = yunxi_base::memory_types::MemoryRef {
+        kind: "fact".to_string(),
+        id: fact_id,
+    };
+    agent
+        .state
+        .replace_visible_with_summary_with_refs(
+            &fold_ids,
+            &visible_ids,
+            "秘密摘要正文不应再进入提示词",
+            Default::default(),
+            false,
+            None,
+            None,
+            &[memory_ref],
+        )
+        .unwrap();
+    agent
+        .memory
+        .store
+        .delete_item(BrowseTable::Facts, fact_id)
+        .unwrap();
+
+    let messages = agent.chat_messages("current", "继续").unwrap().0;
+    let checkpoint = messages
+        .iter()
+        .filter_map(|message| match message.content.as_ref() {
+            Some(ChatContent::Text(text)) => Some(text.as_str()),
+            _ => None,
+        })
+        .find(|text| text.contains("<conversation-checkpoint>"))
+        .expect("a summary checkpoint");
+    assert!(
+        checkpoint.contains(SUMMARY_REDACTION_MARKER),
+        "{checkpoint}"
+    );
+    assert!(!checkpoint.contains("秘密摘要正文不应再进入提示词"));
 }
 
 /// 复读轮平时原样回放(09-24):活体每一轮都发过,回放少一轮下一轮的前缀就在那里

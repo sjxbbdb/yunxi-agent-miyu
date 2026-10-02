@@ -8,10 +8,13 @@ use crate::agent::compact_structure::{SummaryStructure, SUMMARY_CORRECTION};
 use crate::agent::compact_transcript::{turn_to_text, turns_to_text};
 use crate::agent::tool_report::fold_repeated_rounds;
 use anyhow::{bail, Result};
+use std::collections::BTreeMap;
+use yunxi_base::memory_types::MemoryRef;
 use yunxi_base::prompts::COMPACT_SYSTEM_PROMPT;
 use yunxi_core::llm::{
     ChatMessage, ChatResult, ChatStreamChunk, OpenAiCompatibleClient, ToolDefinition, Usage,
 };
+use yunxi_core::memory::MemoryStore;
 use yunxi_core::state::{StateStore, Turn};
 
 use super::overflow::estimate_tokens;
@@ -56,6 +59,7 @@ pub type CompactForkBuilder<'a> = &'a dyn Fn(&[String]) -> Result<CompactForkPar
 pub struct Compactor {
     client: OpenAiCompatibleClient,
     state: StateStore,
+    memory: MemoryStore,
     context_window: usize,
     reserved_tokens: usize,
     /// Verbatim tail kept outside the summary. A fixed token count rather
@@ -109,6 +113,7 @@ impl Compactor {
     pub fn new(
         client: OpenAiCompatibleClient,
         state: StateStore,
+        memory: MemoryStore,
         context_window: usize,
         reserved_tokens: usize,
         tail_budget_tokens: usize,
@@ -132,6 +137,7 @@ impl Compactor {
         Self {
             client,
             state,
+            memory,
             context_window,
             reserved_tokens,
             tail_budget_tokens,
@@ -143,6 +149,27 @@ impl Compactor {
             summary_cap,
             running_turn_id: None,
         }
+    }
+
+    fn summary_refs(&self, fold: &[&Turn], previous: Option<&Turn>) -> Result<Vec<MemoryRef>> {
+        let mut refs = BTreeMap::<(String, i64), MemoryRef>::new();
+        for turn in fold {
+            for report in &turn.tool_reports {
+                if let Some(memory_ref) = crate::agent::context::remembered_fact_ref(report) {
+                    refs.entry((memory_ref.kind.clone(), memory_ref.id))
+                        .or_insert(memory_ref);
+                }
+            }
+        }
+        if let Some(previous) = previous {
+            for memory_ref in self.state.load_summary_memory_refs(&previous.turn_id)? {
+                if matches!(memory_ref.kind.as_str(), "fact" | "episode") && memory_ref.id > 0 {
+                    refs.entry((memory_ref.kind.clone(), memory_ref.id))
+                        .or_insert(memory_ref);
+                }
+            }
+        }
+        Ok(refs.into_values().collect())
     }
 
     /// 在回合进行中压缩：这一轮在库里还是 running，它自己不折、也不算进保留的尾巴，
@@ -446,11 +473,25 @@ impl Compactor {
         }
 
         let previous_summary = self.state.load_last_summary()?;
+        let previous_summary_redacted = if let Some(previous) = previous_summary.as_ref() {
+            let refs = self.state.load_summary_memory_refs(&previous.turn_id)?;
+            self.memory.memory_refs_are_tombstoned(&refs)?
+        } else {
+            false
+        };
         // The footprint sections are code-owned: strip them from the anchor
         // so the LLM cannot garble them, then re-append the merged sets.
         let prev_text = previous_summary
             .as_ref()
-            .map(|t| strip_footprint_sections(&t.assistant_content).to_string());
+            .map(|t| {
+                let text = if previous_summary_redacted {
+                    crate::agent::SUMMARY_REDACTION_MARKER
+                } else {
+                    &t.assistant_content
+                };
+                Ok::<String, anyhow::Error>(strip_footprint_sections(text).to_string())
+            })
+            .transpose()?;
 
         let mut compact_usage = Usage::default();
         let mut usage_estimated = false;
@@ -596,6 +637,7 @@ impl Compactor {
         // 保留,它读过的东西不重复回灌。
         let tail = &head[cut..];
         let previous_extras = match previous_summary.as_ref() {
+            Some(_) if previous_summary_redacted => None,
             Some(previous) => self
                 .state
                 .load_summary_extras_json(&previous.turn_id)?
@@ -638,7 +680,8 @@ impl Compactor {
             .iter()
             .map(|turn| turn.turn_id.clone())
             .collect::<Vec<_>>();
-        self.state.replace_visible_with_summary(
+        let summary_refs = self.summary_refs(fold, previous_summary.as_ref())?;
+        self.state.replace_visible_with_summary_with_refs(
             &fold_turn_ids,
             &visible_turn_ids,
             &summary,
@@ -646,6 +689,7 @@ impl Compactor {
             usage_estimated,
             footprint_json.as_deref(),
             extras_json.as_deref(),
+            &summary_refs,
         )?;
         // 保留区的复读轮折叠与工具输出瘦身就在这一刻做：上面那句已经把历史
         // 重写了、前缀本来就断了这一次，顺手做掉不多花一分钱。见

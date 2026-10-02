@@ -35,7 +35,38 @@ const NAMED_MIGRATIONS: &[NamedMigration] = &[
         id: "2026-10-02-g2-profile-schema",
         apply: apply_g2_profile_schema,
     },
+    NamedMigration {
+        id: "2026-10-02-g3-05-summary-provenance",
+        apply: apply_summary_provenance,
+    },
 ];
+
+/// Typed links from conversation-db summary carriers to durable memory rows.
+/// This is additive and deliberately leaves `user_version` untouched so old
+/// binaries can continue opening the database.
+fn apply_summary_provenance(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS memory_provenance (
+             carrier_kind TEXT NOT NULL CHECK (
+                 carrier_kind IN ('evicted_turn', 'summary_turn', 'transcript')
+             ),
+             carrier_id TEXT NOT NULL,
+             memory_kind TEXT NOT NULL CHECK (memory_kind IN ('fact', 'episode')),
+             memory_id INTEGER NOT NULL CHECK (memory_id > 0),
+             relation TEXT NOT NULL CHECK (
+                 relation IN ('tool_report', 'summary_input', 'transcript_input')
+             ),
+             session_id TEXT NOT NULL DEFAULT '',
+             created_at TEXT NOT NULL,
+             PRIMARY KEY (carrier_kind, carrier_id, memory_kind, memory_id, relation)
+         );
+         CREATE INDEX IF NOT EXISTS idx_memory_provenance_memory
+             ON memory_provenance(memory_kind, memory_id, carrier_kind, carrier_id);
+         CREATE INDEX IF NOT EXISTS idx_memory_provenance_carrier
+             ON memory_provenance(carrier_kind, carrier_id);",
+    )?;
+    Ok(())
+}
 
 /// Structured profile claims and persona-scoped relationship metadata (G2-01).
 /// This is intentionally additive: it leaves `profile.md`, prompt assembly,
@@ -221,6 +252,7 @@ mod tests {
             "legacy_file_imports",
             "profile_claims",
             "relationship_events",
+            "memory_provenance",
         ] {
             let exists: bool = conn
                 .query_row(

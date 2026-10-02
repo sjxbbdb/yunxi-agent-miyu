@@ -8,6 +8,7 @@
 //! 里：删了没存下来的历史是找不回来的。
 
 use crate::state::conversation_db::*;
+use yunxi_base::memory_types::MemoryRef;
 
 /// `turns` 的固定列序。`map_turn_row` 是按位置读的,顺序一改全库跟着错——
 /// AGENTS §3.1 点名的最脆弱处。原来这串在本文件里抄了 7 份,新加一个查询就是
@@ -233,6 +234,32 @@ impl ConversationDb {
         Ok(())
     }
 
+    /// Typed provenance links attached to a summary turn. Unknown/legacy
+    /// references are intentionally ignored rather than inferred from text.
+    pub fn load_summary_memory_refs(
+        &self,
+        session_id: &str,
+        turn_id: &str,
+    ) -> Result<Vec<MemoryRef>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT memory_kind, memory_id
+             FROM memory_provenance
+             WHERE session_id = ?1 AND carrier_kind = 'summary_turn'
+               AND carrier_id = ?2 AND relation = 'summary_input'
+             ORDER BY memory_kind ASC, memory_id ASC",
+        )?;
+        let refs = stmt
+            .query_map(params![session_id, turn_id], |row| {
+                Ok(MemoryRef {
+                    kind: row.get(0)?,
+                    id: row.get(1)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(refs)
+    }
+
     pub fn load_last_summary(&self, session_id: &str) -> Result<Option<Turn>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(&format!(
@@ -431,6 +458,31 @@ impl ConversationDb {
         footprint_json: Option<&str>,
         extras_json: Option<&str>,
     ) -> Result<()> {
+        self.replace_visible_with_summary_with_refs(
+            session_id,
+            fold_turn_ids,
+            visible_turn_ids,
+            summary,
+            tokens,
+            token_usage_estimated,
+            footprint_json,
+            extras_json,
+            &[],
+        )
+    }
+
+    pub fn replace_visible_with_summary_with_refs(
+        &self,
+        session_id: &str,
+        fold_turn_ids: &[String],
+        visible_turn_ids: &[String],
+        summary: &str,
+        tokens: TurnTokens,
+        token_usage_estimated: bool,
+        footprint_json: Option<&str>,
+        extras_json: Option<&str>,
+        refs: &[MemoryRef],
+    ) -> Result<()> {
         if summary.trim().is_empty() {
             bail!("compact returned an empty summary");
         }
@@ -515,6 +567,18 @@ impl ConversationDb {
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'completed', '[]', 0, 1, ?8, ?9, ?13, ?14, 1, ?10, ?11, ?12, ?15)",
             params![turn_id, session_id, seq, "[conversation summary]", now, summary, now, token_total, token_usage_estimated, parent_summary_seq, hidden_json, footprint_json, tokens.prompt as i64, tokens.cache_read as i64, extras_json],
         )?;
+        for memory_ref in refs {
+            if !matches!(memory_ref.kind.as_str(), "fact" | "episode") || memory_ref.id <= 0 {
+                continue;
+            }
+            tx.execute(
+                "INSERT OR IGNORE INTO memory_provenance (
+                    carrier_kind, carrier_id, memory_kind, memory_id,
+                    relation, session_id, created_at
+                 ) VALUES ('summary_turn', ?1, ?2, ?3, 'summary_input', ?4, ?5)",
+                params![turn_id, memory_ref.kind, memory_ref.id, session_id, now],
+            )?;
+        }
         tx.commit()?;
         Ok(())
     }
@@ -542,6 +606,10 @@ impl ConversationDb {
     pub fn reset(&self, session_id: &str) -> Result<()> {
         let mut conn = self.conn.lock().unwrap();
         let tx = conn.transaction()?;
+        tx.execute(
+            "DELETE FROM memory_provenance WHERE session_id = ?1",
+            params![session_id],
+        )?;
         tx.execute(
             "DELETE FROM queued_prompts WHERE session_id = ?1",
             params![session_id],
@@ -598,6 +666,13 @@ impl ConversationDb {
             let rows = stmt.query_map(params![persona, platform], |row| row.get(0))?;
             rows.collect::<std::result::Result<Vec<_>, _>>()?
         };
+        tx.execute(
+            &format!(
+                "{target_sql} DELETE FROM memory_provenance
+                  WHERE session_id IN (SELECT session_id FROM targets)"
+            ),
+            params![persona, platform],
+        )?;
         for table in ["queued_prompts", "turns", "session_loaded_items"] {
             tx.execute(
                 &format!(
@@ -685,6 +760,10 @@ impl ConversationDb {
                     tx.rollback()?;
                     return Ok((0, None));
                 }
+                tx.execute(
+                    "DELETE FROM memory_provenance WHERE carrier_kind='summary_turn' AND carrier_id=?1",
+                    params![turn_id],
+                )?;
                 tx.execute("DELETE FROM turns WHERE turn_id = ?1", params![turn_id])?;
                 tx.commit()?;
                 Ok((1, None))
@@ -710,6 +789,10 @@ impl ConversationDb {
                     return Ok((0, None));
                 }
 
+                tx.execute(
+                    "DELETE FROM memory_provenance WHERE carrier_kind='summary_turn' AND carrier_id=?1",
+                    params![turn_id],
+                )?;
                 tx.execute("DELETE FROM turns WHERE turn_id = ?1", params![turn_id])?;
                 match parent_summary_seq {
                     Some(previous_seq) => {
