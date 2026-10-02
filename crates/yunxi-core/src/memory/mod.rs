@@ -254,7 +254,7 @@ impl MemoryOwnership {
 
 // EvictedTurn 下沉到 yunxi_base::memory_types：state 落库也要它，留在这里会和
 // state 形成循环。原样再导出，`memory::EvictedTurn` 的写法不变。
-pub use yunxi_base::memory_types::EvictedTurn;
+pub use yunxi_base::memory_types::{EvictedTurn, MemoryRef};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum MemoryKind {

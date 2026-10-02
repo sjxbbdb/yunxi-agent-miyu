@@ -327,6 +327,22 @@ pub(crate) fn init_state_db(conn: &Connection) -> Result<()> {
             embedding_json TEXT NOT NULL,
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS memory_provenance (
+            carrier_kind TEXT NOT NULL CHECK (carrier_kind = 'evicted_turn'),
+            carrier_id INTEGER NOT NULL,
+            memory_kind TEXT NOT NULL CHECK (memory_kind IN ('fact', 'episode')),
+            memory_id INTEGER NOT NULL CHECK (memory_id > 0),
+            relation TEXT NOT NULL CHECK (
+                relation IN ('tool_report', 'summary_input', 'transcript_input')
+            ),
+            session_id TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (carrier_kind, carrier_id, memory_kind, memory_id, relation)
+        );
+        CREATE INDEX IF NOT EXISTS idx_memory_provenance_memory
+            ON memory_provenance(memory_kind, memory_id, carrier_id);
+        CREATE INDEX IF NOT EXISTS idx_memory_provenance_carrier
+            ON memory_provenance(carrier_kind, carrier_id);
         CREATE VIRTUAL TABLE IF NOT EXISTS evicted_turns_fts USING fts5(
             content,
             content='evicted_turns',
@@ -345,6 +361,28 @@ pub(crate) fn init_state_db(conn: &Connection) -> Result<()> {
             VALUES ('delete', old.id, old.content);
             INSERT INTO evicted_turns_fts(rowid, content) VALUES (new.id, new.content);
         END;",
+    )?;
+    // The first development cut used `memory_ref` for this relation before
+    // the plan settled on the typed `tool_report` name.  Keep that local
+    // state readable and normalize it before any new rows are written.
+    conn.execute(
+        "DELETE FROM memory_provenance AS legacy
+          WHERE legacy.relation='memory_ref'
+            AND EXISTS (
+                SELECT 1 FROM memory_provenance AS current
+                 WHERE current.carrier_kind=legacy.carrier_kind
+                   AND current.carrier_id=legacy.carrier_id
+                   AND current.memory_kind=legacy.memory_kind
+                   AND current.memory_id=legacy.memory_id
+                   AND current.relation='tool_report'
+            )",
+        [],
+    )?;
+    conn.execute(
+        "UPDATE memory_provenance
+            SET relation='tool_report'
+          WHERE carrier_kind='evicted_turn' AND relation='memory_ref'",
+        [],
     )?;
     add_column_if_missing(conn, "evicted_turns", "source_id", "TEXT")?;
     // 09-05: vectors as f32 BLOBs; legacy JSON rows are simply re-embedded.

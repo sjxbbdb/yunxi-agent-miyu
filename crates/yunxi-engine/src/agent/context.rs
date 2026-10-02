@@ -548,11 +548,36 @@ pub(in crate::agent) fn evicted_turn_entries(
                 timestamp: timestamp.clone(),
                 role: "assistant".to_string(),
                 content: report.clone(),
+                refs: remembered_fact_ref(report).into_iter().collect(),
                 ..EvictedTurn::default()
             });
         }
     }
     (entries, evicted)
+}
+
+/// Extract only the compact, typed result produced by `remember_fact`.
+///
+/// Tool reports are untrusted historical text.  In particular, a user or an
+/// assistant message can contain an XML-looking string, so this parser accepts
+/// one exact wrapper and one positive integer id, and otherwise returns no
+/// provenance.  It intentionally does not inspect ordinary conversation text.
+pub(in crate::agent) fn remembered_fact_ref(
+    report: &str,
+) -> Option<yunxi_base::memory_types::MemoryRef> {
+    const START: &str = "<previous_tool_report name=\"remember_fact\">";
+    const END: &str = "</previous_tool_report>";
+    let body = report.strip_prefix(START)?.strip_suffix(END)?.trim();
+    let value = serde_json::from_str::<serde_json::Value>(body).ok()?;
+    let id = value
+        .get("remembered_fact")?
+        .get("id")?
+        .as_i64()
+        .filter(|id| *id > 0)?;
+    Some(yunxi_base::memory_types::MemoryRef {
+        kind: "fact".to_string(),
+        id,
+    })
 }
 
 pub fn archive_and_delete_visible_turns(

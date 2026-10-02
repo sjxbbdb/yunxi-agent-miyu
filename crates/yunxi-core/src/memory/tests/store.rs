@@ -1,6 +1,7 @@
 //! 存取、检索与重置。
 
 use super::shared::*;
+use crate::memory::browse::BrowseTable;
 use crate::memory::*;
 use yunxi_base::config::AppConfig;
 
@@ -246,6 +247,136 @@ fn evicted_context_can_be_cleared() {
         .unwrap()
         .to_string()
         .contains("旧上下文"));
+}
+
+#[test]
+fn tombstoned_fact_ref_hides_only_its_archived_tool_report() {
+    let temp = tempfile::tempdir().unwrap();
+    let config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    let fact_id = store.remember_fact("同一段记忆正文", "test").unwrap();
+    store
+        .remember_evicted_turns(&[
+            EvictedTurn {
+                source_id: "tool:remember_fact".to_string(),
+                timestamp: "now".to_string(),
+                role: "assistant".to_string(),
+                content: "同一段记忆正文".to_string(),
+                refs: vec![MemoryRef {
+                    kind: "fact".to_string(),
+                    id: fact_id,
+                }],
+                ..EvictedTurn::default()
+            },
+            EvictedTurn {
+                source_id: "user:ordinary".to_string(),
+                timestamp: "now".to_string(),
+                role: "user".to_string(),
+                content: "同一段记忆正文".to_string(),
+                ..EvictedTurn::default()
+            },
+        ])
+        .unwrap();
+    let state = rusqlite::Connection::open(&store.state_db).unwrap();
+    let provenance: (String, String, i64, String) = state
+        .query_row(
+            "SELECT carrier_kind, memory_kind, memory_id, relation
+               FROM memory_provenance",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        provenance,
+        (
+            "evicted_turn".to_string(),
+            "fact".to_string(),
+            fact_id,
+            "tool_report".to_string(),
+        )
+    );
+    store.delete_item(BrowseTable::Facts, fact_id).unwrap();
+
+    let results = store.search_evicted_context("同一段记忆正文", 10).unwrap()["results"]
+        .as_array()
+        .unwrap()
+        .clone();
+    assert_eq!(results.len(), 1, "deleted fact report must not be recalled");
+    assert_eq!(results[0]["role"], "user");
+    let semantic_corpus = store.semantic_corpus(None, None).unwrap();
+    assert_eq!(semantic_corpus.len(), 1);
+    assert_eq!(semantic_corpus[0].1, "同一段记忆正文");
+}
+
+#[test]
+fn old_evicted_state_database_migrates_provenance_schema() {
+    let temp = tempfile::tempdir().unwrap();
+    let config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    std::fs::create_dir_all(store.state_db.parent().unwrap()).unwrap();
+    let old = rusqlite::Connection::open(&store.state_db).unwrap();
+    old.execute_batch(
+        "CREATE TABLE evicted_turns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id TEXT,
+            timestamp TEXT NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL
+         );
+         CREATE TABLE evicted_embeddings (
+            id INTEGER PRIMARY KEY,
+            model TEXT NOT NULL,
+            embedding_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+         );
+         CREATE TABLE memory_provenance (
+            carrier_kind TEXT NOT NULL,
+            carrier_id INTEGER NOT NULL,
+            memory_kind TEXT NOT NULL,
+            memory_id INTEGER NOT NULL,
+            relation TEXT NOT NULL,
+            session_id TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+         );
+         INSERT INTO memory_provenance
+             (carrier_kind, carrier_id, memory_kind, memory_id, relation, created_at)
+         VALUES ('evicted_turn', 1, 'fact', 2, 'memory_ref', 'old');
+         INSERT INTO memory_provenance
+             (carrier_kind, carrier_id, memory_kind, memory_id, relation, created_at)
+         VALUES ('evicted_turn', 1, 'fact', 2, 'tool_report', 'current');",
+    )
+    .unwrap();
+    drop(old);
+
+    store.init().unwrap();
+    let state = rusqlite::Connection::open(&store.state_db).unwrap();
+    let exists: i64 = state
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='memory_provenance'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(exists, 1);
+    let relation: String = state
+        .query_row(
+            "SELECT relation FROM memory_provenance WHERE carrier_id=1",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(relation, "tool_report");
+    let relation_count: i64 = state
+        .query_row(
+            "SELECT COUNT(*) FROM memory_provenance WHERE carrier_id=1",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(relation_count, 1);
 }
 
 #[test]

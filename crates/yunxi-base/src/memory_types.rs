@@ -10,7 +10,20 @@
 ///
 /// `state` 负责把它写进库、读出来；`memory` 负责决定哪些该被挤出、挤出后
 /// 怎么整理。两边看到的是同一份数据，但谁都不需要知道对方的实现。
-#[derive(Debug, Clone, Default)]
+use serde::{Deserialize, Serialize};
+
+/// A typed link from an archived turn to a durable memory row.
+///
+/// The link deliberately carries only a kind and a positive database id.  It
+/// never copies memory text into the state database, so deleting a memory can
+/// invalidate the link without creating another text cache to scrub.
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct MemoryRef {
+    pub kind: String,
+    pub id: i64,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EvictedTurn {
     pub source_id: String,
     pub timestamp: String,
@@ -21,4 +34,8 @@ pub struct EvictedTurn {
     /// 归属主体的稳定标识（`PlatformPrincipal::stable_key()`）。
     pub owner_principal: String,
     pub owner_display_name: String,
+    /// Typed durable-memory links only. Ordinary user/assistant text has no
+    /// refs, even when its wording happens to resemble a remembered fact.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub refs: Vec<MemoryRef>,
 }

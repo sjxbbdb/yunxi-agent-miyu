@@ -184,7 +184,7 @@ fn push_eq(
 
 impl MemoryStore {
     /// 状态库(逐出归档)只在存在时打开,不建库。
-    fn state_conn_existing(&self) -> Result<Option<Connection>> {
+    pub(crate) fn state_conn_existing(&self) -> Result<Option<Connection>> {
         if !self.state_db.exists() {
             return Ok(None);
         }
@@ -641,8 +641,16 @@ impl MemoryStore {
         let Some(conn) = self.state_conn_existing()? else {
             return Ok(false);
         };
-        let affected = conn.execute("DELETE FROM evicted_turns WHERE id = ?1", params![id])?;
-        conn.execute("DELETE FROM evicted_embeddings WHERE id = ?1", params![id])?;
+        let mut conn = conn;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        tx.execute(
+            "DELETE FROM memory_provenance
+              WHERE carrier_kind='evicted_turn' AND carrier_id = ?1",
+            params![id],
+        )?;
+        tx.execute("DELETE FROM evicted_embeddings WHERE id = ?1", params![id])?;
+        let affected = tx.execute("DELETE FROM evicted_turns WHERE id = ?1", params![id])?;
+        tx.commit()?;
         Ok(affected == 1)
     }
 }

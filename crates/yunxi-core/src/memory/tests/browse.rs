@@ -269,6 +269,7 @@ fn browse_detail_patch_revisions_and_readonly_stats() {
                 visibility: "privileged".into(),
                 owner_principal: String::new(),
                 owner_display_name: String::new(),
+                refs: Vec::new(),
             },
             EvictedTurn {
                 source_id: "t2".into(),
@@ -278,6 +279,7 @@ fn browse_detail_patch_revisions_and_readonly_stats() {
                 visibility: "privileged".into(),
                 owner_principal: String::new(),
                 owner_display_name: String::new(),
+                refs: Vec::new(),
             },
         ])
         .unwrap();

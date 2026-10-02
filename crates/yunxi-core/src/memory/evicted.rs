@@ -56,6 +56,29 @@ impl MemoryStore {
                     session_id,
                 ],
             )?;
+            let carrier_id: i64 = tx.query_row(
+                "SELECT id FROM evicted_turns WHERE source_id = ?1 ORDER BY id DESC LIMIT 1",
+                params![turn.source_id],
+                |row| row.get(0),
+            )?;
+            for memory_ref in &turn.refs {
+                if !matches!(memory_ref.kind.as_str(), "fact" | "episode") || memory_ref.id <= 0 {
+                    continue;
+                }
+                tx.execute(
+                    "INSERT OR IGNORE INTO memory_provenance (
+                        carrier_kind, carrier_id, memory_kind, memory_id,
+                        relation, session_id, created_at
+                     ) VALUES ('evicted_turn', ?1, ?2, ?3, 'tool_report', ?4, ?5)",
+                    params![
+                        carrier_id,
+                        memory_ref.kind,
+                        memory_ref.id,
+                        session_id,
+                        now()
+                    ],
+                )?;
+            }
         }
         tx.commit()?;
         Ok(())
@@ -71,8 +94,12 @@ impl MemoryStore {
 
     pub fn clear_evicted_context(&self) -> Result<()> {
         self.init()?;
-        self.state_conn()?
-            .execute("DELETE FROM evicted_turns", [])?;
+        let mut conn = self.state_conn()?;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        tx.execute("DELETE FROM memory_provenance", [])?;
+        tx.execute("DELETE FROM evicted_embeddings", [])?;
+        tx.execute("DELETE FROM evicted_turns", [])?;
+        tx.commit()?;
         Ok(())
     }
 
@@ -89,6 +116,12 @@ impl MemoryStore {
         let mut conn = self.state_conn()?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         tx.execute(
+            "DELETE FROM memory_provenance
+              WHERE carrier_kind='evicted_turn'
+                AND carrier_id IN (SELECT id FROM evicted_turns WHERE origin_session_id=?1)",
+            params![session_id],
+        )?;
+        tx.execute(
             "DELETE FROM evicted_embeddings
               WHERE id IN (SELECT id FROM evicted_turns WHERE origin_session_id=?1)",
             params![session_id],
@@ -99,6 +132,66 @@ impl MemoryStore {
         )?;
         tx.commit()?;
         Ok(removed)
+    }
+
+    /// Return archived-row ids whose typed memory references point at a
+    /// durable row deleted in the data database.  The two databases are kept
+    /// independent: if an old state database has no provenance table, or an
+    /// old data database has no tombstone table, no rows are hidden.
+    fn tombstoned_evicted_ids(&self) -> Result<std::collections::HashSet<i64>> {
+        let mut tombstones = std::collections::HashSet::new();
+        let data = match self.data_conn_existing() {
+            Ok(conn) => conn,
+            Err(_) => return Ok(tombstones),
+        };
+        let has_tombstones: i64 = data.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='memory_tombstones'",
+            [],
+            |row| row.get(0),
+        )?;
+        if has_tombstones == 0 {
+            return Ok(tombstones);
+        }
+        let mut stmt = data.prepare("SELECT kind, id FROM memory_tombstones")?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })?;
+        let tombstone_pairs =
+            rows.collect::<std::result::Result<std::collections::HashSet<_>, _>>()?;
+        if tombstone_pairs.is_empty() {
+            return Ok(tombstones);
+        }
+
+        let Some(state) = self.state_conn_existing()? else {
+            return Ok(tombstones);
+        };
+        let has_provenance: i64 = state.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='memory_provenance'",
+            [],
+            |row| row.get(0),
+        )?;
+        if has_provenance == 0 {
+            return Ok(tombstones);
+        }
+        let mut stmt = state.prepare(
+            "SELECT carrier_id, memory_kind, memory_id
+               FROM memory_provenance
+              WHERE carrier_kind='evicted_turn'",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i64>(2)?,
+            ))
+        })?;
+        for row in rows {
+            let (carrier_id, kind, memory_id) = row?;
+            if tombstone_pairs.contains(&(kind, memory_id)) {
+                tombstones.insert(carrier_id);
+            }
+        }
+        Ok(tombstones)
     }
 
     #[allow(dead_code)]
@@ -256,6 +349,7 @@ impl MemoryStore {
         start: Option<&str>,
         end: Option<&str>,
     ) -> Result<Vec<(i64, String)>> {
+        let excluded = self.tombstoned_evicted_ids()?;
         let conn = self.state_conn()?;
         let mut clauses = Vec::new();
         let mut params: Vec<String> = Vec::new();
@@ -274,6 +368,13 @@ impl MemoryStore {
             params.push(end.to_string());
             clauses.push(format!("timestamp <= ?{}", params.len()));
         }
+        if !excluded.is_empty() {
+            let placeholders = std::iter::repeat_n("?", excluded.len())
+                .collect::<Vec<_>>()
+                .join(", ");
+            clauses.push(format!("id NOT IN ({placeholders})"));
+            params.extend(excluded.iter().map(|id| id.to_string()));
+        }
         let where_clause = if clauses.is_empty() {
             String::new()
         } else {
@@ -286,7 +387,11 @@ impl MemoryStore {
         let rows = stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| {
             Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
         })?;
-        Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
+        Ok(rows
+            .collect::<std::result::Result<Vec<_>, _>>()?
+            .into_iter()
+            .filter(|(id, _)| !excluded.contains(id))
+            .collect())
     }
 
     /// No switch of its own: an embedding model being configured is what makes
@@ -319,6 +424,7 @@ impl MemoryStore {
         let conn = self.state_conn()?;
         let mut clauses = Vec::new();
         let mut params: Vec<String> = Vec::new();
+        let excluded = self.tombstoned_evicted_ids()?;
         if let Some(principal) = self.access.principal_key() {
             params.push(principal.to_string());
             clauses.push(format!(
@@ -333,6 +439,13 @@ impl MemoryStore {
         if let Some(end) = end {
             params.push(end.to_string());
             clauses.push(format!("timestamp <= ?{}", params.len()));
+        }
+        if !excluded.is_empty() {
+            let placeholders = std::iter::repeat_n("?", excluded.len())
+                .collect::<Vec<_>>()
+                .join(", ");
+            clauses.push(format!("id NOT IN ({placeholders})"));
+            params.extend(excluded.into_iter().map(|id| id.to_string()));
         }
         // The trigram index does the filtering, so the scan no longer has to be
         // capped at the newest 1000 rows — those beyond it used to be stored

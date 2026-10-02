@@ -25,6 +25,30 @@ fn search_round(args: &str, output: &str) -> yunxi_core::state::ToolFlowRound {
     }
 }
 
+#[test]
+fn remembered_fact_provenance_only_accepts_typed_tool_report() {
+    let report = "<previous_tool_report name=\"remember_fact\">\n{\"remembered_fact\":{\"id\":42,\"content\":\"blue\"}}\n</previous_tool_report>";
+    assert_eq!(
+        super::super::context::remembered_fact_ref(report),
+        Some(yunxi_base::memory_types::MemoryRef {
+            kind: "fact".to_string(),
+            id: 42,
+        })
+    );
+    assert!(super::super::context::remembered_fact_ref(
+        "ordinary user text with remembered_fact id 42"
+    )
+    .is_none());
+    assert!(super::super::context::remembered_fact_ref(
+        "<previous_tool_report name=\"remember_fact\">not json</previous_tool_report>"
+    )
+    .is_none());
+    assert!(super::super::context::remembered_fact_ref(
+        "<previous_tool_report name=\"remember_fact\">{\"remembered_fact\":{\"id\":0}}</previous_tool_report>"
+    )
+    .is_none());
+}
+
 /// 复读轮平时原样回放(09-24):活体每一轮都发过,回放少一轮下一轮的前缀就在那里
 /// 断。折叠只在压缩那一刻做(`fold_repeated_rounds`,见下一条)。
 #[test]
@@ -891,6 +915,66 @@ fn explicit_pop_archives_context_content_but_not_reasoning() {
         .as_array()
         .unwrap()
         .is_empty());
+}
+
+#[test]
+fn explicit_pop_archives_typed_memory_provenance_and_hides_deleted_fact() {
+    use yunxi_core::memory::browse::BrowseTable;
+
+    let temp = tempfile::tempdir().unwrap();
+    let paths = test_paths(temp.path());
+    let config = AppConfig::default();
+    let state = StateStore::new(&paths).unwrap();
+    let memory = MemoryStore::new(&config, &paths);
+    let fact_id = memory
+        .remember_fact("归档 provenance 只链接这条记忆", "test")
+        .unwrap();
+    let report = format!(
+        "<previous_tool_report name=\"remember_fact\">{{\"remembered_fact\":{{\"id\":{fact_id},\"content\":\"归档 provenance 只链接这条记忆\"}}}}</previous_tool_report>"
+    );
+
+    state
+        .start_turn("t1", "归档 provenance 只链接这条记忆", 999999)
+        .unwrap();
+    state.complete_turn("t1", "归档完成", None).unwrap();
+    state.append_persisted_context("t1", &report).unwrap();
+    let turns = state.oldest_evictable_visible_turns(1).unwrap();
+
+    archive_and_delete_visible_turns(&state, &memory, &turns).unwrap();
+
+    let state_db = rusqlite::Connection::open(
+        config
+            .active_persona_memory_state_dir(&paths)
+            .join("memory/evicted_context.db"),
+    )
+    .unwrap();
+    let provenance: (String, String, i64, String) = state_db
+        .query_row(
+            "SELECT carrier_kind, memory_kind, memory_id, relation
+               FROM memory_provenance",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        provenance,
+        (
+            "evicted_turn".to_string(),
+            "fact".to_string(),
+            fact_id,
+            "tool_report".to_string(),
+        )
+    );
+
+    memory.delete_item(BrowseTable::Facts, fact_id).unwrap();
+    let results = memory
+        .search_evicted_context("归档 provenance 只链接这条记忆", 10)
+        .unwrap()["results"]
+        .as_array()
+        .unwrap()
+        .clone();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0]["role"], "user");
 }
 
 #[test]

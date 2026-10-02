@@ -351,6 +351,12 @@ impl ConversationDb {
               visibility, owner_principal, owner_display_name, origin_session_id)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
         );
+        let provenance_sql = format!(
+            "INSERT OR IGNORE INTO {archive_alias}.memory_provenance (
+                carrier_kind, carrier_id, memory_kind, memory_id,
+                relation, session_id, created_at
+             ) VALUES ('evicted_turn', ?1, ?2, ?3, 'tool_report', ?4, ?5)"
+        );
         let operation = (|| -> Result<usize> {
             let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
             verify_loaded_tool_sources(&tx, session_id, expected_loaded_tools)?;
@@ -370,6 +376,30 @@ impl ConversationDb {
                         session_id,
                     ],
                 )?;
+                let carrier_id: i64 = tx.query_row(
+                    &format!(
+                        "SELECT id FROM {archive_alias}.evicted_turns
+                          WHERE source_id = ?1 ORDER BY id DESC LIMIT 1"
+                    ),
+                    params![turn.source_id],
+                    |row| row.get(0),
+                )?;
+                for memory_ref in &turn.refs {
+                    if !matches!(memory_ref.kind.as_str(), "fact" | "episode") || memory_ref.id <= 0
+                    {
+                        continue;
+                    }
+                    tx.execute(
+                        &provenance_sql,
+                        params![
+                            carrier_id,
+                            memory_ref.kind,
+                            memory_ref.id,
+                            session_id,
+                            created_at,
+                        ],
+                    )?;
+                }
             }
             let affected = delete_visible_turns_in_transaction(&tx, session_id, turn_ids)?;
             tx.commit()?;
