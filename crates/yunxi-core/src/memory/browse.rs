@@ -462,6 +462,15 @@ impl MemoryStore {
         if affected == 1 {
             if table == BrowseTable::Episodes {
                 scrub_episode_references(&tx, &[id])?;
+            } else {
+                // Revision bodies are part of the deleted fact's private
+                // history.  Keeping them after the fact is removed would
+                // let browse_revisions (and a future restore/import path)
+                // resurrect content that the user explicitly deleted.
+                tx.execute(
+                    "DELETE FROM memory_revisions WHERE memory_id=?1",
+                    params![id],
+                )?;
             }
             tx.execute(
                 "DELETE FROM memory_embeddings WHERE kind=?1 AND id=?2",

@@ -240,6 +240,15 @@ impl MemoryStore {
             "DELETE FROM facts WHERE origin_session_id=?1",
             params![session_id],
         )?;
+        // A session reset deletes facts as well as episodes.  Their revision
+        // bodies are private history for those facts and must leave in the
+        // same transaction, otherwise browse_revisions would retain content
+        // for a row that no longer exists.
+        tx.execute(
+            "DELETE FROM memory_revisions
+              WHERE memory_id NOT IN (SELECT id FROM facts)",
+            [],
+        )?;
         let episodes = tx.execute(
             "DELETE FROM episodes WHERE origin_session_id=?1",
             params![session_id],

@@ -38,6 +38,10 @@ maintenance.
   inference and before reinforcement, so a concurrent delete or visibility /
   status change cannot return the old snapshot.
 - A failed browse update rolls back both the memory edit and vector deletion.
+- Deleting a fact also deletes its `memory_revisions` rows in the same
+  transaction, and a session reset removes revisions whose owner fact no
+  longer exists; deleted historical bodies are therefore not exposed through
+  `browse_revisions`.
 
 No schema, dependency, provider, profile, knowledge-base, DecisionPort, or
 Laya boundary changed in G3-04.
@@ -58,6 +62,8 @@ Laya boundary changed in G3-04.
   browse edit/delete, failed transaction, expiry, organizer update, recall
   barriers, reopen cleanup, guarded stale-write rejection, unknown kind, digest
   mismatch, idempotence, and valid-vector preservation tests.
+- `crates/yunxi-core/src/memory/tests/browse.rs`: fact-revision deletion
+  barrier and the existing browse/status/tag regression coverage.
 
 ## Verification commands
 
@@ -85,22 +91,33 @@ exit code `0`. An earlier run exposed an invalid three-byte test vector in the
 new semantic-coverage assertion; the fixture now stores a minimal valid `f32`
 payload and the final checkout compiled cleanly.
 
+The revision-deletion follow-up was then verified on a fresh WSL ext4
+checkout with the same source-copy procedure and
+`cargo test -p yunxi-core --lib memory::tests::browse` plus
+`memory::tests::reset`, both with `--locked -- --test-threads=1`.
+They passed `2 + 6 passed; 0 failed` (the browse run filtered 696 tests and
+the reset run filtered 692) with exit code `0`; the reset run also verifies
+that session reset removes the deleted fact's revision body.
+
 ## EVIDENCE_SCHEMA
 
-- `run_id`: `g3-04k-20261002-ext4-07`
+- `run_id`: `g3-04k-20261002-ext4-07` (embedding lifecycle),
+  `g3-04-revisions-20261002-ext4-02` (revision deletion and reset follow-up)
 - `stage/task`: `G3-04 embedding lifecycle and stale-vector cleanup`
 - `implementation_commit`: `f3ffafe5` (post-inference hit revalidation),
   `135d7271` (guarded dedup writes), `ab7ba6de` (guarded async writes), plus
   `87288422`
   (recall/reopen tests), `f2fc6646`, `bf65efa0`, and `aa4993ea`
-  (lifecycle implementation/follow-ups)
+  (lifecycle implementation/follow-ups); the follow-up working tree adds
+  transactional revision deletion in `browse.rs` and `write.rs`.
 - `recorded_at_utc`: `2026-10-02 09:16:30 UTC`
 - `evidence_owner`: `/root` (Lead review); worker requested model
   `GPT-6.1-Sol`; runtime model id not exposed
 - `environment`: WSL Ubuntu-24.04 disposable checkout at `/tmp/g3-04k-src`,
   isolated target at `/tmp/g3-04k-target`; one cargo job with
   incremental compilation and debug info disabled
-- `test_command`: memory-only command above
+- `test_command`: memory-only command above; the browse-only follow-up command
+  is recorded above
 - `test_exit_code`: `0`
 - `stable_counts`: `78 passed; 0 failed; 1 ignored; 619 filtered out`
 - `static_checks`: formatting, diff, metadata, architecture, size, and
@@ -112,8 +129,9 @@ payload and the final checkout compiled cleanly.
   `/tmp/g3-04k-log` paths were removed after
   the run; a follow-up check found no cargo or rustc process.
 - `unverified`: native Arch Linux, macOS, Windows cargo execution, crash,
-  disk-full/lock recovery, concurrent organizer/reset races,
-  compact/restore/backup-import recall barriers, full workspace tests,
+  disk-full/lock recovery, concurrent organizer/reset races, deletion
+  tombstones for old archive/backup imports, compact/restore/backup-import
+  recall barriers, full workspace tests,
   provider/model
   quality, and automatic invocation scheduling for the new maintenance pass
   remain outside this slice.

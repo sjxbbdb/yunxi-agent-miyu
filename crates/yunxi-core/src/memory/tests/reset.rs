@@ -216,6 +216,13 @@ fn reset_session_drops_the_vectors_of_the_rows_it_deletes() {
         )
         .unwrap();
     }
+    conn.execute(
+        "INSERT INTO memory_revisions
+            (memory_id, old_content, new_content, source_episode_ids, created_at)
+         VALUES (?1, '旧事实', '新事实', '[]', '2026-09-09T10:00:00Z')",
+        [mine],
+    )
+    .unwrap();
     drop(conn);
 
     store.reset_session("session-a").unwrap();
@@ -227,4 +234,10 @@ fn reset_session_drops_the_vectors_of_the_rows_it_deletes() {
         })
         .unwrap();
     assert_eq!(remaining, theirs, "删的向量和删的行没有对上");
+    let revisions: i64 = conn
+        .query_row("SELECT COUNT(*) FROM memory_revisions", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(revisions, 0, "会话重置后不应留下已删除事实的修订正文");
 }

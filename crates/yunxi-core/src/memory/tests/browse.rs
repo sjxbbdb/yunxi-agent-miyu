@@ -172,6 +172,28 @@ fn browse_detail_patch_revisions_and_readonly_stats() {
         )
         .is_err());
 
+    // 删除事实也必须原子删除它的修订正文；删除后不能再通过历史抽屉读到
+    // 已明确删除的旧内容。使用独立事实，保留上面那条带标签的事实继续覆盖
+    // 遗忘/救回和筛选路径。
+    let deleted_id = store.remember_fact("待删除的事实", "test").unwrap();
+    assert!(store
+        .update_item(
+            BrowseTable::Facts,
+            deleted_id,
+            &BrowsePatch {
+                content: Some("待删除的事实更新".into()),
+                ..Default::default()
+            }
+        )
+        .unwrap());
+    assert_eq!(store.browse_revisions(deleted_id).unwrap().len(), 1);
+    assert!(store.delete_item(BrowseTable::Facts, deleted_id).unwrap());
+    assert!(store
+        .browse_item(BrowseTable::Facts, deleted_id)
+        .unwrap()
+        .is_none());
+    assert!(store.browse_revisions(deleted_id).unwrap().is_empty());
+
     // 遗忘 → 救回:状态回 active 且强度回满。
     assert!(store
         .update_item(
