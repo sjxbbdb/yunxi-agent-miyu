@@ -14,6 +14,35 @@ another turn.
 This plan turns that gap into an explicit follow-up instead of silently
 claiming that the deletion contract is complete.
 
+## G3-05-01 implemented slice
+
+The first implementation slice is deliberately narrower than the eventual
+schema above: it covers only `evicted_turn` carriers. The state database uses
+the numeric `evicted_turns.id` as `carrier_id`, keeps the typed `fact` or
+`episode` id, and writes the `tool_report` relation. `summary_turn` and
+`transcript` rows are not yet written to `memory_provenance`; their redaction
+and read barriers remain planned work, not an acceptance claim for this
+slice.
+
+The shipped slice now provides:
+
+- `MemoryRef { kind, id }` on `EvictedTurn`; the engine accepts a reference
+  only from the exact structured `remember_fact` tool-report wrapper.
+- Same-transaction provenance writes in both the normal memory archive path
+  and the state-side `archive_and_delete_visible_turns` path.
+- Tombstone-aware keyword and semantic evicted-context filtering, plus
+  provenance cleanup when evicted rows, embeddings, sessions, or the whole
+  evicted context are removed.
+- Additive migration of old state databases, including normalization of the
+  development-only `memory_ref` relation to `tool_report` without failing on
+  a duplicate current row.
+
+Evidence for this slice is external to the model self-report: WSL ext4 runs
+passed `yunxi-core` memory store (12), browse (2), compact (21), and
+`yunxi-engine` context (36) tests. The context count includes the real archive
+path test that checks the typed row and verifies that deleting the fact hides
+only the linked tool report while the ordinary user row remains searchable.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
