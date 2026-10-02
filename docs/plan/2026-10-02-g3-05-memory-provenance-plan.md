@@ -208,6 +208,28 @@ Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
 The `state/compact` transcript-file policy and concurrent delete/recall remain
 explicitly outside this slice.
 
+## G3-05-09 implemented slice: committed-delete recall and browse convergence
+
+The store regression now keeps a reader active across the delete boundary. It
+first proves that a provenance-linked assistant carrier is recallable, then
+releases the reader only after the fact tombstone transaction commits. The
+reader performs both keyword recall and direct evicted browse afterward. The
+linked carrier must disappear from both paths while an unlinked user carrier
+with the same text remains visible. This keeps the assertion on the typed
+`(fact, id)` edge rather than on text matching.
+
+Evidence is recorded in
+[`2026-10-02-g3-05-concurrent-delete-recall-evidence.md`](2026-10-02-g3-05-concurrent-delete-recall-evidence.md):
+
+- `cargo test -p yunxi-core --lib memory::tests::store::concurrent_recall_and_browse_honor_a_committed_memory_tombstone --locked -- --exact --test-threads=1` — 1 passed, 706 filtered.
+- The disposable WSL Ubuntu-24.04 ext4 source and target were removed after
+  the run; no cargo or rustc process remained.
+
+This is still a committed-delete/convergence contract. It does not introduce
+or claim a cross-database transaction, an overlap-after-commit guarantee for a
+read that started before deletion, or crash consistency across the memory and
+state SQLite files.
+
 ## G3-05-08 implemented slice: concurrent browse convergence contract
 
 The memory browse regression now runs a delete and an evicted-context browse

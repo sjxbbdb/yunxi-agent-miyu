@@ -1,8 +1,10 @@
 //! 存取、检索与重置。
 
 use super::shared::*;
-use crate::memory::browse::BrowseTable;
+use crate::memory::browse::{BrowseTable, EvictedQuery};
 use crate::memory::*;
+use std::sync::{Arc, Barrier};
+use std::thread;
 use yunxi_base::config::AppConfig;
 
 #[test]
@@ -313,6 +315,109 @@ fn tombstoned_fact_ref_hides_only_its_archived_tool_report() {
     let semantic_corpus = store.semantic_corpus(None, None).unwrap();
     assert_eq!(semantic_corpus.len(), 1);
     assert_eq!(semantic_corpus[0].1, "同一段记忆正文");
+}
+
+#[test]
+fn concurrent_recall_and_browse_honor_a_committed_memory_tombstone() {
+    let temp = tempfile::tempdir().unwrap();
+    let config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    let fact_id = store
+        .remember_fact("G305_CONCURRENT_MEMORY_MARKER", "test")
+        .unwrap();
+    store
+        .remember_evicted_turns(&[
+            EvictedTurn {
+                source_id: "concurrent-linked-report".into(),
+                timestamp: "2026-10-02T10:00:00+00:00".into(),
+                role: "assistant".into(),
+                content: "G305_CONCURRENT_MEMORY_MARKER".into(),
+                refs: vec![MemoryRef {
+                    kind: "fact".into(),
+                    id: fact_id,
+                }],
+                ..EvictedTurn::default()
+            },
+            EvictedTurn {
+                source_id: "concurrent-unlinked-user".into(),
+                timestamp: "2026-10-02T10:01:00+00:00".into(),
+                role: "user".into(),
+                content: "G305_CONCURRENT_MEMORY_MARKER".into(),
+                ..EvictedTurn::default()
+            },
+        ])
+        .unwrap();
+
+    let before = store
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(before.total, 2);
+    let linked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "assistant")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+    let unlinked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "user")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+
+    // The reader is already live before deletion.  The second rendezvous is
+    // released only after the delete transaction commits, so this checks the
+    // concurrent reader's post-delete snapshot without relying on sleeps or
+    // scheduler timing.
+    let reader_ready = Arc::new(Barrier::new(2));
+    let delete_committed = Arc::new(Barrier::new(2));
+    let reader_store = store.clone();
+    let reader_ready_for_thread = Arc::clone(&reader_ready);
+    let delete_committed_for_thread = Arc::clone(&delete_committed);
+    let reader = thread::spawn(move || {
+        let before_search = reader_store
+            .search_evicted_context("G305_CONCURRENT_MEMORY_MARKER", 10)
+            .unwrap();
+        assert!(before_search["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|item| item["id"] == linked_id));
+        reader_ready_for_thread.wait();
+        delete_committed_for_thread.wait();
+
+        let after_search = reader_store
+            .search_evicted_context("G305_CONCURRENT_MEMORY_MARKER", 10)
+            .unwrap();
+        let after_search_ids = after_search["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|item| item["id"].as_i64())
+            .collect::<Vec<_>>();
+        let after_browse = reader_store
+            .browse_evicted(&EvictedQuery {
+                limit: 10,
+                ..Default::default()
+            })
+            .unwrap();
+        (after_search_ids, after_browse)
+    });
+
+    reader_ready.wait();
+    let deleted = store.delete_item(BrowseTable::Facts, fact_id).unwrap();
+    delete_committed.wait();
+    let (after_search_ids, after_browse) = reader.join().unwrap();
+
+    assert!(deleted);
+    assert!(!after_search_ids.contains(&linked_id));
+    assert!(after_search_ids.contains(&unlinked_id));
+    assert_eq!(after_browse.total, 1);
+    assert_eq!(after_browse.items[0]["id"], unlinked_id);
 }
 
 #[test]

@@ -22,8 +22,8 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   vector、embedding 生命周期和 restore barrier 证据；G3-05 已完成 evicted
   turn、summary carrier、transcript identity/write 和当前 transcript read
   barrier、session-delete/idle-sweep GC、transfer round-trip coverage、
-  rollback regression 和 concurrent browse convergence 的最小切片。代码
-  与测试证据已进入当前工作树；状态文档提交可晚于代码证据提交。session
+  rollback regression、concurrent browse convergence，以及 committed-delete
+  后 recall+browse convergence 的最小切片。代码与测试证据已进入当前工作树；状态文档提交可晚于代码证据提交。session
   GC 的基线提交为 `e9bdaf32`，transcript read
   barrier 的基线提交为 `83f763b0`。
 
