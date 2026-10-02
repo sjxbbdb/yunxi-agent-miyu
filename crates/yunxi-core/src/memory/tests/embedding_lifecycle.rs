@@ -1,5 +1,6 @@
 use super::shared::test_paths;
 use crate::memory::browse::{BrowsePatch, BrowseTable};
+use crate::memory::semantic::persist_embedding_if_current;
 use crate::memory::*;
 use sha2::{Digest, Sha256};
 use yunxi_base::config::AppConfig;
@@ -219,6 +220,35 @@ fn failed_browse_update_rolls_back_without_dropping_vector() {
         )
         .is_err());
     assert_eq!(vector_count(&store, "fact", fact_id), 1);
+}
+
+#[test]
+fn guarded_embedding_write_rejects_a_stale_content_snapshot() {
+    let temp = tempfile::tempdir().unwrap();
+    let store = store(&temp);
+    let fact_id = store.remember_fact("旧内容快照", "test").unwrap();
+    let old_sha = digest("旧内容快照");
+    let mut conn = store.data_conn().unwrap();
+    let tx = conn
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .unwrap();
+    tx.execute(
+        "UPDATE facts SET content='已被修改的内容' WHERE id=?1",
+        [fact_id],
+    )
+    .unwrap();
+    assert!(!persist_embedding_if_current(
+        &tx,
+        MemoryKind::Fact,
+        fact_id,
+        "test-model",
+        &old_sha,
+        &[0.0_f32],
+        "now",
+    )
+    .unwrap());
+    tx.commit().unwrap();
+    assert_eq!(vector_count(&store, "fact", fact_id), 0);
 }
 
 #[test]

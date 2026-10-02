@@ -35,6 +35,55 @@ fn kind_name(kind: MemoryKind) -> &'static str {
     }
 }
 
+/// Persist an embedding only when the row that produced it is still the same
+/// eligible memory. The caller has already awaited the model, so this check
+/// must run inside the write transaction to close the delete/update race.
+pub(crate) fn persist_embedding_if_current(
+    tx: &rusqlite::Transaction<'_>,
+    kind: MemoryKind,
+    id: i64,
+    model: &str,
+    sha: &str,
+    vector: &[f32],
+    now: &str,
+) -> Result<bool> {
+    let content = match kind {
+        MemoryKind::Fact => tx
+            .query_row(
+                "SELECT content FROM facts
+                 WHERE id=?1 AND status!='forgotten' AND truth_status!='rejected'",
+                [id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?,
+        MemoryKind::Diary => tx
+            .query_row(
+                "SELECT content FROM episodes
+                 WHERE id=?1 AND status!='forgotten' AND retention='long_term'",
+                [id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?,
+    };
+    let Some(content) = content else {
+        return Ok(false);
+    };
+    if content_sha(&content) != sha {
+        return Ok(false);
+    }
+    tx.execute(
+        "INSERT INTO memory_embeddings (kind, id, model, content_sha256, embedding, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT (kind, id) DO UPDATE SET
+            model = excluded.model,
+            content_sha256 = excluded.content_sha256,
+            embedding = excluded.embedding,
+            created_at = excluded.created_at",
+        params![kind_name(kind), id, model, sha, vector_to_blob(vector), now],
+    )?;
+    Ok(true)
+}
+
 struct CorpusRow {
     id: i64,
     content: String,
@@ -125,7 +174,8 @@ impl MemoryStore {
         let query_vector = embedder.embed_query(query).await?;
         let vectors = embedder.embed(&texts).await?;
         // Phase 3 (sync): persist new vectors, rank, materialize.
-        let conn = self.data_conn()?;
+        let mut conn = self.data_conn()?;
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let now = now();
         for ((kind, index), vector) in pending.iter().zip(vectors) {
             let rows = match kind {
@@ -133,25 +183,19 @@ impl MemoryStore {
                 MemoryKind::Diary => &mut *episode_rows,
             };
             let row = &mut rows[*index];
-            conn.execute(
-                "INSERT INTO memory_embeddings (kind, id, model, content_sha256, embedding, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                 ON CONFLICT (kind, id) DO UPDATE SET
-                    model = excluded.model,
-                    content_sha256 = excluded.content_sha256,
-                    embedding = excluded.embedding,
-                    created_at = excluded.created_at",
-                params![
-                    kind_name(*kind),
-                    row.id,
-                    embedder.model_id(),
-                    row.sha,
-                    vector_to_blob(&vector),
-                    now
-                ],
-            )?;
-            row.vector = Some(vector);
+            if persist_embedding_if_current(
+                &tx,
+                *kind,
+                row.id,
+                embedder.model_id(),
+                &row.sha,
+                &vector,
+                &now,
+            )? {
+                row.vector = Some(vector);
+            }
         }
+        tx.commit()?;
         if remaining > 0 {
             self.spawn_backfill(embedder.model_id().to_string());
         }
@@ -370,22 +414,18 @@ impl MemoryStore {
                 .map(|(_, _, content, _)| content.clone())
                 .collect();
             let vectors = embedder.embed(&texts).await?;
-            let conn = self.data_conn()?;
-            let now = now();
-            for ((kind, id, _, sha), vector) in batch.iter().zip(vectors) {
-                conn.execute(
-                    "INSERT INTO memory_embeddings (kind, id, model, content_sha256, embedding, created_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                     ON CONFLICT (kind, id) DO UPDATE SET
-                        model = excluded.model,
-                        content_sha256 = excluded.content_sha256,
-                        embedding = excluded.embedding,
-                        created_at = excluded.created_at",
-                    params![kind_name(*kind), id, model, sha, vector_to_blob(&vector), now],
-                )?;
-                total += 1;
+            {
+                let mut conn = self.data_conn()?;
+                let tx =
+                    conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+                let now = now();
+                for ((kind, id, _, sha), vector) in batch.iter().zip(vectors) {
+                    if persist_embedding_if_current(&tx, *kind, *id, model, sha, &vector, &now)? {
+                        total += 1;
+                    }
+                }
+                tx.commit()?;
             }
-            drop(conn);
             tokio::time::sleep(BACKFILL_PAUSE).await;
         }
     }
