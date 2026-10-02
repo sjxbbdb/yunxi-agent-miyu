@@ -45,7 +45,7 @@ checkout and target are intentionally outside `/mnt/d`:
 ```text
 rm -rf /tmp/g3-lifecycle-src /tmp/g3-lifecycle-target
 mkdir -p /tmp/g3-lifecycle-src
-cd /mnt/d/YunXi-Miyu
+cd <repo-root>
 tar --exclude=.git --exclude=target --exclude=.tmp -cf - . \
   | tar -xf - -C /tmp/g3-lifecycle-src
 cd /tmp/g3-lifecycle-src
