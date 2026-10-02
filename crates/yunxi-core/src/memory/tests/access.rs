@@ -176,7 +176,7 @@ fn organizer_can_publish_general_facts_but_cannot_update_another_principal() {
     let (database_id, generation) = user_a.identity().unwrap();
     user_a
         .process_after_turn(
-            "Linux 隔离主题与通用命令",
+            "项目 Linux 隔离主题与通用命令",
             "使用 systemctl --user",
             &origin_a,
             &database_id,

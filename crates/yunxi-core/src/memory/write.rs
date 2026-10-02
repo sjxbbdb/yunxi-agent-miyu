@@ -383,6 +383,21 @@ impl MemoryStore {
             .iter()
             .map(|diary| diary.id)
             .collect::<BTreeSet<_>>();
+        let admission_by_id = batch
+            .diaries
+            .iter()
+            .map(|diary| (diary.id, deterministic_admission(diary)))
+            .collect::<BTreeMap<_, _>>();
+        let candidate_metadata_by_id = batch
+            .diaries
+            .iter()
+            .map(|diary| {
+                let decision = admission_by_id
+                    .get(&diary.id)
+                    .expect("admission decision exists for every batch diary");
+                (diary.id, candidate_metadata(diary, decision))
+            })
+            .collect::<BTreeMap<_, _>>();
         let forced_ids = batch
             .diaries
             .iter()
@@ -404,19 +419,54 @@ impl MemoryStore {
         // 校验失败只丢这一条,不丢整批:以前一条坏项目让整批 bail,批次永远
         // 待处理、每 5 分钟重发一次(08-16 评审记过的「毒批次」)。
         let mut output = output;
+        let mut sensitive_output_ids = BTreeSet::new();
         output.knowledge.retain(|action| {
             let verdict = validate_knowledge_action(action, &diary_ids, &candidate_fact_ids)
                 .and_then(|_| validate_knowledge_visibility(batch, action))
-                .and_then(|_| validate_knowledge_update_scope(batch, action, &candidate_facts));
+                .and_then(|_| validate_knowledge_update_scope(batch, action, &candidate_facts))
+                .and_then(|_| {
+                    if action.diary_ids.iter().all(|id| {
+                        admission_by_id
+                            .get(id)
+                            .is_some_and(|decision| decision.verdict == AdmissionVerdict::Admit)
+                    }) {
+                        Ok(())
+                    } else {
+                        bail!("organizer admission source was not admitted")
+                    }
+                })
+                .and_then(|_| {
+                    if generated_content_is_sensitive(&action.content) {
+                        sensitive_output_ids.extend(action.diary_ids.iter().copied());
+                        bail!("organized content contains sensitive material")
+                    }
+                    Ok(())
+                });
             if let Err(error) = &verdict {
-                tracing::warn!(error = %error, content = %action.content, "{}", yunxi_base::i18n::text("dropping one organized knowledge item", "丢弃一条不合规的整理知识点"));
+                tracing::warn!(error = %error, "{}", yunxi_base::i18n::text("dropping one organized knowledge item", "丢弃一条不合规的整理知识点"));
             }
             verdict.is_ok()
         });
         output.long_diaries.retain(|diary| {
-            let verdict = validate_long_diary(batch, diary, &diary_ids);
+            let verdict = validate_long_diary(batch, diary, &diary_ids).and_then(|_| {
+                if diary.diary_ids.iter().all(|id| {
+                    admission_by_id
+                        .get(id)
+                        .is_some_and(|decision| decision.verdict == AdmissionVerdict::Admit)
+                }) {
+                    Ok(())
+                } else {
+                    bail!("organizer admission source was not admitted")
+                }
+            }).and_then(|_| {
+                if generated_content_is_sensitive(&diary.content) {
+                    sensitive_output_ids.extend(diary.diary_ids.iter().copied());
+                    bail!("organized content contains sensitive material")
+                }
+                Ok(())
+            });
             if let Err(error) = &verdict {
-                tracing::warn!(error = %error, content = %diary.content, "{}", yunxi_base::i18n::text("dropping one organized long diary", "丢弃一条不合规的整理长期日记"));
+                tracing::warn!(error = %error, "{}", yunxi_base::i18n::text("dropping one organized long diary", "丢弃一条不合规的整理长期日记"));
             }
             verdict.is_ok()
         });
@@ -593,11 +643,32 @@ impl MemoryStore {
                  WHERE id=?3 AND retention='short_term'",
                 params![timestamp, promoted_ids.contains(&diary.id), diary.id],
             )?;
-            let diary_content = format!("{}\n{}", diary.user_message, diary.assistant_message);
+            let decision = admission_by_id
+                .get(&diary.id)
+                .expect("admission decision exists for every batch diary");
+            let metadata = candidate_metadata_by_id
+                .get(&diary.id)
+                .expect("candidate metadata exists for every batch diary");
             let (to_state, reason_code) = if admitted_ids.contains(&diary.id) {
-                (MemoryLifecycleState::Committed, "organizer_admitted")
+                (
+                    MemoryLifecycleState::Committed,
+                    format!("organizer_admitted:{}", decision.reason_code),
+                )
+            } else if decision.verdict != AdmissionVerdict::Admit {
+                (
+                    MemoryLifecycleState::Rejected,
+                    format!("organizer_rejected:{}", decision.reason_code),
+                )
+            } else if sensitive_output_ids.contains(&diary.id) {
+                (
+                    MemoryLifecycleState::Rejected,
+                    "organizer_rejected:generated_sensitive".to_string(),
+                )
             } else {
-                (MemoryLifecycleState::Rejected, "organizer_rejected")
+                (
+                    MemoryLifecycleState::Rejected,
+                    "organizer_rejected:no_valid_output".to_string(),
+                )
             };
             record_lifecycle_event(
                 &tx,
@@ -608,9 +679,9 @@ impl MemoryStore {
                     to_state,
                     MemoryLifecycleOwner::MemoryOrganizer,
                     lifecycle_scope_from_principal(diary.owner_principal.as_deref()),
-                    reason_code,
+                    &reason_code,
                     vec![diary.id],
-                    content_digest(&diary_content),
+                    metadata.content_digest.clone(),
                     batch.generation,
                     timestamp.clone(),
                 )?,

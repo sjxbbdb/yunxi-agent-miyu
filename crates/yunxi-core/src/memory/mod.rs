@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use std::sync::LazyLock;
 use yunxi_base::platform_types::PlatformPrincipal;
 
+mod admission;
 mod association;
 pub mod browse;
 mod dedup;
@@ -22,6 +23,7 @@ mod search;
 mod semantic;
 mod validate;
 mod write;
+pub(crate) use admission::*;
 pub use association::*;
 use schema::*;
 use search::*;

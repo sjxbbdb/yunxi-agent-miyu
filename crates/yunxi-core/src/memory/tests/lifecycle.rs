@@ -206,8 +206,8 @@ fn organizer_candidate_audit_is_idempotent_and_commit_reject_are_distinct() {
     let temp = tempfile::tempdir().unwrap();
     let config = diary_config(2);
     let store = MemoryStore::new(&config, &test_paths(&temp));
-    assert!(record_turn(&store, "候选一", "回答一"));
-    assert!(record_turn(&store, "候选二", "回答二"));
+    assert!(record_turn(&store, "以后记住候选一", "回答一"));
+    assert!(record_turn(&store, "以后记住候选二", "回答二"));
     let batch = store.next_organization_batch().unwrap().unwrap();
     assert_eq!(event_rows(&store).len(), 4);
     let again = store.next_organization_batch().unwrap().unwrap();
