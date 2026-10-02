@@ -14,6 +14,8 @@ maintenance.
 - Content, status, or truth-status edits invalidate the old vector. A
   forgotten/rejected row, or a recovered row, starts without a vector and is
   rebuilt by the normal backfill path.
+- Automatic strength decay revokes the vector in the same memory maintenance
+  pass when a row crosses into `forgotten`.
 - Organizer fact updates invalidate the previous content vector in the same
   transaction as the revision and update.
 - Deleting an episode also scrubs its id from active fact/episode summaries and
@@ -62,7 +64,7 @@ CARGO_TARGET_DIR=/tmp/g3-04b-target CARGO_BUILD_JOBS=1 \
   2>&1 | tee /tmp/g3-04b-log
 ```
 
-The final run passed `74 passed; 0 failed; 1 ignored; 619 filtered out` with
+The final run passed `75 passed; 0 failed; 1 ignored; 619 filtered out` with
 exit code `0`. The first compile attempt exposed and then fixed a rusqlite
 statement-borrow lifetime error before this final run; the final checkout
 compiled cleanly.
@@ -72,8 +74,8 @@ compiled cleanly.
 - `run_id`: `g3-04b-20261002-ext4-03`
 - `stage/task`: `G3-04 embedding lifecycle and stale-vector cleanup`
 - `implementation_commit`: `f2fc6646cd9c347f44aecfeca274a16c9fa90264` plus
-  follow-up `bf65efa0`
-- `recorded_at_utc`: `2026-10-02 08:27:04 UTC`
+  follow-ups `bf65efa0` and `aa4993ea`
+- `recorded_at_utc`: `2026-10-02 08:34:15 UTC`
 - `evidence_owner`: `/root` (Lead review); worker requested model
   `GPT-6.1-Sol`; runtime model id not exposed
 - `environment`: WSL Ubuntu disposable checkout at `/tmp/g3-04b-src`,
@@ -81,9 +83,9 @@ compiled cleanly.
   incremental compilation and debug info disabled
 - `test_command`: memory-only command above
 - `test_exit_code`: `0`
-- `stable_counts`: `74 passed; 0 failed; 1 ignored; 619 filtered out`
+- `stable_counts`: `75 passed; 0 failed; 1 ignored; 619 filtered out`
 - `static_checks`: formatting, diff, metadata, architecture, size, and
-  privacy gates all passed. Size report: `362,732` total lines versus the
+  privacy gates all passed. Size report: `362,767` total lines versus the
   corrected `361,444` baseline; no new over-limit file and the gate passed.
 - `privacy_findings`: `credential_shape=0`, `personal_path=0`,
   `private_key=0`; existing fixture/public allowlists were unchanged.
