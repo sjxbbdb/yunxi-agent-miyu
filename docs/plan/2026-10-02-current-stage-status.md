@@ -21,16 +21,18 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 - **G3：进行中。** G3-01 至 G3-04 已有生命周期、admission、committed-only
   vector、embedding 生命周期和 restore barrier 证据；G3-05 已完成 evicted
   turn、summary carrier、transcript identity/write 和当前 transcript read
-  barrier、session-delete/idle-sweep GC、transfer round-trip coverage 和
-  rollback regression 的最小切片。代码证据提交为 `1b0dca8d`；其后的提交
-  仅对齐状态文档。session GC 的基线提交为 `e9bdaf32`，transcript read
+  barrier、session-delete/idle-sweep GC、transfer round-trip coverage、
+  rollback regression 和 concurrent browse convergence 的最小切片。代码
+  与测试证据已进入当前工作树；状态文档提交可晚于代码证据提交。session
+  GC 的基线提交为 `e9bdaf32`，transcript read
   barrier 的基线提交为 `83f763b0`。
 
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
 
-1. 补 provenance 在并发 delete/recall 路径的可复验证据；
+1. 补 provenance 在 concurrent delete/recall 的更强 overlap 语义上的决策
+   或测试 seam；当前只证明了并发调用后的 convergence；
 2. 对 transcript `run_command` 的相对路径、shell 组合语法和历史 session
    做明确的 fail-closed 边界测试；
 3. 只在这些证据通过后，才评估 G3-05 的阶段退出。

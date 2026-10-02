@@ -395,3 +395,63 @@ fn browse_evicted_hides_tombstoned_linked_carrier_but_keeps_unlinked_row() {
     assert_eq!(searched.total, 1);
     assert_eq!(searched.items[0]["id"], unlinked_id);
 }
+
+#[test]
+fn concurrent_delete_and_browse_converge_on_tombstone_barrier() {
+    use std::sync::{Arc, Barrier};
+
+    let temp = tempfile::tempdir().unwrap();
+    let config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    let fact_id = store.remember_fact("并发删除回归事实", "test").unwrap();
+    store
+        .remember_evicted_turns(&[EvictedTurn {
+            source_id: "concurrent-linked-tool-report".into(),
+            timestamp: "2026-10-02T10:00:00+00:00".into(),
+            role: "assistant".into(),
+            content: "并发删除回归事实".into(),
+            refs: vec![MemoryRef {
+                kind: "fact".into(),
+                id: fact_id,
+            }],
+            ..EvictedTurn::default()
+        }])
+        .unwrap();
+
+    let start = Arc::new(Barrier::new(2));
+    let deleter = store.clone();
+    let reader = store.clone();
+    let delete_start = Arc::clone(&start);
+    let read_start = Arc::clone(&start);
+    let delete_thread = std::thread::spawn(move || {
+        delete_start.wait();
+        deleter.delete_item(BrowseTable::Facts, fact_id).unwrap()
+    });
+    let read_thread = std::thread::spawn(move || {
+        read_start.wait();
+        reader
+            .browse_evicted(&EvictedQuery {
+                limit: 10,
+                ..Default::default()
+            })
+            .unwrap()
+    });
+
+    assert!(delete_thread.join().unwrap());
+    let _raced_snapshot = read_thread.join().unwrap();
+
+    let after = store
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(after.total, 0);
+    assert!(store
+        .memory_refs_are_tombstoned(&[MemoryRef {
+            kind: "fact".into(),
+            id: fact_id,
+        }])
+        .unwrap());
+}

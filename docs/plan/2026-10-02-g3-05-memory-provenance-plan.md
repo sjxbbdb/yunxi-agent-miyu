@@ -208,6 +208,26 @@ Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
 The `state/compact` transcript-file policy and concurrent delete/recall remain
 explicitly outside this slice.
 
+## G3-05-08 implemented slice: concurrent browse convergence contract
+
+The memory browse regression now runs a delete and an evicted-context browse
+from cloned `MemoryStore` values behind a two-party barrier. It asserts that
+the delete commits a tombstone, the concurrent call completes without a
+database error, and every read after both operations hides the linked carrier
+while the tombstone lookup remains true.
+
+This is intentionally a convergence contract, not a claim of a cross-database
+transaction: a read that linearizes before the data-database delete commits
+may still observe the carrier. Proving a stronger overlap-after-commit rule
+would require a coordinated read hook or a cross-database synchronization
+policy, neither of which is introduced here.
+
+Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
+
+- `cargo test -p yunxi-core --lib memory::tests::browse::concurrent_delete_and_browse_converge_on_tombstone_barrier --locked -- --exact` — 1 passed.
+- Temporary source and target directories were removed after the run; no cargo
+  or rustc process remained.
+
 ## G3-05-03a implemented slice: direct evicted browse barrier
 
 The existing keyword and semantic evicted-context paths already consulted the
