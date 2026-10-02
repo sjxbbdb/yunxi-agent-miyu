@@ -220,6 +220,12 @@ impl MemoryStore {
             "UPDATE memory_meta SET generation=generation+1 WHERE id=1",
             [],
         )?;
+        let deleted_episode_ids = {
+            let mut stmt =
+                tx.prepare("SELECT id FROM episodes WHERE origin_session_id=?1 ORDER BY id")?;
+            let rows = stmt.query_map(params![session_id], |row| row.get::<_, i64>(0))?;
+            rows.collect::<std::result::Result<Vec<_>, _>>()?
+        };
         // 向量按 (kind, id) 挂在行上,没有触发器跟着删。行走了它还在,而 id
         // 是自增的,迟早被新行撞上并读回一段别人的语义。kind 字面量与
         // `semantic::kind_name` 同源。
@@ -229,6 +235,7 @@ impl MemoryStore {
                  OR (kind='episode' AND id IN (SELECT id FROM episodes WHERE origin_session_id=?1))",
             params![session_id],
         )?;
+        scrub_episode_references(&tx, &deleted_episode_ids)?;
         let facts = tx.execute(
             "DELETE FROM facts WHERE origin_session_id=?1",
             params![session_id],
@@ -793,6 +800,10 @@ impl MemoryStore {
                 )?,
             )?;
         }
+        scrub_episode_references(
+            &tx,
+            &expired.iter().map(|(id, _, _)| *id).collect::<Vec<_>>(),
+        )?;
         tx.execute(
             "DELETE FROM memory_embeddings
               WHERE kind='episode' AND id IN (

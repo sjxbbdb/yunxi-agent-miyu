@@ -77,6 +77,52 @@ pub struct MemoryResetSummary {
     pub evicted_turns: usize,
 }
 
+/// Remove deleted episode ids from active summaries and revision provenance.
+///
+/// Episode rows are the source of long-term summaries, but the summaries live
+/// in separate rows.  Deleting an episode must not leave a stale source id
+/// that can later be presented as a live provenance link.  Lifecycle events
+/// are deliberately excluded: they are append-only audit records, not active
+/// recall or summary references.
+pub(crate) fn scrub_episode_references(
+    tx: &rusqlite::Transaction<'_>,
+    deleted_ids: &[i64],
+) -> Result<()> {
+    let deleted: BTreeSet<i64> = deleted_ids.iter().copied().collect();
+    if deleted.is_empty() {
+        return Ok(());
+    }
+    for table in ["facts", "episodes", "memory_revisions"] {
+        let rows = {
+            let mut stmt = tx.prepare(&format!(
+                "SELECT id, source_episode_ids FROM {table} WHERE source_episode_ids!='[]'"
+            ))?;
+            let mapped = stmt.query_map([], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+            })?;
+            mapped.collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        for (row_id, raw_ids) in rows {
+            let Ok(existing) = serde_json::from_str::<Vec<i64>>(&raw_ids) else {
+                continue;
+            };
+            let original_len = existing.len();
+            let filtered: Vec<i64> = existing
+                .into_iter()
+                .filter(|id| !deleted.contains(id))
+                .collect();
+            if filtered.len() == original_len {
+                continue;
+            }
+            tx.execute(
+                &format!("UPDATE {table} SET source_episode_ids=?1 WHERE id=?2"),
+                params![serde_json::to_string(&filtered)?, row_id],
+            )?;
+        }
+    }
+    Ok(())
+}
+
 impl MemoryResetSummary {
     pub fn total(&self) -> usize {
         self.facts + self.episodes + self.pending_events + self.evicted_turns

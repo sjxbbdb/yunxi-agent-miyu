@@ -122,6 +122,57 @@ fn browse_delete_and_update_keep_embeddings_in_same_transaction() {
 }
 
 #[test]
+fn deleting_an_episode_scrubs_summary_provenance_references() {
+    let temp = tempfile::tempdir().unwrap();
+    let store = store(&temp);
+    let source_id = episode(&store, "被删除的来源经历", "short_term", "active");
+    let fact_id = store.remember_fact("保留的长期事实", "test").unwrap();
+    let summary_id = episode(&store, "保留的长期摘要", "long_term", "active");
+    let conn = store.data_conn().unwrap();
+    conn.execute(
+        "UPDATE facts SET source_episode_ids=?1 WHERE id=?2",
+        rusqlite::params![format!("[{source_id}]"), fact_id],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE episodes SET source_episode_ids=?1 WHERE id=?2",
+        rusqlite::params![format!("[{source_id}]"), summary_id],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO memory_revisions
+             (memory_id, old_content, new_content, source_episode_ids, created_at)
+         VALUES (?1, '旧事实', '新事实', ?2, ?3)",
+        rusqlite::params![
+            fact_id,
+            format!("[{source_id}]"),
+            chrono::Utc::now().to_rfc3339()
+        ],
+    )
+    .unwrap();
+    drop(conn);
+
+    assert!(store.delete_item(BrowseTable::Episodes, source_id).unwrap());
+    let conn = store.data_conn().unwrap();
+    for table in ["facts", "episodes", "memory_revisions"] {
+        let refs: String = conn
+            .query_row(
+                &format!("SELECT source_episode_ids FROM {table} WHERE id=?1"),
+                [if table == "facts" {
+                    fact_id
+                } else if table == "episodes" {
+                    summary_id
+                } else {
+                    1
+                }],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(refs, "[]", "stale source reference remained in {table}");
+    }
+}
+
+#[test]
 fn failed_browse_update_rolls_back_without_dropping_vector() {
     let temp = tempfile::tempdir().unwrap();
     let store = store(&temp);

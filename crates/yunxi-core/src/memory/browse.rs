@@ -460,6 +460,9 @@ impl MemoryStore {
             rusqlite::params![id],
         )?;
         if affected == 1 {
+            if table == BrowseTable::Episodes {
+                scrub_episode_references(&tx, &[id])?;
+            }
             tx.execute(
                 "DELETE FROM memory_embeddings WHERE kind=?1 AND id=?2",
                 params![kind, id],
