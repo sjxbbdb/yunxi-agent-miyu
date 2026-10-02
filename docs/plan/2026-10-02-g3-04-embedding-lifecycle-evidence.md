@@ -34,6 +34,9 @@ maintenance.
   instead of being written back.
 - Organizer dedup's asynchronous fact-vector cache uses the same guard and
   only feeds successfully persisted vectors back into its candidate set.
+- The semantic association path revalidates keyword and semantic hit ids after
+  inference and before reinforcement, so a concurrent delete or visibility /
+  status change cannot return the old snapshot.
 - A failed browse update rolls back both the memory edit and vector deletion.
 
 No schema, dependency, provider, profile, knowledge-base, DecisionPort, or
@@ -48,7 +51,7 @@ Laya boundary changed in G3-04.
 - `crates/yunxi-core/src/memory/browse.rs`: transactional edit/delete
   invalidation.
 - `crates/yunxi-core/src/memory/semantic.rs`: guarded semantic writes and
-  delete-only stale-vector reconciler.
+  post-inference hit revalidation plus delete-only stale-vector reconciler.
 - `crates/yunxi-core/src/memory/dedup.rs`: guarded asynchronous candidate-vector
   writes.
 - `crates/yunxi-core/src/memory/tests/embedding_lifecycle.rs`: reset/orphan,
@@ -84,33 +87,34 @@ payload and the final checkout compiled cleanly.
 
 ## EVIDENCE_SCHEMA
 
-- `run_id`: `g3-04j-20261002-ext4-06`
+- `run_id`: `g3-04k-20261002-ext4-07`
 - `stage/task`: `G3-04 embedding lifecycle and stale-vector cleanup`
-- `implementation_commit`: `135d7271` (guarded dedup writes), `ab7ba6de`
-  (guarded async writes), plus `87288422`
+- `implementation_commit`: `f3ffafe5` (post-inference hit revalidation),
+  `135d7271` (guarded dedup writes), `ab7ba6de` (guarded async writes), plus
+  `87288422`
   (recall/reopen tests), `f2fc6646`, `bf65efa0`, and `aa4993ea`
   (lifecycle implementation/follow-ups)
-- `recorded_at_utc`: `2026-10-02 09:10:55 UTC`
+- `recorded_at_utc`: `2026-10-02 09:16:30 UTC`
 - `evidence_owner`: `/root` (Lead review); worker requested model
   `GPT-6.1-Sol`; runtime model id not exposed
-- `environment`: WSL Ubuntu-24.04 disposable checkout at `/tmp/g3-04j-src`,
-  isolated target at `/tmp/g3-04j-target`; one cargo job with
+- `environment`: WSL Ubuntu-24.04 disposable checkout at `/tmp/g3-04k-src`,
+  isolated target at `/tmp/g3-04k-target`; one cargo job with
   incremental compilation and debug info disabled
 - `test_command`: memory-only command above
 - `test_exit_code`: `0`
 - `stable_counts`: `78 passed; 0 failed; 1 ignored; 619 filtered out`
 - `static_checks`: formatting, diff, metadata, architecture, size, and
-  privacy gates all passed. Size report: `362,895` total lines versus the
+  privacy gates all passed. Size report: `362,926` total lines versus the
   corrected `361,444` baseline; no new over-limit file and the gate passed.
 - `privacy_findings`: `credential_shape=0`, `personal_path=0`,
   `private_key=0`; existing fixture/public allowlists were unchanged.
-- `cleanup`: the disposable `/tmp/g3-04j-src`, `/tmp/g3-04j-target`, and
-  `/tmp/g3-04j-log` paths were removed after
+- `cleanup`: the disposable `/tmp/g3-04k-src`, `/tmp/g3-04k-target`, and
+  `/tmp/g3-04k-log` paths were removed after
   the run; a follow-up check found no cargo or rustc process.
 - `unverified`: native Arch Linux, macOS, Windows cargo execution, crash,
-  disk-full/lock recovery, concurrent organizer/reset races, the in-flight
-  association snapshot race, compact/restore/backup-import recall barriers,
-  full workspace tests, provider/model
+  disk-full/lock recovery, concurrent organizer/reset races,
+  compact/restore/backup-import recall barriers, full workspace tests,
+  provider/model
   quality, and automatic invocation scheduling for the new maintenance pass
   remain outside this slice.
 
