@@ -4,6 +4,7 @@
 
 use super::shared::test_paths;
 use crate::memory::*;
+use sha2::{Digest, Sha256};
 use yunxi_base::config::{AppConfig, EmbeddingBackend};
 
 fn store_with(config: &AppConfig, temp: &tempfile::TempDir) -> MemoryStore {
@@ -22,6 +23,39 @@ fn insert_episode(store: &MemoryStore, content: &str) -> i64 {
     )
     .unwrap();
     conn.last_insert_rowid()
+}
+
+fn insert_long_episode(store: &MemoryStore, content: &str) -> i64 {
+    let conn = store.data_conn().unwrap();
+    let timestamp = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        "INSERT INTO episodes (
+             content, source, status, recall_count, created_at, updated_at,
+             retention, consolidated_at, origin_session_id
+         ) VALUES (?1, 'diary-organizer', 'active', 0, ?2, ?2,
+                   'long_term', ?2, 'test-session')",
+        rusqlite::params![content, timestamp],
+    )
+    .unwrap();
+    conn.last_insert_rowid()
+}
+
+fn insert_embedding(store: &MemoryStore, id: i64, content: &str, model: &str) {
+    let sha = hex::encode(Sha256::digest(content.as_bytes()));
+    let conn = store.data_conn().unwrap();
+    conn.execute(
+        "INSERT INTO memory_embeddings
+             (kind, id, model, content_sha256, embedding, created_at)
+         VALUES ('episode', ?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![
+            id,
+            model,
+            sha,
+            yunxi_base::embedding::vector_to_blob(&[1.0_f32, 0.0]),
+            chrono::Utc::now().to_rfc3339(),
+        ],
+    )
+    .unwrap();
 }
 
 fn runtime_available() -> bool {
@@ -96,7 +130,7 @@ async fn paraphrase_is_found_by_the_semantic_pass() {
     let mut config = AppConfig::default();
     config.embedding.backend = EmbeddingBackend::Local;
     let store = store_with(&config, &temp);
-    let target = insert_episode(
+    let target = insert_long_episode(
         &store,
         "对方说：显卡驱动装完黑屏了；我回：先进 tty 把 nvidia 模块加进 mkinitcpio 再重建镜像",
     );
@@ -105,7 +139,7 @@ async fn paraphrase_is_found_by_the_semantic_pass() {
         "对方说：推荐一部电影；我回：星际穿越",
         "对方说：周末去爬山吗；我回：看天气",
     ] {
-        insert_episode(&store, filler);
+        insert_long_episode(&store, filler);
     }
     // No shared token with any row — not even a single CJK character: the
     // keyword scorer keeps single-character tokens, so "卡" would match "显卡"
@@ -157,6 +191,86 @@ async fn paraphrase_is_found_by_the_semantic_pass() {
     yunxi_base::embedding::shutdown_worker().await;
 }
 
+#[test]
+fn short_episode_vectors_are_ignored_by_semantic_coverage() {
+    let temp = tempfile::tempdir().unwrap();
+    let store = store_with(&AppConfig::default(), &temp);
+    let short_content = "短期上下文不应进入长期向量语料";
+    let long_content = "已提交的长期经历可以进入向量语料";
+    let short_id = insert_episode(&store, short_content);
+    let long_id = insert_long_episode(&store, long_content);
+    insert_embedding(&store, short_id, short_content, "test-model");
+    insert_embedding(&store, long_id, long_content, "test-model");
+
+    // The historical short-term vector is intentionally retained, but it is
+    // outside the corpus. Only the materialized committed long-term row is
+    // counted as covered.
+    assert_eq!(store.embedding_coverage("test-model").unwrap(), (1, 0));
+    assert_eq!(
+        store
+            .data_conn()
+            .unwrap()
+            .query_row(
+                "SELECT COUNT(*) FROM memory_embeddings WHERE kind='episode'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap(),
+        2
+    );
+}
+
+#[tokio::test]
+async fn backfill_only_embeds_materialized_long_term_episodes() {
+    if !runtime_available() {
+        return;
+    }
+    let temp = tempfile::tempdir().unwrap();
+    let mut config = AppConfig::default();
+    config.embedding.backend = EmbeddingBackend::Local;
+    let store = store_with(&config, &temp);
+    let short_id = insert_episode(&store, "短期日记不得回填长期向量");
+    let long_id = insert_long_episode(&store, "已提交长期日记应被回填");
+    let embedder = yunxi_base::embedding::Embedder::from_config(&config).unwrap();
+
+    assert_eq!(
+        store
+            .backfill_embeddings(embedder.model_id())
+            .await
+            .unwrap(),
+        1
+    );
+    let conn = store.data_conn().unwrap();
+    assert_eq!(
+        conn.query_row(
+            "SELECT COUNT(*) FROM memory_embeddings WHERE kind='episode'",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .unwrap(),
+        1
+    );
+    assert_eq!(
+        conn.query_row(
+            "SELECT COUNT(*) FROM memory_embeddings WHERE kind='episode' AND id=?1",
+            [long_id],
+            |row| row.get::<_, i64>(0),
+        )
+        .unwrap(),
+        1
+    );
+    assert_eq!(
+        conn.query_row(
+            "SELECT COUNT(*) FROM memory_embeddings WHERE kind='episode' AND id=?1",
+            [short_id],
+            |row| row.get::<_, i64>(0),
+        )
+        .unwrap(),
+        0
+    );
+    yunxi_base::embedding::shutdown_worker().await;
+}
+
 /// 量尺:用真实语料 + LLM 改写查询对比纯关键词与融合的 hit@3。
 /// `YUNXI_EMBED_EVAL_DIR` 指向含 `memory.jsonl`(`{"id","text"}`)与
 /// `memory-q.jsonl`(`{"q","expect":[id]}`)的目录。
@@ -183,7 +297,7 @@ async fn eval_real_corpus() {
     for line in corpus.lines().filter(|l| !l.trim().is_empty()) {
         let row: serde_json::Value = serde_json::from_str(line).unwrap();
         let text = row["text"].as_str().unwrap();
-        let rowid = insert_episode(&store, text);
+        let rowid = insert_long_episode(&store, text);
         id_map.insert(row["id"].as_str().unwrap().to_string(), rowid);
     }
     // Fill every vector first so the comparison measures ranking, not backlog.

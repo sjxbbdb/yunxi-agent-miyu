@@ -256,7 +256,14 @@ impl MemoryStore {
         let status_filter = if kind == MemoryKind::Fact {
             "status!='forgotten' AND truth_status!='rejected'"
         } else {
-            "status!='forgotten'"
+            // `long_term` is the materialized committed boundary for episodes:
+            // the organizer writes it only after admission and records the
+            // candidate -> committed audit event for the source short diary.
+            // Keeping this gate on the episode row also preserves legacy rows
+            // migrated with the long-term default, while excluding short,
+            // candidate, rejected, and expired rows (and any vectors they may
+            // have left behind). G3-04 owns stale-vector cleanup.
+            "status!='forgotten' AND retention='long_term'"
         };
         let access_filter = if self.access.principal_key().is_some() {
             " AND (visibility='public' OR (visibility='principal' AND owner_principal=?1))"
