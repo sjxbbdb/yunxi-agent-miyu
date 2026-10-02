@@ -205,6 +205,21 @@ fn validate_source(kind: &str, reference: &str) -> Result<()> {
     Ok(())
 }
 
+/// A confirmed profile claim must be backed by an explicit user or operator
+/// action. Conversation/model output may only create inferred claims; it must
+/// never be able to promote one to confirmed through an upsert.
+fn validate_profile_provenance(certainty: ProfileClaimCertainty, source_kind: &str) -> Result<()> {
+    if certainty == ProfileClaimCertainty::Confirmed
+        && !matches!(
+            source_kind,
+            "user_edit" | "user_confirmation" | "manual_import"
+        )
+    {
+        bail!("confirmed profile claims require an explicit user/manual source");
+    }
+    Ok(())
+}
+
 fn validate_timestamp(field: &str, value: &str) -> Result<()> {
     validate_text(field, value, MAX_TIMESTAMP_CHARS, true)
 }
@@ -217,12 +232,21 @@ fn validate_owner_scope(value: &str) -> Result<()> {
     Ok(())
 }
 
+fn validate_persona_scope(value: &str) -> Result<()> {
+    validate_text("persona_scope", value, 128, true)?;
+    if value.trim().is_empty() {
+        bail!("persona_scope must contain non-whitespace characters");
+    }
+    Ok(())
+}
+
 fn validate_profile_claim(claim: &ProfileClaim) -> Result<()> {
     validate_text("claim_id", &claim.claim_id, 128, true)?;
     validate_owner_scope(&claim.owner_scope)?;
     validate_text("key", &claim.key, MAX_PROFILE_KEY_CHARS, true)?;
     validate_text("value", &claim.value, MAX_PROFILE_VALUE_CHARS, true)?;
     validate_source(&claim.source_kind, &claim.source_ref)?;
+    validate_profile_provenance(claim.certainty, &claim.source_kind)?;
     validate_timestamp("observed_at", &claim.observed_at)?;
     validate_timestamp("updated_at", &claim.updated_at)?;
     if claim.revision < 1 {
@@ -236,6 +260,7 @@ fn validate_new_profile_claim(claim: &NewProfileClaim) -> Result<()> {
     validate_text("key", &claim.key, MAX_PROFILE_KEY_CHARS, true)?;
     validate_text("value", &claim.value, MAX_PROFILE_VALUE_CHARS, true)?;
     validate_source(&claim.source_kind, &claim.source_ref)?;
+    validate_profile_provenance(claim.certainty, &claim.source_kind)?;
     validate_timestamp("observed_at", &claim.observed_at)?;
     validate_timestamp("updated_at", &claim.updated_at)?;
     if claim.revision < 1 {
@@ -245,7 +270,7 @@ fn validate_new_profile_claim(claim: &NewProfileClaim) -> Result<()> {
 }
 
 fn validate_relationship_event(event: &NewRelationshipEvent) -> Result<()> {
-    validate_text("persona_scope", &event.persona_scope, 128, true)?;
+    validate_persona_scope(&event.persona_scope)?;
     validate_text("event_kind", &event.event_kind, 128, true)?;
     validate_text(
         "summary",
@@ -346,11 +371,35 @@ impl ConversationDb {
     }
 
     pub fn profile_claim_by_id(&self, claim_id: &str) -> Result<Option<ProfileClaim>> {
+        // Internal migration/repair helper. User-facing callers must use the
+        // scope-aware variant below so a claim id cannot cross persona scopes.
+        validate_text("claim_id", claim_id, 128, true)?;
         let conn = self.conn.lock().unwrap();
         Ok(conn
             .query_row(
                 &format!("SELECT {PROFILE_CLAIM_COLUMNS} FROM profile_claims WHERE claim_id = ?1"),
                 params![claim_id],
+                map_profile_claim,
+            )
+            .optional()?)
+    }
+
+    /// Reads a claim only when both its identifier and owner scope match.
+    pub fn profile_claim_by_id_in_scope(
+        &self,
+        owner_scope: &str,
+        claim_id: &str,
+    ) -> Result<Option<ProfileClaim>> {
+        validate_owner_scope(owner_scope)?;
+        validate_text("claim_id", claim_id, 128, true)?;
+        let conn = self.conn.lock().unwrap();
+        Ok(conn
+            .query_row(
+                &format!(
+                    "SELECT {PROFILE_CLAIM_COLUMNS} FROM profile_claims
+                     WHERE claim_id = ?1 AND owner_scope = ?2"
+                ),
+                params![claim_id, owner_scope],
                 map_profile_claim,
             )
             .optional()?)
@@ -381,6 +430,8 @@ impl ConversationDb {
     }
 
     pub fn revoke_profile_claim(&self, claim_id: &str, updated_at: &str) -> Result<bool> {
+        // Internal migration/repair helper. User-facing callers must use the
+        // scope-aware variant below so revocation cannot cross persona scopes.
         validate_text("claim_id", claim_id, 128, true)?;
         validate_timestamp("updated_at", updated_at)?;
         let conn = self.conn.lock().unwrap();
@@ -388,6 +439,24 @@ impl ConversationDb {
             "UPDATE profile_claims SET status = 'revoked', updated_at = ?2
              WHERE claim_id = ?1 AND status != 'revoked'",
             params![claim_id, updated_at],
+        )? == 1)
+    }
+
+    /// Revokes a claim only when both its identifier and owner scope match.
+    pub fn revoke_profile_claim_in_scope(
+        &self,
+        owner_scope: &str,
+        claim_id: &str,
+        updated_at: &str,
+    ) -> Result<bool> {
+        validate_owner_scope(owner_scope)?;
+        validate_text("claim_id", claim_id, 128, true)?;
+        validate_timestamp("updated_at", updated_at)?;
+        let conn = self.conn.lock().unwrap();
+        Ok(conn.execute(
+            "UPDATE profile_claims SET status = 'revoked', updated_at = ?3
+             WHERE claim_id = ?1 AND owner_scope = ?2 AND status != 'revoked'",
+            params![claim_id, owner_scope, updated_at],
         )? == 1)
     }
 
@@ -428,6 +497,9 @@ impl ConversationDb {
     }
 
     pub fn relationship_event_by_id(&self, event_id: &str) -> Result<Option<RelationshipEvent>> {
+        // Internal migration/repair helper. User-facing callers must use the
+        // scope-aware variant below so event ids cannot cross persona scopes.
+        validate_text("event_id", event_id, 128, true)?;
         let conn = self.conn.lock().unwrap();
         Ok(conn
             .query_row(
@@ -440,12 +512,33 @@ impl ConversationDb {
             .optional()?)
     }
 
+    /// Reads an event only when both its identifier and persona scope match.
+    pub fn relationship_event_by_id_in_scope(
+        &self,
+        persona_scope: &str,
+        event_id: &str,
+    ) -> Result<Option<RelationshipEvent>> {
+        validate_persona_scope(persona_scope)?;
+        validate_text("event_id", event_id, 128, true)?;
+        let conn = self.conn.lock().unwrap();
+        Ok(conn
+            .query_row(
+                &format!(
+                    "SELECT {RELATIONSHIP_EVENT_COLUMNS} FROM relationship_events
+                     WHERE event_id = ?1 AND persona_scope = ?2"
+                ),
+                params![event_id, persona_scope],
+                map_relationship_event,
+            )
+            .optional()?)
+    }
+
     pub fn list_relationship_events(
         &self,
         persona_scope: &str,
         include_revoked: bool,
     ) -> Result<Vec<RelationshipEvent>> {
-        validate_text("persona_scope", persona_scope, 128, true)?;
+        validate_persona_scope(persona_scope)?;
         let conn = self.conn.lock().unwrap();
         let sql = if include_revoked {
             format!(
@@ -465,12 +558,30 @@ impl ConversationDb {
     }
 
     pub fn revoke_relationship_event(&self, event_id: &str) -> Result<bool> {
+        // Internal migration/repair helper. User-facing callers must use the
+        // scope-aware variant below so revocation cannot cross persona scopes.
         validate_text("event_id", event_id, 128, true)?;
         let conn = self.conn.lock().unwrap();
         Ok(conn.execute(
             "UPDATE relationship_events SET status = 'revoked'
              WHERE event_id = ?1 AND status != 'revoked'",
             params![event_id],
+        )? == 1)
+    }
+
+    /// Revokes an event only when both its identifier and persona scope match.
+    pub fn revoke_relationship_event_in_scope(
+        &self,
+        persona_scope: &str,
+        event_id: &str,
+    ) -> Result<bool> {
+        validate_persona_scope(persona_scope)?;
+        validate_text("event_id", event_id, 128, true)?;
+        let conn = self.conn.lock().unwrap();
+        Ok(conn.execute(
+            "UPDATE relationship_events SET status = 'revoked'
+             WHERE event_id = ?1 AND persona_scope = ?2 AND status != 'revoked'",
+            params![event_id, persona_scope],
         )? == 1)
     }
 }

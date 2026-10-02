@@ -135,3 +135,161 @@ fn profile_claim_owner_scope_rejects_whitespace_but_allows_global_empty_scope() 
     assert_eq!(global.owner_scope, "");
     assert_eq!(store.list_profile_claims("", false).unwrap(), vec![global]);
 }
+
+#[test]
+fn confirmed_claims_require_explicit_user_or_manual_provenance() {
+    let (_temp, store) = test_store();
+    for source_kind in ["conversation", "model", "inference"] {
+        let mut input = claim("persona-a", source_kind, ProfileClaimCertainty::Confirmed);
+        input.source_kind = source_kind.to_string();
+        assert!(store.insert_profile_claim(&input).is_err());
+    }
+
+    for source_kind in ["user_edit", "user_confirmation", "manual_import"] {
+        let mut input = claim("persona-a", source_kind, ProfileClaimCertainty::Confirmed);
+        input.source_kind = source_kind.to_string();
+        assert!(store.insert_profile_claim(&input).is_ok());
+    }
+
+    let mut inferred = claim("persona-a", "conversation", ProfileClaimCertainty::Inferred);
+    inferred.key = "inferred".into();
+    inferred.source_kind = "conversation".into();
+    let inserted = store.insert_profile_claim(&inferred).unwrap();
+    let mut forged = inserted.clone();
+    forged.certainty = ProfileClaimCertainty::Confirmed;
+    assert!(store.upsert_profile_claim(&forged).is_err());
+    assert_eq!(
+        store
+            .profile_claim_by_id_in_scope("persona-a", &inserted.claim_id)
+            .unwrap()
+            .unwrap()
+            .certainty,
+        ProfileClaimCertainty::Inferred
+    );
+}
+
+#[test]
+fn scope_aware_reads_and_revokes_never_cross_persona_boundaries() {
+    let (temp, store) = test_store();
+    let global = store
+        .insert_profile_claim(&claim("", "global", ProfileClaimCertainty::Confirmed))
+        .unwrap();
+    let claim_a = store
+        .insert_profile_claim(&claim("persona-a", "a", ProfileClaimCertainty::Inferred))
+        .unwrap();
+    let claim_b = store
+        .insert_profile_claim(&claim("persona-b", "b", ProfileClaimCertainty::Inferred))
+        .unwrap();
+    let event_a = store
+        .insert_relationship_event(&NewRelationshipEvent {
+            persona_scope: "persona-a".into(),
+            event_kind: "stage".into(),
+            summary: "a".into(),
+            payload: None,
+            observed_at: "2026-10-02T00:00:00Z".into(),
+            source_kind: "conversation".into(),
+            source_ref: "turn:a".into(),
+        })
+        .unwrap();
+    let event_b = store
+        .insert_relationship_event(&NewRelationshipEvent {
+            persona_scope: "persona-b".into(),
+            event_kind: "stage".into(),
+            summary: "b".into(),
+            payload: None,
+            observed_at: "2026-10-02T00:00:01Z".into(),
+            source_kind: "conversation".into(),
+            source_ref: "turn:b".into(),
+        })
+        .unwrap();
+
+    assert!(store
+        .profile_claim_by_id_in_scope("persona-b", &claim_a.claim_id)
+        .unwrap()
+        .is_none());
+    assert!(store
+        .relationship_event_by_id_in_scope("persona-b", &event_a.event_id)
+        .unwrap()
+        .is_none());
+    assert!(store
+        .profile_claim_by_id_in_scope("persona-a", &global.claim_id)
+        .unwrap()
+        .is_none());
+    assert_eq!(
+        store
+            .profile_claim_by_id_in_scope("", &global.claim_id)
+            .unwrap(),
+        Some(global.clone())
+    );
+
+    assert!(!store
+        .revoke_profile_claim_in_scope("persona-b", &claim_a.claim_id, "2026-10-02T01:00:00Z")
+        .unwrap());
+    assert!(!store
+        .revoke_relationship_event_in_scope("persona-b", &event_a.event_id)
+        .unwrap());
+    assert_eq!(
+        store.list_profile_claims("persona-a", false).unwrap(),
+        vec![claim_a.clone()]
+    );
+    assert_eq!(
+        store.list_relationship_events("persona-a", false).unwrap(),
+        vec![event_a.clone()]
+    );
+
+    assert!(store
+        .revoke_profile_claim_in_scope("persona-a", &claim_a.claim_id, "2026-10-02T01:00:00Z")
+        .unwrap());
+    assert!(store
+        .revoke_relationship_event_in_scope("persona-a", &event_a.event_id)
+        .unwrap());
+    assert!(store
+        .list_profile_claims("persona-a", false)
+        .unwrap()
+        .is_empty());
+    assert!(store
+        .list_relationship_events("persona-a", false)
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        store.list_profile_claims("persona-a", true).unwrap().len(),
+        1
+    );
+    assert_eq!(
+        store
+            .list_relationship_events("persona-a", true)
+            .unwrap()
+            .len(),
+        1
+    );
+
+    let reopened = StateStore::new(&test_paths(temp.path())).unwrap();
+    assert_eq!(
+        reopened
+            .profile_claim_by_id_in_scope("persona-a", &claim_a.claim_id)
+            .unwrap()
+            .unwrap()
+            .status,
+        ProfileClaimStatus::Revoked
+    );
+    assert_eq!(
+        reopened
+            .relationship_event_by_id_in_scope("persona-a", &event_a.event_id)
+            .unwrap()
+            .unwrap()
+            .status,
+        RelationshipEventStatus::Revoked
+    );
+    assert_eq!(
+        reopened
+            .profile_claim_by_id_in_scope("persona-b", &claim_b.claim_id)
+            .unwrap(),
+        Some(claim_b)
+    );
+    assert_eq!(
+        reopened
+            .relationship_event_by_id_in_scope("persona-b", &event_b.event_id)
+            .unwrap(),
+        Some(event_b)
+    );
+}

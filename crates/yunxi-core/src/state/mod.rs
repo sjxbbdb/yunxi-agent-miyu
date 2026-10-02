@@ -341,14 +341,24 @@ impl StateStore {
     }
 
     /// Structured profile metadata facade. This does not alter `profile.md`
-    /// or feed the memory/prompt stores; lifecycle integration is deferred to
-    /// G2-02/G2-03.
+    /// or feed the memory/prompt stores. Scope-aware reads and revocations are
+    /// the user-facing entry points; the unscoped methods remain only for
+    /// internal migration/repair compatibility.
     pub fn insert_profile_claim(&self, input: &NewProfileClaim) -> Result<ProfileClaim> {
         self.conv_db.insert_profile_claim(input)
     }
 
     pub fn upsert_profile_claim(&self, claim: &ProfileClaim) -> Result<()> {
         self.conv_db.upsert_profile_claim(claim)
+    }
+
+    pub fn profile_claim_by_id_in_scope(
+        &self,
+        owner_scope: &str,
+        claim_id: &str,
+    ) -> Result<Option<ProfileClaim>> {
+        self.conv_db
+            .profile_claim_by_id_in_scope(owner_scope, claim_id)
     }
 
     pub fn list_profile_claims(
@@ -362,6 +372,16 @@ impl StateStore {
 
     pub fn revoke_profile_claim(&self, claim_id: &str, updated_at: &str) -> Result<bool> {
         self.conv_db.revoke_profile_claim(claim_id, updated_at)
+    }
+
+    pub fn revoke_profile_claim_in_scope(
+        &self,
+        owner_scope: &str,
+        claim_id: &str,
+        updated_at: &str,
+    ) -> Result<bool> {
+        self.conv_db
+            .revoke_profile_claim_in_scope(owner_scope, claim_id, updated_at)
     }
 
     pub fn insert_relationship_event(
@@ -380,8 +400,26 @@ impl StateStore {
             .list_relationship_events(persona_scope, include_revoked)
     }
 
+    pub fn relationship_event_by_id_in_scope(
+        &self,
+        persona_scope: &str,
+        event_id: &str,
+    ) -> Result<Option<RelationshipEvent>> {
+        self.conv_db
+            .relationship_event_by_id_in_scope(persona_scope, event_id)
+    }
+
     pub fn revoke_relationship_event(&self, event_id: &str) -> Result<bool> {
         self.conv_db.revoke_relationship_event(event_id)
+    }
+
+    pub fn revoke_relationship_event_in_scope(
+        &self,
+        persona_scope: &str,
+        event_id: &str,
+    ) -> Result<bool> {
+        self.conv_db
+            .revoke_relationship_event_in_scope(persona_scope, event_id)
     }
 
     #[allow(dead_code)]
