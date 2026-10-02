@@ -163,6 +163,7 @@ fn persona_scope_rename_migrates_sessions_bindings_and_affection() {
     store
         .set_persona_current_session("old", &session.session_id)
         .unwrap();
+    store.set_repl_session("old", &session.session_id).unwrap();
     let scope = PlatformPluginScopeKey {
         plugin_id: "real_context".to_string(),
         ..plugin_scope("20000")
@@ -173,6 +174,30 @@ fn persona_scope_rename_migrates_sessions_bindings_and_affection() {
             "affection_profile:old",
             &serde_json::json!({"score": 42}),
         )
+        .unwrap();
+    let claim = store
+        .insert_profile_claim(&NewProfileClaim {
+            owner_scope: "old".into(),
+            key: "drink".into(),
+            value: "tea".into(),
+            certainty: ProfileClaimCertainty::Confirmed,
+            source_kind: "user_edit".into(),
+            source_ref: "profile-form:old".into(),
+            observed_at: "2026-10-02T00:00:00Z".into(),
+            updated_at: "2026-10-02T00:00:00Z".into(),
+            revision: 1,
+        })
+        .unwrap();
+    let event = store
+        .insert_relationship_event(&NewRelationshipEvent {
+            persona_scope: "old".into(),
+            event_kind: "stage".into(),
+            summary: "first contact".into(),
+            payload: None,
+            observed_at: "2026-10-02T00:00:00Z".into(),
+            source_kind: "conversation".into(),
+            source_ref: "turn:old".into(),
+        })
         .unwrap();
 
     store.rename_persona_scope("old", "new").unwrap();
@@ -196,8 +221,9 @@ fn persona_scope_rename_migrates_sessions_bindings_and_affection() {
     );
     assert_eq!(
         store.persona_current_session("new").unwrap(),
-        Some(session.session_id)
+        Some(session.session_id.clone())
     );
+    assert_eq!(store.repl_session("new").unwrap(), Some(session.session_id));
     assert!(store
         .plugin_get_json::<serde_json::Value>(&scope, "affection_profile:old")
         .unwrap()
@@ -209,6 +235,200 @@ fn persona_scope_rename_migrates_sessions_bindings_and_affection() {
             .unwrap()["score"],
         42
     );
+    assert_eq!(
+        store.list_profile_claims("new", false).unwrap(),
+        vec![ProfileClaim {
+            owner_scope: "new".into(),
+            ..claim
+        }]
+    );
+    assert_eq!(
+        store.list_relationship_events("new", false).unwrap(),
+        vec![RelationshipEvent {
+            persona_scope: "new".into(),
+            ..event
+        }]
+    );
+}
+
+#[test]
+fn persona_scope_rename_rejects_profile_or_relationship_target_and_keeps_old_data() {
+    for target_kind in ["profile", "relationship"] {
+        let (_temp, store) = test_store();
+        let session = store
+            .create_session("old", "old session", "user", None)
+            .unwrap();
+        store
+            .set_persona_current_session("old", &session.session_id)
+            .unwrap();
+        store.set_repl_session("old", &session.session_id).unwrap();
+        let scope = PlatformPluginScopeKey {
+            plugin_id: "real_context".to_string(),
+            ..plugin_scope("rename-conflict")
+        };
+        store
+            .plugin_put_json(
+                &scope,
+                "affection_profile:old",
+                &serde_json::json!({"score": 7}),
+            )
+            .unwrap();
+        let old_claim = store
+            .insert_profile_claim(&NewProfileClaim {
+                owner_scope: "old".into(),
+                key: "old-key".into(),
+                value: "old-value".into(),
+                certainty: ProfileClaimCertainty::Confirmed,
+                source_kind: "user_edit".into(),
+                source_ref: "profile-form:old".into(),
+                observed_at: "2026-10-02T00:00:00Z".into(),
+                updated_at: "2026-10-02T00:00:00Z".into(),
+                revision: 1,
+            })
+            .unwrap();
+        let old_event = store
+            .insert_relationship_event(&NewRelationshipEvent {
+                persona_scope: "old".into(),
+                event_kind: "stage".into(),
+                summary: "old event".into(),
+                payload: None,
+                observed_at: "2026-10-02T00:00:00Z".into(),
+                source_kind: "conversation".into(),
+                source_ref: "turn:old".into(),
+            })
+            .unwrap();
+        if target_kind == "profile" {
+            store
+                .insert_profile_claim(&NewProfileClaim {
+                    owner_scope: "new".into(),
+                    key: "target".into(),
+                    value: "occupied".into(),
+                    certainty: ProfileClaimCertainty::Confirmed,
+                    source_kind: "user_edit".into(),
+                    source_ref: "profile-form:new".into(),
+                    observed_at: "2026-10-02T00:00:00Z".into(),
+                    updated_at: "2026-10-02T00:00:00Z".into(),
+                    revision: 1,
+                })
+                .unwrap();
+        } else {
+            store
+                .insert_relationship_event(&NewRelationshipEvent {
+                    persona_scope: "new".into(),
+                    event_kind: "target".into(),
+                    summary: "occupied".into(),
+                    payload: None,
+                    observed_at: "2026-10-02T00:00:00Z".into(),
+                    source_kind: "conversation".into(),
+                    source_ref: "turn:new".into(),
+                })
+                .unwrap();
+        }
+
+        let error = store.rename_persona_scope("old", "new").unwrap_err();
+        assert!(error.to_string().contains(target_kind));
+        assert_eq!(
+            store
+                .session_record(&session.session_id)
+                .unwrap()
+                .unwrap()
+                .persona,
+            "old"
+        );
+        assert_eq!(
+            store.persona_current_session("old").unwrap(),
+            Some(session.session_id.clone())
+        );
+        assert_eq!(store.repl_session("old").unwrap(), Some(session.session_id));
+        assert_eq!(
+            store.list_profile_claims("old", false).unwrap(),
+            vec![old_claim]
+        );
+        assert_eq!(
+            store.list_relationship_events("old", false).unwrap(),
+            vec![old_event]
+        );
+        assert!(store
+            .plugin_get_json::<serde_json::Value>(&scope, "affection_profile:old")
+            .unwrap()
+            .is_some());
+    }
+}
+
+#[test]
+fn persona_scope_delete_cleans_scoped_metadata_but_keeps_global_profile() {
+    let (_temp, store) = test_store();
+    let session = store
+        .create_session("old", "old session", "user", None)
+        .unwrap();
+    store
+        .set_persona_current_session("old", &session.session_id)
+        .unwrap();
+    store.set_repl_session("old", &session.session_id).unwrap();
+    let scope = PlatformPluginScopeKey {
+        plugin_id: "real_context".to_string(),
+        ..plugin_scope("delete-scope")
+    };
+    store
+        .plugin_put_json(
+            &scope,
+            "affection_profile:old",
+            &serde_json::json!({"score": 9}),
+        )
+        .unwrap();
+    let global = store
+        .insert_profile_claim(&NewProfileClaim {
+            owner_scope: String::new(),
+            key: "global".into(),
+            value: "keep".into(),
+            certainty: ProfileClaimCertainty::Confirmed,
+            source_kind: "user_edit".into(),
+            source_ref: "profile-form:global".into(),
+            observed_at: "2026-10-02T00:00:00Z".into(),
+            updated_at: "2026-10-02T00:00:00Z".into(),
+            revision: 1,
+        })
+        .unwrap();
+    store
+        .insert_profile_claim(&NewProfileClaim {
+            owner_scope: "old".into(),
+            key: "scoped".into(),
+            value: "remove".into(),
+            certainty: ProfileClaimCertainty::Inferred,
+            source_kind: "conversation".into(),
+            source_ref: "turn:old".into(),
+            observed_at: "2026-10-02T00:00:00Z".into(),
+            updated_at: "2026-10-02T00:00:00Z".into(),
+            revision: 1,
+        })
+        .unwrap();
+    store
+        .insert_relationship_event(&NewRelationshipEvent {
+            persona_scope: "old".into(),
+            event_kind: "stage".into(),
+            summary: "remove".into(),
+            payload: None,
+            observed_at: "2026-10-02T00:00:00Z".into(),
+            source_kind: "conversation".into(),
+            source_ref: "turn:old".into(),
+        })
+        .unwrap();
+
+    store.delete_persona_scope("old").unwrap();
+
+    assert!(store.session_record(&session.session_id).unwrap().is_none());
+    assert!(store.persona_current_session("old").unwrap().is_none());
+    assert!(store.repl_session("old").unwrap().is_none());
+    assert!(store.list_profile_claims("old", true).unwrap().is_empty());
+    assert!(store
+        .list_relationship_events("old", true)
+        .unwrap()
+        .is_empty());
+    assert!(store
+        .plugin_get_json::<serde_json::Value>(&scope, "affection_profile:old")
+        .unwrap()
+        .is_none());
+    assert_eq!(store.list_profile_claims("", false).unwrap(), vec![global]);
 }
 
 #[test]

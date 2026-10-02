@@ -156,15 +156,16 @@ impl ConversationDb {
         if target_exists {
             bail!("persona scope already has sessions: {new_scope}");
         }
-        let old_key = format!("current_session_persona:{old_scope}");
-        let new_key = format!("current_session_persona:{new_scope}");
-        let target_pointer_exists: bool = tx.query_row(
-            "SELECT EXISTS(SELECT 1 FROM app_state WHERE key = ?1)",
-            params![new_key],
-            |row| row.get(0),
-        )?;
-        if target_pointer_exists {
-            bail!("persona scope already has a current-session pointer: {new_scope}");
+        for prefix in [CURRENT_SESSION_POINTER, REPL_SESSION_POINTER] {
+            let target_key = format!("{prefix}:{new_scope}");
+            let target_pointer_exists: bool = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM app_state WHERE key = ?1)",
+                params![target_key],
+                |row| row.get(0),
+            )?;
+            if target_pointer_exists {
+                bail!("persona scope already has a {prefix} pointer: {new_scope}");
+            }
         }
         let old_affection_key = format!("affection_profile:{old_scope}");
         let new_affection_key = format!("affection_profile:{new_scope}");
@@ -179,6 +180,22 @@ impl ConversationDb {
         if target_affection_exists {
             bail!("persona scope already has affection state: {new_scope}");
         }
+        let target_profile_exists: bool = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM profile_claims WHERE owner_scope = ?1)",
+            params![new_scope],
+            |row| row.get(0),
+        )?;
+        if target_profile_exists {
+            bail!("persona scope already has profile claims: {new_scope}");
+        }
+        let target_relationship_exists: bool = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM relationship_events WHERE persona_scope = ?1)",
+            params![new_scope],
+            |row| row.get(0),
+        )?;
+        if target_relationship_exists {
+            bail!("persona scope already has relationship events: {new_scope}");
+        }
 
         tx.execute(
             "UPDATE platform_session_bindings SET persona = ?2 WHERE persona = ?1",
@@ -188,14 +205,26 @@ impl ConversationDb {
             "UPDATE sessions SET persona = ?2 WHERE persona = ?1",
             params![old_scope, new_scope],
         )?;
-        tx.execute(
-            "UPDATE app_state SET key = ?2 WHERE key = ?1",
-            params![old_key, new_key],
-        )?;
+        for prefix in [CURRENT_SESSION_POINTER, REPL_SESSION_POINTER] {
+            let old_key = format!("{prefix}:{old_scope}");
+            let new_key = format!("{prefix}:{new_scope}");
+            tx.execute(
+                "UPDATE app_state SET key = ?2 WHERE key = ?1",
+                params![old_key, new_key],
+            )?;
+        }
         tx.execute(
             "UPDATE platform_plugin_kv SET key = ?2
               WHERE plugin_id = 'real_context' AND key = ?1",
             params![old_affection_key, new_affection_key],
+        )?;
+        tx.execute(
+            "UPDATE profile_claims SET owner_scope = ?2 WHERE owner_scope = ?1",
+            params![old_scope, new_scope],
+        )?;
+        tx.execute(
+            "UPDATE relationship_events SET persona_scope = ?2 WHERE persona_scope = ?1",
+            params![old_scope, new_scope],
         )?;
         tx.commit()?;
         Ok(())
@@ -207,12 +236,24 @@ impl ConversationDb {
         tx.execute("DELETE FROM sessions WHERE persona = ?1", params![scope])?;
         tx.execute(
             "DELETE FROM app_state WHERE key = ?1",
-            params![format!("current_session_persona:{scope}")],
+            params![format!("{CURRENT_SESSION_POINTER}:{scope}")],
+        )?;
+        tx.execute(
+            "DELETE FROM app_state WHERE key = ?1",
+            params![format!("{REPL_SESSION_POINTER}:{scope}")],
         )?;
         tx.execute(
             "DELETE FROM platform_plugin_kv
               WHERE plugin_id = 'real_context' AND key = ?1",
             params![format!("affection_profile:{scope}")],
+        )?;
+        tx.execute(
+            "DELETE FROM profile_claims WHERE owner_scope = ?1",
+            params![scope],
+        )?;
+        tx.execute(
+            "DELETE FROM relationship_events WHERE persona_scope = ?1",
+            params![scope],
         )?;
         tx.commit()?;
         Ok(())
