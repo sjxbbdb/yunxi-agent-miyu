@@ -81,6 +81,26 @@ Laya boundary changed in G3-04.
   `data.personas/*/memory/memory.db` and `personas/*/memory/memory.db` before
   atomic install.
 
+## Residual audit: compact and evicted context
+
+The current compact/evicted stores do not carry a stable `fact_id` or
+`episode_id` provenance edge. `EvictedTurn` keeps a conversation `source_id`
+and text in the state database, while compact summaries and transcript extras
+keep turn ids or copied text. The memory data database has no cross-database
+join to those rows. Therefore a single-memory deletion cannot safely scrub an
+already archived turn or summary: text matching could remove unrelated content,
+and the existing tombstone cannot identify the source row. `reset_all` and
+session reset still clear their scoped evicted rows, but the per-memory delete
+barrier remains intentionally unimplemented until a future provenance schema
+adds the stable mapping.
+
+Audit anchors: `crates/yunxi-base/src/memory_types.rs` (`EvictedTurn`),
+`crates/yunxi-engine/src/agent/context.rs` (evicted writes),
+`crates/yunxi-core/src/state/conversation_db/history.rs` (compact summaries),
+and `crates/yunxi-core/src/state/conversation_db/compact_extras.rs` (transcript
+extras). This is a documented G3 residual, not a claim of full compact/evicted
+deletion recall isolation.
+
 ## Verification commands
 
 The authoritative Rust run used a disposable WSL Ubuntu checkout on ext4. The
