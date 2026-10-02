@@ -59,7 +59,7 @@ TIERS = [
              "workspace", "sandbox"]),
     ("配置", ["config", "host_ports", "provider_catalog", "models_cache", "embedding"]),
     ("存储与协议", ["alarm", "ledger", "state", "llm"]),
-    ("子系统", ["memory", "skills", "persona_hint", "companion_context"]),
+    ("子系统", ["memory", "skills", "persona_hint", "companion_context", "persona_source"]),
     ("传输", ["ipc", "args", "slash_commands"]),
     ("工具与引擎", ["tools", "voice", "transfer", "agent", "default_kb"]),
     ("场所与展示", ["platforms", "runtime", "web", "daemon", "render"]),

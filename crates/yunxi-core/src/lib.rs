@@ -10,6 +10,7 @@ pub mod ledger;
 pub mod llm;
 pub mod memory;
 pub mod persona_hint;
+pub mod persona_source;
 pub mod skills;
 pub mod slash_commands;
 pub mod state;
