@@ -52,6 +52,7 @@ pub(in crate::agent) struct CoreTurnSnapshot {
 /// 回合里 `take()` 或读一次;daemon 每回合新建 Agent,REPL 直连形态跨回合复用时由
 /// setter 覆盖。
 pub(in crate::agent) struct TurnInput {
+    pub(in crate::agent) companion_context: Option<yunxi_core::companion_context::CompanionContext>,
     /// Raw user input snapshot taken before platform plugins wrapped the turn
     /// content (instruction boilerplate, group history, …). The memory diary
     /// records this instead of the wrapped prompt — the minimal C10 "记忆只读

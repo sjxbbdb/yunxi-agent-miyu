@@ -103,6 +103,16 @@ pub(crate) fn push_block(prompt: &mut String, block: &str) {
     prompt.push_str(block);
 }
 
+pub(in crate::agent) fn with_companion_context(
+    mut system_prompt: String,
+    context: Option<&yunxi_core::companion_context::CompanionContext>,
+) -> String {
+    if let Some(block) = context.and_then(|context| context.to_prompt_block()) {
+        push_block(&mut system_prompt, &block);
+    }
+    system_prompt
+}
+
 pub(in crate::agent) fn with_host_environment(
     mut system_prompt: String,
     audience: PromptAudience,

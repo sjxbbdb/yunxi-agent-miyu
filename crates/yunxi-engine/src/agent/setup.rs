@@ -171,6 +171,7 @@ impl Agent {
             client,
             system_prompt,
             input: TurnInput {
+                companion_context: None,
                 memory_content: None,
                 suppress_session_history: false,
                 runtime_system_context: Vec::new(),
@@ -397,7 +398,7 @@ impl Agent {
     }
 
     fn assemble_base_system_prompt(&self, persona_prompt: String) -> String {
-        match &self.input.system_prompt_override {
+        let prompt = match &self.input.system_prompt_override {
             Some(override_prompt) => with_memory_preamble(
                 with_runtime_system_context(
                     override_prompt.clone(),
@@ -419,7 +420,8 @@ impl Agent {
                 // 配置,清单关着记忆的人格第一回合起前言又回来了)。
                 self.core.subsystems.memory,
             ),
-        }
+        };
+        with_companion_context(prompt, self.input.companion_context.as_ref())
     }
 
     /// 程序驱动 CLI 的整体替换提示词;`prepare_for_turn` 之前调用才生效。
@@ -439,6 +441,16 @@ impl Agent {
             .map(|item| item.trim().to_string())
             .filter(|item| !item.is_empty())
             .collect();
+        self.refresh_system_prompt()
+    }
+
+    /// Set the optional companion context used by the system prompt.
+    /// Unsupported values are treated as an explicit clear.
+    pub fn set_companion_context(
+        &mut self,
+        context: Option<yunxi_core::companion_context::CompanionContext>,
+    ) -> Result<()> {
+        self.input.companion_context = context.filter(|context| context.is_supported());
         self.refresh_system_prompt()
     }
 

@@ -322,6 +322,46 @@ fn runtime_system_context_refreshes_the_effective_prompt_immediately() {
 }
 
 #[test]
+fn companion_context_is_optional_versioned_and_byte_stable_when_cleared() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = test_paths(temp.path());
+    let config = AppConfig::default();
+    let state = StateStore::new(&paths).unwrap();
+    let client =
+        OpenAiCompatibleClient::new(config.provider(None).unwrap(), &config, &paths).unwrap();
+    let mut agent = Agent::new(
+        config,
+        &paths,
+        state,
+        client,
+        ToolRegistry::new(),
+        PersonaLane::Active,
+    )
+    .unwrap();
+    let baseline = agent.system_prompt.clone();
+
+    let context = yunxi_core::companion_context::CompanionContext::new("g1-test", "owner")
+        .with_relationship_stage("初识")
+        .with_stable_tone("温和")
+        .with_boundaries(["不虚构未确认的记忆"])
+        .with_response_preference("先给结论，再给必要细节")
+        .with_current_companion_state("正在建立上下文");
+    agent.set_companion_context(Some(context)).unwrap();
+    assert!(agent.system_prompt.ends_with("</companion-context>"));
+    assert!(agent
+        .system_prompt
+        .contains("<relationship-stage>初识</relationship-stage>"));
+    assert!(agent
+        .system_prompt
+        .contains("<boundary>不虚构未确认的记忆</boundary>"));
+
+    let mut unsupported = yunxi_core::companion_context::CompanionContext::new("g1-test", "owner");
+    unsupported.version = 0;
+    agent.set_companion_context(Some(unsupported)).unwrap();
+    assert_eq!(agent.system_prompt, baseline);
+}
+
+#[test]
 fn nothing_after_the_leading_prompt_may_carry_the_system_role() {
     // Provider chat templates gather every `system` message to the front of
     // the rendered prompt, so one appearing mid-conversation shifts that

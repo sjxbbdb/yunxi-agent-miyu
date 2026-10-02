@@ -4,6 +4,7 @@
 
 pub mod alarm;
 pub mod args;
+pub mod companion_context;
 pub mod ipc;
 pub mod ledger;
 pub mod llm;
