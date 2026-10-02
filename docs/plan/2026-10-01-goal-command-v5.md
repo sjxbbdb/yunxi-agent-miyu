@@ -17,7 +17,7 @@
 
 ## 2. 可复制的长期 Goal Command
 
-下面代码块是当前活动 goal 的详细执行合同；活动状态由 Codex goal 跟踪，阶段细节、证据和残余风险以本文为准。必须从 `CURRENT_STAGE=G0` 开始，不得直接跳到 G1 或 Laya。
+下面代码块是当前活动 goal 的详细执行合同；活动状态由 Codex goal 跟踪，阶段细节、证据和残余风险以本文为准。合同最初从 `CURRENT_STAGE=G0` 激活；阶段推进必须以退出审计和当前状态对账为准，不得跳过未退出阶段。
 
 ```text
 GOAL_ID
@@ -48,12 +48,12 @@ OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
 
 CURRENT_STAGE
-  G0
+  G3-05（G0/G1/G2 已按退出审计推进；当前仍在 G3 provenance 补齐）
 
 CURRENT_AUTHORIZATION
-  当前只允许 G0：基线冻结、架构审计、兼容回归、证据补齐和必要的既有 bug 修复。
-  G0 未退出前禁止实现 G1 CompanionContext、G2 profile 迁移、G3 admission 业务、G4 KB 业务扩展、G5 Laya provider、G6 自动总结、G7 新终端路由和 G8 新 TUI。
-  G0 可以盘点 DecisionPort seam、补协议/边界测试、修复已复现的既有 bug；不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
+  G0 已退出，G1/G2 已有实现与退出证据；当前只允许按状态对账文档继续执行 G3-05 的 provenance 最小切片。
+  G3-05 未退出前禁止推进 G4 KB 业务扩展、G5 Laya provider、G6 自动总结、G7 新终端路由和 G8 新 TUI。
+  G3-05 可以补 provenance 的协议/边界测试和已复现 bug；不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
 
 NON_NEGOTIABLE_PRODUCT_INVARIANTS
   N1. fish capture、daemon、IPC、TUI、session/state、prompt/cache、tool/host、MCP/Skills 各只有一套权威运行时；新模块只能挂既有 seam。
@@ -139,7 +139,7 @@ EVIDENCE_SCHEMA
 STOP_RULES
   prompt/cache 字节、隐私、权限、迁移、回放、跨域删除、故障恢复、测试或 push 失败，立即停在当前 slice；修复后重新 failing-test→verify→fault/replay→review。
   行号/trait/调用方向与施工单不一致，停止并让 Lead 重定位；不要猜测文件名或创建第二实现。
-  G0 未退出不得实现 G1-G9；G0 退出后停在 G1 门口，等待用户明确授权。未达到完整长期目标时保持 goal active，不用“当前阶段通过”宣称产品完成。
+  任一阶段未退出不得实现其后续阶段；G3-05 退出前停在 G3-05，未达到完整长期目标时保持 goal active，不用“当前阶段通过”宣称产品完成。
 ```
 
 ## 3. 当前交接基线（供新模型压缩后恢复）
@@ -155,5 +155,5 @@ STOP_RULES
 
 1. 用户删除旧 goal 后，将本文件 `GOAL_COMMAND` 原样作为新 goal objective。
 2. 新模型第一轮只读 `AGENTS.md`、本文、evidence index、当前 `git status/log/remote`，不得直接写 G1 代码。
-3. 新模型先恢复 G0 状态表和未决风险，再向用户报告“当前阶段、已证据、下一最小 slice、预计验收命令”，之后才派 6.1-sol worker。
+3. 新模型先恢复当前阶段状态表和未决风险，再向用户报告“当前阶段、已证据、下一最小 slice、预计验收命令”，之后才派 6.1-sol worker。
 4. 若 worker 没有按施工单返回文件/函数/测试/清理/commit/push 证据，Lead 不得采纳其“完成”结论。

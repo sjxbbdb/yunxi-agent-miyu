@@ -150,7 +150,7 @@ NEXT_G0
 
 ## 3. 阶段任务与执行边界
 
-### G0：基线冻结与架构审计（当前阶段）
+### G0：基线冻结与架构审计（已完成的历史基线阶段）
 
 **只读为主，不改变业务行为。**本阶段只允许修复审计发现的既有兼容性回归；不得借机开始 G1。
 
@@ -362,10 +362,10 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 
 | 阶段 | 状态 | 下一步 |
 | --- | --- | --- |
-| G0 基线审计 | 进行中（基线测试已全绿；actor 会话 reset 隔离已修复，入口调用关系与隐私审计仍待收口） | 完成逐项入口/调用/测试映射、公开文件隐私扫描、成员 transfer 策略和 Arch/macOS 缺口记录 |
-| G1 CompanionContext | 未开始 | G0 通过后做最小垂直切片 |
-| G2 Profile/关系 | 未开始 | G1 通过后追加迁移 |
-| G3 分层记忆 | 未开始 | G2 通过后做 admission |
+| G0 基线审计 | 已退出（见 `2026-10-02-g0-exit-audit.md`；Arch/macOS 与部分故障注入仍未验证） | 仅维护残余风险，不重复基线劳动 |
+| G1 CompanionContext | 已实现并完成退出审计（见 `2026-10-02-g1-exit-audit.md`） | 保留 provider cache hit 与脱敏 request-shape 差异为未验证项 |
+| G2 Profile/关系 | 已实现并完成 schema、scope lifecycle、isolation 证据 | 保持 profile 非向量化，后续只修复已登记残余 |
+| G3 分层记忆 | 进行中：G3-01..04 已证据化，G3-05 provenance 正在补齐 | 完成 import/rollback/reset/并发与 shell 边界证据后再做 G3 退出审计 |
 | G4 独立知识库 | 未开始 | G3 边界验收后进行 |
 | G5 DecisionPort/Laya | 未开始（主线已固化，G0 不实现模型） | G3/G4 接口稳定后按 G5-00→G5-06 完成验证、shadow 和建议采纳 |
 | G6 陪伴/总结 | 未开始 | G1–G5 的保存入口稳定后 |
@@ -373,4 +373,5 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 | G8 TUI | 未开始 | 终端链路稳定后 |
 | G9 硬化发布 | 未开始 | 所有功能阶段完成后 |
 
-当前只允许执行 G0；不能用“能启动”替代阶段验收。
+当前允许继续执行 G3-05 的已登记最小切片；不能用“能启动”替代阶段验收。
+G4–G9 仍未完成，详见 [`2026-10-02-current-stage-status.md`](2026-10-02-current-stage-status.md)。
