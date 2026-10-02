@@ -35,12 +35,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 
 1. 补 provenance 在 concurrent delete/recall 的更强 overlap 语义上的决策
    或测试 seam；当前只证明了并发调用后的 convergence；
-2. 补齐剩余实际执行入口的 transcript guard 绑定（尤其是无 daemon 直连路径的
-   dev 子代理工具面），避免只在 Agent 主回合绑定；本轮 daemon IPC、直连 CLI
-   与直连 MCP 已完成并通过宿主编译/测试；
-3. 对 transcript `run_command` 的变量、命令替换、重定向、symlink/hardlink
-   和相对 `..` 语法做明确的 fail-closed 边界测试或实现；
-4. 只在这些证据通过后，才评估 G3-05 的阶段退出。
+2. 对 transcript `run_command` 的变量、命令替换、重定向、symlink/hardlink
+   和 `cd` 后相对路径语法做明确的 fail-closed 边界决策；当前 dev 子代理
+   前台 fresh registry 已绑定并有 WSL 回归覆盖，dev 面的 read/grep/glob
+   仍按既有设计不注册；
+3. 只在这些证据通过后，才评估 G3-05 的阶段退出。
 
 现有 read barrier 对未知 legacy carrier 默认拒绝；它对手工拼接的相对 shell
    路径尚未宣称覆盖。不得用“结构化 tool-call 可拒绝”替代任意 shell 语法

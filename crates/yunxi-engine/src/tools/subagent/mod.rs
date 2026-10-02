@@ -538,6 +538,36 @@ fn build_dev_system_prompt(config: &AppConfig, paths: &YunXiPaths) -> Result<Str
     Ok(prompt)
 }
 
+/// Bind the transcript barrier to the registry created for a foreground dev
+/// subagent.
+///
+/// `compose_registry` cannot do this: it is intentionally session-free so its
+/// tool definitions stay byte-stable.  The foreground path is the only place
+/// that creates a fresh dev registry after composition, so it must pin both
+/// state and memory to the ambient parent session before handing the registry
+/// to the runner.  A missing or unknown ambient session is an execution error;
+/// silently falling back to the store's process-current session could expose a
+/// different session's transcript.
+fn bind_dev_transcript_guard(
+    registry: &mut ToolRegistry,
+    config: &AppConfig,
+    paths: &YunXiPaths,
+) -> Result<String> {
+    let session_id = yunxi_base::workspace::try_session()
+        .map(|session| session.to_string())
+        .filter(|session| !session.trim().is_empty())
+        .context("foreground dev subagent requires an ambient session for transcript access")?;
+    let state = yunxi_core::state::StateStore::new(paths)
+        .context("failed to open state for foreground dev transcript guard")?;
+    if state.session_record(&session_id)?.is_none() {
+        bail!("foreground dev subagent ambient session `{session_id}` is not present in state");
+    }
+    let state = state.pinned(&session_id);
+    let memory = yunxi_core::memory::MemoryStore::new(config, paths).with_session_id(&session_id);
+    crate::tools::bind_transcript_access_guard(registry, state, memory);
+    Ok(session_id)
+}
+
 async fn run_core(
     context: SubagentContext,
     progress: crate::tools::ToolProgress,
@@ -608,11 +638,17 @@ async fn run_core(
     // dev 子代理反过来:它的任务与主体人格无关,拿的就是 dev 会话那张面,
     // 现造而不是注册时造——注册发生在 `compose_registry` 里,在那儿造 dev
     // 面会自己套自己。
-    let tools = if dev {
+    let mut tools = if dev {
         crate::tools::build_tool_registry(&config, &context.paths, PersonaLane::Dev, false)?
     } else {
         context.tools.clone()
     };
+    if dev {
+        // This fresh registry bypasses compose_registry's session-free binding
+        // point.  Keep the guard on the actual execution registry, not merely
+        // on the provider-facing catalog.
+        bind_dev_transcript_guard(&mut tools, &config, &context.paths)?;
+    }
 
     let system_prompt = if dev {
         build_dev_system_prompt(&config, &context.paths)?

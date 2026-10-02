@@ -267,13 +267,25 @@ Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
 
 - `cargo test -p yunxi-hosts --lib web::tests::ipc_bridge --locked -- --test-threads=1` — 22 passed.
 - `cargo check -p yunxi --locked` — passed.
+- `cargo test -p yunxi-engine --lib subagent::tests::foreground_dev_registry_binds_transcript_guard_to_ambient_session --locked -- --exact --test-threads=1` — 1 passed, 702 filtered.
 - `cargo fmt --all -- --check`, `git diff --check`, and the privacy scan passed.
 
 The daemon-less development subagent creates a separate dev registry inside
-its foreground fallback loop and remains an explicit next boundary; the
-session-hosted subagent path already receives its session-owned registry from
-the host. This slice therefore does not claim all possible subagent creation
-paths are covered.
+its foreground fallback loop and is now bound to the ambient parent session.
+Missing or unknown ambient sessions fail closed; no process-current session is
+silently substituted. The session-hosted subagent path continues to receive
+its session-owned registry from the host.
+
+## G3-05-12 boundary audit: shell indirection and filesystem links
+
+The remaining `run_command` barrier is intentionally still lexical. Literal
+absolute/relative/`~/` paths, literal `..`, and literal wildcard paths are
+normalized and checked against the compact namespace before dispatch. The
+guard does not claim to interpret shell variables, command substitution,
+redirection, `cd` plus a later relative path, embedded scripts, or filesystem
+symlink/hardlink identity races. Covering those cases requires an argv/shell
+mediation layer or a carrier inode/realpath registry; this contract does not
+silently introduce either one.
 
 ## G3-05-08 implemented slice: concurrent browse convergence contract
 

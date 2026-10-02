@@ -223,6 +223,55 @@ fn dev_system_prompt_is_byte_stable_within_a_session() {
     );
 }
 
+/// The daemon-less dev path creates a fresh registry after composition.  It
+/// must still carry the same transcript barrier as the normal execution
+/// registry, and it must use the ambient parent session rather than the
+/// process-current store session.
+#[tokio::test]
+async fn foreground_dev_registry_binds_transcript_guard_to_ambient_session() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = test_paths(temp.path());
+    let config = AppConfig::default().dev_scoped();
+    let state = yunxi_core::state::StateStore::new(&paths).unwrap();
+    let session_id = state.session_id().to_string();
+    let transcript = paths
+        .state_dir
+        .join("compact")
+        .join(&session_id)
+        .join("fold-1.md");
+
+    yunxi_base::workspace::with_session(session_id.clone().into(), async {
+        let mut registry =
+            crate::tools::build_tool_registry(&config, &paths, PersonaLane::Dev, false).unwrap();
+        let bound_session = bind_dev_transcript_guard(&mut registry, &config, &paths).unwrap();
+        assert_eq!(bound_session, session_id);
+
+        // Dev intentionally omits the normal read/grep/glob tools; keep this
+        // assertion explicit so a future expansion of the dev face cannot add
+        // one without also exercising the guard below.
+        for name in ["read", "grep", "glob"] {
+            assert!(!registry.contains(name), "dev unexpectedly exposes {name}");
+        }
+        assert!(registry.contains("run_command"));
+        let error = registry
+            .call(
+                "run_command",
+                &serde_json::json!({
+                    "command": format!("cat '{}'", transcript.display())
+                })
+                .to_string(),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("transcript"),
+            "run_command bypassed guard: {error}"
+        );
+    })
+    .await;
+}
+
 /// 递归防护:dev 子代理拿的是 dev 会话那张面,而那张面里也注册着
 /// `subagent`——排除表必须认得新名,否则子代理能自己再开子代理。
 #[test]
