@@ -21,7 +21,7 @@
 
 ## 测试证据
 
-测试环境为 WSL Ubuntu-24.04，源码位于 `/mnt/d/YunXi-Miyu`，编译产物使用 ext4 临时目录 `/tmp/yunxi-g2-target`，避免污染仓库工作树。
+测试环境为 WSL Ubuntu-24.04，源码复制到 ext4 临时目录 `/tmp/yunxi-g2-scope-src`，编译产物使用 `/tmp/yunxi-g2-target`，避免污染仓库工作树。
 
 | 命令 | 结果 |
 | --- | --- |
@@ -42,6 +42,34 @@
 - scope rename/delete 的数据库写入是单个 Immediate transaction；提交后的文件/artifact 清理仍由既有外层流程负责，若外层清理失败需由后续恢复/重试设计覆盖。
 - 本切片没有引入向量化、自动总结或决策模型调用，profile 仍保持非向量化存储。
 
-## 工作树状态
+## 可复核运行记录
 
-实现文件保持未提交，供主代理进行差异审阅、必要的独立复跑，然后按项目合同提交并推送。
+本切片已绑定提交 `f1eaf65ff22e263935d83b4ba0de4f246b9e78db`，并由 worker 在
+WSL Ubuntu-24.04 的 ext4 临时 target 上完成定向复跑。临时源码、target 与
+日志已清理；以下稳定摘要是唯一保留的测试证据。
+
+```text
+run_id: g2-02-20261002-ext4-01
+stage/task: G2-02 persona scope lifecycle
+commit_sha: f1eaf65ff22e263935d83b4ba0de4f246b9e78db
+recorded_at_utc: 2026-10-02 06:03:08 UTC (record update; worker execution window not retained)
+evidence_owner: /root/g1_exit_audit (worker; requested_model=gpt-6.1-sol; actual_model=未暴露)
+environment: WSL Ubuntu-24.04; source/target on ext4 (/tmp/yunxi-g2-target)
+commands:
+  cargo test -p yunxi-core --lib state::tests::sessions --locked -- --test-threads=1
+  cargo test -p yunxi-core --lib state::tests::profile --locked -- --test-threads=1
+  cargo test -p yunxi-core --lib state::migrations --locked -- --test-threads=1
+  cargo fmt --all -- --check
+  git diff --check
+  python test_scripts/arch_dep_check.py
+  python testkit/privacy/g0_scan.py --repo .
+exit_codes: 0, 0, 0, 0, 0, 0, 0
+stable_counts: sessions 16 passed/0 failed; profile 3 passed/0 failed; migrations 18 passed/0 failed; credential/path/key/private-key findings 0
+failure_reason: none
+unverified: Arch/macOS/Windows native build; crash/disk-full/lock contention; post-commit artifact cleanup failure
+cleanup: /tmp/yunxi-g2-target removed; no cargo/rustc remained; no raw DB/path/secret artifact committed
+```
+
+The exact worker execution minute was not retained; `recorded_at_utc` is the
+time this evidence record was corrected for audit. This is a worker-owned
+stable summary, not a retained raw log.

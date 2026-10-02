@@ -70,3 +70,50 @@ the audit; no raw DB, path, or secret artifact is committed.
 
 The Windows host cannot compile this Unix-targeted crate directly; WSL ext4 is
 the required verification environment for this slice.
+
+## Evidence record
+
+This record follows the repository `EVIDENCE_SCHEMA`; the stable summary is
+kept here after the temporary source/target/log trees were removed.
+
+```text
+run_id: g2-01-20261002-ext4-01
+stage/task: G2-01 profile schema and named migration
+commit_sha: 507fdaa6a9ec8ce035b0fb5831c5c37980a97e98
+recorded_at_utc: 2026-10-02 06:03:08 UTC (record update; historical execution window not retained)
+evidence_owner: /root/g1_exit_audit (worker; requested_model=gpt-6.1-sol; actual_model=未暴露)
+environment: WSL Ubuntu-24.04; source copied to /tmp/yunxi-g2-src; target /tmp/yunxi-g2-ext4-target
+commands:
+  cargo test -p yunxi-core --lib state::tests::profile --locked -- --test-threads=1
+  cargo test -p yunxi-core --lib state::migrations::named --locked -- --test-threads=1
+  cargo fmt --all -- --check
+  cargo metadata --no-deps --format-version 1 --locked
+  git diff --check
+exit_codes: 0, 0, 0, 0, 0
+stable_counts: profile 3 passed/0 failed/665 filtered; named 2 passed/0 failed/666 filtered
+failure_reason: D: DrvFS attempts stopped in yunxi-base include-flate p9_cli wait; not counted as passes
+unverified: no real provider cache hit; no Arch/macOS/Windows native build; no crash/disk-full/lock contention; no independent replay after temp cleanup
+cleanup: source, target, logs and workspace .tmp removed; no raw DB/path/secret artifact committed
+```
+
+The exact historical execution minute was not retained; `recorded_at_utc` is
+the time this evidence record was corrected for audit. The record is a
+historical stable summary, not a claim of a retained raw log. The follow-up
+hardening run below is the current reproducible owner-scope regression.
+
+### Follow-up scope hardening
+
+```text
+run_id: g2-01-20261002-ext4-hardening-01
+stage/task: G2-01 owner_scope whitespace invariant
+commit_sha: cc96afed7c896b9237294306575992734cdcbb85
+recorded_at_utc: 2026-10-02 06:03:08 UTC
+evidence_owner: /root (lead replay; worker implementation by /root/profile_scope_hardening)
+environment: WSL Ubuntu-24.04; source copied to /tmp/yunxi-g2-hardening-src; target /tmp/yunxi-g2-hardening-target
+command: cargo test -p yunxi-core --lib state::tests::profile --locked -- --test-threads=1
+exit_code: 0
+stable_counts: 4 passed/0 failed/0 ignored/667 filtered; includes whitespace reject and global empty-scope acceptance
+failure_reason: none on WSL ext4; Windows host attempt was not counted because this Unix-targeted crate emits existing std::os::unix/libc errors
+unverified: full suite and native Arch/macOS/Windows builds remain out of scope for this slice
+cleanup: both temporary source and target removed; no cargo/rustc remained; no raw test artifact committed
+```
