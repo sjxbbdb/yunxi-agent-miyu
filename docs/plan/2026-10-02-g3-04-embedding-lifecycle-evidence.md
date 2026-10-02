@@ -28,6 +28,10 @@ maintenance.
   recall, and the semantic corpus all return no hit for its former content.
 - Reopening the store does not recreate stale vectors: an explicit prune pass
   removes the stale row once and the next pass removes zero rows.
+- Inline semantic top-up and background backfill re-check row existence,
+  eligibility, and content SHA inside an `IMMEDIATE` transaction after model
+  inference; a deleted, forgotten, rejected, or edited snapshot is discarded
+  instead of being written back.
 - A failed browse update rolls back both the memory edit and vector deletion.
 
 No schema, dependency, provider, profile, knowledge-base, DecisionPort, or
@@ -41,12 +45,12 @@ Laya boundary changed in G3-04.
   scrubber for deleted episode ids.
 - `crates/yunxi-core/src/memory/browse.rs`: transactional edit/delete
   invalidation.
-- `crates/yunxi-core/src/memory/semantic.rs`: delete-only stale-vector
-  reconciler.
+- `crates/yunxi-core/src/memory/semantic.rs`: guarded semantic writes and
+  delete-only stale-vector reconciler.
 - `crates/yunxi-core/src/memory/tests/embedding_lifecycle.rs`: reset/orphan,
   browse edit/delete, failed transaction, expiry, organizer update, recall
-  barriers, reopen cleanup, unknown kind, digest mismatch, idempotence, and
-  valid-vector preservation tests.
+  barriers, reopen cleanup, guarded stale-write rejection, unknown kind, digest
+  mismatch, idempotence, and valid-vector preservation tests.
 
 ## Verification commands
 
@@ -57,50 +61,53 @@ package is compiled.
 
 ```text
 set -euo pipefail
-rm -rf /tmp/g3-04f-src /tmp/g3-04f-target /tmp/g3-04f-log
-mkdir -p /tmp/g3-04f-src
+rm -rf /tmp/g3-04i-src /tmp/g3-04i-target /tmp/g3-04i-log
+mkdir -p /tmp/g3-04i-src
 cd <repo-root>
 tar --exclude=.git --exclude=target --exclude=.tmp -cf - . \
-  | tar -xf - -C /tmp/g3-04f-src
-cd /tmp/g3-04f-src
-CARGO_TARGET_DIR=/tmp/g3-04f-target CARGO_BUILD_JOBS=1 \
+  | tar -xf - -C /tmp/g3-04i-src
+cd /tmp/g3-04i-src
+CARGO_TARGET_DIR=/tmp/g3-04i-target CARGO_BUILD_JOBS=1 \
   CARGO_INCREMENTAL=0 CARGO_PROFILE_TEST_DEBUG=0 \
   cargo test -p yunxi-core --lib memory --locked -- --test-threads=1 \
-  2>&1 | tee /tmp/g3-04f-log
+  2>&1 | tee /tmp/g3-04i-log
 ```
 
-The final run passed `77 passed; 0 failed; 1 ignored; 619 filtered out` with
+The final run passed `78 passed; 0 failed; 1 ignored; 619 filtered out` with
 exit code `0`. An earlier run exposed an invalid three-byte test vector in the
 new semantic-coverage assertion; the fixture now stores a minimal valid `f32`
 payload and the final checkout compiled cleanly.
 
 ## EVIDENCE_SCHEMA
 
-- `run_id`: `g3-04f-20261002-ext4-04`
+- `run_id`: `g3-04i-20261002-ext4-05`
 - `stage/task`: `G3-04 embedding lifecycle and stale-vector cleanup`
-- `implementation_commit`: `87288422` (tests) plus `f2fc6646`, `bf65efa0`,
-  and `aa4993ea` (lifecycle implementation/follow-ups)
-- `recorded_at_utc`: `2026-10-02 08:49:58 UTC`
+- `implementation_commit`: `ab7ba6de` (guarded async writes) plus `87288422`
+  (recall/reopen tests), `f2fc6646`, `bf65efa0`, and `aa4993ea`
+  (lifecycle implementation/follow-ups)
+- `recorded_at_utc`: `2026-10-02 09:04:51 UTC`
 - `evidence_owner`: `/root` (Lead review); worker requested model
   `GPT-6.1-Sol`; runtime model id not exposed
-- `environment`: WSL Ubuntu-24.04 disposable checkout at `/tmp/g3-04f-src`,
-  isolated target at `/tmp/g3-04f-target`; one cargo job with
+- `environment`: WSL Ubuntu-24.04 disposable checkout at `/tmp/g3-04i-src`,
+  isolated target at `/tmp/g3-04i-target`; one cargo job with
   incremental compilation and debug info disabled
 - `test_command`: memory-only command above
 - `test_exit_code`: `0`
-- `stable_counts`: `77 passed; 0 failed; 1 ignored; 619 filtered out`
+- `stable_counts`: `78 passed; 0 failed; 1 ignored; 619 filtered out`
 - `static_checks`: formatting, diff, metadata, architecture, size, and
-  privacy gates all passed. Size report: `362,767` total lines versus the
+  privacy gates all passed. Size report: `362,883` total lines versus the
   corrected `361,444` baseline; no new over-limit file and the gate passed.
 - `privacy_findings`: `credential_shape=0`, `personal_path=0`,
   `private_key=0`; existing fixture/public allowlists were unchanged.
-- `cleanup`: the disposable `/tmp/g3-04f-src`, `/tmp/g3-04f-target`, and
-  `/tmp/g3-04f-log` paths were removed after
+- `cleanup`: the disposable `/tmp/g3-04i-src`, `/tmp/g3-04i-target`, and
+  `/tmp/g3-04i-log` paths were removed after
   the run; a follow-up check found no cargo or rustc process.
 - `unverified`: native Arch Linux, macOS, Windows cargo execution, crash,
-  disk-full/lock recovery, concurrent organizer/reset races, full workspace
-  tests, provider/model quality, and automatic invocation scheduling for the
-  new maintenance pass remain outside this slice.
+  disk-full/lock recovery, concurrent organizer/reset races, the dedup
+  async-vector writer and in-flight association snapshot race, compact/
+  restore/backup-import recall barriers, full workspace tests, provider/model
+  quality, and automatic invocation scheduling for the new maintenance pass
+  remain outside this slice.
 
 This record covers G3-04 only. Later slices can decide where maintenance is
 scheduled and add crash/concurrency fault injection without weakening the
