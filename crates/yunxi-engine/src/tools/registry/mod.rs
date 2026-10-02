@@ -9,6 +9,11 @@ pub use spec::{
     ToolTrust,
 };
 
+/// A per-session barrier for files that carry conversation provenance.  This
+/// is deliberately kept outside the provider-visible tool contract: it is a
+/// local read-time policy, not another tool or prompt instruction.
+pub type TranscriptAccessGuard = Arc<dyn Fn(&ToolSpec, &Value) -> Option<String> + Send + Sync>;
+
 use crate::tools::load_tools::TOOL_NAME as LOAD_TOOLS_TOOL_NAME;
 use crate::tools::tool_descriptions::LoadPolicy;
 use anyhow::{bail, Result};
@@ -45,6 +50,11 @@ pub struct ToolRegistry {
     default_timeout: Option<std::time::Duration>,
     /// 单调守卫链,按注册序求值,第一个拒绝即终。
     guards: Vec<ToolGuard>,
+    /// Transcript reads need the current StateStore/MemoryStore, which are
+    /// session-scoped and therefore cannot be installed during static tool
+    /// composition.  The Agent binds this after construction; cloning a
+    /// registry preserves the barrier for subagents and lane snapshots.
+    transcript_access_guard: Option<TranscriptAccessGuard>,
     /// 脚本可见范围:受限平台注册表只收 `Trust: external` 的脚本。热刷新
     /// 走同一条 replace_script_tools,所以范围记在注册表上而不是调用点。
     script_scope: ScriptScope,
@@ -80,6 +90,10 @@ impl ToolRegistry {
         self.guards.push(guard);
     }
 
+    pub fn bind_transcript_access_guard(&mut self, guard: TranscriptAccessGuard) {
+        self.transcript_access_guard = Some(guard);
+    }
+
     /// 场所过滤:只留信任等级够的工具。定义按名排序,所以过滤后的 tools 数组
     /// 与「只注册这些」逐字节相同。
     pub fn retain_trust(&mut self, trust: ToolTrust) {
@@ -98,6 +112,11 @@ impl ToolRegistry {
     }
 
     fn guard_denial(&self, tool: &ToolSpec, args: &Value, ctx: &GuardCtx) -> Option<String> {
+        if let Some(guard) = &self.transcript_access_guard {
+            if let Some(reason) = guard(tool, args) {
+                return Some(reason);
+            }
+        }
         self.guards.iter().find_map(|guard| guard(tool, args, ctx))
     }
 

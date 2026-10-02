@@ -67,6 +67,7 @@ pub mod tool_descriptions;
 pub use tool_descriptions::tool_event_base_name;
 mod tool_display;
 pub use tool_display::*;
+mod transcript_guard;
 pub mod usage_query;
 pub mod vision;
 mod web;
@@ -84,7 +85,7 @@ pub(crate) use registry::empty_parameters;
 #[allow(unused_imports)]
 pub use registry::{
     CommandOutputStream, GuardCtx, ScriptScope, ToolFuture, ToolGuard, ToolPermission,
-    ToolProgress, ToolProgressEvent, ToolRegistry, ToolSpec, ToolTrust,
+    ToolProgress, ToolProgressEvent, ToolRegistry, ToolSpec, ToolTrust, TranscriptAccessGuard,
 };
 pub use scripts::{
     apply_script_refresh, builtin_scripts_dir, list_global_scripts, list_scripts_for_features,
@@ -177,6 +178,14 @@ pub fn register_display_name(name: &str, display_name: &str) {
 
 pub fn clear_aur_review_state(paths: &YunXiPaths) -> anyhow::Result<()> {
     archlinux::aur_review::clear_aur_review_state(paths)
+}
+
+pub(crate) fn bind_transcript_access_guard(
+    registry: &mut ToolRegistry,
+    state: yunxi_core::state::StateStore,
+    memory: yunxi_core::memory::MemoryStore,
+) {
+    transcript_guard::bind(registry, state, memory);
 }
 
 /// AUR 装包互斥:review 与 install 不同轮,逼一次"给用户看过再装"的确认。

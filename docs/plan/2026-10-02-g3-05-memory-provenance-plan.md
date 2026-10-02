@@ -111,6 +111,42 @@ The disposable copy was removed after these runs. The read/grep/run-command
 barrier is intentionally not part of this evidence and remains the next
 implementation slice.
 
+## G3-05-04 implemented slice: transcript read barrier
+
+The Agent now binds a local, session-scoped transcript access guard after its
+`StateStore` and `MemoryStore` are constructed. The guard is attached to the
+existing `ToolRegistry` and is copied with registry clones, so it does not
+change provider-visible tool definitions or introduce a second dispatch path.
+`read`, `grep`, and `glob` paths under the current session's
+`state/compact/<session>` root are checked against the typed transcript
+carrier registry. A registered carrier with no tombstoned memory references is
+readable; a carrier whose exact `fact`/`episode` reference is tombstoned is
+denied. A path in that compact root with no registry row is treated as a
+legacy/unknown carrier and denied rather than guessed safe. Provenance lookup
+errors also fail closed.
+
+`run_command` receives the same check when its command contains the exact
+absolute compact-session root emitted by the transcript hint. Shell syntax is
+not parsed and transcript contents are never searched or scrubbed. Structured
+`yunxi tool-call` reads therefore re-enter the same registry guard; relative or
+hand-constructed paths outside the emitted absolute root remain a later shell
+boundary hardening item, not a claim of full arbitrary-command mediation.
+
+Evidence for this read-side slice (WSL Ubuntu-24.04, ext4 disposable copy,
+one cargo job at a time):
+
+- `yunxi-engine` `tools::transcript_guard`: 5 passed, covering path-scope
+  separation, lexical traversal normalization, unknown legacy denial, live
+  registered readability, and tombstoned-reference denial.
+- The Windows-host `cargo test` attempt was not used as evidence: this
+  repository's source intentionally compiles Unix-only `yunxi-base` modules
+  and fails before reaching the changed code. WSL is the authoritative Rust
+  harness for this Linux branch.
+
+The disposable copy must be removed after the broader G3-05 regression run;
+the barrier is not yet a claim that every historical session or every shell
+grammar has been exhaustively mediated.
+
 ## G3-05-03a implemented slice: direct evicted browse barrier
 
 The existing keyword and semantic evicted-context paths already consulted the

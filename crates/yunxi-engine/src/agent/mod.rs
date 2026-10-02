@@ -317,6 +317,13 @@ impl Agent {
             .with_session_id(&self.memory.origin.session_id);
         self.memory.store.init()?;
         (self.memory.database_id, self.memory.generation) = self.memory.store.identity()?;
+        if let Ok(mut tools) = self.tools.lock() {
+            crate::tools::bind_transcript_access_guard(
+                &mut tools,
+                self.state.clone(),
+                self.memory.store.clone(),
+            );
+        }
         Ok(())
     }
 

@@ -166,6 +166,7 @@ impl Agent {
         let mut tools = tools;
         let turn_usage = TurnUsageMirror::default();
         bind_session_usage(&mut tools, &state, &client, &config, &turn_usage);
+        crate::tools::bind_transcript_access_guard(&mut tools, state.clone(), memory.clone());
         Ok(Self {
             state,
             client,
@@ -606,6 +607,12 @@ impl Agent {
     /// 回合里换库会让日记落到另一个命名空间。
     pub fn switch_lane(&mut self, lane: PersonaLane, tools: ToolRegistry) {
         self.core.dev = lane.is_dev();
+        let mut tools = tools;
+        crate::tools::bind_transcript_access_guard(
+            &mut tools,
+            self.state.clone(),
+            self.memory.store.clone(),
+        );
         // 情境化工具的原件跟着新表走:两张表是分别建的,拿旧表的 Arc 去
         // 新表上放回,等于把上一人格面的工具塞进这一面。
         self.situational_tools = situational_tool_specs(&tools, self.core.dev);
@@ -666,6 +673,13 @@ impl Agent {
         } else {
             (String::new(), 0)
         };
+        if let Ok(mut tools) = self.tools.lock() {
+            crate::tools::bind_transcript_access_guard(
+                &mut tools,
+                self.state.clone(),
+                self.memory.store.clone(),
+            );
+        }
         self.refresh_preset_dialogs();
         self.prepare_for_turn()
     }
