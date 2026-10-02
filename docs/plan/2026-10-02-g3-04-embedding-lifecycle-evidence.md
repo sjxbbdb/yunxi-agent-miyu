@@ -24,6 +24,10 @@ maintenance.
 - `prune_stale_embeddings` is idempotent and delete-only. It removes orphan
   rows, unknown kinds, forgotten/rejected rows, non-`long_term` episodes, and
   content-digest mismatches while preserving a valid current vector.
+- After an episode is deleted, keyword recall, association, historical-event
+  recall, and the semantic corpus all return no hit for its former content.
+- Reopening the store does not recreate stale vectors: an explicit prune pass
+  removes the stale row once and the next pass removes zero rows.
 - A failed browse update rolls back both the memory edit and vector deletion.
 
 No schema, dependency, provider, profile, knowledge-base, DecisionPort, or
@@ -40,8 +44,9 @@ Laya boundary changed in G3-04.
 - `crates/yunxi-core/src/memory/semantic.rs`: delete-only stale-vector
   reconciler.
 - `crates/yunxi-core/src/memory/tests/embedding_lifecycle.rs`: reset/orphan,
-  browse edit/delete, failed transaction, expiry, organizer update, unknown
-  kind, digest mismatch, idempotence, and valid-vector preservation tests.
+  browse edit/delete, failed transaction, expiry, organizer update, recall
+  barriers, reopen cleanup, unknown kind, digest mismatch, idempotence, and
+  valid-vector preservation tests.
 
 ## Verification commands
 
@@ -52,45 +57,45 @@ package is compiled.
 
 ```text
 set -euo pipefail
-rm -rf /tmp/g3-04b-src /tmp/g3-04b-target /tmp/g3-04b-log
-mkdir -p /tmp/g3-04b-src
+rm -rf /tmp/g3-04f-src /tmp/g3-04f-target /tmp/g3-04f-log
+mkdir -p /tmp/g3-04f-src
 cd <repo-root>
 tar --exclude=.git --exclude=target --exclude=.tmp -cf - . \
-  | tar -xf - -C /tmp/g3-04b-src
-cd /tmp/g3-04b-src
-CARGO_TARGET_DIR=/tmp/g3-04b-target CARGO_BUILD_JOBS=1 \
+  | tar -xf - -C /tmp/g3-04f-src
+cd /tmp/g3-04f-src
+CARGO_TARGET_DIR=/tmp/g3-04f-target CARGO_BUILD_JOBS=1 \
   CARGO_INCREMENTAL=0 CARGO_PROFILE_TEST_DEBUG=0 \
   cargo test -p yunxi-core --lib memory --locked -- --test-threads=1 \
-  2>&1 | tee /tmp/g3-04b-log
+  2>&1 | tee /tmp/g3-04f-log
 ```
 
-The final run passed `75 passed; 0 failed; 1 ignored; 619 filtered out` with
-exit code `0`. The first compile attempt exposed and then fixed a rusqlite
-statement-borrow lifetime error before this final run; the final checkout
-compiled cleanly.
+The final run passed `77 passed; 0 failed; 1 ignored; 619 filtered out` with
+exit code `0`. An earlier run exposed an invalid three-byte test vector in the
+new semantic-coverage assertion; the fixture now stores a minimal valid `f32`
+payload and the final checkout compiled cleanly.
 
 ## EVIDENCE_SCHEMA
 
-- `run_id`: `g3-04b-20261002-ext4-03`
+- `run_id`: `g3-04f-20261002-ext4-04`
 - `stage/task`: `G3-04 embedding lifecycle and stale-vector cleanup`
-- `implementation_commit`: `f2fc6646cd9c347f44aecfeca274a16c9fa90264` plus
-  follow-ups `bf65efa0` and `aa4993ea`
-- `recorded_at_utc`: `2026-10-02 08:34:15 UTC`
+- `implementation_commit`: `87288422` (tests) plus `f2fc6646`, `bf65efa0`,
+  and `aa4993ea` (lifecycle implementation/follow-ups)
+- `recorded_at_utc`: `2026-10-02 08:49:58 UTC`
 - `evidence_owner`: `/root` (Lead review); worker requested model
   `GPT-6.1-Sol`; runtime model id not exposed
-- `environment`: WSL Ubuntu disposable checkout at `/tmp/g3-04b-src`,
-  isolated target at `/tmp/g3-04b-target`; one cargo job with
+- `environment`: WSL Ubuntu-24.04 disposable checkout at `/tmp/g3-04f-src`,
+  isolated target at `/tmp/g3-04f-target`; one cargo job with
   incremental compilation and debug info disabled
 - `test_command`: memory-only command above
 - `test_exit_code`: `0`
-- `stable_counts`: `75 passed; 0 failed; 1 ignored; 619 filtered out`
+- `stable_counts`: `77 passed; 0 failed; 1 ignored; 619 filtered out`
 - `static_checks`: formatting, diff, metadata, architecture, size, and
   privacy gates all passed. Size report: `362,767` total lines versus the
   corrected `361,444` baseline; no new over-limit file and the gate passed.
 - `privacy_findings`: `credential_shape=0`, `personal_path=0`,
   `private_key=0`; existing fixture/public allowlists were unchanged.
-- `cleanup`: the disposable `/tmp/g3-04b-src`, `/tmp/g3-04b-target`, and
-  `/tmp/g3-04b-log` paths were removed after
+- `cleanup`: the disposable `/tmp/g3-04f-src`, `/tmp/g3-04f-target`, and
+  `/tmp/g3-04f-log` paths were removed after
   the run; a follow-up check found no cargo or rustc process.
 - `unverified`: native Arch Linux, macOS, Windows cargo execution, crash,
   disk-full/lock recovery, concurrent organizer/reset races, full workspace
