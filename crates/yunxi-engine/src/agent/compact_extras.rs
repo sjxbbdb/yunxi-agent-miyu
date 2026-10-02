@@ -51,6 +51,10 @@ pub(in crate::agent) struct CompactExtras {
     /// 折叠转录路径，最新在前，最多 `MAX_TRANSCRIPT_CHAIN` 条。
     #[serde(default)]
     pub transcripts: Vec<String>,
+    /// Stable logical ids aligned with `transcripts`. Empty entries preserve
+    /// positional compatibility for transcript paths written by older builds.
+    #[serde(default)]
+    pub transcript_ids: Vec<String>,
     #[serde(default)]
     pub restored: Vec<RestoredFile>,
     /// 压缩时冻结：之后工具集变了也不改提示语，否则这块每请求重渲染会
@@ -435,13 +439,33 @@ fn render_transcript(session_id: &str, fold: &[&Turn], previous_summary: Option<
     out
 }
 
+/// Derive a carrier id from the session and ordered folded turn ids. This is
+/// independent of export timestamps and file paths, so retrying one fold does
+/// not create a second logical carrier.
+pub(in crate::agent) fn transcript_logical_id(session_id: &str, fold: &[&Turn]) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"yunxi-transcript-v1\0");
+    hasher.update(session_id.as_bytes());
+    hasher.update(&[0]);
+    for turn in fold {
+        hasher.update(turn.turn_id.as_bytes());
+        hasher.update(&[0]);
+    }
+    format!("transcript-{}", hasher.finalize().to_hex())
+}
+
+struct TranscriptExport {
+    path: PathBuf,
+    transcript_id: String,
+}
+
 /// 写 `transcript_dir/fold-<unix_ms>.md`；同毫秒撞名就加 `-2`、`-3`。
 fn export_transcript(
     policy: &CompactExtrasPolicy,
     session_id: &str,
     fold: &[&Turn],
     previous_summary: Option<&str>,
-) -> Result<PathBuf> {
+) -> Result<TranscriptExport> {
     std::fs::create_dir_all(&policy.transcript_dir)?;
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -456,7 +480,10 @@ fn export_transcript(
         suffix += 1;
     }
     std::fs::write(&path, render_transcript(session_id, fold, previous_summary))?;
-    Ok(path)
+    Ok(TranscriptExport {
+        path,
+        transcript_id: transcript_logical_id(session_id, fold),
+    })
 }
 
 /// 折叠区与尾巴各自落库的 footprint(`turns.tool_footprint` 合并值)。
@@ -513,9 +540,21 @@ pub(in crate::agent) fn build_compact_extras(
     extras.transcripts = previous
         .map(|previous| previous.transcripts.clone())
         .unwrap_or_default();
+    extras.transcript_ids = previous
+        .map(|previous| {
+            let mut ids = previous.transcript_ids.clone();
+            ids.resize(previous.transcripts.len(), String::new());
+            ids
+        })
+        .unwrap_or_default();
     if policy.export_transcript {
         match export_transcript(policy, session_id, fold, previous_summary) {
-            Ok(path) => extras.transcripts.insert(0, path.display().to_string()),
+            Ok(export) => {
+                extras
+                    .transcripts
+                    .insert(0, export.path.display().to_string());
+                extras.transcript_ids.insert(0, export.transcript_id);
+            }
             Err(error) => tracing::warn!(
                 %error,
                 dir = %policy.transcript_dir.display(),
@@ -524,5 +563,6 @@ pub(in crate::agent) fn build_compact_extras(
         }
     }
     extras.transcripts.truncate(MAX_TRANSCRIPT_CHAIN);
+    extras.transcript_ids.truncate(extras.transcripts.len());
     extras
 }

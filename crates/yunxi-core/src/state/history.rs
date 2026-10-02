@@ -264,9 +264,44 @@ impl StateStore {
         )
     }
 
+    pub fn replace_visible_with_summary_with_refs_and_transcripts(
+        &self,
+        fold_turn_ids: &[String],
+        visible_turn_ids: &[String],
+        summary: &str,
+        tokens: TurnTokens,
+        token_usage_estimated: bool,
+        footprint_json: Option<&str>,
+        extras_json: Option<&str>,
+        refs: &[MemoryRef],
+        transcripts: &[TranscriptCarrier],
+    ) -> Result<()> {
+        self.conv_db
+            .replace_visible_with_summary_with_refs_and_transcripts(
+                &self.session(),
+                fold_turn_ids,
+                visible_turn_ids,
+                summary,
+                tokens,
+                token_usage_estimated,
+                footprint_json,
+                extras_json,
+                refs,
+                transcripts,
+            )
+    }
+
     pub fn load_summary_memory_refs(&self, turn_id: &str) -> Result<Vec<MemoryRef>> {
         self.conv_db
             .load_summary_memory_refs(&self.session(), turn_id)
+    }
+
+    pub fn load_transcript_provenance_by_path(
+        &self,
+        path: &str,
+    ) -> Result<Option<TranscriptCarrierProvenance>> {
+        self.conv_db
+            .load_transcript_provenance_by_path(&self.session(), path)
     }
 
     pub fn load_summary_extras_json(&self, turn_id: &str) -> Result<Option<String>> {

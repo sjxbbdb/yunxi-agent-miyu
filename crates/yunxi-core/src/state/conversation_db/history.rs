@@ -10,6 +10,24 @@
 use crate::state::conversation_db::*;
 use yunxi_base::memory_types::MemoryRef;
 
+/// The stable logical identity and current filesystem location of a compact
+/// transcript.  The path is an implementation detail and is never used as a
+/// provenance carrier id.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TranscriptCarrier {
+    pub transcript_id: String,
+    pub path: String,
+}
+
+/// Transcript provenance returned by path lookup.  A missing row means that a
+/// legacy/removed transcript is unknown, not that it has no memory inputs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TranscriptCarrierProvenance {
+    pub transcript_id: String,
+    pub path: String,
+    pub refs: Vec<MemoryRef>,
+}
+
 /// `turns` 的固定列序。`map_turn_row` 是按位置读的,顺序一改全库跟着错——
 /// AGENTS §3.1 点名的最脆弱处。原来这串在本文件里抄了 7 份,新加一个查询就是
 /// 第 8 份;收成一份,谁都别再手抄。
@@ -260,6 +278,48 @@ impl ConversationDb {
         Ok(refs)
     }
 
+    /// Resolve a transcript path to its stable carrier id and typed memory
+    /// inputs.  Paths are only lookup keys; provenance rows always use the
+    /// logical id.
+    pub fn load_transcript_provenance_by_path(
+        &self,
+        session_id: &str,
+        path: &str,
+    ) -> Result<Option<TranscriptCarrierProvenance>> {
+        let conn = self.conn.lock().unwrap();
+        let Some((transcript_id, canonical_path)) = conn
+            .query_row(
+                "SELECT transcript_id, path FROM transcript_carriers
+                 WHERE session_id = ?1 AND path = ?2",
+                params![session_id, path],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )
+            .optional()?
+        else {
+            return Ok(None);
+        };
+        let mut stmt = conn.prepare(
+            "SELECT memory_kind, memory_id
+             FROM memory_provenance
+             WHERE session_id = ?1 AND carrier_kind = 'transcript'
+               AND carrier_id = ?2 AND relation = 'transcript_input'
+             ORDER BY memory_kind ASC, memory_id ASC",
+        )?;
+        let refs = stmt
+            .query_map(params![session_id, transcript_id], |row| {
+                Ok(MemoryRef {
+                    kind: row.get(0)?,
+                    id: row.get(1)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(Some(TranscriptCarrierProvenance {
+            transcript_id,
+            path: canonical_path,
+            refs,
+        }))
+    }
+
     pub fn load_last_summary(&self, session_id: &str) -> Result<Option<Turn>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(&format!(
@@ -483,6 +543,33 @@ impl ConversationDb {
         extras_json: Option<&str>,
         refs: &[MemoryRef],
     ) -> Result<()> {
+        self.replace_visible_with_summary_with_refs_and_transcripts(
+            session_id,
+            fold_turn_ids,
+            visible_turn_ids,
+            summary,
+            tokens,
+            token_usage_estimated,
+            footprint_json,
+            extras_json,
+            refs,
+            &[],
+        )
+    }
+
+    pub fn replace_visible_with_summary_with_refs_and_transcripts(
+        &self,
+        session_id: &str,
+        fold_turn_ids: &[String],
+        visible_turn_ids: &[String],
+        summary: &str,
+        tokens: TurnTokens,
+        token_usage_estimated: bool,
+        footprint_json: Option<&str>,
+        extras_json: Option<&str>,
+        refs: &[MemoryRef],
+        transcripts: &[TranscriptCarrier],
+    ) -> Result<()> {
         if summary.trim().is_empty() {
             bail!("compact returned an empty summary");
         }
@@ -579,6 +666,45 @@ impl ConversationDb {
                 params![turn_id, memory_ref.kind, memory_ref.id, session_id, now],
             )?;
         }
+        for transcript in transcripts {
+            if transcript.transcript_id.trim().is_empty() || transcript.path.trim().is_empty() {
+                continue;
+            }
+            tx.execute(
+                "INSERT INTO transcript_carriers (
+                    transcript_id, path, session_id, summary_turn_id, created_at
+                 ) VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(transcript_id) DO UPDATE SET
+                    path = excluded.path,
+                    session_id = excluded.session_id,
+                    summary_turn_id = excluded.summary_turn_id",
+                params![
+                    transcript.transcript_id,
+                    transcript.path,
+                    session_id,
+                    turn_id,
+                    now,
+                ],
+            )?;
+            for memory_ref in refs {
+                if !matches!(memory_ref.kind.as_str(), "fact" | "episode") || memory_ref.id <= 0 {
+                    continue;
+                }
+                tx.execute(
+                    "INSERT OR IGNORE INTO memory_provenance (
+                        carrier_kind, carrier_id, memory_kind, memory_id,
+                        relation, session_id, created_at
+                     ) VALUES ('transcript', ?1, ?2, ?3, 'transcript_input', ?4, ?5)",
+                    params![
+                        transcript.transcript_id,
+                        memory_ref.kind,
+                        memory_ref.id,
+                        session_id,
+                        now,
+                    ],
+                )?;
+            }
+        }
         tx.commit()?;
         Ok(())
     }
@@ -608,6 +734,10 @@ impl ConversationDb {
         let tx = conn.transaction()?;
         tx.execute(
             "DELETE FROM memory_provenance WHERE session_id = ?1",
+            params![session_id],
+        )?;
+        tx.execute(
+            "DELETE FROM transcript_carriers WHERE session_id = ?1",
             params![session_id],
         )?;
         tx.execute(
@@ -669,6 +799,13 @@ impl ConversationDb {
         tx.execute(
             &format!(
                 "{target_sql} DELETE FROM memory_provenance
+                  WHERE session_id IN (SELECT session_id FROM targets)"
+            ),
+            params![persona, platform],
+        )?;
+        tx.execute(
+            &format!(
+                "{target_sql} DELETE FROM transcript_carriers
                   WHERE session_id IN (SELECT session_id FROM targets)"
             ),
             params![persona, platform],
@@ -764,6 +901,10 @@ impl ConversationDb {
                     "DELETE FROM memory_provenance WHERE carrier_kind='summary_turn' AND carrier_id=?1",
                     params![turn_id],
                 )?;
+                tx.execute(
+                    "DELETE FROM transcript_carriers WHERE summary_turn_id = ?1",
+                    params![turn_id],
+                )?;
                 tx.execute("DELETE FROM turns WHERE turn_id = ?1", params![turn_id])?;
                 tx.commit()?;
                 Ok((1, None))
@@ -791,6 +932,10 @@ impl ConversationDb {
 
                 tx.execute(
                     "DELETE FROM memory_provenance WHERE carrier_kind='summary_turn' AND carrier_id=?1",
+                    params![turn_id],
+                )?;
+                tx.execute(
+                    "DELETE FROM transcript_carriers WHERE summary_turn_id = ?1",
                     params![turn_id],
                 )?;
                 tx.execute("DELETE FROM turns WHERE turn_id = ?1", params![turn_id])?;

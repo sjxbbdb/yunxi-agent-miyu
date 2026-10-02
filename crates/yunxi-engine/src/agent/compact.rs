@@ -15,7 +15,7 @@ use yunxi_core::llm::{
     ChatMessage, ChatResult, ChatStreamChunk, OpenAiCompatibleClient, ToolDefinition, Usage,
 };
 use yunxi_core::memory::MemoryStore;
-use yunxi_core::state::{StateStore, Turn};
+use yunxi_core::state::{StateStore, TranscriptCarrier, Turn};
 
 use super::overflow::estimate_tokens;
 
@@ -675,22 +675,40 @@ impl Compactor {
         let transcript = extras
             .as_ref()
             .and_then(|extras| extras.transcripts.first().cloned());
+        let transcript_carriers = extras
+            .as_ref()
+            .and_then(|extras| {
+                extras
+                    .transcripts
+                    .first()
+                    .zip(extras.transcript_ids.first())
+            })
+            .filter(|(_, transcript_id)| !transcript_id.trim().is_empty())
+            .map(|(path, transcript_id)| {
+                vec![TranscriptCarrier {
+                    transcript_id: transcript_id.clone(),
+                    path: path.clone(),
+                }]
+            })
+            .unwrap_or_default();
 
         let visible_turn_ids = turns
             .iter()
             .map(|turn| turn.turn_id.clone())
             .collect::<Vec<_>>();
         let summary_refs = self.summary_refs(fold, previous_summary.as_ref())?;
-        self.state.replace_visible_with_summary_with_refs(
-            &fold_turn_ids,
-            &visible_turn_ids,
-            &summary,
-            yunxi_core::llm::TurnTokens::from_usage(Some(&compact_usage)),
-            usage_estimated,
-            footprint_json.as_deref(),
-            extras_json.as_deref(),
-            &summary_refs,
-        )?;
+        self.state
+            .replace_visible_with_summary_with_refs_and_transcripts(
+                &fold_turn_ids,
+                &visible_turn_ids,
+                &summary,
+                yunxi_core::llm::TurnTokens::from_usage(Some(&compact_usage)),
+                usage_estimated,
+                footprint_json.as_deref(),
+                extras_json.as_deref(),
+                &summary_refs,
+                &transcript_carriers,
+            )?;
         // 保留区的复读轮折叠与工具输出瘦身就在这一刻做：上面那句已经把历史
         // 重写了、前缀本来就断了这一次，顺手做掉不多花一分钱。见
         // `tool_result_prune` 字段上的说明。

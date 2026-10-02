@@ -39,6 +39,10 @@ const NAMED_MIGRATIONS: &[NamedMigration] = &[
         id: "2026-10-02-g3-05-summary-provenance",
         apply: apply_summary_provenance,
     },
+    NamedMigration {
+        id: "2026-10-02-g3-05-transcript-carriers",
+        apply: apply_transcript_carriers,
+    },
 ];
 
 /// Typed links from conversation-db summary carriers to durable memory rows.
@@ -64,6 +68,26 @@ fn apply_summary_provenance(conn: &Connection) -> Result<()> {
              ON memory_provenance(memory_kind, memory_id, carrier_kind, carrier_id);
          CREATE INDEX IF NOT EXISTS idx_memory_provenance_carrier
              ON memory_provenance(carrier_kind, carrier_id);",
+    )?;
+    Ok(())
+}
+
+/// Stable logical ids for compact transcript files.  The filesystem path is
+/// deliberately only an index: retrying a fold may choose a different file
+/// name, while its carrier id must remain the same.
+fn apply_transcript_carriers(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS transcript_carriers (
+             transcript_id  TEXT PRIMARY KEY,
+             path           TEXT NOT NULL UNIQUE,
+             session_id     TEXT NOT NULL,
+             summary_turn_id TEXT NOT NULL,
+             created_at     TEXT NOT NULL
+         );
+         CREATE INDEX IF NOT EXISTS idx_transcript_carriers_session
+             ON transcript_carriers(session_id, summary_turn_id);
+         CREATE INDEX IF NOT EXISTS idx_transcript_carriers_path
+             ON transcript_carriers(path);",
     )?;
     Ok(())
 }
@@ -253,6 +277,7 @@ mod tests {
             "profile_claims",
             "relationship_events",
             "memory_provenance",
+            "transcript_carriers",
         ] {
             let exists: bool = conn
                 .query_row(

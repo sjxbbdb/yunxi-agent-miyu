@@ -370,6 +370,7 @@ fn render_is_deterministic_and_english() {
             "/state/fold-2.md".to_string(),
             "/state/fold-1.md".to_string(),
         ],
+        transcript_ids: Vec::new(),
         restored: vec![
             RestoredFile {
                 path: "/work/a.rs".to_string(),
@@ -469,6 +470,32 @@ fn transcript_chain_keeps_the_previous_paths_newest_first() {
     assert!(extras.transcripts[0].contains("compact/session/fold-"));
     assert_eq!(extras.transcripts[1], "/old/fold-1.md");
     assert_eq!(extras.transcripts[4], "/old/fold-4.md");
+}
+
+#[test]
+fn transcript_ids_are_stable_for_a_fold_and_distinct_between_folds() {
+    let first = turn(1, "one", Vec::new());
+    let second = turn(2, "two", Vec::new());
+    let first_fold = [&first];
+    let first_fold_retry = [&first];
+    let second_fold = [&second];
+
+    assert_eq!(
+        transcript_logical_id("session", &first_fold),
+        transcript_logical_id("session", &first_fold_retry)
+    );
+    assert_ne!(
+        transcript_logical_id("session", &first_fold),
+        transcript_logical_id("session", &second_fold)
+    );
+}
+
+#[test]
+fn legacy_compact_extras_without_transcript_ids_still_parse() {
+    let extras: CompactExtras =
+        serde_json::from_str(r#"{"transcripts":["/state/fold-1.md"],"read_hint":true}"#).unwrap();
+    assert_eq!(extras.transcripts, vec!["/state/fold-1.md"]);
+    assert!(extras.transcript_ids.is_empty());
 }
 
 #[test]

@@ -10,6 +10,7 @@ pub use attachments::{
 mod goals;
 pub use goals::*;
 mod history;
+pub use history::{TranscriptCarrier, TranscriptCarrierProvenance};
 mod open;
 mod pages;
 pub use pages::{ReplayPage, TurnPage};

@@ -116,6 +116,81 @@ fn summary_provenance_is_typed_and_removed_by_undo() {
 }
 
 #[test]
+fn transcript_carrier_path_lookup_returns_id_and_refs_and_undo_cleans_it() {
+    let (_temp, store) = test_store();
+    for id in ["t1", "t2"] {
+        store.start_turn(id, id, 999999).unwrap();
+        store.complete_turn(id, "reply", None).unwrap();
+    }
+    let (fold_ids, turn_ids) = visible_snapshot(&store);
+    let refs = vec![yunxi_base::memory_types::MemoryRef {
+        kind: "fact".to_string(),
+        id: 31,
+    }];
+    let transcript_id = "transcript-stable-id".to_string();
+    let transcript_path = "/state/compact/s/fold-1.md".to_string();
+    store
+        .replace_visible_with_summary_with_refs_and_transcripts(
+            &fold_ids,
+            &turn_ids,
+            "summary",
+            TurnTokens::default(),
+            false,
+            None,
+            None,
+            &refs,
+            &[TranscriptCarrier {
+                transcript_id: transcript_id.clone(),
+                path: transcript_path.clone(),
+            }],
+        )
+        .unwrap();
+
+    let carrier = store
+        .load_transcript_provenance_by_path(&transcript_path)
+        .unwrap()
+        .unwrap();
+    assert_eq!(carrier.transcript_id, transcript_id);
+    assert_eq!(carrier.refs, refs);
+
+    store.undo_last_turn().unwrap();
+    assert!(store
+        .load_transcript_provenance_by_path(&transcript_path)
+        .unwrap()
+        .is_none());
+}
+
+#[test]
+fn reset_cleans_transcript_carriers_without_deleting_files() {
+    let (_temp, store) = test_store();
+    store.start_turn("t1", "one", 999999).unwrap();
+    store.complete_turn("t1", "reply", None).unwrap();
+    let (fold_ids, turn_ids) = visible_snapshot(&store);
+    let path = "/state/compact/s/fold-1.md";
+    store
+        .replace_visible_with_summary_with_refs_and_transcripts(
+            &fold_ids,
+            &turn_ids,
+            "summary",
+            TurnTokens::default(),
+            false,
+            None,
+            None,
+            &[],
+            &[TranscriptCarrier {
+                transcript_id: "transcript-reset".to_string(),
+                path: path.to_string(),
+            }],
+        )
+        .unwrap();
+    store.reset_conversation().unwrap();
+    assert!(store
+        .load_transcript_provenance_by_path(path)
+        .unwrap()
+        .is_none());
+}
+
+#[test]
 fn session_loaded_tools_persist_until_reset() {
     let (_temp, store) = test_store();
     store

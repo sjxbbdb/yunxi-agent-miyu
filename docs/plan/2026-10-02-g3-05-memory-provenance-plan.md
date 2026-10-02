@@ -76,6 +76,41 @@ The transcript carrier remains deliberately out of this slice. Transcript
 paths are still legacy/unknown until a stable logical id and a read barrier are
 implemented together; no transcript text is guessed or scrubbed here.
 
+## G3-05-03b implemented slice: transcript carrier identity and writes
+
+This slice adds the write-side transcript carrier contract without introducing
+the read/grep/run-command barriers. Compact extras keep the existing
+`transcripts` path list and add an optional, position-aligned `transcript_ids`
+list, so old JSON remains readable. Each new id is a deterministic BLAKE3
+digest of a version tag, the session id, and the ordered folded turn ids. The
+filesystem path remains a display/lookup key and is never used as
+`memory_provenance.carrier_id`.
+
+The additive named migration `2026-10-02-g3-05-transcript-carriers` stores the
+path-to-id registry and the summary turn that introduced it. Compaction writes
+the registry row and `transcript_input` links in the same transaction as the
+summary row. Undo and session/persona reset remove both registry and typed
+links; transcript files themselves are retained. Legacy transcript paths
+without ids resolve as unknown until a later write assigns one.
+
+Evidence for this write-side slice (WSL Ubuntu-24.04, ext4 disposable copy,
+one cargo job at a time):
+
+- `yunxi-core` `state::tests::compact`: 24 passed, including migration-backed
+  path lookup and undo/reset cleanup.
+- `yunxi-core` `memory::tests::store`: 12 passed, including the existing
+  tombstone and memory/profile isolation regressions.
+- `yunxi-core` `memory::tests::browse`: 3 passed, including the direct
+  tombstone-aware evicted browse barrier.
+- `yunxi-engine` `agent::tests::compact_extras`: 17 passed, including stable
+  logical ids, legacy extras parsing, and transcript chain compatibility.
+- `yunxi-engine` `agent::tests::context`: 37 passed, covering compaction and
+  replay consumers of the updated extras/state API.
+
+The disposable copy was removed after these runs. The read/grep/run-command
+barrier is intentionally not part of this evidence and remains the next
+implementation slice.
+
 ## G3-05-03a implemented slice: direct evicted browse barrier
 
 The existing keyword and semantic evicted-context paths already consulted the
