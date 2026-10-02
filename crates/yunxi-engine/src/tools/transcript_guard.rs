@@ -358,6 +358,52 @@ mod tests {
         assert!(error.contains("another session"), "unexpected: {error}");
     }
 
+    #[tokio::test]
+    async fn literal_glob_inside_compact_scope_is_denied_fail_closed() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let state = yunxi_core::state::StateStore::new(&paths).unwrap();
+        let memory =
+            yunxi_core::memory::MemoryStore::new(&yunxi_base::config::AppConfig::default(), &paths);
+        let root = transcript_root(&state);
+        let mut registry = run_command_registry();
+        bind(&mut registry, state, memory);
+
+        let command = format!("cat '{}/fold-*.md'", root.display());
+        let error = registry
+            .call(
+                "run_command",
+                &serde_json::json!({"command": command}).to_string(),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("unknown provenance"), "unexpected: {error}");
+    }
+
+    #[tokio::test]
+    async fn cd_into_compact_scope_is_denied_before_relative_read() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let state = yunxi_core::state::StateStore::new(&paths).unwrap();
+        let memory =
+            yunxi_core::memory::MemoryStore::new(&yunxi_base::config::AppConfig::default(), &paths);
+        let root = transcript_root(&state);
+        let mut registry = run_command_registry();
+        bind(&mut registry, state, memory);
+
+        let command = format!("cd '{}'; cat fold-1.md", root.display());
+        let error = registry
+            .call(
+                "run_command",
+                &serde_json::json!({"command": command}).to_string(),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("unknown provenance"), "unexpected: {error}");
+    }
+
     fn read_registry() -> ToolRegistry {
         let mut registry = ToolRegistry::new();
         registry.register(super::super::ToolSpec::new(

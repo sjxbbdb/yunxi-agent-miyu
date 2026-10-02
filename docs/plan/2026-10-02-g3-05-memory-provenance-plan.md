@@ -242,9 +242,10 @@ so an absolute historical path cannot be smuggled through `cat ...; ...`.
 
 Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
 
-- `cargo test -p yunxi-engine --lib transcript_guard --locked -- --test-threads=1` — 8 passed, 694 filtered.
+- `cargo test -p yunxi-engine --lib transcript_guard --locked -- --test-threads=1` — 11 passed, 694 filtered.
 - The new regressions cover tombstoned transcript reads through a shell chain
-  and a live-provenance historical-session read.
+  and a live-provenance historical-session read; literal glob paths and
+  `cd`-then-relative reads are also rejected before shell dispatch.
 - The disposable source and target were removed after the run; no cargo or
   rustc process remained.
 
