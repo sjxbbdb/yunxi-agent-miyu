@@ -252,6 +252,29 @@ This slice does not claim to parse arbitrary shell grammar or defend against
 symlink/hardlink races; dynamic variables, command substitution, redirection,
 and external filesystem links remain explicit next-boundary work.
 
+## G3-05-11 implemented slice: execution-entry binding parity
+
+The transcript barrier is now attached at the narrow execution boundaries
+that construct a fresh registry after static composition. Daemon IPC
+`ToolCall`, direct CLI `tool`/`tool-call`, and direct MCP `call_tool` all pin
+`StateStore` and `MemoryStore` to the requested session before dispatch. The
+public binding facade does not alter tool definitions or provider-facing
+catalog bytes. Catalog-only paths (`ToolCatalog` and MCP `tools/list`) remain
+unbound intentionally because they expose definitions and do not execute a
+filesystem-reading tool.
+
+Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
+
+- `cargo test -p yunxi-hosts --lib web::tests::ipc_bridge --locked -- --test-threads=1` — 22 passed.
+- `cargo check -p yunxi --locked` — passed.
+- `cargo fmt --all -- --check`, `git diff --check`, and the privacy scan passed.
+
+The daemon-less development subagent creates a separate dev registry inside
+its foreground fallback loop and remains an explicit next boundary; the
+session-hosted subagent path already receives its session-owned registry from
+the host. This slice therefore does not claim all possible subagent creation
+paths are covered.
+
 ## G3-05-08 implemented slice: concurrent browse convergence contract
 
 The memory browse regression now runs a delete and an evicted-context browse

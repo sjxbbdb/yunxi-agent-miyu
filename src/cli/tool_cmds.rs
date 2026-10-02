@@ -11,7 +11,8 @@ pub(in crate::cli) async fn run_tool(
     args: ToolArgs,
 ) -> Result<()> {
     let config = AppConfig::load_or_default(paths)?;
-    let registry = build_tool_registry(&config, paths, mode, false)?;
+    let mut registry = build_tool_registry(&config, paths, mode, false)?;
+    bind_direct_transcript_guard(&mut registry, paths, &config, None)?;
     let output = registry
         .call(&args.name, args.arguments.as_deref().unwrap_or("{}"))
         .await?;
@@ -192,7 +193,8 @@ pub(in crate::cli) async fn run_tool_call(paths: &YunXiPaths, args: ToolCallArgs
     if depth >= yunxi_base::workspace::MAX_BRIDGE_DEPTH {
         bail!("tool bridge recursion limit reached (depth {depth})");
     }
-    let registry = build_tool_registry(&config, paths, mode, false)?;
+    let mut registry = build_tool_registry(&config, paths, mode, false)?;
+    bind_direct_transcript_guard(&mut registry, paths, &config, session.as_deref())?;
     if !registry.contains(&name) {
         bail!(
             "{:#}. {}",
@@ -221,6 +223,24 @@ pub(in crate::cli) async fn run_tool_call(paths: &YunXiPaths, args: ToolCallArgs
         None => invoke.await?,
     };
     println!("{output}");
+    Ok(())
+}
+
+/// Install the transcript guard on direct (daemon-less) execution registries.
+/// Catalog paths deliberately do not call this helper.
+fn bind_direct_transcript_guard(
+    registry: &mut yunxi_engine::tools::ToolRegistry,
+    paths: &YunXiPaths,
+    config: &AppConfig,
+    session_id: Option<&str>,
+) -> Result<()> {
+    let state = StateStore::new(paths)?;
+    let session_id = session_id
+        .map(str::to_owned)
+        .unwrap_or_else(|| state.session_id().to_string());
+    let state = state.pinned(&session_id);
+    let memory = yunxi_core::memory::MemoryStore::new(config, paths).with_session_id(&session_id);
+    yunxi_engine::tools::bind_transcript_access_guard(registry, state, memory);
     Ok(())
 }
 

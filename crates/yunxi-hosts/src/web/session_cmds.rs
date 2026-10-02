@@ -307,6 +307,18 @@ pub(in crate::web) async fn handle_session_command(
                 yunxi_engine::tools::build_tool_registry(&config, &state.paths, mode, false)
                     .map_err(|error| safe_error_message(&error))?;
             attach_owner_turn_tools(&mut registry, state, &config, mode, &session_id);
+            // ToolCall is an execution path, unlike ToolCatalog above. Pin
+            // both stores to the requested session before installing the
+            // transcript barrier so a switched daemon pointer cannot bypass
+            // provenance checks.
+            let session_state = session_store.pinned(&session_id);
+            let session_memory = yunxi_core::memory::MemoryStore::new(&config, &state.paths)
+                .with_session_id(&session_id);
+            yunxi_engine::tools::bind_transcript_access_guard(
+                &mut registry,
+                session_state,
+                session_memory,
+            );
             if !registry.contains(&name) {
                 // 桥专属报错:dev 实测里裸 "unknown tool" 让脚本作者盲试了
                 // 一轮,这里把近似建议和"查目录"的路标一并给出。

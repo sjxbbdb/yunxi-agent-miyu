@@ -180,7 +180,12 @@ pub fn clear_aur_review_state(paths: &YunXiPaths) -> anyhow::Result<()> {
     archlinux::aur_review::clear_aur_review_state(paths)
 }
 
-pub(crate) fn bind_transcript_access_guard(
+/// Bind session-owned transcript access policy to an execution registry.
+///
+/// Tool definitions remain unchanged; callers must invoke this only for a
+/// registry that will execute tools, after all session-specific tools have
+/// been attached. Catalog/describe registries intentionally stay unbound.
+pub fn bind_transcript_access_guard(
     registry: &mut ToolRegistry,
     state: yunxi_core::state::StateStore,
     memory: yunxi_core::memory::MemoryStore,

@@ -234,7 +234,9 @@ mod tests {
             serde_json::json!({"type":"object"}),
             |_| async { Ok("handler ran".to_string()) },
         ));
-        bind(&mut registry, state, memory);
+        // Exercise the public execution-registry facade used by hosts and the
+        // direct CLI, rather than the module-private implementation.
+        super::super::bind_transcript_access_guard(&mut registry, state, memory);
         let path = root
             .join("../")
             .join(root.file_name().unwrap())

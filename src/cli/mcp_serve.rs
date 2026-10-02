@@ -258,6 +258,22 @@ async fn list_tools(
     Ok(serde_json::json!({ "tools": tools }))
 }
 
+fn bind_direct_transcript_guard(
+    registry: &mut yunxi_engine::tools::ToolRegistry,
+    paths: &YunXiPaths,
+    config: &AppConfig,
+    session_id: Option<&str>,
+) -> Result<()> {
+    let state = yunxi_core::state::StateStore::new(paths)?;
+    let session_id = session_id
+        .map(str::to_owned)
+        .unwrap_or_else(|| state.session_id().to_string());
+    let state = state.pinned(&session_id);
+    let memory = yunxi_core::memory::MemoryStore::new(config, paths).with_session_id(&session_id);
+    yunxi_engine::tools::bind_transcript_access_guard(registry, state, memory);
+    Ok(())
+}
+
 async fn call_tool(
     paths: &YunXiPaths,
     session: &Option<String>,
@@ -293,7 +309,8 @@ async fn call_tool(
     } else {
         PersonaLane::Active
     };
-    let registry = build_tool_registry(&config, paths, mode, false)?;
+    let mut registry = build_tool_registry(&config, paths, mode, false)?;
+    bind_direct_transcript_guard(&mut registry, paths, &config, session.as_deref())?;
     if !registry.contains(name) {
         bail!("{:#}", registry.unknown_tool_error(name));
     }

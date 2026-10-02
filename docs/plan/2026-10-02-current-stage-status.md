@@ -25,7 +25,9 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   rollback regression、concurrent browse convergence，以及 committed-delete
   后 recall+browse convergence、历史 transcript scope barrier 的最小切片。代码与测试证据已进入当前工作树；状态文档提交可晚于代码证据提交。session
   GC 的基线提交为 `e9bdaf32`，transcript read
-  barrier 的基线提交为 `83f763b0`。
+   barrier 的基线提交为 `83f763b0`。本轮又将 barrier 绑定到 daemon IPC
+   `ToolCall`、直连 CLI `tool`/`tool-call` 与直连 MCP `call_tool` 执行入口；
+   `ToolCatalog`、`tools/list` 等只读目录面仍刻意不绑定。
 
 ## 下一处施工边界
 
@@ -33,8 +35,9 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 
 1. 补 provenance 在 concurrent delete/recall 的更强 overlap 语义上的决策
    或测试 seam；当前只证明了并发调用后的 convergence；
-2. 补齐所有实际执行入口的 transcript guard 绑定（daemon IPC tool-call、
-   直连 CLI tool-call、dev 子代理工具面），避免只在 Agent 主回合绑定；
+2. 补齐剩余实际执行入口的 transcript guard 绑定（尤其是无 daemon 直连路径的
+   dev 子代理工具面），避免只在 Agent 主回合绑定；本轮 daemon IPC、直连 CLI
+   与直连 MCP 已完成并通过宿主编译/测试；
 3. 对 transcript `run_command` 的变量、命令替换、重定向、symlink/hardlink
    和相对 `..` 语法做明确的 fail-closed 边界测试或实现；
 4. 只在这些证据通过后，才评估 G3-05 的阶段退出。
