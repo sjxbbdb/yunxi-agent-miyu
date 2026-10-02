@@ -809,6 +809,14 @@ impl ConversationDb {
             "DELETE FROM queued_prompts WHERE session_id = ?1",
             params![session_id],
         )?;
+        tx.execute(
+            "DELETE FROM memory_provenance WHERE session_id = ?1",
+            params![session_id],
+        )?;
+        tx.execute(
+            "DELETE FROM transcript_carriers WHERE session_id = ?1",
+            params![session_id],
+        )?;
         let deleted = tx.execute(
             "DELETE FROM sessions WHERE session_id = ?1",
             params![session_id],

@@ -191,6 +191,47 @@ fn reset_cleans_transcript_carriers_without_deleting_files() {
 }
 
 #[test]
+fn delete_session_cleans_provenance_rows() {
+    let (_temp, store) = test_store();
+    let doomed = store.session_id().to_string();
+    store.start_turn("t1", "one", 999999).unwrap();
+    store.complete_turn("t1", "reply", None).unwrap();
+    let (fold_ids, turn_ids) = visible_snapshot(&store);
+    let refs = [yunxi_base::memory_types::MemoryRef {
+        kind: "fact".to_string(),
+        id: 41,
+    }];
+    let doomed_path = "/state/compact/doomed/fold-1.md";
+    store
+        .replace_visible_with_summary_with_refs_and_transcripts(
+            &fold_ids,
+            &turn_ids,
+            "summary",
+            TurnTokens::default(),
+            false,
+            None,
+            None,
+            &refs,
+            &[TranscriptCarrier {
+                transcript_id: "transcript-doomed".to_string(),
+                path: doomed_path.to_string(),
+            }],
+        )
+        .unwrap();
+    assert!(store
+        .load_transcript_provenance_by_path(doomed_path)
+        .unwrap()
+        .is_some());
+
+    store.delete_session(&doomed).unwrap();
+
+    assert!(store
+        .load_transcript_provenance_by_path(doomed_path)
+        .unwrap()
+        .is_none());
+}
+
+#[test]
 fn session_loaded_tools_persist_until_reset() {
     let (_temp, store) = test_store();
     store

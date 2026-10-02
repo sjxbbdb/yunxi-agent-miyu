@@ -21,13 +21,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 - **G3：进行中。** G3-01 至 G3-04 已有生命周期、admission、committed-only
   vector、embedding 生命周期和 restore barrier 证据；G3-05 已完成 evicted
   turn、summary carrier、transcript identity/write 和当前 transcript read
-  barrier 的最小切片。当前 HEAD 为 `c72a2397`。
+  barrier 和 session-delete/idle-sweep GC 的最小切片。当前 HEAD 仍待本轮
+  GC 变更提交后更新；transcript read barrier 的基线提交为 `83f763b0`。
 
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
 
-1. 补 provenance 在 import、rollback、reset 和并发 delete/recall 路径的
+1. 补 provenance 在 import、rollback 和并发 delete/recall 路径的
    可复验证据；
 2. 对 transcript `run_command` 的相对路径、shell 组合语法和历史 session
    做明确的 fail-closed 边界测试；

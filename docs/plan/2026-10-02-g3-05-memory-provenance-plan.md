@@ -149,6 +149,30 @@ The disposable copy must be removed after the broader G3-05 regression run;
 the barrier is not yet a claim that every historical session or every shell
 grammar has been exhaustively mediated.
 
+## G3-05-05 implemented slice: session deletion and idle-sweep GC
+
+`ConversationDb::delete_session` and the idle one-shot session sweep now delete
+`memory_provenance` and `transcript_carriers` by the same `session_id` inside
+the existing SQLite transaction, before removing the session row. This closes
+the orphan-index gap without touching sibling sessions, global profile data, or
+filesystem transcript files. A failed later delete still rolls the metadata
+cleanup back with the session transaction.
+
+Evidence for this slice (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job
+at a time):
+
+- `yunxi-core` `state::tests::compact`: 25 passed, including direct session
+  deletion removing both provenance tables.
+- `yunxi-core` `state::tests::sessions`: 16 passed, including idle ask-session
+  sweep removing both provenance tables while leaving the user session intact.
+- `cargo fmt --all -- --check` and `git diff --check`: passed on the host
+  checkout before the ext4 run.
+- Temporary source and target directories were removed after the run; no cargo
+  or rustc process remained.
+
+This does not yet prove import/rollback transfer of the provenance tables or
+concurrent delete/recall behavior; those remain the next G3-05 boundaries.
+
 ## G3-05-03a implemented slice: direct evicted browse barrier
 
 The existing keyword and semantic evicted-context paths already consulted the

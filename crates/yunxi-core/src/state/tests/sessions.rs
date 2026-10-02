@@ -669,6 +669,33 @@ fn one_shot_sessions_stay_invisible_and_stale_ones_are_swept() {
         .unwrap()
         .is_none());
 
+    // Provenance rows follow the same session lifetime as the one-shot row.
+    // Seed both carrier tables directly so this test exercises the sweep's
+    // transaction rather than the compaction write path.
+    {
+        use rusqlite::params;
+        let db_path = temp.path().join("state").join("conversation.db");
+        let conn = rusqlite::Connection::open(db_path).unwrap();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO memory_provenance (
+                carrier_kind, carrier_id, memory_kind, memory_id, relation,
+                session_id, created_at
+             ) VALUES ('summary_turn', 'summary-ask', 'fact', 7,
+                       'summary_input', ?1, ?2)",
+            params![ask.session_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO transcript_carriers (
+                transcript_id, path, session_id, summary_turn_id, created_at
+             ) VALUES ('transcript-ask', '/state/compact/ask/fold.md', ?1,
+                       'summary-ask', ?2)",
+            params![ask.session_id, now],
+        )
+        .unwrap();
+    }
+
     // Fresh one-shot survives the sweep; an hour-old orphan does not.
     assert_eq!(store.delete_ask_sessions_older_than(1).unwrap(), 0);
     {
@@ -681,6 +708,21 @@ fn one_shot_sessions_stay_invisible_and_stale_ones_are_swept() {
     }
     assert_eq!(store.delete_ask_sessions_older_than(1).unwrap(), 1);
     assert!(store.session_record(&ask.session_id).unwrap().is_none());
+    {
+        use rusqlite::params;
+        let db_path = temp.path().join("state").join("conversation.db");
+        let conn = rusqlite::Connection::open(db_path).unwrap();
+        for table in ["memory_provenance", "transcript_carriers"] {
+            let count: i64 = conn
+                .query_row(
+                    &format!("SELECT COUNT(*) FROM {table} WHERE session_id = ?1"),
+                    params![ask.session_id],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(count, 0, "stale {table} row remained after sweep");
+        }
+    }
     // The equally backdated user session is untouched.
     assert!(store.session_record(&user.session_id).unwrap().is_some());
 }
