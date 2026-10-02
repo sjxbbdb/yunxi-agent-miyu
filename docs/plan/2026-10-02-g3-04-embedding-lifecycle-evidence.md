@@ -134,7 +134,7 @@ reset runs cover the transactional deletion paths that create tombstones.
   `g3-04-revisions-20261002-ext4-02` (revision deletion and reset follow-up),
   `g3-04-tombstones-20261002-ext4-01` (restore barrier)
 - `stage/task`: `G3-04 embedding lifecycle and stale-vector cleanup`
-- `implementation_commit`: pending Lead commit for the tombstone slice;
+- `implementation_commit`: `f302e637` (deletion tombstones and restore barrier);
   prior lifecycle commits include `f3ffafe5` (post-inference hit revalidation),
   `135d7271` (guarded dedup writes), `ab7ba6de` (guarded async writes), plus
   `87288422`
