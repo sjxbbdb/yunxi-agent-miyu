@@ -63,7 +63,40 @@ pub(crate) mod tests {
              CREATE TABLE turns (turn_id TEXT PRIMARY KEY, workspace TEXT,
                                  tool_footprint TEXT, owner_pid INTEGER);
              CREATE TABLE queued_prompts (prompt_id TEXT PRIMARY KEY, owner_pid INTEGER);
+             CREATE TABLE memory_provenance (
+                 carrier_kind TEXT NOT NULL,
+                 carrier_id TEXT NOT NULL,
+                 memory_kind TEXT NOT NULL,
+                 memory_id INTEGER NOT NULL,
+                 relation TEXT NOT NULL,
+                 session_id TEXT NOT NULL,
+                 created_at TEXT NOT NULL
+             );
+             CREATE TABLE transcript_carriers (
+                 transcript_id TEXT PRIMARY KEY,
+                 path TEXT NOT NULL,
+                 session_id TEXT NOT NULL,
+                 summary_turn_id TEXT NOT NULL,
+                 created_at TEXT NOT NULL
+             );
              INSERT INTO sessions VALUES ('s1', '/gone/from/this/machine');",
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO memory_provenance (
+                carrier_kind, carrier_id, memory_kind, memory_id, relation,
+                session_id, created_at
+             ) VALUES ('summary_turn', 'summary-s1', 'fact', 7,
+                       'summary_input', 's1', '2026-10-02T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO transcript_carriers (
+                transcript_id, path, session_id, summary_turn_id, created_at
+             ) VALUES ('transcript-s1', '/state/compact/s1/fold.md', 's1',
+                       'summary-s1', '2026-10-02T00:00:00Z')",
+            [],
         )
         .unwrap();
         // Leave the write sitting in the WAL: a plain file copy would miss it.
@@ -166,6 +199,22 @@ pub(crate) mod tests {
             )
             .unwrap();
         assert!(workspace.is_none(), "stale workspace should be cleared");
+        let provenance_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM memory_provenance WHERE session_id='s1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(provenance_count, 1);
+        let transcript_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM transcript_carriers WHERE session_id='s1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(transcript_count, 1);
         assert_eq!(outcome.cleared_workspaces, 1);
 
         // Machine-specific noise stayed behind.
@@ -968,6 +1017,81 @@ pub(crate) mod tests {
             "live files must be rolled back"
         );
         assert!(!outside.path().join("config.jsonc").exists());
+        assert!(std::fs::symlink_metadata(target.path().join(".layout-v1")).is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn marker_failure_restores_provenance_tables() {
+        use std::os::unix::fs::symlink;
+
+        fn label_provenance(paths: &YunXiPaths, label: &str) {
+            let conn = rusqlite::Connection::open(paths.state_dir.join("conversation.db")).unwrap();
+            conn.execute(
+                "UPDATE memory_provenance SET carrier_id = ?1 WHERE session_id = 's1'",
+                [format!("summary-{label}")],
+            )
+            .unwrap();
+            conn.execute(
+                "UPDATE transcript_carriers SET transcript_id = ?1 WHERE session_id = 's1'",
+                [format!("transcript-{label}")],
+            )
+            .unwrap();
+        }
+
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        label_provenance(&source_paths, "source");
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let target_paths = populated_home(target.path());
+        label_provenance(&target_paths, "target");
+        let outside = tempfile::tempdir().unwrap();
+        symlink(outside.path(), target.path().join(".layout-v1")).unwrap();
+
+        let error = super::import::import(
+            &target_paths,
+            &archive,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("symlink"), "got: {error}");
+
+        let conn =
+            rusqlite::Connection::open(target_paths.state_dir.join("conversation.db")).unwrap();
+        let carrier_id: String = conn
+            .query_row(
+                "SELECT carrier_id FROM memory_provenance WHERE session_id = 's1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(carrier_id, "summary-target");
+        let transcript_id: String = conn
+            .query_row(
+                "SELECT transcript_id FROM transcript_carriers WHERE session_id = 's1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(transcript_id, "transcript-target");
+        let source_rows: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM memory_provenance WHERE carrier_id = 'summary-source'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(source_rows, 0);
         assert!(std::fs::symlink_metadata(target.path().join(".layout-v1")).is_ok());
     }
 

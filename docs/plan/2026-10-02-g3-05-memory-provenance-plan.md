@@ -173,6 +173,41 @@ at a time):
 This does not yet prove import/rollback transfer of the provenance tables or
 concurrent delete/recall behavior; those remain the next G3-05 boundaries.
 
+## G3-05-06 implemented slice: transfer round-trip coverage
+
+The existing SQLite transfer round-trip fixture now contains one
+`memory_provenance` row and one `transcript_carriers` row for the exported
+conversation session. The import assertion verifies both rows survive the
+SQLite snapshot/archive/import path alongside the existing session data. This
+is coverage of the registered `state/conversation.db` unit; it does not change
+the transfer registry or add a second database.
+
+Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
+
+- `cargo test -p yunxi-engine --lib transfer::tests::an_export_round_trips_into_an_empty_home --locked -- --test-threads=1` — 1 passed.
+- Temporary source and target directories were removed after the run; no cargo
+  or rustc process remained.
+
+Rollback failure-injection and concurrent delete/recall remain unverified.
+
+## G3-05-07 implemented slice: provenance rollback regression
+
+The transfer failure-injection suite now seeds distinct source and target
+sentinels in both provenance tables, forces an import into a target whose
+layout marker is a symlink, and verifies that rollback restores the target
+rows without installing the source rows. The test exercises the existing
+SQLite snapshot plus staged-install/undo path; it does not alter transfer
+registry policy or transcript-file transport.
+
+Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
+
+- `cargo test -p yunxi-engine --lib transfer::tests::marker_failure_restores_provenance_tables --locked -- --exact` — 1 passed.
+- Temporary source and target directories were removed after the run; no cargo
+  or rustc process remained.
+
+The `state/compact` transcript-file policy and concurrent delete/recall remain
+explicitly outside this slice.
+
 ## G3-05-03a implemented slice: direct evicted browse barrier
 
 The existing keyword and semantic evicted-context paths already consulted the
