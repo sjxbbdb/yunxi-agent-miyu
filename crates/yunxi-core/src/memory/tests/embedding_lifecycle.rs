@@ -200,6 +200,11 @@ fn deleted_episode_is_absent_from_keyword_association_and_history_recall() {
     let history = store.recall_past_events_readonly(content, 10).unwrap();
     assert!(history["episodes"].as_array().unwrap().is_empty());
     assert!(store.association(content, None).unwrap().is_none());
+    let conn = store.data_conn().unwrap();
+    assert!(store
+        .revalidate_hits(&conn, MemoryKind::Diary, association.episodes)
+        .unwrap()
+        .is_empty());
     assert_eq!(store.embedding_coverage("test-model").unwrap(), (0, 0));
 }
 

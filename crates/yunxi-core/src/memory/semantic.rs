@@ -130,12 +130,38 @@ impl MemoryStore {
             .await;
         let conn = self.data_conn()?;
         match fused {
-            Ok((facts, episodes)) => self.finish_association(&conn, facts, episodes),
+            Ok((facts, episodes)) => {
+                let facts = self.revalidate_hits(&conn, MemoryKind::Fact, facts)?;
+                let episodes = self.revalidate_hits(&conn, MemoryKind::Diary, episodes)?;
+                self.finish_association(&conn, facts, episodes)
+            }
             Err(error) => {
                 tracing::debug!(error = %error, "memory semantic pass unavailable; keyword only");
+                let facts = self.revalidate_hits(&conn, MemoryKind::Fact, facts)?;
+                let episodes = self.revalidate_hits(&conn, MemoryKind::Diary, episodes)?;
                 self.finish_association(&conn, facts, episodes)
             }
         }
+    }
+
+    /// Re-check ids captured before an async embedding pass. Deletion or
+    /// status/visibility changes during inference must win over the snapshot.
+    pub(crate) fn revalidate_hits(
+        &self,
+        conn: &rusqlite::Connection,
+        kind: MemoryKind,
+        hits: Vec<MemoryHit>,
+    ) -> Result<Vec<MemoryHit>> {
+        let ids = hits.iter().map(|hit| hit.id).collect::<Vec<_>>();
+        let current = self.hits_by_ids(conn, kind, &ids)?;
+        let current_ids = current
+            .into_iter()
+            .map(|hit| hit.id)
+            .collect::<HashSet<_>>();
+        Ok(hits
+            .into_iter()
+            .filter(|hit| current_ids.contains(&hit.id))
+            .collect())
     }
 
     #[allow(clippy::too_many_arguments)]
