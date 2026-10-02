@@ -45,17 +45,21 @@ use yunxi_base::paths::YunXiPaths;
 pub use conversation_db::{
     interrupted_text, pending_placeholder, ArtifactAsset, ArtifactAssetData, BackgroundReportRow,
     CacheBreakRecord, ContextAnchor, ConversationDb, FlowMessage, GoalDenied, GoalPhase,
-    GoalRecord, HeldJobReport, ImageAsset, ImageAssetData, NewSponsorRecord, PlatformAccessActor,
-    PlatformAccessGrant, PlatformAccessGrantKey, PlatformMemeRefRecord, PlatformPluginScopeKey,
-    PlatformSessionBinding, PlatformSessionBindingKey, QueuedPrompt, QueuedPromptAttachment,
-    QueuedSyntheticPrompt, RedoCandidate, RedoInputKind, RedoStart, ReplayEntry, ReplayPage,
-    RestartOrphan, SessionOverview, SessionRecord, SessionValueKind, SponsorOrder, SponsorRecord,
-    SponsorSummary, SponsorTotal, ToolFlowCall, ToolFlowRound, ToolFootprint, Turn, TurnCompletion,
+    GoalRecord, HeldJobReport, ImageAsset, ImageAssetData, NewProfileClaim, NewRelationshipEvent,
+    NewSponsorRecord, PlatformAccessActor, PlatformAccessGrant, PlatformAccessGrantKey,
+    PlatformMemeRefRecord, PlatformPluginScopeKey, PlatformSessionBinding,
+    PlatformSessionBindingKey, ProfileClaim, ProfileClaimCertainty, ProfileClaimStatus,
+    QueuedPrompt, QueuedPromptAttachment, QueuedSyntheticPrompt, RedoCandidate, RedoInputKind,
+    RedoStart, RelationshipEvent, RelationshipEventStatus, ReplayEntry, ReplayPage, RestartOrphan,
+    SessionOverview, SessionRecord, SessionValueKind, SponsorOrder, SponsorRecord, SponsorSummary,
+    SponsorTotal, ToolFlowCall, ToolFlowRound, ToolFootprint, Turn, TurnCompletion,
     TurnFinishExtras, TurnFollowup, TurnInlineMedia, TurnJournalEvent, TurnPage,
     TurnRedoCheckpointPayload, TurnReplay, TurnStatus, UserAttachment, UserAttachmentData,
     DEFAULT_MAX_GOAL_ROUNDS, GLOBAL_PLATFORM_ACCOUNT_SCOPE, INLINE_MEDIA_KIND_IMAGE,
-    INLINE_MEDIA_KIND_PDF, INLINE_MEDIA_KIND_TEXT, INLINE_MEDIA_KIND_VIDEO,
-    USER_ATTACHMENT_KIND_FILE, USER_ATTACHMENT_KIND_IMAGE, USER_ATTACHMENT_KIND_TEXT,
+    INLINE_MEDIA_KIND_PDF, INLINE_MEDIA_KIND_TEXT, INLINE_MEDIA_KIND_VIDEO, MAX_PROFILE_KEY_CHARS,
+    MAX_PROFILE_VALUE_CHARS, MAX_RELATIONSHIP_PAYLOAD_CHARS, MAX_RELATIONSHIP_SUMMARY_CHARS,
+    MAX_SOURCE_KIND_CHARS, MAX_SOURCE_REF_CHARS, MAX_TIMESTAMP_CHARS, USER_ATTACHMENT_KIND_FILE,
+    USER_ATTACHMENT_KIND_IMAGE, USER_ATTACHMENT_KIND_TEXT,
 };
 pub use usage::{
     UsageMeta, UsageRange, UsageSnapshot, UsageStats, USAGE_KIND_AFFECTION, USAGE_KIND_GROUP_JOIN,
@@ -334,6 +338,50 @@ impl StateStore {
     #[allow(dead_code)]
     pub fn conv_db(&self) -> &ConversationDb {
         &self.conv_db
+    }
+
+    /// Structured profile metadata facade. This does not alter `profile.md`
+    /// or feed the memory/prompt stores; lifecycle integration is deferred to
+    /// G2-02/G2-03.
+    pub fn insert_profile_claim(&self, input: &NewProfileClaim) -> Result<ProfileClaim> {
+        self.conv_db.insert_profile_claim(input)
+    }
+
+    pub fn upsert_profile_claim(&self, claim: &ProfileClaim) -> Result<()> {
+        self.conv_db.upsert_profile_claim(claim)
+    }
+
+    pub fn list_profile_claims(
+        &self,
+        owner_scope: &str,
+        include_revoked: bool,
+    ) -> Result<Vec<ProfileClaim>> {
+        self.conv_db
+            .list_profile_claims(owner_scope, include_revoked)
+    }
+
+    pub fn revoke_profile_claim(&self, claim_id: &str, updated_at: &str) -> Result<bool> {
+        self.conv_db.revoke_profile_claim(claim_id, updated_at)
+    }
+
+    pub fn insert_relationship_event(
+        &self,
+        input: &NewRelationshipEvent,
+    ) -> Result<RelationshipEvent> {
+        self.conv_db.insert_relationship_event(input)
+    }
+
+    pub fn list_relationship_events(
+        &self,
+        persona_scope: &str,
+        include_revoked: bool,
+    ) -> Result<Vec<RelationshipEvent>> {
+        self.conv_db
+            .list_relationship_events(persona_scope, include_revoked)
+    }
+
+    pub fn revoke_relationship_event(&self, event_id: &str) -> Result<bool> {
+        self.conv_db.revoke_relationship_event(event_id)
     }
 
     #[allow(dead_code)]

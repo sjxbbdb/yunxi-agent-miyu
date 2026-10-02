@@ -19,6 +19,13 @@ pub(crate) use open::{file_identity, OpenRole};
 pub use session_state::SessionValueKind;
 pub(crate) use session_state::{LegacyContent, LegacyKind};
 mod platform;
+mod profile;
+pub use profile::{
+    NewProfileClaim, NewRelationshipEvent, ProfileClaim, ProfileClaimCertainty, ProfileClaimStatus,
+    RelationshipEvent, RelationshipEventStatus, MAX_PROFILE_KEY_CHARS, MAX_PROFILE_VALUE_CHARS,
+    MAX_RELATIONSHIP_PAYLOAD_CHARS, MAX_RELATIONSHIP_SUMMARY_CHARS, MAX_SOURCE_KIND_CHARS,
+    MAX_SOURCE_REF_CHARS, MAX_TIMESTAMP_CHARS,
+};
 mod queue;
 mod rows;
 pub use rows::*;

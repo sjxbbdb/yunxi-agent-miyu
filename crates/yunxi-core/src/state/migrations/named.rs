@@ -31,7 +31,54 @@ const NAMED_MIGRATIONS: &[NamedMigration] = &[
         id: "2026-09-26-held-job-reports",
         apply: apply_held_job_reports,
     },
+    NamedMigration {
+        id: "2026-10-02-g2-profile-schema",
+        apply: apply_g2_profile_schema,
+    },
 ];
+
+/// Structured profile claims and persona-scoped relationship metadata (G2-01).
+/// This is intentionally additive: it leaves `profile.md`, prompt assembly,
+/// memory tables, and the versioned `user_version` untouched. Rename/delete
+/// persona scope migration belongs to G2-02.
+fn apply_g2_profile_schema(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS profile_claims (
+             claim_id    TEXT PRIMARY KEY,
+             owner_scope TEXT NOT NULL DEFAULT '',
+             key         TEXT NOT NULL,
+             value       TEXT NOT NULL,
+             certainty   TEXT NOT NULL CHECK (certainty IN ('confirmed', 'inferred')),
+             source_kind TEXT NOT NULL,
+             source_ref  TEXT NOT NULL,
+             observed_at TEXT NOT NULL,
+             updated_at  TEXT NOT NULL,
+             status      TEXT NOT NULL DEFAULT 'active'
+                         CHECK (status IN ('active', 'revoked')),
+             revision    INTEGER NOT NULL CHECK (revision > 0),
+             UNIQUE (owner_scope, key, revision)
+         );
+         CREATE INDEX IF NOT EXISTS idx_profile_claims_scope_status
+             ON profile_claims(owner_scope, status, key, revision);
+         CREATE TABLE IF NOT EXISTS relationship_events (
+             event_id      TEXT PRIMARY KEY,
+             persona_scope TEXT NOT NULL CHECK (length(trim(persona_scope)) > 0),
+             event_kind    TEXT NOT NULL,
+             summary       TEXT NOT NULL,
+             payload       TEXT,
+             observed_at   TEXT NOT NULL,
+             source_kind   TEXT NOT NULL,
+             source_ref    TEXT NOT NULL,
+             status        TEXT NOT NULL DEFAULT 'active'
+                           CHECK (status IN ('active', 'revoked'))
+         );
+         CREATE INDEX IF NOT EXISTS idx_relationship_events_scope_time
+             ON relationship_events(persona_scope, observed_at, event_id);
+         CREATE INDEX IF NOT EXISTS idx_relationship_events_scope_status
+             ON relationship_events(persona_scope, status, observed_at, event_id);",
+    )?;
+    Ok(())
+}
 
 /// 平台会话里还没交出去的后台任务汇报（09-26，见 `conversation_db/held_reports.rs`）：一份一行，
 /// 按批（派它们的那一轮）取，挂会话级联删除。
@@ -168,7 +215,13 @@ mod tests {
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .unwrap();
         assert_eq!(version, crate::state::migrations::LATEST_VERSION);
-        for table in ["session_values", "repl_history", "legacy_file_imports"] {
+        for table in [
+            "session_values",
+            "repl_history",
+            "legacy_file_imports",
+            "profile_claims",
+            "relationship_events",
+        ] {
             let exists: bool = conn
                 .query_row(
                     "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1)",

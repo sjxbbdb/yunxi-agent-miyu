@@ -12,6 +12,7 @@ mod goals;
 mod interrupted_replay;
 mod pages;
 mod platform;
+mod profile;
 mod queue;
 mod redo;
 mod replay_text;
