@@ -123,6 +123,34 @@ pub(crate) fn scrub_episode_references(
     Ok(())
 }
 
+/// Keep an id-level deletion marker after a memory row is physically removed.
+///
+/// Transfer/import uses these markers to stop an older archive from bringing
+/// back something the user already deleted on the current installation.  The
+/// marker intentionally contains no memory text or provenance: it is only a
+/// durable negative fact keyed by the row kind and id.
+pub(crate) fn record_memory_tombstones(
+    tx: &rusqlite::Transaction<'_>,
+    kind: &str,
+    ids: &[i64],
+    deleted_at: &str,
+) -> Result<()> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    if !matches!(kind, "fact" | "episode") {
+        bail!("invalid memory tombstone kind: {kind}");
+    }
+    for id in ids.iter().copied().filter(|id| *id > 0) {
+        tx.execute(
+            "INSERT OR IGNORE INTO memory_tombstones (kind, id, deleted_at)
+             VALUES (?1, ?2, ?3)",
+            params![kind, id, deleted_at],
+        )?;
+    }
+    Ok(())
+}
+
 impl MemoryResetSummary {
     pub fn total(&self) -> usize {
         self.facts + self.episodes + self.pending_events + self.evicted_turns

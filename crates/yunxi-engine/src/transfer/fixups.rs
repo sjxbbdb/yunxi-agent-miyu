@@ -6,7 +6,8 @@
 //! point work at directories that do not exist here.
 
 use anyhow::{Context, Result};
-use rusqlite::Connection;
+use rusqlite::{Connection, OpenFlags, Transaction};
+use serde_json::Value;
 use std::path::{Path, PathBuf};
 use yunxi_base::paths::YunXiPaths;
 
@@ -39,6 +40,181 @@ pub(crate) fn apply_database_paths(databases: &[PathBuf]) -> Result<usize> {
         cleared_total += apply_database(database)?;
     }
     Ok(cleared_total)
+}
+
+/// Carry deletion tombstones from the current installation into an imported
+/// memory snapshot before that snapshot is installed.
+///
+/// Archives made before the tombstone migration do not have the table.  A
+/// complete YunXi memory database gets the table created on the staged copy;
+/// malformed/partial SQLite files are left alone so the existing import
+/// validation and rollback behavior remains unchanged.
+pub(crate) fn apply_memory_tombstones(pairs: &[(PathBuf, PathBuf)]) -> Result<usize> {
+    let mut removed = 0usize;
+    for (live, staged) in pairs {
+        let live_tombstones = match read_tombstones(live)? {
+            Some(rows) => rows,
+            None => continue,
+        };
+        if live_tombstones.is_empty() {
+            continue;
+        }
+        let mut staged_conn = Connection::open(staged)
+            .with_context(|| format!("opening staged memory database {}", staged.display()))?;
+        if !has_table(&staged_conn, "facts")? || !has_table(&staged_conn, "episodes")? {
+            // A hand-authored or malformed database is not a memory snapshot
+            // that this migration can safely rewrite.
+            continue;
+        }
+        let tx = staged_conn.transaction()?;
+        tx.execute_batch(
+            "CREATE TABLE IF NOT EXISTS memory_tombstones (
+                kind TEXT NOT NULL CHECK (kind IN ('fact', 'episode')),
+                id INTEGER NOT NULL,
+                deleted_at TEXT NOT NULL,
+                PRIMARY KEY (kind, id)
+            )",
+        )?;
+        for (kind, id, deleted_at) in live_tombstones {
+            tx.execute(
+                "INSERT OR IGNORE INTO memory_tombstones (kind, id, deleted_at)
+                 VALUES (?1, ?2, ?3)",
+                rusqlite::params![kind, id, deleted_at],
+            )?;
+        }
+
+        if has_table_tx(&tx, "memory_embeddings")? {
+            removed += tx.execute(
+                "DELETE FROM memory_embeddings
+                  WHERE EXISTS (
+                      SELECT 1 FROM memory_tombstones t
+                       WHERE t.kind = memory_embeddings.kind AND t.id = memory_embeddings.id
+                  )",
+                [],
+            )?;
+        }
+        if has_table_tx(&tx, "memory_revisions")? {
+            removed += tx.execute(
+                "DELETE FROM memory_revisions
+                  WHERE memory_id IN (
+                      SELECT id FROM memory_tombstones WHERE kind='fact'
+                  )",
+                [],
+            )?;
+        }
+        removed += tx.execute(
+            "DELETE FROM facts
+              WHERE id IN (SELECT id FROM memory_tombstones WHERE kind='fact')",
+            [],
+        )?;
+        removed += tx.execute(
+            "DELETE FROM episodes
+              WHERE id IN (SELECT id FROM memory_tombstones WHERE kind='episode')",
+            [],
+        )?;
+        scrub_episode_sources(&tx)?;
+        tx.commit()?;
+    }
+    Ok(removed)
+}
+
+fn read_tombstones(path: &Path) -> Result<Option<Vec<(String, i64, String)>>> {
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let conn = Connection::open_with_flags(
+        path,
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .with_context(|| format!("opening live memory database {}", path.display()))?;
+    if !has_table(&conn, "memory_tombstones")? {
+        return Ok(None);
+    }
+    let mut stmt = conn.prepare(
+        "SELECT kind, id, deleted_at FROM memory_tombstones
+         WHERE kind IN ('fact', 'episode') ORDER BY kind, id",
+    )?;
+    let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?;
+    Ok(Some(rows.collect::<std::result::Result<Vec<_>, _>>()?))
+}
+
+fn has_table(conn: &Connection, table: &str) -> Result<bool> {
+    Ok(conn.query_row(
+        "SELECT EXISTS(
+             SELECT 1 FROM sqlite_master WHERE type='table' AND name=?1
+         )",
+        [table],
+        |row| row.get::<_, i64>(0),
+    )? != 0)
+}
+
+fn has_table_tx(tx: &Transaction<'_>, table: &str) -> Result<bool> {
+    Ok(tx.query_row(
+        "SELECT EXISTS(
+             SELECT 1 FROM sqlite_master WHERE type='table' AND name=?1
+         )",
+        [table],
+        |row| row.get::<_, i64>(0),
+    )? != 0)
+}
+
+fn has_column_tx(tx: &Transaction<'_>, table: &str, column: &str) -> Result<bool> {
+    let mut stmt = tx.prepare(&format!("PRAGMA table_info({table})"))?;
+    let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
+    Ok(rows
+        .collect::<std::result::Result<Vec<_>, _>>()?
+        .into_iter()
+        .any(|name| name == column))
+}
+
+/// Remove references to deleted episodes from the staged rows.  This keeps
+/// imported provenance from pointing at a memory that the current install has
+/// explicitly removed, while leaving malformed JSON untouched for later
+/// diagnostics instead of failing an otherwise valid archive.
+fn scrub_episode_sources(tx: &Transaction<'_>) -> Result<()> {
+    for table in ["facts", "episodes", "memory_revisions"] {
+        if !has_table_tx(tx, table)? || !has_column_tx(tx, table, "source_episode_ids")? {
+            continue;
+        }
+        let rows = {
+            let mut stmt = tx.prepare(&format!(
+                "SELECT id, source_episode_ids FROM {table}
+                 WHERE source_episode_ids IS NOT NULL AND source_episode_ids != '[]'"
+            ))?;
+            let rows = stmt.query_map([], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+            })?;
+            rows.collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        for (row_id, raw) in rows {
+            let Ok(ids) = serde_json::from_str::<Vec<i64>>(&raw) else {
+                continue;
+            };
+            let mut kept = Vec::with_capacity(ids.len());
+            for id in ids {
+                let tombstoned: bool = tx.query_row(
+                    "SELECT EXISTS(
+                         SELECT 1 FROM memory_tombstones
+                          WHERE kind='episode' AND id=?1
+                     )",
+                    [id],
+                    |row| row.get::<_, i64>(0),
+                )? != 0;
+                if !tombstoned {
+                    kept.push(id);
+                }
+            }
+            let encoded =
+                serde_json::to_string(&Value::Array(kept.into_iter().map(Value::from).collect()))?;
+            if encoded != raw {
+                tx.execute(
+                    &format!("UPDATE {table} SET source_episode_ids=?1 WHERE id=?2"),
+                    rusqlite::params![encoded, row_id],
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 fn apply_database(database: &Path) -> Result<usize> {
@@ -230,5 +406,92 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let paths = crate::transfer::tests::test_paths(temp.path());
         assert_eq!(apply(&paths).unwrap(), 0);
+    }
+
+    #[test]
+    fn memory_tombstones_filter_an_old_snapshot_before_install() {
+        let temp = tempfile::tempdir().unwrap();
+        let live = temp.path().join("live.db");
+        let staged = temp.path().join("staged.db");
+        let live_conn = Connection::open(&live).unwrap();
+        live_conn
+            .execute_batch(
+                "CREATE TABLE memory_tombstones (
+                    kind TEXT NOT NULL,
+                    id INTEGER NOT NULL,
+                    deleted_at TEXT NOT NULL,
+                    PRIMARY KEY(kind, id)
+                 );
+                 INSERT INTO memory_tombstones VALUES ('fact', 1, '2026-10-02T00:00:00Z');
+                 INSERT INTO memory_tombstones VALUES ('episode', 2, '2026-10-02T00:00:00Z');",
+            )
+            .unwrap();
+        drop(live_conn);
+
+        let staged_conn = Connection::open(&staged).unwrap();
+        staged_conn
+            .execute_batch(
+                "CREATE TABLE facts (id INTEGER PRIMARY KEY, content TEXT NOT NULL,
+                                     source_episode_ids TEXT NOT NULL DEFAULT '[]');
+                 CREATE TABLE episodes (id INTEGER PRIMARY KEY, content TEXT NOT NULL,
+                                        source_episode_ids TEXT NOT NULL DEFAULT '[]');
+                 CREATE TABLE memory_revisions (
+                    id INTEGER PRIMARY KEY, memory_id INTEGER NOT NULL,
+                    old_content TEXT NOT NULL, new_content TEXT NOT NULL,
+                    source_episode_ids TEXT NOT NULL DEFAULT '[]');
+                 CREATE TABLE memory_embeddings (
+                    kind TEXT NOT NULL, id INTEGER NOT NULL, model TEXT NOT NULL,
+                    content_sha256 TEXT NOT NULL, embedding BLOB NOT NULL,
+                    created_at TEXT NOT NULL, PRIMARY KEY(kind, id));
+                 INSERT INTO facts VALUES (1, 'deleted fact', '[2]');
+                 INSERT INTO facts VALUES (3, 'retained fact', '[2]');
+                 INSERT INTO episodes VALUES (2, 'deleted episode', '[]');
+                 INSERT INTO episodes VALUES (4, 'retained episode', '[]');
+                 INSERT INTO memory_revisions VALUES (9, 1, 'old', 'new', '[2]');
+                 INSERT INTO memory_embeddings VALUES ('fact', 1, 'test', 'sha', X'00000000', 'now');
+                 INSERT INTO memory_embeddings VALUES ('episode', 2, 'test', 'sha', X'00000000', 'now');",
+            )
+            .unwrap();
+        drop(staged_conn);
+
+        let removed = apply_memory_tombstones(&[(live, staged.clone())]).unwrap();
+        assert_eq!(removed, 5);
+        let conn = Connection::open(staged).unwrap();
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM facts", [], |row| row.get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            conn.query_row("SELECT id FROM facts", [], |row| row.get::<_, i64>(0))
+                .unwrap(),
+            3
+        );
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM episodes", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM memory_revisions", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM memory_embeddings", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        let sources: String = conn
+            .query_row(
+                "SELECT source_episode_ids FROM facts WHERE id=3",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(sources, "[]");
     }
 }

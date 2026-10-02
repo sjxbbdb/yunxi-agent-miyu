@@ -460,6 +460,7 @@ impl MemoryStore {
             rusqlite::params![id],
         )?;
         if affected == 1 {
+            record_memory_tombstones(&tx, kind, &[id], &now())?;
             if table == BrowseTable::Episodes {
                 scrub_episode_references(&tx, &[id])?;
             } else {

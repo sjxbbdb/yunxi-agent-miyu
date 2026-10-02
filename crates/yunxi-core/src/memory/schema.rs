@@ -292,6 +292,12 @@ pub(crate) fn init_data_db(conn: &Connection) -> Result<()> {
             embedding BLOB NOT NULL,
             created_at TEXT NOT NULL,
             PRIMARY KEY (kind, id)
+         );
+         CREATE TABLE IF NOT EXISTS memory_tombstones (
+            kind TEXT NOT NULL CHECK (kind IN ('fact', 'episode')),
+            id INTEGER NOT NULL,
+            deleted_at TEXT NOT NULL,
+            PRIMARY KEY (kind, id)
          );",
     )?;
     conn.execute(

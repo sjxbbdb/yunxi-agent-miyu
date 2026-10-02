@@ -240,4 +240,12 @@ fn reset_session_drops_the_vectors_of_the_rows_it_deletes() {
         })
         .unwrap();
     assert_eq!(revisions, 0, "会话重置后不应留下已删除事实的修订正文");
+    let tombstone: (String, i64) = conn
+        .query_row(
+            "SELECT kind, id FROM memory_tombstones WHERE kind='fact' AND id=?1",
+            [mine],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(tombstone, ("fact".to_string(), mine));
 }

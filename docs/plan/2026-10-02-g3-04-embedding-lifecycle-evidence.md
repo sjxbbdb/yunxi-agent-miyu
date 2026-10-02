@@ -42,6 +42,17 @@ maintenance.
   transaction, and a session reset removes revisions whose owner fact no
   longer exists; deleted historical bodies are therefore not exposed through
   `browse_revisions`.
+- A physical fact/episode deletion records only a durable `(kind, id,
+  deleted_at)` tombstone. The marker contains no memory text and survives
+  `reset_all`, session reset, and short-diary expiry.
+- Importing an older archive merges the live tombstones into each staged
+  persona memory database before install. Matching facts, episodes, vectors,
+  revisions, and episode-source references are removed from the staged copy,
+  so a deleted id cannot be resurrected by restore or backup import.
+- A legacy memory database without `memory_tombstones` remains importable; the
+  table is created on the staged copy only when the database has the expected
+  facts/episodes tables. Fresh rows that intentionally reuse an id clear that
+  id's marker in the same write transaction.
 
 No schema, dependency, provider, profile, knowledge-base, DecisionPort, or
 Laya boundary changed in G3-04.
@@ -64,6 +75,11 @@ Laya boundary changed in G3-04.
   mismatch, idempotence, and valid-vector preservation tests.
 - `crates/yunxi-core/src/memory/tests/browse.rs`: fact-revision deletion
   barrier and the existing browse/status/tag regression coverage.
+- `crates/yunxi-engine/src/transfer/fixups.rs`: staged-memory tombstone merge,
+  filtering, provenance scrub, and the old-snapshot regression test.
+- `crates/yunxi-engine/src/transfer/import.rs`: applies the filter for both
+  `data.personas/*/memory/memory.db` and `personas/*/memory/memory.db` before
+  atomic install.
 
 ## Verification commands
 
@@ -99,12 +115,27 @@ They passed `2 + 6 passed; 0 failed` (the browse run filtered 696 tests and
 the reset run filtered 692) with exit code `0`; the reset run also verifies
 that session reset removes the deleted fact's revision body.
 
+The deletion-restore barrier was verified on a fresh WSL ext4 checkout with
+the following targeted commands:
+
+```text
+cargo test -p yunxi-engine --lib transfer::fixups --locked -- --test-threads=1
+cargo test -p yunxi-core --lib memory::tests::browse --locked -- --test-threads=1
+cargo test -p yunxi-core --lib memory::tests::reset --locked -- --test-threads=1
+```
+
+The runs passed `3 + 2 + 6 = 11 passed; 0 failed` with exit code `0`. The
+transfer run includes the old-snapshot resurrection regression; the browse and
+reset runs cover the transactional deletion paths that create tombstones.
+
 ## EVIDENCE_SCHEMA
 
 - `run_id`: `g3-04k-20261002-ext4-07` (embedding lifecycle),
-  `g3-04-revisions-20261002-ext4-02` (revision deletion and reset follow-up)
+  `g3-04-revisions-20261002-ext4-02` (revision deletion and reset follow-up),
+  `g3-04-tombstones-20261002-ext4-01` (restore barrier)
 - `stage/task`: `G3-04 embedding lifecycle and stale-vector cleanup`
-- `implementation_commit`: `f3ffafe5` (post-inference hit revalidation),
+- `implementation_commit`: pending Lead commit for the tombstone slice;
+  prior lifecycle commits include `f3ffafe5` (post-inference hit revalidation),
   `135d7271` (guarded dedup writes), `ab7ba6de` (guarded async writes), plus
   `87288422`
   (recall/reopen tests), `f2fc6646`, `bf65efa0`, and `aa4993ea`
@@ -119,7 +150,8 @@ that session reset removes the deleted fact's revision body.
 - `test_command`: memory-only command above; the browse-only follow-up command
   is recorded above
 - `test_exit_code`: `0`
-- `stable_counts`: `78 passed; 0 failed; 1 ignored; 619 filtered out`
+- `stable_counts`: prior lifecycle run `78 passed; 0 failed; 1 ignored; 619
+  filtered out`; tombstone targeted run `11 passed; 0 failed`
 - `static_checks`: formatting, diff, metadata, architecture, size, and
   privacy gates all passed. Size report: `362,926` total lines versus the
   corrected `361,444` baseline; no new over-limit file and the gate passed.
@@ -129,9 +161,8 @@ that session reset removes the deleted fact's revision body.
   `/tmp/g3-04k-log` paths were removed after
   the run; a follow-up check found no cargo or rustc process.
 - `unverified`: native Arch Linux, macOS, Windows cargo execution, crash,
-  disk-full/lock recovery, concurrent organizer/reset races, deletion
-  tombstones for old archive/backup imports, compact/restore/backup-import
-  recall barriers, full workspace tests,
+  disk-full/lock recovery, concurrent organizer/reset races, compact/evicted
+  source linkage and compact recall barriers, full workspace tests,
   provider/model
   quality, and automatic invocation scheduling for the new maintenance pass
   remain outside this slice.

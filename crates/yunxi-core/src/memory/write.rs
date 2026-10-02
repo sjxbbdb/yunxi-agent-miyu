@@ -9,6 +9,15 @@
 
 use crate::memory::*;
 
+fn collect_ids(tx: &rusqlite::Transaction<'_>, table: &str) -> Result<Vec<i64>> {
+    if !matches!(table, "facts" | "episodes") {
+        bail!("invalid memory id table: {table}");
+    }
+    let mut stmt = tx.prepare(&format!("SELECT id FROM {table} ORDER BY id"))?;
+    let rows = stmt.query_map([], |row| row.get::<_, i64>(0))?;
+    Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
+}
+
 impl MemoryStore {
     pub fn clear_pending_events(&self) -> Result<()> {
         self.init()?;
@@ -51,6 +60,13 @@ impl MemoryStore {
             ],
         )?;
         let id = tx.last_insert_rowid();
+        // `reset_all` historically resets the AUTOINCREMENT sequence.  If a
+        // fresh row reuses an id, its old deletion marker must not hide it
+        // from future transfer imports.
+        tx.execute(
+            "DELETE FROM memory_tombstones WHERE kind='fact' AND id=?1",
+            [id],
+        )?;
         record_lifecycle_event(
             &tx,
             lifecycle_event(
@@ -136,6 +152,10 @@ impl MemoryStore {
             ],
         )?;
         let episode_id = tx.last_insert_rowid();
+        tx.execute(
+            "DELETE FROM memory_tombstones WHERE kind='episode' AND id=?1",
+            [episode_id],
+        )?;
         record_lifecycle_event(
             &tx,
             lifecycle_event(
@@ -184,6 +204,11 @@ impl MemoryStore {
         self.init()?;
         let mut data = self.data_conn()?;
         let tx = data.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let fact_ids = collect_ids(&tx, "facts")?;
+        let episode_ids = collect_ids(&tx, "episodes")?;
+        let deleted_at = now();
+        record_memory_tombstones(&tx, "fact", &fact_ids, &deleted_at)?;
+        record_memory_tombstones(&tx, "episode", &episode_ids, &deleted_at)?;
         tx.execute(
             "UPDATE memory_meta SET generation=generation+1 WHERE id=1",
             [],
@@ -226,6 +251,15 @@ impl MemoryStore {
             let rows = stmt.query_map(params![session_id], |row| row.get::<_, i64>(0))?;
             rows.collect::<std::result::Result<Vec<_>, _>>()?
         };
+        let deleted_fact_ids = {
+            let mut stmt =
+                tx.prepare("SELECT id FROM facts WHERE origin_session_id=?1 ORDER BY id")?;
+            let rows = stmt.query_map(params![session_id], |row| row.get::<_, i64>(0))?;
+            rows.collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        let deleted_at = now();
+        record_memory_tombstones(&tx, "fact", &deleted_fact_ids, &deleted_at)?;
+        record_memory_tombstones(&tx, "episode", &deleted_episode_ids, &deleted_at)?;
         // 向量按 (kind, id) 挂在行上,没有触发器跟着删。行走了它还在,而 id
         // 是自增的,迟早被新行撞上并读回一段别人的语义。kind 字面量与
         // `semantic::kind_name` 同源。
@@ -525,7 +559,7 @@ impl MemoryStore {
                     organized_subjects_json(batch, &action.diary_ids, &action.subjects, &ownership);
                 match action.operation.as_str() {
                     "create" => {
-                        tx.execute(
+                        let inserted = tx.execute(
                             "INSERT INTO facts (
                                 content, source, status, confidence, strength, recall_count,
                                 created_at, updated_at, memory_type, truth_status, importance,
@@ -555,6 +589,12 @@ impl MemoryStore {
                                 organized_session_id(batch, &action.diary_ids),
                             ],
                         )?;
+                        if inserted == 1 {
+                            tx.execute(
+                                "DELETE FROM memory_tombstones WHERE kind='fact' AND id=?1",
+                                [tx.last_insert_rowid()],
+                            )?;
+                        }
                     }
                     "update" => {
                         let target = action
@@ -632,7 +672,7 @@ impl MemoryStore {
             let ownership = diary_ownership(batch, &diary.diary_ids);
             let subjects =
                 organized_subjects_json(batch, &diary.diary_ids, &diary.subjects, &ownership);
-            tx.execute(
+            let inserted = tx.execute(
                 "INSERT OR IGNORE INTO episodes (
                     content, source, status, strength, recall_count, created_at, updated_at,
                     retention, consolidated_at, importance, confidence, tags,
@@ -657,6 +697,12 @@ impl MemoryStore {
                     organized_session_id(batch, &diary.diary_ids),
                 ],
             )?;
+            if inserted == 1 {
+                tx.execute(
+                    "DELETE FROM memory_tombstones WHERE kind='episode' AND id=?1",
+                    [tx.last_insert_rowid()],
+                )?;
+            }
         }
 
         for diary in &batch.diaries {
@@ -837,6 +883,20 @@ impl MemoryStore {
                AND unixepoch(expires_at) <= unixepoch('now')",
             [],
         )?;
+        let deleted_ids = {
+            let mut stmt = tx.prepare(
+                "SELECT id FROM episodes
+                 WHERE retention='short_term'
+                   AND consolidated_at IS NOT NULL
+                   AND promotion_pending=0
+                   AND expires_at IS NOT NULL
+                   AND unixepoch(expires_at) IS NOT NULL
+                   AND unixepoch(expires_at) <= unixepoch('now')
+                 ORDER BY id",
+            )?;
+            let rows = stmt.query_map([], |row| row.get::<_, i64>(0))?;
+            rows.collect::<std::result::Result<Vec<_>, _>>()?
+        };
         let deleted = tx.execute(
             "DELETE FROM episodes
              WHERE retention='short_term'
@@ -847,6 +907,7 @@ impl MemoryStore {
                AND unixepoch(expires_at) <= unixepoch('now')",
             [],
         )?;
+        record_memory_tombstones(&tx, "episode", &deleted_ids, &timestamp)?;
         tx.commit()?;
         Ok(deleted)
     }

@@ -148,6 +148,22 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
         .map(|entry| staged.join(&entry.path))
         .collect::<Vec<_>>();
     let cleared_workspaces = super::fixups::apply_database_paths(&staged_databases)?;
+    // A force import may be restoring an older snapshot than the current
+    // installation.  Carry current memory deletion tombstones into each
+    // staged persona DB before the atomic install so deleted ids cannot be
+    // resurrected by that archive.
+    let staged_memory_databases = manifest
+        .entries
+        .iter()
+        .filter(|entry| {
+            matches!(
+                unit_for(&entry.path).map(|unit| unit.id),
+                Some("data.persona_memory" | "personas.memory")
+            )
+        })
+        .map(|entry| (root.join(&entry.path), staged.join(&entry.path)))
+        .collect::<Vec<_>>();
+    super::fixups::apply_memory_tombstones(&staged_memory_databases)?;
 
     let mut unknown_units = BTreeSet::new();
     for entry in &manifest.entries {
