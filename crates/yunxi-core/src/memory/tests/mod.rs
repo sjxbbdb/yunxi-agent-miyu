@@ -5,6 +5,7 @@ mod association;
 mod browse;
 mod dedup;
 mod diary;
+mod lifecycle;
 mod ranking;
 mod reset;
 mod semantic;

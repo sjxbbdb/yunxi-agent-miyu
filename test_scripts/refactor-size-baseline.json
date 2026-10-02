@@ -18,7 +18,7 @@
     },
     "crates/yunxi-base/src/config/defaults.rs": {
       "tests": 0,
-      "total": 498
+      "total": 503
     },
     "crates/yunxi-base/src/config/display.rs": {
       "tests": 0,
@@ -30,7 +30,7 @@
     },
     "crates/yunxi-base/src/config/io.rs": {
       "tests": 0,
-      "total": 559
+      "total": 581
     },
     "crates/yunxi-base/src/config/memory.rs": {
       "tests": 0,
@@ -38,7 +38,7 @@
     },
     "crates/yunxi-base/src/config/mod.rs": {
       "tests": 7,
-      "total": 624
+      "total": 631
     },
     "crates/yunxi-base/src/config/paths.rs": {
       "tests": 0,
@@ -54,7 +54,7 @@
     },
     "crates/yunxi-base/src/config/persona_paths.rs": {
       "tests": 0,
-      "total": 417
+      "total": 421
     },
     "crates/yunxi-base/src/config/platform.rs": {
       "tests": 0,
@@ -114,7 +114,7 @@
     },
     "crates/yunxi-base/src/config/tests/defaults.rs": {
       "tests": 0,
-      "total": 347
+      "total": 369
     },
     "crates/yunxi-base/src/config/tests/mod.rs": {
       "tests": 0,
@@ -122,7 +122,7 @@
     },
     "crates/yunxi-base/src/config/tests/paths.rs": {
       "tests": 0,
-      "total": 300
+      "total": 339
     },
     "crates/yunxi-base/src/config/tests/platform.rs": {
       "tests": 0,
@@ -222,7 +222,7 @@
     },
     "crates/yunxi-base/src/host_ports/subagent.rs": {
       "tests": 0,
-      "total": 98
+      "total": 93
     },
     "crates/yunxi-base/src/host_ports/turn_restrictions.rs": {
       "tests": 115,
@@ -298,7 +298,7 @@
     },
     "crates/yunxi-base/src/paths/mod.rs": {
       "tests": 38,
-      "total": 782
+      "total": 826
     },
     "crates/yunxi-base/src/paths/resource_migration.rs": {
       "tests": 0,
@@ -309,8 +309,8 @@
       "total": 15
     },
     "crates/yunxi-base/src/paths/resources.rs": {
-      "tests": 134,
-      "total": 333
+      "tests": 137,
+      "total": 336
     },
     "crates/yunxi-base/src/paths/search_path.rs": {
       "tests": 92,
@@ -322,7 +322,7 @@
     },
     "crates/yunxi-base/src/paths/tests/legacy.rs": {
       "tests": 0,
-      "total": 534
+      "total": 562
     },
     "crates/yunxi-base/src/paths/tests/mod.rs": {
       "tests": 0,
@@ -377,8 +377,8 @@
       "total": 31
     },
     "crates/yunxi-base/src/question.rs": {
-      "tests": 98,
-      "total": 427
+      "tests": 116,
+      "total": 470
     },
     "crates/yunxi-base/src/random_id.rs": {
       "tests": 0,
@@ -421,8 +421,8 @@
       "total": 189
     },
     "crates/yunxi-base/src/shell/fish.rs": {
-      "tests": 162,
-      "total": 518
+      "tests": 164,
+      "total": 521
     },
     "crates/yunxi-base/src/shell/locate.rs": {
       "tests": 19,
@@ -490,7 +490,7 @@
     },
     "crates/yunxi-base/src/workspace.rs": {
       "tests": 101,
-      "total": 406
+      "total": 411
     },
     "crates/yunxi-core/src/alarm.rs": {
       "tests": 94,
@@ -499,6 +499,10 @@
     "crates/yunxi-core/src/args.rs": {
       "tests": 0,
       "total": 35
+    },
+    "crates/yunxi-core/src/companion_context.rs": {
+      "tests": 66,
+      "total": 303
     },
     "crates/yunxi-core/src/ipc/frames.rs": {
       "tests": 210,
@@ -513,8 +517,8 @@
       "total": 722
     },
     "crates/yunxi-core/src/ipc/mod.rs": {
-      "tests": 605,
-      "total": 642
+      "tests": 606,
+      "total": 643
     },
     "crates/yunxi-core/src/ipc/protocol.rs": {
       "tests": 0,
@@ -586,7 +590,7 @@
     },
     "crates/yunxi-core/src/lib.rs": {
       "tests": 0,
-      "total": 15
+      "total": 17
     },
     "crates/yunxi-core/src/llm/cache_break.rs": {
       "tests": 156,
@@ -657,8 +661,8 @@
       "total": 401
     },
     "crates/yunxi-core/src/llm/openai_compatible/cli_relay/session.rs": {
-      "tests": 322,
-      "total": 724
+      "tests": 338,
+      "total": 740
     },
     "crates/yunxi-core/src/llm/openai_compatible/codebuddy/mod.rs": {
       "tests": 0,
@@ -836,9 +840,13 @@
       "tests": 0,
       "total": 399
     },
+    "crates/yunxi-core/src/memory/lifecycle.rs": {
+      "tests": 0,
+      "total": 292
+    },
     "crates/yunxi-core/src/memory/mod.rs": {
       "tests": 4,
-      "total": 488
+      "total": 493
     },
     "crates/yunxi-core/src/memory/organizer.rs": {
       "tests": 180,
@@ -850,7 +858,7 @@
     },
     "crates/yunxi-core/src/memory/schema.rs": {
       "tests": 0,
-      "total": 618
+      "total": 659
     },
     "crates/yunxi-core/src/memory/search.rs": {
       "tests": 0,
@@ -880,9 +888,13 @@
       "tests": 0,
       "total": 137
     },
+    "crates/yunxi-core/src/memory/tests/lifecycle.rs": {
+      "tests": 0,
+      "total": 306
+    },
     "crates/yunxi-core/src/memory/tests/mod.rs": {
       "tests": 0,
-      "total": 13
+      "total": 14
     },
     "crates/yunxi-core/src/memory/tests/ranking.rs": {
       "tests": 0,
@@ -902,7 +914,7 @@
     },
     "crates/yunxi-core/src/memory/tests/store.rs": {
       "tests": 0,
-      "total": 317
+      "total": 367
     },
     "crates/yunxi-core/src/memory/validate.rs": {
       "tests": 0,
@@ -910,7 +922,7 @@
     },
     "crates/yunxi-core/src/memory/write.rs": {
       "tests": 0,
-      "total": 600
+      "total": 846
     },
     "crates/yunxi-core/src/memory/write/test_support.rs": {
       "tests": 0,
@@ -919,6 +931,10 @@
     "crates/yunxi-core/src/persona_hint.rs": {
       "tests": 176,
       "total": 518
+    },
+    "crates/yunxi-core/src/persona_source.rs": {
+      "tests": 211,
+      "total": 528
     },
     "crates/yunxi-core/src/skills/draft/install.rs": {
       "tests": 0,
@@ -980,6 +996,10 @@
       "tests": 0,
       "total": 517
     },
+    "crates/yunxi-core/src/state/conversation_db/held_reports.rs": {
+      "tests": 0,
+      "total": 86
+    },
     "crates/yunxi-core/src/state/conversation_db/history.rs": {
       "tests": 0,
       "total": 856
@@ -994,7 +1014,7 @@
     },
     "crates/yunxi-core/src/state/conversation_db/mod.rs": {
       "tests": 0,
-      "total": 697
+      "total": 706
     },
     "crates/yunxi-core/src/state/conversation_db/open.rs": {
       "tests": 4,
@@ -1016,9 +1036,13 @@
       "tests": 0,
       "total": 132
     },
+    "crates/yunxi-core/src/state/conversation_db/profile.rs": {
+      "tests": 0,
+      "total": 588
+    },
     "crates/yunxi-core/src/state/conversation_db/queue/consume.rs": {
       "tests": 0,
-      "total": 495
+      "total": 499
     },
     "crates/yunxi-core/src/state/conversation_db/queue/consume/test_support.rs": {
       "tests": 0,
@@ -1046,7 +1070,7 @@
     },
     "crates/yunxi-core/src/state/conversation_db/sessions.rs": {
       "tests": 0,
-      "total": 886
+      "total": 927
     },
     "crates/yunxi-core/src/state/conversation_db/sessions/test_support.rs": {
       "tests": 0,
@@ -1121,8 +1145,8 @@
       "total": 344
     },
     "crates/yunxi-core/src/state/migrations/named.rs": {
-      "tests": 49,
-      "total": 179
+      "tests": 55,
+      "total": 254
     },
     "crates/yunxi-core/src/state/migrations/tests.rs": {
       "tests": 0,
@@ -1130,11 +1154,11 @@
     },
     "crates/yunxi-core/src/state/mod.rs": {
       "tests": 4,
-      "total": 602
+      "total": 691
     },
     "crates/yunxi-core/src/state/queue.rs": {
       "tests": 0,
-      "total": 160
+      "total": 190
     },
     "crates/yunxi-core/src/state/queue/test_support.rs": {
       "tests": 0,
@@ -1190,7 +1214,7 @@
     },
     "crates/yunxi-core/src/state/tests/mod.rs": {
       "tests": 0,
-      "total": 24
+      "total": 25
     },
     "crates/yunxi-core/src/state/tests/pages.rs": {
       "tests": 0,
@@ -1198,11 +1222,15 @@
     },
     "crates/yunxi-core/src/state/tests/platform.rs": {
       "tests": 0,
-      "total": 466
+      "total": 469
+    },
+    "crates/yunxi-core/src/state/tests/profile.rs": {
+      "tests": 0,
+      "total": 296
     },
     "crates/yunxi-core/src/state/tests/queue.rs": {
       "tests": 0,
-      "total": 353
+      "total": 400
     },
     "crates/yunxi-core/src/state/tests/redo.rs": {
       "tests": 0,
@@ -1222,7 +1250,7 @@
     },
     "crates/yunxi-core/src/state/tests/sessions.rs": {
       "tests": 0,
-      "total": 623
+      "total": 852
     },
     "crates/yunxi-core/src/state/tests/shared.rs": {
       "tests": 0,
@@ -1234,7 +1262,7 @@
     },
     "crates/yunxi-core/src/state/tests/turns.rs": {
       "tests": 0,
-      "total": 1258
+      "total": 1281
     },
     "crates/yunxi-core/src/state/turns.rs": {
       "tests": 0,
@@ -1318,11 +1346,11 @@
     },
     "crates/yunxi-engine/src/agent/history.rs": {
       "tests": 0,
-      "total": 482
+      "total": 484
     },
     "crates/yunxi-engine/src/agent/images.rs": {
       "tests": 0,
-      "total": 408
+      "total": 410
     },
     "crates/yunxi-engine/src/agent/input.rs": {
       "tests": 0,
@@ -1354,7 +1382,7 @@
     },
     "crates/yunxi-engine/src/agent/prompt.rs": {
       "tests": 0,
-      "total": 235
+      "total": 249
     },
     "crates/yunxi-engine/src/agent/pruning.rs": {
       "tests": 0,
@@ -1374,7 +1402,7 @@
     },
     "crates/yunxi-engine/src/agent/setup.rs": {
       "tests": 0,
-      "total": 725
+      "total": 737
     },
     "crates/yunxi-engine/src/agent/setup/test_support.rs": {
       "tests": 0,
@@ -1426,7 +1454,7 @@
     },
     "crates/yunxi-engine/src/agent/tests/prompt.rs": {
       "tests": 0,
-      "total": 733
+      "total": 773
     },
     "crates/yunxi-engine/src/agent/tests/queue_journal.rs": {
       "tests": 0,
@@ -1558,7 +1586,7 @@
     },
     "crates/yunxi-engine/src/agent/turn_state.rs": {
       "tests": 0,
-      "total": 137
+      "total": 138
     },
     "crates/yunxi-engine/src/default_kb.rs": {
       "tests": 83,
@@ -1590,11 +1618,11 @@
     },
     "crates/yunxi-engine/src/tools/apply_patch/tests.rs": {
       "tests": 0,
-      "total": 418
+      "total": 422
     },
     "crates/yunxi-engine/src/tools/archlinux/aur_review.rs": {
       "tests": 68,
-      "total": 579
+      "total": 581
     },
     "crates/yunxi-engine/src/tools/archlinux/mod.rs": {
       "tests": 58,
@@ -1646,7 +1674,7 @@
     },
     "crates/yunxi-engine/src/tools/default_tools/command.rs": {
       "tests": 0,
-      "total": 402
+      "total": 430
     },
     "crates/yunxi-engine/src/tools/default_tools/command/test_support.rs": {
       "tests": 0,
@@ -1657,8 +1685,8 @@
       "total": 310
     },
     "crates/yunxi-engine/src/tools/default_tools/mod.rs": {
-      "tests": 393,
-      "total": 750
+      "tests": 423,
+      "total": 781
     },
     "crates/yunxi-engine/src/tools/exchange_rate.rs": {
       "tests": 0,
@@ -1674,7 +1702,7 @@
     },
     "crates/yunxi-engine/src/tools/goal/prompt.rs": {
       "tests": 0,
-      "total": 105
+      "total": 106
     },
     "crates/yunxi-engine/src/tools/goal/runtime.rs": {
       "tests": 0,
@@ -1694,7 +1722,7 @@
     },
     "crates/yunxi-engine/src/tools/jobs/mod.rs": {
       "tests": 30,
-      "total": 875
+      "total": 882
     },
     "crates/yunxi-engine/src/tools/jobs/output.rs": {
       "tests": 135,
@@ -1702,7 +1730,7 @@
     },
     "crates/yunxi-engine/src/tools/jobs/tests/lifecycle.rs": {
       "tests": 0,
-      "total": 200
+      "total": 203
     },
     "crates/yunxi-engine/src/tools/jobs/tests/mod.rs": {
       "tests": 0,
@@ -1717,8 +1745,8 @@
       "total": 55
     },
     "crates/yunxi-engine/src/tools/knowledge_base/dashboard.rs": {
-      "tests": 254,
-      "total": 581
+      "tests": 289,
+      "total": 632
     },
     "crates/yunxi-engine/src/tools/knowledge_base/dashboard/test_support.rs": {
       "tests": 0,
@@ -1726,15 +1754,15 @@
     },
     "crates/yunxi-engine/src/tools/knowledge_base/files.rs": {
       "tests": 0,
-      "total": 392
+      "total": 487
     },
     "crates/yunxi-engine/src/tools/knowledge_base/index.rs": {
-      "tests": 60,
-      "total": 719
+      "tests": 164,
+      "total": 845
     },
     "crates/yunxi-engine/src/tools/knowledge_base/mod.rs": {
-      "tests": 290,
-      "total": 508
+      "tests": 694,
+      "total": 912
     },
     "crates/yunxi-engine/src/tools/knowledge_base/search.rs": {
       "tests": 0,
@@ -1778,7 +1806,7 @@
     },
     "crates/yunxi-engine/src/tools/mcp/connection.rs": {
       "tests": 0,
-      "total": 427
+      "total": 447
     },
     "crates/yunxi-engine/src/tools/mcp/instructions.rs": {
       "tests": 0,
@@ -1789,20 +1817,24 @@
       "total": 239
     },
     "crates/yunxi-engine/src/tools/mcp/mod.rs": {
-      "tests": 10,
-      "total": 108
+      "tests": 12,
+      "total": 110
     },
     "crates/yunxi-engine/src/tools/mcp/pool.rs": {
       "tests": 6,
-      "total": 394
+      "total": 397
     },
     "crates/yunxi-engine/src/tools/mcp/pool/test_support.rs": {
       "tests": 0,
-      "total": 20
+      "total": 30
     },
     "crates/yunxi-engine/src/tools/mcp/protocol.rs": {
       "tests": 0,
-      "total": 201
+      "total": 251
+    },
+    "crates/yunxi-engine/src/tools/mcp/protocol_tests.rs": {
+      "tests": 0,
+      "total": 129
     },
     "crates/yunxi-engine/src/tools/mcp/result_tests.rs": {
       "tests": 0,
@@ -1818,11 +1850,11 @@
     },
     "crates/yunxi-engine/src/tools/mcp/tests.rs": {
       "tests": 0,
-      "total": 534
+      "total": 835
     },
     "crates/yunxi-engine/src/tools/memes/crud.rs": {
       "tests": 0,
-      "total": 478
+      "total": 482
     },
     "crates/yunxi-engine/src/tools/memes/dashboard.rs": {
       "tests": 126,
@@ -1902,7 +1934,7 @@
     },
     "crates/yunxi-engine/src/tools/scripts/dashboard.rs": {
       "tests": 0,
-      "total": 340
+      "total": 344
     },
     "crates/yunxi-engine/src/tools/scripts/header.rs": {
       "tests": 0,
@@ -1934,7 +1966,7 @@
     },
     "crates/yunxi-engine/src/tools/scripts/tests/bundled.rs": {
       "tests": 0,
-      "total": 274
+      "total": 275
     },
     "crates/yunxi-engine/src/tools/scripts/tests/dashboard.rs": {
       "tests": 0,
@@ -1998,11 +2030,15 @@
     },
     "crates/yunxi-engine/src/tools/subagent/mod.rs": {
       "tests": 4,
-      "total": 934
+      "total": 717
     },
     "crates/yunxi-engine/src/tools/subagent/protocol.rs": {
       "tests": 0,
       "total": 169
+    },
+    "crates/yunxi-engine/src/tools/subagent/slots.rs": {
+      "tests": 0,
+      "total": 39
     },
     "crates/yunxi-engine/src/tools/subagent/status.rs": {
       "tests": 0,
@@ -2010,11 +2046,11 @@
     },
     "crates/yunxi-engine/src/tools/subagent/tests.rs": {
       "tests": 0,
-      "total": 509
+      "total": 570
     },
     "crates/yunxi-engine/src/tools/subagent_runner.rs": {
       "tests": 112,
-      "total": 966
+      "total": 896
     },
     "crates/yunxi-engine/src/tools/test_support.rs": {
       "tests": 0,
@@ -2022,7 +2058,7 @@
     },
     "crates/yunxi-engine/src/tools/tests.rs": {
       "tests": 0,
-      "total": 650
+      "total": 655
     },
     "crates/yunxi-engine/src/tools/tier_schema_probe.rs": {
       "tests": 0,
@@ -2118,27 +2154,27 @@
     },
     "crates/yunxi-engine/src/transfer/export.rs": {
       "tests": 0,
-      "total": 396
+      "total": 456
     },
     "crates/yunxi-engine/src/transfer/fixups.rs": {
       "tests": 94,
-      "total": 165
+      "total": 235
     },
     "crates/yunxi-engine/src/transfer/import.rs": {
-      "tests": 0,
-      "total": 236
+      "tests": 42,
+      "total": 1256
     },
     "crates/yunxi-engine/src/transfer/manifest.rs": {
       "tests": 0,
-      "total": 58
+      "total": 63
     },
     "crates/yunxi-engine/src/transfer/mod.rs": {
-      "tests": 419,
-      "total": 428
+      "tests": 1560,
+      "total": 1569
     },
     "crates/yunxi-engine/src/transfer/registry.rs": {
       "tests": 0,
-      "total": 595
+      "total": 617
     },
     "crates/yunxi-engine/src/voice/cues.rs": {
       "tests": 0,
@@ -2204,6 +2240,10 @@
       "tests": 50,
       "total": 146
     },
+    "crates/yunxi-hosts/src/platforms/background_send.rs": {
+      "tests": 0,
+      "total": 145
+    },
     "crates/yunxi-hosts/src/platforms/commands.rs": {
       "tests": 185,
       "total": 399
@@ -2226,7 +2266,11 @@
     },
     "crates/yunxi-hosts/src/platforms/mod.rs": {
       "tests": 7,
-      "total": 251
+      "total": 253
+    },
+    "crates/yunxi-hosts/src/platforms/onebot/active_turn.rs": {
+      "tests": 0,
+      "total": 142
     },
     "crates/yunxi-hosts/src/platforms/onebot/adapter.rs": {
       "tests": 0,
@@ -2234,7 +2278,7 @@
     },
     "crates/yunxi-hosts/src/platforms/onebot/admission.rs": {
       "tests": 0,
-      "total": 332
+      "total": 372
     },
     "crates/yunxi-hosts/src/platforms/onebot/builtin_commands.rs": {
       "tests": 0,
@@ -2246,11 +2290,11 @@
     },
     "crates/yunxi-hosts/src/platforms/onebot/connection.rs": {
       "tests": 0,
-      "total": 763
+      "total": 771
     },
     "crates/yunxi-hosts/src/platforms/onebot/dispatch.rs": {
       "tests": 7,
-      "total": 852
+      "total": 745
     },
     "crates/yunxi-hosts/src/platforms/onebot/dispatch/test_support.rs": {
       "tests": 0,
@@ -2268,6 +2312,10 @@
       "tests": 0,
       "total": 582
     },
+    "crates/yunxi-hosts/src/platforms/onebot/held_reports.rs": {
+      "tests": 37,
+      "total": 234
+    },
     "crates/yunxi-hosts/src/platforms/onebot/identity.rs": {
       "tests": 7,
       "total": 452
@@ -2282,11 +2330,11 @@
     },
     "crates/yunxi-hosts/src/platforms/onebot/inbound.rs": {
       "tests": 0,
-      "total": 995
+      "total": 996
     },
     "crates/yunxi-hosts/src/platforms/onebot/mod.rs": {
       "tests": 4,
-      "total": 135
+      "total": 140
     },
     "crates/yunxi-hosts/src/platforms/onebot/notices.rs": {
       "tests": 0,
@@ -2306,7 +2354,7 @@
     },
     "crates/yunxi-hosts/src/platforms/onebot/tests/admission.rs": {
       "tests": 0,
-      "total": 789
+      "total": 785
     },
     "crates/yunxi-hosts/src/platforms/onebot/tests/connection.rs": {
       "tests": 0,
@@ -2326,7 +2374,7 @@
     },
     "crates/yunxi-hosts/src/platforms/onebot/tests/identity.rs": {
       "tests": 0,
-      "total": 444
+      "total": 445
     },
     "crates/yunxi-hosts/src/platforms/onebot/tests/mod.rs": {
       "tests": 0,
@@ -2338,7 +2386,7 @@
     },
     "crates/yunxi-hosts/src/platforms/onebot/tests/parsing.rs": {
       "tests": 0,
-      "total": 348
+      "total": 351
     },
     "crates/yunxi-hosts/src/platforms/onebot/tests/receipt_recall.rs": {
       "tests": 0,
@@ -2354,11 +2402,15 @@
     },
     "crates/yunxi-hosts/src/platforms/onebot/tests/turn.rs": {
       "tests": 0,
-      "total": 769
+      "total": 768
     },
     "crates/yunxi-hosts/src/platforms/onebot/turn.rs": {
       "tests": 0,
-      "total": 705
+      "total": 720
+    },
+    "crates/yunxi-hosts/src/platforms/onebot/undelivered.rs": {
+      "tests": 0,
+      "total": 90
     },
     "crates/yunxi-hosts/src/platforms/onebot/voice_inbound.rs": {
       "tests": 0,
@@ -2462,7 +2514,7 @@
     },
     "crates/yunxi-hosts/src/platforms/plugins/mod.rs": {
       "tests": 100,
-      "total": 898
+      "total": 920
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/active_judgement_skip.rs": {
       "tests": 330,
@@ -2502,7 +2554,7 @@
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/inject.rs": {
       "tests": 0,
-      "total": 989
+      "total": 1001
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/judge.rs": {
       "tests": 264,
@@ -2510,11 +2562,11 @@
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/mod.rs": {
       "tests": 6,
-      "total": 553
+      "total": 567
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/pending.rs": {
       "tests": 0,
-      "total": 298
+      "total": 361
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/restraint.rs": {
       "tests": 0,
@@ -2526,7 +2578,7 @@
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/targeting.rs": {
       "tests": 0,
-      "total": 745
+      "total": 750
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/history.rs": {
       "tests": 0,
@@ -2538,7 +2590,7 @@
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/reaction.rs": {
       "tests": 0,
-      "total": 120
+      "total": 203
     },
     "crates/yunxi-hosts/src/platforms/plugins/real_context/tests/restraint.rs": {
       "tests": 0,
@@ -2700,13 +2752,17 @@
       "tests": 0,
       "total": 104
     },
+    "crates/yunxi-hosts/src/platforms/tests/background_send.rs": {
+      "tests": 0,
+      "total": 121
+    },
     "crates/yunxi-hosts/src/platforms/tests/logging.rs": {
       "tests": 0,
       "total": 122
     },
     "crates/yunxi-hosts/src/platforms/tests/mod.rs": {
       "tests": 0,
-      "total": 9
+      "total": 10
     },
     "crates/yunxi-hosts/src/platforms/tests/reply.rs": {
       "tests": 0,
@@ -2726,7 +2782,7 @@
     },
     "crates/yunxi-hosts/src/platforms/tool.rs": {
       "tests": 48,
-      "total": 606
+      "total": 640
     },
     "crates/yunxi-hosts/src/platforms/tool_context.rs": {
       "tests": 0,
@@ -2734,7 +2790,7 @@
     },
     "crates/yunxi-hosts/src/platforms/turn_context.rs": {
       "tests": 11,
-      "total": 1030
+      "total": 1046
     },
     "crates/yunxi-hosts/src/platforms/turn_context/test_support.rs": {
       "tests": 0,
@@ -2750,7 +2806,7 @@
     },
     "crates/yunxi-hosts/src/platforms/turn_run.rs": {
       "tests": 40,
-      "total": 407
+      "total": 408
     },
     "crates/yunxi-hosts/src/render/agent_events.rs": {
       "tests": 0,
@@ -2814,11 +2870,11 @@
     },
     "crates/yunxi-hosts/src/render/mod.rs": {
       "tests": 4,
-      "total": 148
+      "total": 151
     },
     "crates/yunxi-hosts/src/render/patch.rs": {
       "tests": 0,
-      "total": 325
+      "total": 354
     },
     "crates/yunxi-hosts/src/render/stream/event_clock.rs": {
       "tests": 0,
@@ -2826,7 +2882,7 @@
     },
     "crates/yunxi-hosts/src/render/stream/mod.rs": {
       "tests": 0,
-      "total": 903
+      "total": 915
     },
     "crates/yunxi-hosts/src/render/stream/reasoning_phase.rs": {
       "tests": 0,
@@ -2842,7 +2898,7 @@
     },
     "crates/yunxi-hosts/src/render/stream/timeline/cross_session.rs": {
       "tests": 0,
-      "total": 131
+      "total": 134
     },
     "crates/yunxi-hosts/src/render/stream/timeline/glyphs.rs": {
       "tests": 0,
@@ -2854,11 +2910,11 @@
     },
     "crates/yunxi-hosts/src/render/stream/timeline/live.rs": {
       "tests": 0,
-      "total": 764
+      "total": 748
     },
     "crates/yunxi-hosts/src/render/stream/timeline/mod.rs": {
       "tests": 4,
-      "total": 1158
+      "total": 1157
     },
     "crates/yunxi-hosts/src/render/stream/timeline/question.rs": {
       "tests": 0,
@@ -2886,7 +2942,7 @@
     },
     "crates/yunxi-hosts/src/render/stream/tool_summary.rs": {
       "tests": 0,
-      "total": 802
+      "total": 855
     },
     "crates/yunxi-hosts/src/render/style.rs": {
       "tests": 0,
@@ -2906,7 +2962,7 @@
     },
     "crates/yunxi-hosts/src/render/tests/cross_session.rs": {
       "tests": 0,
-      "total": 125
+      "total": 157
     },
     "crates/yunxi-hosts/src/render/tests/diagram_style.rs": {
       "tests": 0,
@@ -2914,7 +2970,7 @@
     },
     "crates/yunxi-hosts/src/render/tests/event_clock.rs": {
       "tests": 0,
-      "total": 131
+      "total": 134
     },
     "crates/yunxi-hosts/src/render/tests/golden.rs": {
       "tests": 0,
@@ -2970,7 +3026,7 @@
     },
     "crates/yunxi-hosts/src/render/tests/timeline.rs": {
       "tests": 0,
-      "total": 881
+      "total": 867
     },
     "crates/yunxi-hosts/src/render/tests/timeline_panels.rs": {
       "tests": 0,
@@ -2978,7 +3034,7 @@
     },
     "crates/yunxi-hosts/src/render/tests/todo.rs": {
       "tests": 0,
-      "total": 37
+      "total": 36
     },
     "crates/yunxi-hosts/src/render/tests/tool_summary.rs": {
       "tests": 0,
@@ -2990,7 +3046,7 @@
     },
     "crates/yunxi-hosts/src/render/tool_display.rs": {
       "tests": 2,
-      "total": 171
+      "total": 174
     },
     "crates/yunxi-hosts/src/render/usage.rs": {
       "tests": 41,
@@ -3038,7 +3094,7 @@
     },
     "crates/yunxi-hosts/src/runtime/run.rs": {
       "tests": 0,
-      "total": 294
+      "total": 349
     },
     "crates/yunxi-hosts/src/runtime/session_ops.rs": {
       "tests": 0,
@@ -3050,7 +3106,7 @@
     },
     "crates/yunxi-hosts/src/runtime/state/test_support.rs": {
       "tests": 0,
-      "total": 55
+      "total": 56
     },
     "crates/yunxi-hosts/src/runtime/stores.rs": {
       "tests": 0,
@@ -3066,15 +3122,15 @@
     },
     "crates/yunxi-hosts/src/web/actor/delivery.rs": {
       "tests": 0,
-      "total": 245
+      "total": 248
     },
     "crates/yunxi-hosts/src/web/actor/job_wake.rs": {
       "tests": 0,
-      "total": 609
+      "total": 625
     },
     "crates/yunxi-hosts/src/web/actor/mod.rs": {
       "tests": 0,
-      "total": 731
+      "total": 732
     },
     "crates/yunxi-hosts/src/web/actor/restart_resume.rs": {
       "tests": 0,
@@ -3174,11 +3230,11 @@
     },
     "crates/yunxi-hosts/src/web/goal_driver.rs": {
       "tests": 0,
-      "total": 351
+      "total": 357
     },
     "crates/yunxi-hosts/src/web/ipc_server.rs": {
       "tests": 0,
-      "total": 1271
+      "total": 1289
     },
     "crates/yunxi-hosts/src/web/link_preview/fetch.rs": {
       "tests": 63,
@@ -3234,11 +3290,11 @@
     },
     "crates/yunxi-hosts/src/web/server.rs": {
       "tests": 33,
-      "total": 1240
+      "total": 1241
     },
     "crates/yunxi-hosts/src/web/session_cmds.rs": {
       "tests": 0,
-      "total": 964
+      "total": 968
     },
     "crates/yunxi-hosts/src/web/session_effort.rs": {
       "tests": 0,
@@ -3258,7 +3314,7 @@
     },
     "crates/yunxi-hosts/src/web/sessions/mod.rs": {
       "tests": 0,
-      "total": 660
+      "total": 662
     },
     "crates/yunxi-hosts/src/web/sessions/state.rs": {
       "tests": 0,
@@ -3278,15 +3334,15 @@
     },
     "crates/yunxi-hosts/src/web/subagent_host.rs": {
       "tests": 0,
-      "total": 703
+      "total": 691
     },
     "crates/yunxi-hosts/src/web/subagent_tree.rs": {
       "tests": 0,
-      "total": 139
+      "total": 206
     },
     "crates/yunxi-hosts/src/web/test_support.rs": {
       "tests": 0,
-      "total": 63
+      "total": 64
     },
     "crates/yunxi-hosts/src/web/tests/auth_secrets.rs": {
       "tests": 0,
@@ -3306,7 +3362,7 @@
     },
     "crates/yunxi-hosts/src/web/tests/effort.rs": {
       "tests": 0,
-      "total": 156
+      "total": 159
     },
     "crates/yunxi-hosts/src/web/tests/events_questions.rs": {
       "tests": 0,
@@ -3318,7 +3374,7 @@
     },
     "crates/yunxi-hosts/src/web/tests/http.rs": {
       "tests": 0,
-      "total": 564
+      "total": 583
     },
     "crates/yunxi-hosts/src/web/tests/ipc_bridge.rs": {
       "tests": 0,
@@ -3330,7 +3386,7 @@
     },
     "crates/yunxi-hosts/src/web/tests/live_turn.rs": {
       "tests": 0,
-      "total": 64
+      "total": 107
     },
     "crates/yunxi-hosts/src/web/tests/mod.rs": {
       "tests": 0,
@@ -3342,7 +3398,7 @@
     },
     "crates/yunxi-hosts/src/web/tests/session.rs": {
       "tests": 0,
-      "total": 1376
+      "total": 1471
     },
     "crates/yunxi-hosts/src/web/tests/session_delete.rs": {
       "tests": 0,
@@ -3350,11 +3406,11 @@
     },
     "crates/yunxi-hosts/src/web/tests/shared.rs": {
       "tests": 0,
-      "total": 87
+      "total": 88
     },
     "crates/yunxi-hosts/src/web/tests/subagent_tree.rs": {
       "tests": 0,
-      "total": 501
+      "total": 586
     },
     "crates/yunxi-hosts/src/web/tests/turn.rs": {
       "tests": 0,
@@ -3362,15 +3418,15 @@
     },
     "crates/yunxi-hosts/src/web/tty.rs": {
       "tests": 0,
-      "total": 101
+      "total": 119
     },
     "crates/yunxi-hosts/src/web/turns/mod.rs": {
       "tests": 0,
-      "total": 750
+      "total": 759
     },
     "crates/yunxi-hosts/src/web/turns/task.rs": {
       "tests": 0,
-      "total": 1029
+      "total": 1032
     },
     "crates/yunxi-hosts/src/web/ui_locale.rs": {
       "tests": 54,
@@ -3386,7 +3442,7 @@
     },
     "crates/yunxi-hosts/src/web/voice_bridge.rs": {
       "tests": 11,
-      "total": 1093
+      "total": 1094
     },
     "crates/yunxi-hosts/src/web/voice_tts.rs": {
       "tests": 248,
@@ -3406,11 +3462,11 @@
     },
     "src/cli/daemon_cmds.rs": {
       "tests": 0,
-      "total": 569
+      "total": 575
     },
     "src/cli/daemon_log.rs": {
       "tests": 0,
-      "total": 577
+      "total": 583
     },
     "src/cli/data_cmds.rs": {
       "tests": 0,
@@ -3422,7 +3478,7 @@
     },
     "src/cli/entry_flows.rs": {
       "tests": 0,
-      "total": 138
+      "total": 148
     },
     "src/cli/exit_code.rs": {
       "tests": 25,
@@ -3430,11 +3486,11 @@
     },
     "src/cli/footer.rs": {
       "tests": 0,
-      "total": 715
+      "total": 721
     },
     "src/cli/history_replay.rs": {
       "tests": 0,
-      "total": 492
+      "total": 512
     },
     "src/cli/host_cmds.rs": {
       "tests": 0,
@@ -3462,7 +3518,7 @@
     },
     "src/cli/mcp_serve.rs": {
       "tests": 0,
-      "total": 316
+      "total": 318
     },
     "src/cli/migrate_cmds.rs": {
       "tests": 0,
@@ -3470,11 +3526,15 @@
     },
     "src/cli/mod.rs": {
       "tests": 26,
-      "total": 801
+      "total": 803
     },
     "src/cli/model_cmds.rs": {
       "tests": 0,
       "total": 822
+    },
+    "src/cli/output/conclusion.rs": {
+      "tests": 55,
+      "total": 247
     },
     "src/cli/output/event.rs": {
       "tests": 72,
@@ -3482,11 +3542,11 @@
     },
     "src/cli/output/mod.rs": {
       "tests": 0,
-      "total": 57
+      "total": 60
     },
     "src/cli/output/turn_client.rs": {
       "tests": 0,
-      "total": 277
+      "total": 398
     },
     "src/cli/pm_cmds.rs": {
       "tests": 0,
@@ -3518,11 +3578,11 @@
     },
     "src/cli/repl/direct.rs": {
       "tests": 0,
-      "total": 1041
+      "total": 1079
     },
     "src/cli/repl/editor.rs": {
       "tests": 0,
-      "total": 594
+      "total": 635
     },
     "src/cli/repl/herdr.rs": {
       "tests": 67,
@@ -3530,7 +3590,7 @@
     },
     "src/cli/repl/input.rs": {
       "tests": 0,
-      "total": 1148
+      "total": 1168
     },
     "src/cli/repl/input_layout.rs": {
       "tests": 28,
@@ -3542,7 +3602,7 @@
     },
     "src/cli/repl/jobs.rs": {
       "tests": 0,
-      "total": 785
+      "total": 820
     },
     "src/cli/repl/layout.rs": {
       "tests": 0,
@@ -3578,7 +3638,7 @@
     },
     "src/cli/repl/remote/interactive.rs": {
       "tests": 0,
-      "total": 532
+      "total": 533
     },
     "src/cli/repl/remote/lobby_lane.rs": {
       "tests": 0,
@@ -3586,11 +3646,11 @@
     },
     "src/cli/repl/remote/mod.rs": {
       "tests": 0,
-      "total": 16
+      "total": 19
     },
     "src/cli/repl/remote/one_shot.rs": {
       "tests": 0,
-      "total": 1355
+      "total": 1428
     },
     "src/cli/repl/remote/slash_config.rs": {
       "tests": 0,
@@ -3602,7 +3662,11 @@
     },
     "src/cli/repl/remote/slash_session.rs": {
       "tests": 0,
-      "total": 574
+      "total": 577
+    },
+    "src/cli/repl/remote/subagent_follow.rs": {
+      "tests": 0,
+      "total": 193
     },
     "src/cli/repl/remote/submit.rs": {
       "tests": 0,
@@ -3618,7 +3682,7 @@
     },
     "src/cli/repl/session.rs": {
       "tests": 0,
-      "total": 1354
+      "total": 1369
     },
     "src/cli/repl/session_picker.rs": {
       "tests": 0,
@@ -3642,7 +3706,7 @@
     },
     "src/cli/repl/tail/mod.rs": {
       "tests": 75,
-      "total": 1212
+      "total": 1213
     },
     "src/cli/repl/tail/navigate.rs": {
       "tests": 0,
@@ -3665,8 +3729,8 @@
       "total": 14
     },
     "src/cli/repl/tail/screen/cells.rs": {
-      "tests": 272,
-      "total": 527
+      "tests": 275,
+      "total": 530
     },
     "src/cli/repl/tail/screen/draw.rs": {
       "tests": 0,
@@ -3674,7 +3738,7 @@
     },
     "src/cli/repl/tail/screen/expand.rs": {
       "tests": 108,
-      "total": 811
+      "total": 813
     },
     "src/cli/repl/tail/screen/mod.rs": {
       "tests": 4,
@@ -3714,7 +3778,7 @@
     },
     "src/cli/repl/tail/screen/tail_impl.rs": {
       "tests": 0,
-      "total": 413
+      "total": 414
     },
     "src/cli/repl/tail/screen/term/edges.rs": {
       "tests": 0,
@@ -3750,7 +3814,7 @@
     },
     "src/cli/repl/wake.rs": {
       "tests": 0,
-      "total": 974
+      "total": 978
     },
     "src/cli/repl/width.rs": {
       "tests": 0,
@@ -3774,7 +3838,7 @@
     },
     "src/cli/shell_bridge.rs": {
       "tests": 55,
-      "total": 327
+      "total": 330
     },
     "src/cli/stdin_input.rs": {
       "tests": 0,
@@ -3782,15 +3846,23 @@
     },
     "src/cli/stdio.rs": {
       "tests": 21,
-      "total": 418
+      "total": 419
     },
     "src/cli/stt.rs": {
       "tests": 0,
-      "total": 178
+      "total": 188
+    },
+    "src/cli/subagent_wait.rs": {
+      "tests": 114,
+      "total": 272
     },
     "src/cli/terminal_guard.rs": {
       "tests": 0,
       "total": 171
+    },
+    "src/cli/tests/blank_content.rs": {
+      "tests": 0,
+      "total": 120
     },
     "src/cli/tests/cli_args.rs": {
       "tests": 0,
@@ -3826,7 +3898,7 @@
     },
     "src/cli/tests/input_editing.rs": {
       "tests": 0,
-      "total": 1155
+      "total": 1203
     },
     "src/cli/tests/jobs_feed.rs": {
       "tests": 0,
@@ -3846,7 +3918,7 @@
     },
     "src/cli/tests/mod.rs": {
       "tests": 0,
-      "total": 41
+      "total": 43
     },
     "src/cli/tests/pop_menu.rs": {
       "tests": 0,
@@ -3855,6 +3927,10 @@
     "src/cli/tests/replay_pages.rs": {
       "tests": 0,
       "total": 62
+    },
+    "src/cli/tests/replay_steps.rs": {
+      "tests": 0,
+      "total": 236
     },
     "src/cli/tests/reply_tail.rs": {
       "tests": 0,
@@ -3878,7 +3954,7 @@
     },
     "src/cli/tests/static_timeline.rs": {
       "tests": 0,
-      "total": 831
+      "total": 846
     },
     "src/cli/tests/strip_navigation.rs": {
       "tests": 0,
@@ -3886,7 +3962,7 @@
     },
     "src/cli/tests/strip_sessions.rs": {
       "tests": 0,
-      "total": 683
+      "total": 682
     },
     "src/cli/tests/tui_ansi.rs": {
       "tests": 0,
@@ -3894,7 +3970,7 @@
     },
     "src/cli/tests/tui_blocks.rs": {
       "tests": 0,
-      "total": 557
+      "total": 599
     },
     "src/cli/tests/tui_live_anchor.rs": {
       "tests": 0,
@@ -3934,7 +4010,7 @@
     },
     "src/cli/tests/variant_menu.rs": {
       "tests": 0,
-      "total": 441
+      "total": 444
     },
     "src/cli/tests/wait_spinner_cursor.rs": {
       "tests": 0,
@@ -3942,7 +4018,7 @@
     },
     "src/cli/tool_cmds.rs": {
       "tests": 75,
-      "total": 381
+      "total": 385
     },
     "src/cli/turn_request.rs": {
       "tests": 46,
@@ -3978,23 +4054,27 @@
     },
     "src/config_tui/mod.rs": {
       "tests": 23,
-      "total": 1016
+      "total": 1041
     },
     "src/config_tui/pending.rs": {
       "tests": 0,
-      "total": 87
+      "total": 130
+    },
+    "src/config_tui/persona_drafts.rs": {
+      "tests": 0,
+      "total": 206
     },
     "src/config_tui/personas.rs": {
       "tests": 0,
-      "total": 1075
+      "total": 1209
     },
     "src/config_tui/platforms/id_lists.rs": {
       "tests": 0,
-      "total": 388
+      "total": 393
     },
     "src/config_tui/platforms/mod.rs": {
       "tests": 0,
-      "total": 748
+      "total": 750
     },
     "src/config_tui/platforms/model_assignment.rs": {
       "tests": 0,
@@ -4002,19 +4082,19 @@
     },
     "src/config_tui/platforms/routes.rs": {
       "tests": 0,
-      "total": 596
+      "total": 604
     },
     "src/config_tui/plugin_settings.rs": {
       "tests": 0,
-      "total": 886
+      "total": 888
     },
     "src/config_tui/plugins.rs": {
       "tests": 0,
-      "total": 548
+      "total": 555
     },
     "src/config_tui/providers.rs": {
       "tests": 0,
-      "total": 1027
+      "total": 1037
     },
     "src/config_tui/real_context/affection.rs": {
       "tests": 0,
@@ -4026,7 +4106,7 @@
     },
     "src/config_tui/real_context/identity.rs": {
       "tests": 0,
-      "total": 242
+      "total": 248
     },
     "src/config_tui/real_context/mod.rs": {
       "tests": 0,
@@ -4042,7 +4122,7 @@
     },
     "src/config_tui/settings.rs": {
       "tests": 0,
-      "total": 236
+      "total": 253
     },
     "src/config_tui/tests/custom_models.rs": {
       "tests": 0,
@@ -4054,7 +4134,11 @@
     },
     "src/config_tui/tests/mod.rs": {
       "tests": 0,
-      "total": 9
+      "total": 10
+    },
+    "src/config_tui/tests/persona_drafts.rs": {
+      "tests": 0,
+      "total": 167
     },
     "src/config_tui/tests/plugins.rs": {
       "tests": 0,
@@ -4090,7 +4174,7 @@
     },
     "src/config_tui/widgets/form.rs": {
       "tests": 0,
-      "total": 896
+      "total": 890
     },
     "src/config_tui/widgets/input.rs": {
       "tests": 66,
@@ -4102,7 +4186,7 @@
     },
     "src/config_tui/widgets/select.rs": {
       "tests": 0,
-      "total": 191
+      "total": 195
     },
     "src/config_tui/widgets/ui.rs": {
       "tests": 0,
@@ -4114,7 +4198,7 @@
     },
     "src/lib.rs": {
       "tests": 0,
-      "total": 65
+      "total": 67
     },
     "src/main.rs": {
       "tests": 0,

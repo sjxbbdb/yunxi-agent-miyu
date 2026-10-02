@@ -28,8 +28,13 @@ impl MemoryStore {
         self.init()?;
         let ownership = self.manual_fact_ownership();
         let subjects = ownership_subjects_json(&ownership);
-        let conn = self.data_conn()?;
-        conn.execute(
+        let mut conn = self.data_conn()?;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let generation =
+            tx.query_row("SELECT generation FROM memory_meta WHERE id=1", [], |row| {
+                row.get::<_, i64>(0)
+            })?;
+        tx.execute(
             "INSERT INTO facts (
                 content, source, status, confidence, recall_count, created_at, updated_at,
                 visibility, owner_principal, owner_display_name, subjects, origin_session_id
@@ -45,7 +50,25 @@ impl MemoryStore {
                 self.write_session_id(),
             ],
         )?;
-        Ok(conn.last_insert_rowid())
+        let id = tx.last_insert_rowid();
+        record_lifecycle_event(
+            &tx,
+            lifecycle_event(
+                "fact",
+                Some(id),
+                MemoryLifecycleState::Transient,
+                MemoryLifecycleState::Committed,
+                MemoryLifecycleOwner::User,
+                lifecycle_scope(&ownership),
+                "manual_remember",
+                Vec::new(),
+                content_digest(content.trim()),
+                generation,
+                now(),
+            )?,
+        )?;
+        tx.commit()?;
+        Ok(id)
     }
 
     pub fn process_after_turn(
@@ -111,6 +134,23 @@ impl MemoryStore {
                 ownership.owner_display_name,
                 subjects,
             ],
+        )?;
+        let episode_id = tx.last_insert_rowid();
+        record_lifecycle_event(
+            &tx,
+            lifecycle_event(
+                "episode",
+                Some(episode_id),
+                MemoryLifecycleState::Transient,
+                MemoryLifecycleState::Short,
+                MemoryLifecycleOwner::TurnLoop,
+                lifecycle_scope(&ownership),
+                "turn_completed",
+                vec![episode_id],
+                content_digest(&content),
+                current_generation,
+                created_at.clone(),
+            )?,
         )?;
         tx.commit()?;
         self.cleanup_expired_short_diaries()?;
@@ -297,6 +337,28 @@ impl MemoryStore {
             return Ok(None);
         }
         let existing = load_existing_memory_candidates(&conn, &diaries)?;
+        let mut audit_conn = self.data_conn_existing()?;
+        let audit_tx = audit_conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        for diary in &diaries {
+            let diary_content = format!("{}\n{}", diary.user_message, diary.assistant_message);
+            record_lifecycle_event(
+                &audit_tx,
+                lifecycle_event(
+                    "episode",
+                    Some(diary.id),
+                    MemoryLifecycleState::Short,
+                    MemoryLifecycleState::Candidate,
+                    MemoryLifecycleOwner::MemoryOrganizer,
+                    lifecycle_scope_from_principal(diary.owner_principal.as_deref()),
+                    "organizer_batch_claimed",
+                    vec![diary.id],
+                    content_digest(&diary_content),
+                    generation,
+                    now(),
+                )?,
+            )?;
+        }
+        audit_tx.commit()?;
         Ok(Some(OrganizationBatch {
             database_id,
             generation,
@@ -361,6 +423,14 @@ impl MemoryStore {
         let mut promoted_ids = BTreeSet::new();
         for diary in &output.long_diaries {
             promoted_ids.extend(diary.diary_ids.iter().copied());
+        }
+        let mut admitted_ids = promoted_ids.clone();
+        if self.config.auto_fact_enabled {
+            for action in &output.knowledge {
+                if action.truth_status != "rejected" {
+                    admitted_ids.extend(action.diary_ids.iter().copied());
+                }
+            }
         }
         if !forced_ids.is_subset(&promoted_ids) {
             // 模型没给被点名的日记写长期日记:记一笔,但这批照常落地并清掉
@@ -523,6 +593,28 @@ impl MemoryStore {
                  WHERE id=?3 AND retention='short_term'",
                 params![timestamp, promoted_ids.contains(&diary.id), diary.id],
             )?;
+            let diary_content = format!("{}\n{}", diary.user_message, diary.assistant_message);
+            let (to_state, reason_code) = if admitted_ids.contains(&diary.id) {
+                (MemoryLifecycleState::Committed, "organizer_admitted")
+            } else {
+                (MemoryLifecycleState::Rejected, "organizer_rejected")
+            };
+            record_lifecycle_event(
+                &tx,
+                lifecycle_event(
+                    "episode",
+                    Some(diary.id),
+                    MemoryLifecycleState::Candidate,
+                    to_state,
+                    MemoryLifecycleOwner::MemoryOrganizer,
+                    lifecycle_scope_from_principal(diary.owner_principal.as_deref()),
+                    reason_code,
+                    vec![diary.id],
+                    content_digest(&diary_content),
+                    batch.generation,
+                    timestamp.clone(),
+                )?,
+            )?;
         }
         tx.commit()?;
         self.cleanup_expired_short_diaries()?;
@@ -535,15 +627,34 @@ impl MemoryStore {
         if !self.data_db.is_file() {
             return Ok(());
         }
-        let conn = self.data_conn_existing()?;
+        let mut conn = self.data_conn_existing()?;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let timestamp = now();
         for diary in &batch.diaries {
-            conn.execute(
+            tx.execute(
                 "UPDATE episodes SET consolidated_at=COALESCE(consolidated_at, ?1), promotion_pending=0
                  WHERE id=?2 AND retention='short_term'",
                 params![timestamp, diary.id],
             )?;
+            let diary_content = format!("{}\n{}", diary.user_message, diary.assistant_message);
+            record_lifecycle_event(
+                &tx,
+                lifecycle_event(
+                    "episode",
+                    Some(diary.id),
+                    MemoryLifecycleState::Candidate,
+                    MemoryLifecycleState::Rejected,
+                    MemoryLifecycleOwner::MemoryOrganizer,
+                    lifecycle_scope_from_principal(diary.owner_principal.as_deref()),
+                    "organizer_failed",
+                    vec![diary.id],
+                    content_digest(&diary_content),
+                    batch.generation,
+                    timestamp.clone(),
+                )?,
+            )?;
         }
+        tx.commit()?;
         Ok(())
     }
 
@@ -551,10 +662,62 @@ impl MemoryStore {
         if !self.data_db.is_file() {
             return Ok(0);
         }
-        let conn = self.data_conn_existing()?;
-        conn.execute(
+        let mut conn = self.data_conn_existing()?;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let generation =
+            tx.query_row("SELECT generation FROM memory_meta WHERE id=1", [], |row| {
+                row.get::<_, i64>(0)
+            })?;
+        let expired = {
+            let mut stmt = tx.prepare(
+                "SELECT id, content, owner_principal
+                   FROM episodes
+                  WHERE retention='short_term'
+                    AND status!='forgotten'
+                    AND promotion_pending=0
+                    AND expires_at IS NOT NULL
+                    AND unixepoch(expires_at) IS NOT NULL
+                    AND unixepoch(expires_at) <= unixepoch('now')
+                  ORDER BY id",
+            )?;
+            let rows = stmt.query_map([], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })?;
+            rows.collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        if expired.is_empty() {
+            tx.commit()?;
+            return Ok(0);
+        }
+        let timestamp = now();
+        for (id, content, owner_principal) in &expired {
+            record_lifecycle_event(
+                &tx,
+                lifecycle_event(
+                    "episode",
+                    Some(*id),
+                    MemoryLifecycleState::Short,
+                    MemoryLifecycleState::Expired,
+                    MemoryLifecycleOwner::MemoryGc,
+                    lifecycle_scope_from_principal(
+                        (!owner_principal.is_empty()).then_some(owner_principal.as_str()),
+                    ),
+                    "short_retention_elapsed",
+                    vec![*id],
+                    content_digest(content),
+                    generation,
+                    timestamp.clone(),
+                )?,
+            )?;
+        }
+        tx.execute(
             "UPDATE episodes SET status='forgotten'
              WHERE retention='short_term'
+               AND status!='forgotten'
                AND consolidated_at IS NULL
                AND promotion_pending=0
                AND expires_at IS NOT NULL
@@ -562,7 +725,7 @@ impl MemoryStore {
                AND unixepoch(expires_at) <= unixepoch('now')",
             [],
         )?;
-        Ok(conn.execute(
+        let deleted = tx.execute(
             "DELETE FROM episodes
              WHERE retention='short_term'
                AND consolidated_at IS NOT NULL
@@ -571,7 +734,9 @@ impl MemoryStore {
                AND unixepoch(expires_at) IS NOT NULL
                AND unixepoch(expires_at) <= unixepoch('now')",
             [],
-        )?)
+        )?;
+        tx.commit()?;
+        Ok(deleted)
     }
 
     pub(crate) fn prune_missing_skill_records(&self) -> Result<()> {
@@ -593,6 +758,87 @@ impl MemoryStore {
         }
         Ok(())
     }
+}
+
+fn lifecycle_scope(ownership: &MemoryOwnership) -> String {
+    lifecycle_scope_from_principal(
+        (!ownership.owner_principal.is_empty()).then_some(ownership.owner_principal.as_str()),
+    )
+}
+
+fn lifecycle_scope_from_principal(principal: Option<&str>) -> String {
+    principal
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| "privileged".to_string())
+}
+
+fn lifecycle_event(
+    memory_kind: &str,
+    memory_id: Option<i64>,
+    from_state: MemoryLifecycleState,
+    to_state: MemoryLifecycleState,
+    owner: MemoryLifecycleOwner,
+    owner_scope: String,
+    reason_code: &str,
+    source_episode_ids: Vec<i64>,
+    content_digest: String,
+    generation: i64,
+    created_at: String,
+) -> Result<MemoryLifecycleEvent> {
+    let source_episode_ids = normalized_episode_ids(&source_episode_ids)?;
+    let transition_key = transition_key(
+        generation,
+        memory_kind,
+        memory_id,
+        from_state,
+        to_state,
+        &source_episode_ids,
+    );
+    let event = MemoryLifecycleEvent {
+        memory_kind: memory_kind.to_string(),
+        memory_id,
+        from_state,
+        to_state,
+        owner,
+        owner_scope,
+        reason_code: reason_code.to_string(),
+        source_episode_ids,
+        content_digest,
+        generation,
+        transition_key,
+        created_at,
+    };
+    event.validate()?;
+    Ok(event)
+}
+
+fn record_lifecycle_event(conn: &Connection, event: MemoryLifecycleEvent) -> Result<bool> {
+    event.validate()?;
+    let source_episode_ids = serde_json::to_string(&event.source_episode_ids)?;
+    let affected = conn.execute(
+        "INSERT OR IGNORE INTO memory_lifecycle_events (
+             memory_kind, memory_id, from_state, to_state, owner, owner_scope,
+             reason_code, source_episode_ids, content_digest, generation,
+             transition_key, created_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+        params![
+            event.memory_kind,
+            event.memory_id,
+            event.from_state.as_str(),
+            event.to_state.as_str(),
+            event.owner.as_str(),
+            event.owner_scope,
+            event.reason_code,
+            source_episode_ids,
+            event.content_digest,
+            event.generation,
+            event.transition_key,
+            event.created_at,
+        ],
+    )?;
+    Ok(affected == 1)
 }
 
 #[cfg(any(test, feature = "testkit"))]

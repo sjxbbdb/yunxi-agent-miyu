@@ -15,6 +15,7 @@ mod association;
 pub mod browse;
 mod dedup;
 mod evicted;
+mod lifecycle;
 mod recall;
 mod schema;
 mod search;
@@ -27,6 +28,10 @@ use search::*;
 use validate::*;
 mod organizer;
 
+pub use lifecycle::{
+    content_digest, normalized_episode_ids, transition_key, validate_owned_transition,
+    validate_transition, MemoryLifecycleEvent, MemoryLifecycleOwner, MemoryLifecycleState,
+};
 pub use organizer::{MemoryOrganizer, MemoryOrganizerHandle};
 
 const SHORT_TERM: &str = "short_term";

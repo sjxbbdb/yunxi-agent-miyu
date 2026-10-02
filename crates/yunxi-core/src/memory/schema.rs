@@ -70,7 +70,8 @@ pub(crate) fn init_data_db(conn: &Connection) -> Result<()> {
             id INTEGER PRIMARY KEY CHECK(id=1),
             generation INTEGER NOT NULL DEFAULT 0,
             database_id TEXT NOT NULL DEFAULT '',
-            access_schema_version INTEGER NOT NULL DEFAULT 2
+            access_schema_version INTEGER NOT NULL DEFAULT 2,
+            lifecycle_schema_version INTEGER NOT NULL DEFAULT 0
         );",
     )?;
     add_column_if_missing(
@@ -83,6 +84,12 @@ pub(crate) fn init_data_db(conn: &Connection) -> Result<()> {
         conn,
         "memory_meta",
         "access_schema_version",
+        "INTEGER NOT NULL DEFAULT 0",
+    )?;
+    add_column_if_missing(
+        conn,
+        "memory_meta",
+        "lifecycle_schema_version",
         "INTEGER NOT NULL DEFAULT 0",
     )?;
     conn.execute(
@@ -248,6 +255,35 @@ pub(crate) fn init_data_db(conn: &Connection) -> Result<()> {
              ON facts(visibility, owner_principal, updated_at DESC);
          CREATE INDEX IF NOT EXISTS idx_episodes_access_updated
              ON episodes(visibility, owner_principal, updated_at DESC);
+         CREATE TABLE IF NOT EXISTS memory_lifecycle_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            memory_kind TEXT NOT NULL,
+            memory_id INTEGER,
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL,
+            owner TEXT NOT NULL,
+            owner_scope TEXT NOT NULL,
+            reason_code TEXT NOT NULL,
+            source_episode_ids TEXT NOT NULL DEFAULT '[]',
+            content_digest TEXT NOT NULL DEFAULT '',
+            generation INTEGER NOT NULL,
+            transition_key TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL
+         );
+         CREATE INDEX IF NOT EXISTS idx_memory_lifecycle_memory
+             ON memory_lifecycle_events(memory_kind, memory_id, created_at);
+         CREATE INDEX IF NOT EXISTS idx_memory_lifecycle_scope
+             ON memory_lifecycle_events(owner_scope, generation, created_at);
+         CREATE TRIGGER IF NOT EXISTS memory_lifecycle_events_no_update
+             BEFORE UPDATE ON memory_lifecycle_events
+             BEGIN
+                 SELECT RAISE(ABORT, 'memory lifecycle events are append-only');
+             END;
+         CREATE TRIGGER IF NOT EXISTS memory_lifecycle_events_no_delete
+             BEFORE DELETE ON memory_lifecycle_events
+             BEGIN
+                 SELECT RAISE(ABORT, 'memory lifecycle events are append-only');
+             END;
          CREATE TABLE IF NOT EXISTS memory_embeddings (
             kind TEXT NOT NULL,
             id INTEGER NOT NULL,
@@ -257,6 +293,11 @@ pub(crate) fn init_data_db(conn: &Connection) -> Result<()> {
             created_at TEXT NOT NULL,
             PRIMARY KEY (kind, id)
          );",
+    )?;
+    conn.execute(
+        "UPDATE memory_meta SET lifecycle_schema_version=1
+          WHERE id=1 AND lifecycle_schema_version < 1",
+        [],
     )?;
     Ok(())
 }
