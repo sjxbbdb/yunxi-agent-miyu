@@ -125,19 +125,21 @@ denied. A path in that compact root with no registry row is treated as a
 legacy/unknown carrier and denied rather than guessed safe. Provenance lookup
 errors also fail closed.
 
-`run_command` receives the same check when its command contains the exact
-absolute compact-session root emitted by the transcript hint. Shell syntax is
-not parsed and transcript contents are never searched or scrubbed. Structured
-`yunxi tool-call` reads therefore re-enter the same registry guard; relative or
-hand-constructed paths outside the emitted absolute root remain a later shell
-boundary hardening item, not a claim of full arbitrary-command mediation.
+`run_command` receives the same check when a lightweight path token resolves
+inside the current compact-session root. This covers the emitted absolute path
+and relative/`~/` spellings that resolve to that root. Shell syntax, variables,
+command substitutions, and embedded script strings are not parsed; transcript
+contents are never searched or scrubbed. Structured `yunxi tool-call` reads
+therefore re-enter the same registry guard, while arbitrary shell grammar
+mediation remains outside this slice.
 
 Evidence for this read-side slice (WSL Ubuntu-24.04, ext4 disposable copy,
 one cargo job at a time):
 
-- `yunxi-engine` `tools::transcript_guard`: 5 passed, covering path-scope
+- `yunxi-engine` `tools::transcript_guard`: 6 passed, covering path-scope
   separation, lexical traversal normalization, unknown legacy denial, live
-  registered readability, and tombstoned-reference denial.
+  registered readability, tombstoned-reference denial, and the command-token
+  parser regression.
 - The Windows-host `cargo test` attempt was not used as evidence: this
   repository's source intentionally compiles Unix-only `yunxi-base` modules
   and fails before reaching the changed code. WSL is the authoritative Rust

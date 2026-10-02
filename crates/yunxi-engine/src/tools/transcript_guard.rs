@@ -127,20 +127,32 @@ fn check_path(state: &StateStore, memory: &MemoryStore, path: &Path) -> Option<S
 fn check_command(state: &StateStore, memory: &MemoryStore, command: &str) -> Option<String> {
     let root = transcript_root(state);
     let root_text = root.to_string_lossy();
-    if !command.contains(root_text.as_ref()) {
-        return None;
+    // Shell grammar is intentionally not parsed. We only inspect path-like
+    // tokens and deny when one resolves inside this session's compact root.
+    // This covers absolute paths emitted by compact extras and relative/`~/`
+    // spellings that resolve to the same root, without pretending to
+    // understand shell variables, command substitutions, or embedded script
+    // strings. Those remain explicit residuals of this barrier.
+    for token in command_path_tokens(command) {
+        let candidate = resolve_path(token);
+        if is_transcript_scope(&candidate, &root) {
+            return check_path(state, memory, &candidate);
+        }
     }
-    // The command contains the exact path prefix emitted by compact extras;
-    // do not inspect or redact command output.  A shell command touching the
-    // compact session is conservatively denied unless its carrier lookup is
-    // live, which keeps the barrier fail-closed without shell heuristics.
-    let candidate = command
+    // Preserve the conservative behavior for an absolute root embedded in a
+    // token that the lightweight tokenizer cannot split cleanly. The root
+    // itself has no carrier row and therefore fails closed.
+    if command.contains(root_text.as_ref()) {
+        return check_path(state, memory, &root);
+    }
+    None
+}
+
+fn command_path_tokens(command: &str) -> impl Iterator<Item = &str> {
+    command
         .split(|ch: char| ch.is_whitespace() || matches!(ch, '\'' | '"' | '`' | ';' | '|' | '&'))
         .map(|token| token.trim_matches(|ch: char| matches!(ch, '(' | ')' | '[' | ']' | '{' | '}')))
-        .find(|token| token.starts_with(root_text.as_ref()))
-        .map(resolve_path)
-        .unwrap_or(root);
-    check_path(state, memory, &candidate)
+        .filter(|token| !token.is_empty())
 }
 
 #[cfg(test)]
@@ -162,6 +174,17 @@ mod tests {
     fn command_probe_only_uses_exact_root_prefix() {
         assert!("cat /state/compact/s/fold-1.md".contains("/state/compact/s"));
         assert!(!"cat /state/compact/other/fold-1.md".contains("/state/compact/s"));
+    }
+
+    #[test]
+    fn command_path_tokens_keep_relative_and_quoted_paths() {
+        let tokens =
+            command_path_tokens("cat './state/compact/session/fold-1.md' && printf \"done\"")
+                .collect::<Vec<_>>();
+        assert_eq!(
+            tokens,
+            vec!["cat", "./state/compact/session/fold-1.md", "printf", "done"]
+        );
     }
 
     #[tokio::test]
