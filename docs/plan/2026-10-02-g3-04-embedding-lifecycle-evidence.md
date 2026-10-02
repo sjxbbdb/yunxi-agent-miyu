@@ -68,16 +68,16 @@ package is compiled.
 
 ```text
 set -euo pipefail
-rm -rf /tmp/g3-04j-src /tmp/g3-04j-target /tmp/g3-04j-log
-mkdir -p /tmp/g3-04j-src
+rm -rf /tmp/g3-04k-src /tmp/g3-04k-target /tmp/g3-04k-log
+mkdir -p /tmp/g3-04k-src
 cd <repo-root>
 tar --exclude=.git --exclude=target --exclude=.tmp -cf - . \
-  | tar -xf - -C /tmp/g3-04j-src
-cd /tmp/g3-04j-src
-CARGO_TARGET_DIR=/tmp/g3-04j-target CARGO_BUILD_JOBS=1 \
+  | tar -xf - -C /tmp/g3-04k-src
+cd /tmp/g3-04k-src
+CARGO_TARGET_DIR=/tmp/g3-04k-target CARGO_BUILD_JOBS=1 \
   CARGO_INCREMENTAL=0 CARGO_PROFILE_TEST_DEBUG=0 \
   cargo test -p yunxi-core --lib memory --locked -- --test-threads=1 \
-  2>&1 | tee /tmp/g3-04j-log
+  2>&1 | tee /tmp/g3-04k-log
 ```
 
 The final run passed `78 passed; 0 failed; 1 ignored; 619 filtered out` with
