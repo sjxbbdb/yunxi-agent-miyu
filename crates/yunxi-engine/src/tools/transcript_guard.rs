@@ -85,13 +85,12 @@ fn normalize_path(path: &Path) -> PathBuf {
     normalized
 }
 
+fn compact_root(state: &StateStore) -> PathBuf {
+    normalize_path(&state.state_dir().join("compact"))
+}
+
 fn transcript_root(state: &StateStore) -> PathBuf {
-    normalize_path(
-        &state
-            .state_dir()
-            .join("compact")
-            .join(state.session_id().as_ref()),
-    )
+    normalize_path(&compact_root(state).join(state.session_id().as_ref()))
 }
 
 fn is_transcript_scope(path: &Path, root: &Path) -> bool {
@@ -99,12 +98,30 @@ fn is_transcript_scope(path: &Path, root: &Path) -> bool {
 }
 
 fn check_path(state: &StateStore, memory: &MemoryStore, path: &Path) -> Option<String> {
+    let compact = compact_root(state);
+    let Some(relative) = path.strip_prefix(&compact).ok() else {
+        return None;
+    };
+    let mut components = relative.components();
+    let Some(std::path::Component::Normal(session)) = components.next() else {
+        return Some("compact transcript root is not a readable file".to_string());
+    };
+    let session = session.to_string_lossy();
+    let current_session = state.session_id();
+    if session != current_session.as_ref() {
+        return Some(format!(
+            "transcript belongs to another session `{session}` and is blocked"
+        ));
+    }
     let root = transcript_root(state);
     if !is_transcript_scope(path, &root) {
-        return None;
+        return Some("transcript path is outside the active session scope".to_string());
     }
     let path = path.to_string_lossy();
-    match state.load_transcript_provenance_by_path(&path) {
+    match state
+        .conv_db()
+        .load_transcript_provenance_by_path(current_session.as_ref(), &path)
+    {
         Ok(Some(provenance))
             if memory
                 .memory_refs_are_tombstoned(&provenance.refs)
@@ -125,8 +142,8 @@ fn check_path(state: &StateStore, memory: &MemoryStore, path: &Path) -> Option<S
 }
 
 fn check_command(state: &StateStore, memory: &MemoryStore, command: &str) -> Option<String> {
-    let root = transcript_root(state);
-    let root_text = root.to_string_lossy();
+    let compact = compact_root(state);
+    let compact_text = compact.to_string_lossy();
     // Shell grammar is intentionally not parsed. We only inspect path-like
     // tokens and deny when one resolves inside this session's compact root.
     // This covers absolute paths emitted by compact extras and relative/`~/`
@@ -135,15 +152,16 @@ fn check_command(state: &StateStore, memory: &MemoryStore, command: &str) -> Opt
     // strings. Those remain explicit residuals of this barrier.
     for token in command_path_tokens(command) {
         let candidate = resolve_path(token);
-        if is_transcript_scope(&candidate, &root) {
-            return check_path(state, memory, &candidate);
+        if let Some(reason) = check_path(state, memory, &candidate) {
+            return Some(reason);
         }
     }
-    // Preserve the conservative behavior for an absolute root embedded in a
-    // token that the lightweight tokenizer cannot split cleanly. The root
-    // itself has no carrier row and therefore fails closed.
-    if command.contains(root_text.as_ref()) {
-        return check_path(state, memory, &root);
+    // Preserve conservative behavior for a compact root embedded in shell
+    // syntax that the lightweight tokenizer cannot split cleanly. We cannot
+    // prove which session the expression resolves to, so deny it rather than
+    // treating an opaque shell expression as a safe read.
+    if command.contains(compact_text.as_ref()) {
+        return Some("opaque compact transcript command is blocked".to_string());
     }
     None
 }
@@ -273,11 +291,87 @@ mod tests {
         assert!(error.contains("memory was deleted"), "unexpected: {error}");
     }
 
+    #[tokio::test]
+    async fn run_command_shell_chain_cannot_read_tombstoned_transcript() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let state = yunxi_core::state::StateStore::new(&paths).unwrap();
+        let config = yunxi_base::config::AppConfig::default();
+        let memory = yunxi_core::memory::MemoryStore::new(&config, &paths);
+        memory.init().unwrap();
+        let fact_id = memory.remember_fact("private", "test").unwrap();
+        memory
+            .delete_item(yunxi_core::memory::browse::BrowseTable::Facts, fact_id)
+            .unwrap();
+        let path = register_transcript(
+            &state,
+            &[yunxi_base::memory_types::MemoryRef {
+                kind: "fact".to_string(),
+                id: fact_id,
+            }],
+        );
+        let mut registry = run_command_registry();
+        bind(&mut registry, state, memory);
+        let command = format!("cat '{}' ; printf done", path.display());
+        let error = registry
+            .call(
+                "run_command",
+                &serde_json::json!({"command": command}).to_string(),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("memory was deleted"), "unexpected: {error}");
+    }
+
+    #[tokio::test]
+    async fn historical_session_transcript_is_denied_even_with_live_provenance() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let state = yunxi_core::state::StateStore::new(&paths).unwrap();
+        let memory =
+            yunxi_core::memory::MemoryStore::new(&yunxi_base::config::AppConfig::default(), &paths);
+        let current_session = state.session_id().to_string();
+        let historical = state
+            .create_session(
+                "yunxi",
+                "historical",
+                yunxi_core::state::USER_SESSION_KIND,
+                None,
+            )
+            .unwrap();
+        state.switch_session(&historical.session_id).unwrap();
+        let path = register_transcript(&state, &[]);
+        state.switch_session(&current_session).unwrap();
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "historical").unwrap();
+
+        let mut registry = read_registry();
+        bind(&mut registry, state, memory);
+        let error = registry
+            .call("read", &serde_json::json!({"path": path}).to_string())
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("another session"), "unexpected: {error}");
+    }
+
     fn read_registry() -> ToolRegistry {
         let mut registry = ToolRegistry::new();
         registry.register(super::super::ToolSpec::new(
             "read",
             "read",
+            serde_json::json!({"type":"object"}),
+            |_| async { Ok("handler ran".to_string()) },
+        ));
+        registry
+    }
+
+    fn run_command_registry() -> ToolRegistry {
+        let mut registry = ToolRegistry::new();
+        registry.register(super::super::ToolSpec::new(
+            "run_command",
+            "run command",
             serde_json::json!({"type":"object"}),
             |_| async { Ok("handler ran".to_string()) },
         ));

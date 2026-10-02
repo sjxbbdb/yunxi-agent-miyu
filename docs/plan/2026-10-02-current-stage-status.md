@@ -23,7 +23,7 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   turn、summary carrier、transcript identity/write 和当前 transcript read
   barrier、session-delete/idle-sweep GC、transfer round-trip coverage、
   rollback regression、concurrent browse convergence，以及 committed-delete
-  后 recall+browse convergence 的最小切片。代码与测试证据已进入当前工作树；状态文档提交可晚于代码证据提交。session
+  后 recall+browse convergence、历史 transcript scope barrier 的最小切片。代码与测试证据已进入当前工作树；状态文档提交可晚于代码证据提交。session
   GC 的基线提交为 `e9bdaf32`，transcript read
   barrier 的基线提交为 `83f763b0`。
 
@@ -33,9 +33,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 
 1. 补 provenance 在 concurrent delete/recall 的更强 overlap 语义上的决策
    或测试 seam；当前只证明了并发调用后的 convergence；
-2. 对 transcript `run_command` 的相对路径、shell 组合语法和历史 session
-   做明确的 fail-closed 边界测试；
-3. 只在这些证据通过后，才评估 G3-05 的阶段退出。
+2. 补齐所有实际执行入口的 transcript guard 绑定（daemon IPC tool-call、
+   直连 CLI tool-call、dev 子代理工具面），避免只在 Agent 主回合绑定；
+3. 对 transcript `run_command` 的变量、命令替换、重定向、symlink/hardlink
+   和相对 `..` 语法做明确的 fail-closed 边界测试或实现；
+4. 只在这些证据通过后，才评估 G3-05 的阶段退出。
 
 现有 read barrier 对未知 legacy carrier 默认拒绝；它对手工拼接的相对 shell
    路径尚未宣称覆盖。不得用“结构化 tool-call 可拒绝”替代任意 shell 语法

@@ -230,6 +230,28 @@ or claim a cross-database transaction, an overlap-after-commit guarantee for a
 read that started before deletion, or crash consistency across the memory and
 state SQLite files.
 
+## G3-05-10 implemented slice: historical transcript scope barrier
+
+The transcript guard now treats the whole `state/compact` tree as a protected
+namespace instead of checking only the active session directory. The compact
+root itself, sibling-session paths, and paths that resolve through `..` are
+fail-closed. The active session still goes through the typed provenance and
+tombstone check; a path belonging to another session is rejected even when its
+provenance is live. `run_command` uses the same scope check for shell chains,
+so an absolute historical path cannot be smuggled through `cat ...; ...`.
+
+Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
+
+- `cargo test -p yunxi-engine --lib transcript_guard --locked -- --test-threads=1` — 8 passed, 694 filtered.
+- The new regressions cover tombstoned transcript reads through a shell chain
+  and a live-provenance historical-session read.
+- The disposable source and target were removed after the run; no cargo or
+  rustc process remained.
+
+This slice does not claim to parse arbitrary shell grammar or defend against
+symlink/hardlink races; dynamic variables, command substitution, redirection,
+and external filesystem links remain explicit next-boundary work.
+
 ## G3-05-08 implemented slice: concurrent browse convergence contract
 
 The memory browse regression now runs a delete and an evicted-context browse
