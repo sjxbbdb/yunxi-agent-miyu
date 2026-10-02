@@ -209,9 +209,17 @@ fn validate_timestamp(field: &str, value: &str) -> Result<()> {
     validate_text(field, value, MAX_TIMESTAMP_CHARS, true)
 }
 
+fn validate_owner_scope(value: &str) -> Result<()> {
+    validate_text("owner_scope", value, 128, false)?;
+    if !value.is_empty() && value.trim().is_empty() {
+        bail!("owner_scope must be empty or contain non-whitespace characters");
+    }
+    Ok(())
+}
+
 fn validate_profile_claim(claim: &ProfileClaim) -> Result<()> {
     validate_text("claim_id", &claim.claim_id, 128, true)?;
-    validate_text("owner_scope", &claim.owner_scope, 128, false)?;
+    validate_owner_scope(&claim.owner_scope)?;
     validate_text("key", &claim.key, MAX_PROFILE_KEY_CHARS, true)?;
     validate_text("value", &claim.value, MAX_PROFILE_VALUE_CHARS, true)?;
     validate_source(&claim.source_kind, &claim.source_ref)?;
@@ -224,7 +232,7 @@ fn validate_profile_claim(claim: &ProfileClaim) -> Result<()> {
 }
 
 fn validate_new_profile_claim(claim: &NewProfileClaim) -> Result<()> {
-    validate_text("owner_scope", &claim.owner_scope, 128, false)?;
+    validate_owner_scope(&claim.owner_scope)?;
     validate_text("key", &claim.key, MAX_PROFILE_KEY_CHARS, true)?;
     validate_text("value", &claim.value, MAX_PROFILE_VALUE_CHARS, true)?;
     validate_source(&claim.source_kind, &claim.source_ref)?;
@@ -353,7 +361,7 @@ impl ConversationDb {
         owner_scope: &str,
         include_revoked: bool,
     ) -> Result<Vec<ProfileClaim>> {
-        validate_text("owner_scope", owner_scope, 128, false)?;
+        validate_owner_scope(owner_scope)?;
         let conn = self.conn.lock().unwrap();
         let sql = if include_revoked {
             format!(

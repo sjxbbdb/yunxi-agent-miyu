@@ -116,3 +116,22 @@ fn profile_claims_do_not_create_memory_rows_and_duplicate_revision_is_atomic() {
         Some(first)
     );
 }
+
+#[test]
+fn profile_claim_owner_scope_rejects_whitespace_but_allows_global_empty_scope() {
+    let (_temp, store) = test_store();
+    let mut input = claim("   \t", "drink", ProfileClaimCertainty::Confirmed);
+    assert!(store.insert_profile_claim(&input).is_err());
+    assert!(store.list_profile_claims("   \t", false).is_err());
+
+    input.owner_scope = "persona-a".into();
+    let mut inserted = store.insert_profile_claim(&input).unwrap();
+    inserted.owner_scope = " \n".into();
+    assert!(store.upsert_profile_claim(&inserted).is_err());
+
+    let global = store
+        .insert_profile_claim(&claim("", "global-key", ProfileClaimCertainty::Confirmed))
+        .unwrap();
+    assert_eq!(global.owner_scope, "");
+    assert_eq!(store.list_profile_claims("", false).unwrap(), vec![global]);
+}
