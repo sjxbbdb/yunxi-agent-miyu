@@ -577,6 +577,25 @@ impl MemoryStore {
             clauses.push("timestamp <= ?".into());
             params.push(Box::new(end.to_string()));
         }
+        // Direct browsing must enforce the same typed provenance barrier as
+        // keyword/semantic recall.  Tombstones live in the persona data DB,
+        // while carriers live in the state DB, so take the id snapshot before
+        // issuing either count or page query and exclude linked carriers by
+        // their exact `evicted_turns.id`.
+        let excluded = self.tombstoned_evicted_ids()?;
+        if !excluded.is_empty() {
+            let mut excluded = excluded.into_iter().collect::<Vec<_>>();
+            excluded.sort_unstable();
+            let placeholders = std::iter::repeat_n("?", excluded.len())
+                .collect::<Vec<_>>()
+                .join(", ");
+            clauses.push(format!("id NOT IN ({placeholders})"));
+            params.extend(
+                excluded
+                    .into_iter()
+                    .map(|id| Box::new(id) as Box<dyn rusqlite::ToSql>),
+            );
+        }
         let where_sql = if clauses.is_empty() {
             String::new()
         } else {
@@ -617,6 +636,11 @@ impl MemoryStore {
         let Some(conn) = self.state_conn_existing()? else {
             return Ok(None);
         };
+        // A direct id lookup is still a read barrier: never disclose a state
+        // carrier whose typed fact/episode reference has a durable tombstone.
+        if self.tombstoned_evicted_ids()?.contains(&id) {
+            return Ok(None);
+        }
         let item = conn
             .query_row(
                 "SELECT id, timestamp, role, content, visibility, owner_display_name

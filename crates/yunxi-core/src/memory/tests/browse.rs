@@ -316,3 +316,82 @@ fn browse_detail_patch_revisions_and_readonly_stats() {
     assert!(!store.delete_evicted_item(first_id).unwrap());
     assert_eq!(store.stats_readonly().unwrap()["evicted_turns"], 1);
 }
+
+#[test]
+fn browse_evicted_hides_tombstoned_linked_carrier_but_keeps_unlinked_row() {
+    let temp = tempfile::tempdir().unwrap();
+    let config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    let fact_id = store.remember_fact("浏览墓碑回归事实", "test").unwrap();
+    store
+        .remember_evicted_turns(&[
+            EvictedTurn {
+                source_id: "linked-tool-report".into(),
+                timestamp: "2026-09-02T10:00:00+00:00".into(),
+                role: "assistant".into(),
+                content: "浏览墓碑回归事实".into(),
+                refs: vec![MemoryRef {
+                    kind: "fact".into(),
+                    id: fact_id,
+                }],
+                ..EvictedTurn::default()
+            },
+            EvictedTurn {
+                source_id: "unlinked-user-row".into(),
+                timestamp: "2026-09-02T10:01:00+00:00".into(),
+                role: "user".into(),
+                content: "浏览墓碑回归事实".into(),
+                ..EvictedTurn::default()
+            },
+        ])
+        .unwrap();
+
+    let before = store
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(before.total, 2);
+    let linked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "assistant")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+    let unlinked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "user")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+
+    store.delete_item(BrowseTable::Facts, fact_id).unwrap();
+
+    let after = store
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(after.total, 1);
+    assert_eq!(after.items[0]["id"], unlinked_id);
+    assert!(store.browse_evicted_item(linked_id).unwrap().is_none());
+    assert_eq!(
+        store.browse_evicted_item(unlinked_id).unwrap().unwrap()["id"],
+        unlinked_id
+    );
+
+    // The keyword path already applies the same barrier; keep it covered here
+    // so direct browse changes cannot accidentally diverge from search.
+    let searched = store
+        .browse_evicted(&EvictedQuery {
+            text: "浏览墓碑回归事实".into(),
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(searched.total, 1);
+    assert_eq!(searched.items[0]["id"], unlinked_id);
+}

@@ -76,6 +76,28 @@ The transcript carrier remains deliberately out of this slice. Transcript
 paths are still legacy/unknown until a stable logical id and a read barrier are
 implemented together; no transcript text is guessed or scrubbed here.
 
+## G3-05-03a implemented slice: direct evicted browse barrier
+
+The existing keyword and semantic evicted-context paths already consulted the
+typed tombstone set, but the dashboard-style no-keyword browse and direct
+`browse_evicted_item` lookup queried `evicted_turns` without that barrier. This
+slice closes only that read gap: both the count/page query and the direct item
+lookup exclude carriers by exact `evicted_turns.id` when their typed
+`fact`/`episode` reference has a durable tombstone. The state/data databases
+remain separate and the snapshot is still best-effort across that boundary;
+there is no text matching or cross-database transaction.
+
+Evidence for G3-05-03a (WSL Ubuntu ext4, one cargo job at a time):
+
+- `yunxi-core` `memory::tests::browse`: 3 passed, including the linked versus
+  unlinked carrier regression and keyword-path parity.
+- `yunxi-core` `memory::tests::store`: 12 passed, including the existing
+  keyword/semantic tombstone and migration coverage.
+
+The direct browse path still retains its pre-existing visibility/pagination
+semantics; changing those contracts is outside this slice. Summary and
+transcript barriers remain separate G3-05 slices.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,

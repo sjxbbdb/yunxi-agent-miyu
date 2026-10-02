@@ -138,7 +138,7 @@ impl MemoryStore {
     /// durable row deleted in the data database.  The two databases are kept
     /// independent: if an old state database has no provenance table, or an
     /// old data database has no tombstone table, no rows are hidden.
-    fn tombstoned_evicted_ids(&self) -> Result<std::collections::HashSet<i64>> {
+    pub(crate) fn tombstoned_evicted_ids(&self) -> Result<std::collections::HashSet<i64>> {
         let mut tombstones = std::collections::HashSet::new();
         let data = match self.data_conn_existing() {
             Ok(conn) => conn,
