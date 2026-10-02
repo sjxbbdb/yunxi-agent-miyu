@@ -22,9 +22,8 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   vector、embedding 生命周期和 restore barrier 证据；G3-05 已完成 evicted
   turn、summary carrier、transcript identity/write 和当前 transcript read
   barrier、session-delete/idle-sweep GC、transfer round-trip coverage 和
-  rollback regression 的最小切片。当前 HEAD 待本轮 rollback 变更提交后
-  更新；session GC 的基线提交为 `e9bdaf32`，transcript read barrier 的
-  基线提交为 `83f763b0`。
+  rollback regression 的最小切片。当前 HEAD 为 `1b0dca8d`；session GC 的
+  基线提交为 `e9bdaf32`，transcript read barrier 的基线提交为 `83f763b0`。
 
 ## 下一处施工边界
 
