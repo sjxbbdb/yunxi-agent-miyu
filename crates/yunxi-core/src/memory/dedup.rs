@@ -16,9 +16,10 @@
 //! 嵌入不可用时退回归一化文本比较（大小写、空白、标点、全半角），这是纯词面
 //! 的近义下限。任何一步失败都只是不折叠，不影响整理本身。
 
+use crate::memory::semantic::persist_embedding_if_current;
 use crate::memory::*;
 use sha2::{Digest, Sha256};
-use yunxi_base::embedding::{cosine, vector_from_blob, vector_to_blob, Embedder};
+use yunxi_base::embedding::{cosine, vector_from_blob, Embedder};
 
 /// 两条事实算「同一条」的余弦下限。检索地板（`min_score`，默认 0.35）对去重
 /// 太松：它只保证「相关」，这里要的是「同一件事换个说法」。
@@ -123,9 +124,11 @@ impl MemoryStore {
                 .collect::<Vec<_>>();
             match embedder.embed(&texts).await {
                 Ok(vectors) => {
-                    self.store_vectors(&embedder, &fresh, &rows, &vectors);
+                    let stored = self.store_vectors(&embedder, &fresh, &rows, &vectors);
                     for (index, vector) in fresh.into_iter().zip(vectors) {
-                        rows[index].vector = Some(vector);
+                        if stored.contains(&index) {
+                            rows[index].vector = Some(vector);
+                        }
                     }
                 }
                 Err(error) => {
@@ -287,33 +290,42 @@ impl MemoryStore {
         indexes: &[usize],
         rows: &[DedupRow],
         vectors: &[Vec<f32>],
-    ) {
-        let Ok(conn) = self.data_conn() else {
-            return;
+    ) -> BTreeSet<usize> {
+        let Ok(mut conn) = self.data_conn() else {
+            return BTreeSet::new();
+        };
+        let Ok(tx) = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        else {
+            return BTreeSet::new();
         };
         let timestamp = now();
+        let mut stored = BTreeSet::new();
         for (index, vector) in indexes.iter().zip(vectors) {
             let row = &rows[*index];
-            if let Err(error) = conn.execute(
-                "INSERT INTO memory_embeddings (kind, id, model, content_sha256, embedding, created_at)
-                 VALUES ('fact', ?1, ?2, ?3, ?4, ?5)
-                 ON CONFLICT (kind, id) DO UPDATE SET
-                    model = excluded.model,
-                    content_sha256 = excluded.content_sha256,
-                    embedding = excluded.embedding,
-                    created_at = excluded.created_at",
-                params![
-                    row.id,
-                    embedder.model_id(),
-                    content_sha(&row.content),
-                    vector_to_blob(vector),
-                    timestamp
-                ],
+            match persist_embedding_if_current(
+                &tx,
+                MemoryKind::Fact,
+                row.id,
+                embedder.model_id(),
+                &content_sha(&row.content),
+                vector,
+                &timestamp,
             ) {
-                tracing::warn!(error = %error, "{}", yunxi_base::i18n::text("storing memory dedup vectors failed", "记忆去重向量落库失败"));
-                return;
+                Ok(true) => {
+                    stored.insert(*index);
+                }
+                Ok(false) => {}
+                Err(error) => {
+                    tracing::warn!(error = %error, "{}", yunxi_base::i18n::text("storing memory dedup vectors failed", "记忆去重向量落库失败"));
+                    return BTreeSet::new();
+                }
             }
         }
+        if let Err(error) = tx.commit() {
+            tracing::warn!(error = %error, "{}", yunxi_base::i18n::text("storing memory dedup vectors failed", "记忆去重向量落库失败"));
+            return BTreeSet::new();
+        }
+        stored
     }
 
     /// 库里的事实连同存量向量。连接不跨 await 持有（rusqlite 的 Connection
