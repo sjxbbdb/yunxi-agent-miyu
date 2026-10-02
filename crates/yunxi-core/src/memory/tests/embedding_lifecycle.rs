@@ -213,6 +213,34 @@ fn expired_short_diary_drops_its_embedding() {
 }
 
 #[test]
+fn decay_forgetting_revokes_the_vector_immediately() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut config = AppConfig::default();
+    config.memory.forgetting_min_strength = 2.0;
+    config.memory.forgetting_half_life_days = 1.0;
+    let store = MemoryStore::new(&config, &test_paths(&temp));
+    let id = store.remember_fact("会被衰减遗忘的事实", "test").unwrap();
+    let conn = store.data_conn().unwrap();
+    conn.execute(
+        "UPDATE facts SET strength=1.0, updated_at='2020-01-01T00:00:00Z' WHERE id=?1",
+        [id],
+    )
+    .unwrap();
+    embedding(&store, "fact", id, &digest("会被衰减遗忘的事实"));
+    drop(conn);
+
+    store.init().unwrap();
+    let conn = store.data_conn().unwrap();
+    let status: String = conn
+        .query_row("SELECT status FROM facts WHERE id=?1", [id], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(status, "forgotten");
+    assert_eq!(vector_count(&store, "fact", id), 0);
+}
+
+#[test]
 fn organizer_fact_update_drops_old_embedding_for_backfill() {
     let temp = tempfile::tempdir().unwrap();
     let store = store(&temp);

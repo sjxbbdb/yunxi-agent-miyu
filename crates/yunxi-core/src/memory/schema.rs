@@ -629,6 +629,13 @@ pub(crate) fn decay_table(conn: &Connection, table: &str, config: &MemoryConfig)
             &format!("UPDATE {table} SET strength=?1, status=?2, last_decay_at=?3 WHERE id=?4"),
             params![strength, status, now.to_rfc3339(), id],
         )?;
+        if status == "forgotten" {
+            let kind = if table == "facts" { "fact" } else { "episode" };
+            conn.execute(
+                "DELETE FROM memory_embeddings WHERE kind=?1 AND id=?2",
+                params![kind, id],
+            )?;
+        }
     }
     Ok(())
 }
