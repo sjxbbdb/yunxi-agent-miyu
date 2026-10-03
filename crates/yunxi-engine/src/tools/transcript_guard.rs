@@ -368,6 +368,13 @@ fn command_has_dynamic_file_access(command: &str) -> bool {
         return true;
     }
 
+    // `find -exec` (and its confirmation variants) passes each matched path
+    // to a nested command. The path is therefore opaque to this lexical
+    // barrier even when the outer command contains no shell expansion.
+    if command_segments(command).any(segment_has_find_exec_file_access) {
+        return true;
+    }
+
     // `xargs` obtains command arguments from stdin (or from its replacement
     // placeholders), so a file-access command below it is dynamic even when
     // the command text contains no `$`/backtick expansion.  Keep this as a
@@ -395,6 +402,10 @@ fn command_has_dynamic_file_access(command: &str) -> bool {
 
 fn command_has_dynamic_file_access_at_depth(command: &str, depth: usize) -> bool {
     if command_has_dynamic_wrapper_payload(command) {
+        return true;
+    }
+
+    if command_segments(command).any(segment_has_find_exec_file_access) {
         return true;
     }
 
@@ -584,6 +595,94 @@ fn xargs_option_has_attached_argument(token: &str) -> bool {
                 .strip_prefix(option)
                 .is_some_and(|rest| rest.starts_with('='))
         })
+}
+
+/// Return whether a `find` execution predicate can pass an opaque matched
+/// path to a file consumer. This is intentionally a small lexical guard, not
+/// a `find` grammar or shell parser: known-safe `printf` predicates remain
+/// usable, while an unknown or incomplete predicate fails closed.
+fn segment_has_find_exec_file_access(segment: &str) -> bool {
+    let tokens = shell_tokens(segment);
+    let Some(first_index) = tokens
+        .iter()
+        .position(|token| !is_shell_assignment(&token.text))
+    else {
+        return false;
+    };
+
+    let mut find_index = first_index;
+    while let Some(token) = tokens.get(find_index) {
+        let basename = command_basename(&token.text);
+        if basename == "find" {
+            break;
+        }
+        if !FILE_ACCESS_WRAPPERS.contains(&basename) || basename == "xargs" {
+            return false;
+        }
+        find_index += 1;
+        while let Some(token) = tokens.get(find_index) {
+            if is_shell_assignment(&token.text) {
+                find_index += 1;
+            } else {
+                break;
+            }
+        }
+    }
+    if tokens
+        .get(find_index)
+        .is_none_or(|token| command_basename(&token.text) != "find")
+    {
+        return false;
+    }
+
+    let mut index = find_index + 1;
+    while let Some(token) = tokens.get(index) {
+        let text = token.text.as_str();
+        if !matches!(text, "-exec" | "-execdir" | "-ok" | "-okdir") {
+            index += 1;
+            continue;
+        }
+
+        let payload_start = index + 1;
+        let Some(end) = (payload_start..tokens.len()).find(|candidate| {
+            matches!(tokens[*candidate].text.as_str(), ";" | "\\;" | "+" | "\\+")
+        }) else {
+            return true;
+        };
+        let payload = &tokens[payload_start..end];
+        if payload.is_empty() {
+            return true;
+        }
+        if find_payload_is_safe_printf(payload) {
+            index = end + 1;
+            continue;
+        }
+        return true;
+    }
+    false
+}
+
+fn find_payload_is_safe_printf(payload: &[ShellToken]) -> bool {
+    let first = command_basename(&payload[0].text);
+    if first == "printf" {
+        return true;
+    }
+
+    // Permit a static shell/wrapper payload only when the existing lexical
+    // scanner proves that it has no file-access command. Dynamic payloads
+    // remain denied by the caller's fail-closed path.
+    if SHELL_COMMANDS.contains(&first) || FILE_ACCESS_WRAPPERS.contains(&first) {
+        let command = payload
+            .iter()
+            .map(|token| token.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        return !has_dynamic_shell_syntax(&command)
+            && !segment_invokes_file_access(&command)
+            && !command_has_dynamic_wrapper_payload(&command);
+    }
+
+    false
 }
 
 fn is_shell_command_option(token: &str) -> bool {
@@ -1523,6 +1622,29 @@ mod tests {
             .await
             .expect("xargs driving printf does not access a file");
         assert_eq!(result, "handler ran");
+    }
+
+    #[tokio::test]
+    async fn find_exec_file_access_dataflow_is_denied() {
+        for command in [
+            r#"find . -exec cat {} \;"#,
+            r#"find . -execdir cp {} /tmp \;"#,
+            r#"find . -exec sh -c 'cat {}' sh {} \;"#,
+            r#"find . -ok grep pattern {} \;"#,
+        ] {
+            let error = call_guarded_run_command(command).await.unwrap_err();
+            assert!(
+                error.contains("dynamic transcript path"),
+                "command {command:?}: unexpected error: {error}"
+            );
+        }
+
+        for command in ["find . -print", r#"find . -exec printf '%p' \;"#] {
+            let result = call_guarded_run_command(command)
+                .await
+                .expect("find without a file consumer should reach the handler");
+            assert_eq!(result, "handler ran", "command {command:?}");
+        }
     }
 
     #[tokio::test]

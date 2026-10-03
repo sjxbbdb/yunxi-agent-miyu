@@ -159,6 +159,15 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   `tools::transcript_guard` 26/26 通过。该切片仍是有限词法屏障，不宣称
   完整 xargs 参数/函数别名/嵌入脚本 data-flow。
 
+  G3-05-36 又收窄了 `find` 执行谓词的 transcript data-flow 缺口：
+  `find -exec`、`-execdir`、`-ok` 与 `-okdir` 会把匹配到的路径交给嵌套
+  命令，因此对 `cat`/`cp`/`grep`/`sh -c` 等文件消费者按 opaque 动态路径
+  fail-closed；不带执行谓词的 `find` 与直接 `find -exec printf` 继续放行。
+  既有 wrapper 词汇也纳入扫描，WSL Ubuntu-24.04 ext4
+  `tools::transcript_guard` 27/27 通过。该切片仍是有界词法屏障，不宣称
+  完整 find grammar、shell parser、process substitution 或嵌入脚本
+  data-flow。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
@@ -172,7 +181,8 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
    明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
-   参数、`xargs` opaque stdin/placeholder 及 `$()`/反引号内嵌动态文件访问已有词法屏障与 26/26 回归，live
+   参数、`xargs` opaque stdin/placeholder、`find -exec` opaque matched-path
+   data-flow 及 `$()`/反引号内嵌动态文件访问已有词法屏障与 27/27 回归，live
    transcript shell 路径也已拒绝，当前仍不做完整 shell parser；
 3. 继续评估 `grep` 的 `include` 过滤与 `glob` 的目录能力是否值得进入
    descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；当前审计

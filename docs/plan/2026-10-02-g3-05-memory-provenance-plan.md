@@ -836,6 +836,21 @@ bounded lexical/data-flow seam: it does not parse the complete xargs grammar,
 arbitrary functions or aliases, dynamic command names, or embedded Python,
 Node, Perl, or other language scripts.
 
+## G3-05-36 implemented slice: `find` execution-predicate data flow
+
+The bounded transcript shell barrier now treats `find` execution predicates as
+opaque path sources. `-exec`, `-execdir`, `-ok`, and `-okdir` pass each matched
+path to a nested command, so payloads that dispatch `cat`, `cp`, `grep`, `sed`,
+or a nested `sh -c` are denied even when the outer command contains no shell
+expansion. The existing wrapper vocabulary is recognized before `find`, while
+plain `find` and a direct `find -exec printf` predicate remain usable.
+
+An incomplete or unknown predicate fails closed. The implementation is a
+bounded lexical guard, not a complete `find` grammar or shell parser; it does
+not claim coverage for process substitution, arbitrary functions/aliases,
+embedded Python/Node/Perl or other language scripts, or parent-directory
+TOCTOU. WSL Ubuntu-24.04 ext4 `tools::transcript_guard` passed 27/27.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate
