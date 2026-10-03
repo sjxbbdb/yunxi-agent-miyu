@@ -366,13 +366,13 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 | G1 CompanionContext | 已实现并完成退出审计（见 `2026-10-02-g1-exit-audit.md`） | 保留 provider cache hit 与脱敏 request-shape 差异为未验证项 |
 | G2 Profile/关系 | 已实现并完成 schema、scope lifecycle、isolation 证据 | 保持 profile 非向量化，后续只修复已登记残余 |
 | G3 分层记忆 | 已完成阶段退出：G3-01..04 与 G3-05 provenance/边界证据已固化，跨库原子性、完整 shell parser 等仍是明确非目标 | 只维护已登记残余风险，不把非目标隐性扩张回 G3 |
-| G4 独立知识库 | G4-01、G4-02-01 已完成；G4-02-02 调用方接缝进行中 | 审计并实现 ToolCallContext/registry 可信注入，再处理 Web/版本生命周期 |
+| G4 独立知识库 | G4-01、G4-02-01、G4-02-02 已完成；G4-03 版本生命周期进行中 | 实现 source_revision 失效/重建/回滚，再处理 Web/MCP 生命周期授权 |
 | G5 DecisionPort/Laya | 未开始（主线已固化，G0 不实现模型） | G3/G4 接口稳定后按 G5-00→G5-06 完成验证、shadow 和建议采纳 |
 | G6 陪伴/总结 | 未开始 | G1–G5 的保存入口稳定后 |
 | G7 终端自然语言层 | 未开始 | 复用 Miyu 终端路径 |
 | G8 TUI | 未开始 | 终端链路稳定后 |
 | G9 硬化发布 | 未开始 | 所有功能阶段完成后 |
 
-当前允许执行 G4-02-02 的 ToolCallContext/registry 可信注入设计与失败矩阵；不得把 G4-01 provenance 当作鉴权凭证，
+当前允许执行 G4-03 的 source_revision 失效/重建/回滚设计与失败矩阵；不得把 G4-01 provenance 当作鉴权凭证，
 也不能用“能启动”替代阶段验收。
 G4–G9 仍未完成，详见 [`2026-10-02-current-stage-status.md`](2026-10-02-current-stage-status.md)。
