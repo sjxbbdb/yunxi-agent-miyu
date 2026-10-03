@@ -675,6 +675,24 @@ non-goals are arbitrary function/alias/dynamic-command data flow, `source`/`.`
 and embedded Python/Node/Perl scripts, filesystem identity/openat semantics,
 and cross-database overlap linearization.
 
+## G3-05-27 implemented slice: deterministic overlap test seam
+
+Memory overlap tests now use a per-`MemoryStore`, `cfg(test)`-only callback
+instead of sleeps, process-wide locks, or scheduler-dependent barriers. The
+seam can pause immediately before the final epoch check and immediately before
+an evicted state delete commits; production builds do not carry the callback or
+its synchronization machinery. The new tests deterministically cover the
+hybrid keyword fallback retry after a memory tombstone commit and the state-side
+delete overlap followed by a clean subsequent browse. The latter intentionally
+does not assert strict post-commit exclusion for the already-raced result, in
+accordance with G3-05-25; it asserts idempotent deletion and convergence on the
+next read.
+
+WSL Ubuntu-24.04 ext4 `memory::tests::browse` passed 6/6 with one test thread.
+The existing async-provider semantic regression remains the evidence for the
+embedding-await boundary. No runtime global lock, database schema change,
+fixed sleep, or cross-database atomicity claim was added.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,

@@ -95,13 +95,20 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   通过。任意函数/别名/动态命令名、source/嵌入脚本、文件身份竞态和跨库
   overlap 仍未宣称覆盖。
 
+  G3-05-27 又加入 per-store、仅 `cfg(test)` 的确定性 overlap seam：可在最终
+  epoch 检查前和 state-side 删除提交前暂停，不把 sleep、进程级全局锁或调度
+  偶合带进生产路径。WSL `memory::tests::browse` 6/6 通过，覆盖 hybrid keyword
+  fallback 在墓碑提交后的重试，以及 state-side 删除 overlap 后的后续浏览收敛；
+  按 G3-05-25 合同不对已经越过最终检查的 raced result 宣称严格 post-commit 排除。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
 
-1. 按 G3-05-25 合同补 provenance 在 concurrent delete/recall 的确定性
-   overlap 测试 seam；当前只证明了并发调用后的 convergence，epoch 二次检查和
-   异步 embedding await 边界已有有限重试，不把调用方消费窗口误写成严格保证；
+1. 按 G3-05-25 合同继续补 provenance 在 concurrent delete/recall 的语义
+   覆盖；确定性 seam 已覆盖 keyword/hybrid fallback 与 state-side browse，
+   仍需评估 semantic provider、browse detail 和 transfer/restore overlap，
+   不把调用方消费窗口误写成严格保证；
 2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
    明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置

@@ -370,6 +370,8 @@ impl MemoryStore {
         }
         sort_json_hits(&mut hits);
         hits.truncate(limit);
+        #[cfg(test)]
+        self.overlap_hook(OverlapPoint::SemanticBeforeEpoch);
         // The final carrier materialisation is separated from the data DB by
         // provider awaits and state queries.  Never return a corpus built
         // across a tombstone transition; the keyword path has a bounded retry
@@ -485,6 +487,8 @@ impl MemoryStore {
             let snapshot = self.tombstone_snapshot()?;
             let result =
                 self.search_evicted_context_filtered_once(query, limit, start, end, &snapshot)?;
+            #[cfg(test)]
+            self.overlap_hook(OverlapPoint::KeywordBeforeEpoch);
             if self.tombstone_epoch()? == snapshot.epoch {
                 return Ok(result);
             }

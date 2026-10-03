@@ -635,6 +635,8 @@ impl MemoryStore {
                 })?
                 .collect::<std::result::Result<Vec<_>, _>>()?;
             let page = BrowsePage { items, total };
+            #[cfg(test)]
+            self.overlap_hook(OverlapPoint::BrowseBeforeEpoch);
             if self.tombstone_epoch()? == snapshot.epoch {
                 return Ok(page);
             }
@@ -678,6 +680,8 @@ impl MemoryStore {
                     .optional()?
                 }
             };
+            #[cfg(test)]
+            self.overlap_hook(OverlapPoint::BrowseBeforeEpoch);
             if self.tombstone_epoch()? == snapshot.epoch {
                 return Ok(item);
             }
@@ -701,6 +705,8 @@ impl MemoryStore {
         )?;
         tx.execute("DELETE FROM evicted_embeddings WHERE id = ?1", params![id])?;
         let affected = tx.execute("DELETE FROM evicted_turns WHERE id = ?1", params![id])?;
+        #[cfg(test)]
+        self.overlap_hook(OverlapPoint::StateDeleteBeforeCommit);
         tx.commit()?;
         Ok(affected == 1)
     }

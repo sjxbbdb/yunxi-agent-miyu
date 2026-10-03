@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::PathBuf;
+#[cfg(test)]
+use std::sync::Arc;
 use std::sync::LazyLock;
 use yunxi_base::platform_types::PlatformPrincipal;
 
@@ -65,6 +67,20 @@ pub struct MemoryStore {
     session_id: String,
     data_db: PathBuf,
     state_db: PathBuf,
+    #[cfg(test)]
+    overlap_hook: Option<Arc<dyn Fn(OverlapPoint) + Send + Sync>>,
+}
+
+/// Deterministic read-barrier seam used only by the memory overlap tests.
+/// Production builds do not carry the field, callback, or synchronization
+/// machinery; the hook never changes the runtime read/write contract.
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OverlapPoint {
+    BrowseBeforeEpoch,
+    KeywordBeforeEpoch,
+    SemanticBeforeEpoch,
+    StateDeleteBeforeCommit,
 }
 
 /// 一次记忆重置删掉了什么，按表分。每个触发面都要把它讲给用户听，所以计数
@@ -167,6 +183,23 @@ pub(crate) fn bump_tombstone_epoch(tx: &rusqlite::Transaction<'_>) -> Result<()>
         [],
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+impl MemoryStore {
+    pub(crate) fn with_overlap_hook(
+        mut self,
+        hook: Arc<dyn Fn(OverlapPoint) + Send + Sync>,
+    ) -> Self {
+        self.overlap_hook = Some(hook);
+        self
+    }
+
+    pub(crate) fn overlap_hook(&self, point: OverlapPoint) {
+        if let Some(hook) = &self.overlap_hook {
+            hook(point);
+        }
+    }
 }
 
 impl MemoryResetSummary {
@@ -528,6 +561,8 @@ impl MemoryStore {
             session_id: String::new(),
             data_db: data_dir.join("memory.db"),
             state_db: state_dir.join("evicted_context.db"),
+            #[cfg(test)]
+            overlap_hook: None,
         }
     }
 
