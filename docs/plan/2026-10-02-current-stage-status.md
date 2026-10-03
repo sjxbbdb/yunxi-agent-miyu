@@ -82,22 +82,35 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   继续走原来的路径搜索；父目录替换、目录 glob、复杂 shell wrapper 和
   跨库 overlap 仍未宣称覆盖。
 
+  G3-05-25 已固定本阶段的 overlap 语义合同：采用标准读线性化，最终
+  `tombstone_epoch` 相等检查是本次读取的线性化点；有限重试耗尽返回空结果，
+  不宣称调用方消费窗口内的严格 post-commit 排除，也不引入跨数据库全局锁。
+  该合同要求后续用确定性 seam 覆盖 keyword browse、semantic/hybrid fallback
+  与 state-side evicted deletion；合同本身不是 G3-05 完成声明。
+
+  G3-05-26 又补上 quoted shell wrapper 的词法边界：`sh`/`bash`/`dash`/`ksh`/
+  `zsh` 的 `-c`、组合短选项和 `--command` payload，以及 `eval`/浅层 wrapper
+  的引号内容会作为独立命令递归扫描；动态或不透明 payload fail-closed，
+  `sh -c 'printf hi'` 等静态安全 payload 仍放行。WSL transcript_guard 25/25
+  通过。任意函数/别名/动态命令名、source/嵌入脚本、文件身份竞态和跨库
+  overlap 仍未宣称覆盖。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
 
-1. 补 provenance 在 concurrent delete/recall 的更强 overlap 语义上的决策
-   或测试 seam；当前只证明了并发调用后的 convergence，epoch 二次检查和
-   异步 embedding await 边界已有有限重试，但最终跨库 overlap 仍未线性化；
-2. 对 transcript `run_command` 剩余的 quoted `sh -c`/`eval` 嵌入脚本、任意
-   wrapper data-flow 做明确的 fail-closed 边界决策；变量、命令替换、重定向、
+1. 按 G3-05-25 合同补 provenance 在 concurrent delete/recall 的确定性
+   overlap 测试 seam；当前只证明了并发调用后的 convergence，epoch 二次检查和
+   异步 embedding await 边界已有有限重试，不把调用方消费窗口误写成严格保证；
+2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
+   明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
-   参数及 `$()`/反引号内嵌动态文件访问已有词法屏障与 16/16 回归，live
+   参数及 `$()`/反引号内嵌动态文件访问已有词法屏障与 25/25 回归，live
    transcript shell 路径也已拒绝，当前仍不做完整 shell parser；
 3. 继续评估 `grep` 的 `include` 过滤与 `glob` 的目录能力是否值得进入
    descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；同时继续
-   审计 quoted `sh -c`/`eval`、任意 wrapper data-flow 与跨库 overlap，再评估
-   G3-05 的阶段退出；`read` 与单文件 `grep` 的叶文件 capability 已落地，
+   审计任意 wrapper data-flow 与跨库 overlap，再评估 G3-05 的阶段退出；
+   `read` 与单文件 `grep` 的叶文件 capability 已落地，
    但不等于整段完成；
 
 此外，transfer 的 staged fixup 目前仍依赖导入前的 tombstone 过滤，尚未把

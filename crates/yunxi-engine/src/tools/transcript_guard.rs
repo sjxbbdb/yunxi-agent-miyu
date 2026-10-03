@@ -364,6 +364,10 @@ fn check_command(state: &StateStore, memory: &MemoryStore, command: &str) -> Opt
 /// harmless substitutions such as `echo "$(printf hi)"` available while
 /// refusing to guess about dynamic paths used by file operations.
 fn command_has_dynamic_file_access(command: &str) -> bool {
+    if command_has_dynamic_wrapper_payload(command) {
+        return true;
+    }
+
     if command_segments(command).any(|segment| {
         let file_access = has_unquoted_redirection(segment) || segment_invokes_file_access(segment);
         file_access && has_dynamic_shell_syntax(segment)
@@ -381,6 +385,10 @@ fn command_has_dynamic_file_access(command: &str) -> bool {
 }
 
 fn command_has_dynamic_file_access_at_depth(command: &str, depth: usize) -> bool {
+    if command_has_dynamic_wrapper_payload(command) {
+        return true;
+    }
+
     if command_segments(command).any(|segment| {
         let file_access = has_unquoted_redirection(segment) || segment_invokes_file_access(segment);
         file_access && has_dynamic_shell_syntax(segment)
@@ -398,6 +406,159 @@ fn command_has_dynamic_file_access_at_depth(command: &str, depth: usize) -> bool
     nested_shell_fragments(command)
         .into_iter()
         .any(|fragment| command_has_dynamic_file_access_at_depth(&fragment, depth + 1))
+}
+
+/// Inspect shell and command wrappers without attempting to parse the full
+/// shell grammar. A wrapper's quoted payload is a separate command string, so
+/// scanning only the outer segment would hide dynamic paths behind quotes.
+/// Dynamic or otherwise opaque payloads are rejected conservatively; a static
+/// payload is recursively scanned for the same wrapper/file-access patterns.
+fn command_has_dynamic_wrapper_payload(command: &str) -> bool {
+    command_segments(command).any(segment_has_dynamic_wrapper_payload)
+}
+
+fn segment_has_dynamic_wrapper_payload(segment: &str) -> bool {
+    let tokens = shell_tokens(segment);
+    let Some(first_index) = tokens
+        .iter()
+        .position(|token| !is_shell_assignment(&token.text))
+    else {
+        return false;
+    };
+    let first = command_basename(&tokens[first_index].text);
+
+    if SHELL_COMMANDS.contains(&first) {
+        let mut index = first_index + 1;
+        while let Some(token) = tokens.get(index) {
+            if is_shell_command_option(&token.text) {
+                if let Some(payload) = token.text.strip_prefix("--command=") {
+                    let payload = std::iter::once(payload)
+                        .chain(
+                            tokens
+                                .iter()
+                                .skip(index + 1)
+                                .map(|token| token.text.as_str()),
+                        )
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    return wrapper_payload_is_dynamic(&payload);
+                }
+                let Some(payload) = tokens.get(index + 1) else {
+                    return true;
+                };
+                return wrapper_payload_is_dynamic(&payload.text);
+            }
+            index += 1;
+        }
+        return false;
+    }
+
+    if FILE_ACCESS_WRAPPERS.contains(&first) {
+        let payload = tokens
+            .iter()
+            .skip(first_index + 1)
+            .map(|token| token.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        return !payload.is_empty() && wrapper_payload_is_dynamic(&payload);
+    }
+
+    false
+}
+
+fn is_shell_command_option(token: &str) -> bool {
+    token == "-c"
+        || token == "--command"
+        || token.starts_with("--command=")
+        || is_combined_shell_c_option(token)
+}
+
+fn is_combined_shell_c_option(token: &str) -> bool {
+    token.starts_with('-')
+        && !token.starts_with("--")
+        && token.len() > 2
+        && token
+            .as_bytes()
+            .get(1..)
+            .is_some_and(|bytes| bytes.contains(&b'c'))
+}
+
+fn wrapper_payload_is_dynamic(payload: &str) -> bool {
+    if has_dynamic_shell_syntax(payload) {
+        return true;
+    }
+    command_has_dynamic_file_access(payload)
+}
+
+#[derive(Debug)]
+struct ShellToken {
+    text: String,
+}
+
+/// Tokenize just enough shell syntax to retain quoted wrapper payloads. Quote
+/// delimiters are removed, while the contents (including nested shell quotes)
+/// remain available to the recursive lexical scan.
+fn shell_tokens(command: &str) -> Vec<ShellToken> {
+    let mut tokens = Vec::new();
+    let mut token = String::new();
+    let mut quote = None;
+    let mut escaped = false;
+    let mut token_started = false;
+
+    for ch in command.chars() {
+        if escaped {
+            token.push(ch);
+            escaped = false;
+            token_started = true;
+            continue;
+        }
+        if ch == '\\' && quote != Some('\'') {
+            token.push(ch);
+            escaped = true;
+            token_started = true;
+            continue;
+        }
+        match quote {
+            Some('\'') => {
+                if ch == '\'' {
+                    quote = None;
+                } else {
+                    token.push(ch);
+                }
+            }
+            Some('"') => {
+                if ch == '"' {
+                    quote = None;
+                } else {
+                    token.push(ch);
+                }
+            }
+            None => match ch {
+                '\'' | '"' => {
+                    quote = Some(ch);
+                    token_started = true;
+                }
+                ch if ch.is_whitespace() => {
+                    if token_started {
+                        tokens.push(ShellToken {
+                            text: std::mem::take(&mut token),
+                        });
+                        token_started = false;
+                    }
+                }
+                _ => {
+                    token.push(ch);
+                    token_started = true;
+                }
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    if token_started {
+        tokens.push(ShellToken { text: token });
+    }
+    tokens
 }
 
 /// Extract the bodies of the first shell-level `$()` and backtick
@@ -1238,6 +1399,31 @@ mod tests {
             let result = call_guarded_run_command(command)
                 .await
                 .expect("nested non-file substitution should reach the handler");
+            assert_eq!(result, "handler ran", "command {command:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn shell_wrapper_payloads_are_scanned_recursively() {
+        for command in [
+            r#"sh -c 'cat "$p/fold.md"'"#,
+            r#"bash -lc 'cat "$p/fold.md"'"#,
+            r#"sh --command='cat "$p/fold.md"'"#,
+            r#"eval 'cat "$p/fold.md"'"#,
+            r#"sh -c "$cmd""#,
+            r#"echo "$(sh -c 'cat "$p"')""#,
+        ] {
+            let error = call_guarded_run_command(command).await.unwrap_err();
+            assert!(
+                error.contains("dynamic transcript path"),
+                "command {command:?}: unexpected error: {error}"
+            );
+        }
+
+        for command in [r#"sh -c 'printf hi'"#, r#"eval 'printf hi'"#] {
+            let result = call_guarded_run_command(command)
+                .await
+                .expect("static wrapper payload without file access should reach the handler");
             assert_eq!(result, "handler ran", "command {command:?}");
         }
     }

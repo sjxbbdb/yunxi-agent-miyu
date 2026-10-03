@@ -63,6 +63,18 @@
   已删除 carrier；定向异步回归与 store 测试在 WSL ext4 通过。严格跨库
   overlap 线性化和 crash 注入仍属于后续边界。
 
+- G3-05 overlap contract：本阶段固定采用标准读线性化。读取以
+  `tombstone_epoch` 最终相等检查作为线性化点，变化时有限重试，预算耗尽
+  fail-closed；不宣称调用方消费窗口内的严格 post-commit 排除，也不引入跨库
+  全局锁。后续回归会用确定性 seam 覆盖 keyword browse、semantic/hybrid
+  fallback 与 state-side evicted deletion。
+
+- G3-05 quoted shell-wrapper barrier：`run_command` 现在把 `sh`/`bash` 等
+  `-c`、组合短选项、`--command` 以及 `eval`/浅层 wrapper 的 quoted payload
+  作为独立命令递归扫描；动态或不透明 payload fail-closed，静态 `printf` 等
+  安全 payload 保持可用。WSL transcript_guard 25/25 通过。函数/别名、动态
+  命令名、嵌入脚本、文件身份竞态与跨库 overlap 仍是后续边界。
+
 - G0 基线稳定化：修复 YunXi 产品改名后 legacy config namespace 的正/负路径兼容，校准 TUI/replay/renderer/tool-summary 的当前产品输出夹具，修正 bundled script 与 registry fixture 漂移，并让 WSL 权限位测试使用原生 Linux 文件系统临时目录。
 - G0 验证：WSL Ubuntu-24.04 工作区单线程测试在 v4 当前提交上重新全绿（根包 yunxi 运行 508 项、yunxi-base 396、yunxi-core 651、yunxi-engine 与 yunxi-hosts 均完成且 0 failed；doctest 全部通过）。本结果对应 G0 evidence index 的 `G0-20261001-workspace-02`；Arch Linux 与 macOS M-series 仍未实机验证。
 - G0 计划补充 Skills/MCP 生命周期、host 权限真相源、raw/display/context 三分、长期记忆删除不可召回、memory/KB 数据边界、Laya 可行性门、自动总结独立写入协议，以及不新增 YunXi 通用审批状态机的约束。

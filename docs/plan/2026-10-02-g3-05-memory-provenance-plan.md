@@ -631,6 +631,50 @@ The disposable ext4 source and target were removed after verification. Parent
 directory replacement, directory `glob`, quoted embedded scripts, arbitrary
 wrapper data-flow, and cross-database overlap remain explicit boundaries.
 
+## G3-05-25 overlap contract: standard read linearization
+
+The remaining concurrent-delete question is fixed to the standard, bounded
+linearization contract for this stage. A read takes a tombstone snapshot,
+materialises its result, and treats the final `tombstone_epoch` equality check
+as its read linearization point. If the epoch changed before that point, the
+read retries within its fixed budget; if the budget is exhausted it returns an
+empty, fail-closed result. A read that has already passed the final check may
+still be consumed by its caller while a later delete commits. That caller-side
+window is outside this contract and is not described as strict post-commit
+exclusion.
+
+This deliberately does not introduce a cross-database global lock or claim
+atomicity between the persona memory database and the state/evicted database.
+Async semantic recall must re-check live ids around provider awaits and before
+returning; state-side carrier cleanup must remain id-based and idempotent. Any
+future strict post-commit guarantee would require a separate coordinated
+read/write protocol and a new performance/crash-recovery review rather than a
+silent strengthening of this slice.
+
+The acceptance evidence for this contract must include deterministic overlap
+seams for keyword browse, semantic/hybrid fallback, and state-side evicted
+deletion, plus the existing restart and async-provider tests. The tests prove
+convergence and the chosen linearization point; they must not assert a stronger
+post-commit guarantee than the contract states.
+
+## G3-05-26 implemented slice: quoted shell-wrapper boundary
+
+The transcript `run_command` lexical barrier now treats a shell wrapper's
+quoted command as a separate command string. `sh`/`bash`/`dash`/`ksh`/`zsh`
+recognise `-c`, combined short options such as `-lc`, and `--command`; the
+wrapper payload is recursively scanned for dynamic paths and file-access
+commands. `eval` and the other shallow command wrappers receive the same
+conservative payload treatment. Dynamic or opaque payloads fail closed, while
+static payloads such as `sh -c 'printf hi'` remain allowed. The implementation
+is still a bounded lexical screen, not a shell interpreter.
+
+WSL Ubuntu-24.04 ext4 `transcript_guard::tests` passed 25/25, including quoted
+`sh -c`, `bash -lc`, `--command=`, `eval`, positional/variable payloads, nested
+command substitution, and safe static wrapper payloads. The remaining explicit
+non-goals are arbitrary function/alias/dynamic-command data flow, `source`/`.`
+and embedded Python/Node/Perl scripts, filesystem identity/openat semantics,
+and cross-database overlap linearization.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
