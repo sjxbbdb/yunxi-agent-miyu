@@ -3,6 +3,10 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::fs::{File, OpenOptions};
+use std::io::Write;
+#[cfg(unix)]
+use std::os::fd::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use yunxi_base::config::AppConfig;
@@ -107,6 +111,7 @@ impl UpdateStage {
 }
 
 pub fn ensure_initialized(paths: &YunXiPaths, config: &AppConfig) -> Result<()> {
+    let _lease = DefaultKbUpdateLease::acquire(paths)?;
     let source = default_kb_source_dir();
     if !source.is_dir() {
         return Ok(());
@@ -116,7 +121,11 @@ pub fn ensure_initialized(paths: &YunXiPaths, config: &AppConfig) -> Result<()> 
     if state.release_hash == release_hash {
         return Ok(());
     }
-    import_snapshot(paths, config, &source, &release_hash)
+    let result = import_snapshot_inner(paths, config, &source, &release_hash);
+    if let Err(error) = &result {
+        let _ = record_update_failure(paths, Some(UpdateStage::ImportingFiles), &error.to_string());
+    }
+    result
 }
 
 pub fn bundled_available() -> bool {
@@ -138,6 +147,7 @@ pub fn status(paths: &YunXiPaths) -> Result<DefaultKbStatus> {
 }
 
 pub fn notice_if_update_available(paths: &YunXiPaths) -> Result<Option<String>> {
+    let _lease = DefaultKbUpdateLease::acquire(paths)?;
     let mut state = load_state(paths)?;
     if !state.update_available || state.remote_commit.is_empty() {
         return Ok(None);
@@ -156,12 +166,18 @@ pub fn notice_if_update_available(paths: &YunXiPaths) -> Result<Option<String>> 
 }
 
 pub async fn check_update_if_due(paths: &YunXiPaths) -> Result<()> {
+    let snapshot = load_state(paths)?;
+    if !should_check(&snapshot) {
+        return Ok(());
+    }
+    let remote = remote_head().await.ok();
+    let _lease = DefaultKbUpdateLease::acquire(paths)?;
     let mut state = load_state(paths)?;
     if !should_check(&state) {
         return Ok(());
     }
     state.last_checked_at = Utc::now().to_rfc3339();
-    if let Ok(remote) = remote_head().await {
+    if let Some(remote) = remote {
         state.remote_commit = remote.clone();
         state.update_available =
             !state.shorin_wiki_commit.is_empty() && state.shorin_wiki_commit != remote;
@@ -177,6 +193,7 @@ pub fn update<F>(
 where
     F: FnMut(UpdateStage),
 {
+    let _lease = DefaultKbUpdateLease::acquire(paths)?;
     let mut current_stage = None;
     let result = update_inner(paths, config, &mut current_stage, &mut on_progress);
     if let Err(error) = &result {
@@ -308,19 +325,6 @@ fn restore_previous_head(
     }
 }
 
-fn import_snapshot(
-    paths: &YunXiPaths,
-    config: &AppConfig,
-    source: &Path,
-    release_hash: &str,
-) -> Result<()> {
-    let result = import_snapshot_inner(paths, config, source, release_hash);
-    if let Err(error) = &result {
-        let _ = record_update_failure(paths, Some(UpdateStage::ImportingFiles), &error.to_string());
-    }
-    result
-}
-
 fn import_snapshot_inner(
     paths: &YunXiPaths,
     config: &AppConfig,
@@ -384,6 +388,82 @@ fn state_file(paths: &YunXiPaths) -> PathBuf {
 
 fn state_backup_file(paths: &YunXiPaths) -> PathBuf {
     paths.data_dir.join("default-kb/state.json.bak")
+}
+
+struct DefaultKbUpdateLease {
+    #[cfg(not(unix))]
+    path: PathBuf,
+    file: File,
+}
+
+impl DefaultKbUpdateLease {
+    fn acquire(paths: &YunXiPaths) -> Result<Self> {
+        Self::acquire_path(paths.data_dir.join("default-kb/update.lock"))
+    }
+
+    fn acquire_path(path: PathBuf) -> Result<Self> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        #[cfg(unix)]
+        let file = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&path)?;
+        #[cfg(unix)]
+        {
+            let result = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
+            if result != 0 {
+                let error = std::io::Error::last_os_error();
+                if error.raw_os_error() == Some(libc::EWOULDBLOCK) {
+                    bail!("default knowledge-base update already running");
+                }
+                return Err(error).with_context(|| {
+                    format!(
+                        "failed to acquire default knowledge-base update lock {}",
+                        path.display()
+                    )
+                });
+            }
+        }
+        #[cfg(not(unix))]
+        let file = OpenOptions::new()
+            .create_new(true)
+            .read(true)
+            .write(true)
+            .open(&path)
+            .map_err(|error| {
+                if error.kind() == std::io::ErrorKind::AlreadyExists {
+                    anyhow::anyhow!("default knowledge-base update already running")
+                } else {
+                    error.into()
+                }
+            })?;
+        let mut lease = Self {
+            #[cfg(not(unix))]
+            path,
+            file,
+        };
+        lease.file.set_len(0)?;
+        write!(
+            lease.file,
+            "pid={} started_at={}\n",
+            std::process::id(),
+            Utc::now().to_rfc3339()
+        )?;
+        lease.file.flush()?;
+        Ok(lease)
+    }
+}
+
+impl Drop for DefaultKbUpdateLease {
+    fn drop(&mut self) {
+        #[cfg(not(unix))]
+        let _ = std::fs::remove_file(&self.path);
+        // On Unix closing the file releases flock. Keep the inode and diagnostic
+        // record so a later busy error never depends on a stale marker file.
+    }
 }
 
 fn update_repo_dir(paths: &YunXiPaths) -> PathBuf {
@@ -861,6 +941,23 @@ mod tests {
             state.last_recovery,
             "previous imported snapshot remains active; retry update"
         );
+    }
+
+    #[test]
+    fn update_lease_rejects_a_second_holder_and_releases_on_drop() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("default-kb/update.lock");
+        let first = DefaultKbUpdateLease::acquire_path(path.clone()).unwrap();
+        let error = match DefaultKbUpdateLease::acquire_path(path.clone()) {
+            Ok(_) => panic!("second update lease unexpectedly acquired"),
+            Err(error) => error,
+        };
+        assert!(error
+            .to_string()
+            .contains("default knowledge-base update already running"));
+        drop(first);
+        let second = DefaultKbUpdateLease::acquire_path(path).unwrap();
+        drop(second);
     }
 
     #[test]
