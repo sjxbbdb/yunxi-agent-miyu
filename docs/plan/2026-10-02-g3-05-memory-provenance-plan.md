@@ -411,6 +411,43 @@ Evidence (WSL Ubuntu-24.04, ext4 disposable checkout, one cargo job):
 - The disposable checkout and target were removed; no cargo or rustc process
   remained after verification.
 
+## G3-05-17 implemented slice: tombstone epoch optimistic read barrier
+
+The memory database now carries an additive, monotonic
+`memory_meta.tombstone_epoch` counter. The schema migration is idempotent and
+initializes legacy databases to zero. A delete, full reset, session reset, or
+expired short-diary cleanup bumps the counter only when that transaction
+actually inserts one or more typed tombstones; repeated deletes and empty
+cleanups do not create false epochs. The increment is in the same
+data-database transaction as the tombstone rows.
+
+State-side evicted browse, direct item lookup, keyword recall, and semantic
+recall now use a bounded optimistic read barrier: read `(epoch, tombstones)` in
+one SQLite read transaction, materialize the state-side result, then re-read
+the epoch before returning it. An epoch change retries once with a fresh
+snapshot; if the second attempt still overlaps a delete, the read fails closed
+to an empty result. Semantic recall additionally re-materializes the live
+corpus on retry, so an unlinked carrier that shares text with a deleted carrier
+remains eligible while the typed linked carrier stays hidden. This closes the
+snapshot-to-state and embedding-await windows without a process-wide lock or a
+cross-database transaction.
+
+Evidence for this slice (WSL Ubuntu-24.04 ext4 disposable checkout, one cargo
+job at a time):
+
+- lifecycle epoch/idempotence regressions: 8 passed;
+- evicted browse barrier tests: 4 passed;
+- memory store tests, including the async semantic retry: 16 passed;
+- full `yunxi-core` library run: 699 passed, 8 ignored, 5 pre-existing
+  `llm::openai_compatible` endpoint/error-message failures unrelated to these
+  memory-only files;
+- `cargo fmt --all -- --check`, `git diff --check`, and the privacy scan passed.
+
+This remains an optimistic convergence barrier, not strict linearization: a
+read can still overlap the tiny interval after its final epoch check and before
+the caller consumes the value. Transfer-side staged tombstone fixups and
+crash-injection evidence remain the next G3-05 boundaries.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,

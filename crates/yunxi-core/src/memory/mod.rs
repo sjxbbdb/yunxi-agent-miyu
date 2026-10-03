@@ -134,20 +134,38 @@ pub(crate) fn record_memory_tombstones(
     kind: &str,
     ids: &[i64],
     deleted_at: &str,
-) -> Result<()> {
+) -> Result<usize> {
     if ids.is_empty() {
-        return Ok(());
+        return Ok(0);
     }
     if !matches!(kind, "fact" | "episode") {
         bail!("invalid memory tombstone kind: {kind}");
     }
+    let mut inserted = 0;
     for id in ids.iter().copied().filter(|id| *id > 0) {
-        tx.execute(
+        inserted += tx.execute(
             "INSERT OR IGNORE INTO memory_tombstones (kind, id, deleted_at)
              VALUES (?1, ?2, ?3)",
             params![kind, id, deleted_at],
         )?;
     }
+    Ok(inserted)
+}
+
+/// Consistent data-side read snapshot used by the state-side carrier barrier.
+/// The epoch and tombstone rows are read in one SQLite read transaction; no
+/// lock is held while the independent state database is queried.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct TombstoneSnapshot {
+    pub(crate) epoch: i64,
+    pub(crate) pairs: HashSet<(String, i64)>,
+}
+
+pub(crate) fn bump_tombstone_epoch(tx: &rusqlite::Transaction<'_>) -> Result<()> {
+    tx.execute(
+        "UPDATE memory_meta SET tombstone_epoch=tombstone_epoch+1 WHERE id=1",
+        [],
+    )?;
     Ok(())
 }
 
@@ -403,6 +421,63 @@ pub(crate) struct LongDiaryDraft {
 }
 
 impl MemoryStore {
+    pub(crate) fn tombstone_snapshot(&self) -> Result<TombstoneSnapshot> {
+        if !self.data_db.is_file() {
+            return Ok(TombstoneSnapshot::default());
+        }
+        let mut conn = self.data_conn_existing()?;
+        let tx = conn.transaction()?;
+        let has_meta: bool = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='memory_meta')",
+            [],
+            |row| row.get(0),
+        )?;
+        if !has_meta {
+            tx.commit()?;
+            return Ok(TombstoneSnapshot::default());
+        }
+        // Old databases are readable before their next normal init migration.
+        // Detect the missing column explicitly so unrelated SQL errors surface.
+        let has_epoch: bool = tx.query_row(
+            "SELECT EXISTS(
+                SELECT 1 FROM pragma_table_info('memory_meta')
+                 WHERE name='tombstone_epoch'
+             )",
+            [],
+            |row| row.get(0),
+        )?;
+        let epoch = if has_epoch {
+            tx.query_row(
+                "SELECT tombstone_epoch FROM memory_meta WHERE id=1",
+                [],
+                |row| row.get::<_, i64>(0),
+            )?
+        } else {
+            0
+        };
+        let mut pairs = HashSet::new();
+        let has_table: bool = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='memory_tombstones')",
+            [],
+            |row| row.get(0),
+        )?;
+        if has_table {
+            pairs = {
+                let mut stmt = tx.prepare("SELECT kind, id FROM memory_tombstones")?;
+                let rows = stmt.query_map([], |row| {
+                    Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+                })?;
+                rows.collect::<std::result::Result<HashSet<_>, _>>()?
+            };
+        }
+        tx.commit()?;
+        Ok(TombstoneSnapshot { epoch, pairs })
+    }
+
+    pub(crate) fn tombstone_epoch(&self) -> Result<i64> {
+        Ok(self.tombstone_snapshot()?.epoch)
+    }
+
     /// Return whether any typed reference points at a memory row that has been
     /// tombstoned.  This is deliberately id-only: prompt/state carriers must
     /// never be reinterpreted by matching their copied text.

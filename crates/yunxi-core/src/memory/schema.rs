@@ -69,10 +69,17 @@ pub(crate) fn init_data_db(conn: &Connection) -> Result<()> {
         CREATE TABLE IF NOT EXISTS memory_meta (
             id INTEGER PRIMARY KEY CHECK(id=1),
             generation INTEGER NOT NULL DEFAULT 0,
+            tombstone_epoch INTEGER NOT NULL DEFAULT 0,
             database_id TEXT NOT NULL DEFAULT '',
             access_schema_version INTEGER NOT NULL DEFAULT 2,
             lifecycle_schema_version INTEGER NOT NULL DEFAULT 0
         );",
+    )?;
+    add_column_if_missing(
+        conn,
+        "memory_meta",
+        "tombstone_epoch",
+        "INTEGER NOT NULL DEFAULT 0",
     )?;
     add_column_if_missing(
         conn,
@@ -94,8 +101,8 @@ pub(crate) fn init_data_db(conn: &Connection) -> Result<()> {
     )?;
     conn.execute(
         "INSERT OR IGNORE INTO memory_meta (
-            id, generation, database_id, access_schema_version
-         ) VALUES (1, 0, '', 2)",
+            id, generation, tombstone_epoch, database_id, access_schema_version
+         ) VALUES (1, 0, 0, '', 2)",
         [],
     )?;
     let database_id = conn.query_row(

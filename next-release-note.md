@@ -8,6 +8,13 @@
 
 ## 修复
 
+- G3-05 tombstone epoch read barrier：memory 数据库新增可迁移的
+  `tombstone_epoch`，真实删除/reset/过期清理在同一事务递增；evicted browse、
+  keyword/semantic recall 在快照与状态物化之间进行 epoch 复核，变化时有限重试，
+  避免删除提交后在 await 或跨库读取窗口重新暴露 typed carrier。WSL 定向
+  lifecycle 8/8、browse 4/4、store 16/16 通过；严格跨库线性化与 crash 注入仍未
+  宣称完成。
+
 - G3-05 memory provenance：删除提交后的 `MemoryStore` 重建会继续隐藏已删除的
   evicted carrier；`reset_all` 保留 facts/episodes 的自增高水位，避免独立 state
   清理窗口中的 tombstone ID 复用。新增重启与 ID 复用回归测试，WSL store 测试

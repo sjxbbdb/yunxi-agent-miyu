@@ -207,8 +207,11 @@ impl MemoryStore {
         let fact_ids = collect_ids(&tx, "facts")?;
         let episode_ids = collect_ids(&tx, "episodes")?;
         let deleted_at = now();
-        record_memory_tombstones(&tx, "fact", &fact_ids, &deleted_at)?;
-        record_memory_tombstones(&tx, "episode", &episode_ids, &deleted_at)?;
+        let tombstones = record_memory_tombstones(&tx, "fact", &fact_ids, &deleted_at)?
+            + record_memory_tombstones(&tx, "episode", &episode_ids, &deleted_at)?;
+        if tombstones > 0 {
+            bump_tombstone_epoch(&tx)?;
+        }
         tx.execute(
             "UPDATE memory_meta SET generation=generation+1 WHERE id=1",
             [],
@@ -261,8 +264,11 @@ impl MemoryStore {
             rows.collect::<std::result::Result<Vec<_>, _>>()?
         };
         let deleted_at = now();
-        record_memory_tombstones(&tx, "fact", &deleted_fact_ids, &deleted_at)?;
-        record_memory_tombstones(&tx, "episode", &deleted_episode_ids, &deleted_at)?;
+        let tombstones = record_memory_tombstones(&tx, "fact", &deleted_fact_ids, &deleted_at)?
+            + record_memory_tombstones(&tx, "episode", &deleted_episode_ids, &deleted_at)?;
+        if tombstones > 0 {
+            bump_tombstone_epoch(&tx)?;
+        }
         // 向量按 (kind, id) 挂在行上,没有触发器跟着删。行走了它还在,而 id
         // 是自增的,迟早被新行撞上并读回一段别人的语义。kind 字面量与
         // `semantic::kind_name` 同源。
@@ -910,7 +916,9 @@ impl MemoryStore {
                AND unixepoch(expires_at) <= unixepoch('now')",
             [],
         )?;
-        record_memory_tombstones(&tx, "episode", &deleted_ids, &timestamp)?;
+        if record_memory_tombstones(&tx, "episode", &deleted_ids, &timestamp)? > 0 {
+            bump_tombstone_epoch(&tx)?;
+        }
         tx.commit()?;
         Ok(deleted)
     }

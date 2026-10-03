@@ -39,20 +39,29 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   回归已在 WSL ext4 通过。G3-05-16 又补上语义召回 embedding await 边界：
   embedding 完成后重新检查 tombstone 与 evicted_turn 存在性，避免删除在
   await 期间提交后仍写入或返回已删除 carrier；定向异步回归与 store 测试
-  已在 WSL ext4 通过。严格跨库 overlap 线性化仍未宣称完成。
+  已在 WSL ext4 通过。G3-05-17 又加入持久化 `tombstone_epoch`：删除、reset、
+  session reset、过期清理只在实际写入 tombstone 时递增；evicted browse、直接
+  lookup、keyword/semantic recall 使用快照→物化→epoch 复核，变化时有限重试并
+  在预算耗尽时 fail-closed。生命周期 8/8、browse 4/4、store 16/16 已在 WSL
+  ext4 通过；full core 的 5 个既有 LLM endpoint/error-message 失败与本批
+  memory-only 改动无关。严格跨库 overlap 线性化仍未宣称完成。
 
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
 
 1. 补 provenance 在 concurrent delete/recall 的更强 overlap 语义上的决策
-   或测试 seam；当前只证明了并发调用后的 convergence，异步 embedding
-   await 边界已有二次检查，但最终跨库 overlap 仍未线性化；
+   或测试 seam；当前只证明了并发调用后的 convergence，epoch 二次检查和
+   异步 embedding await 边界已有有限重试，但最终跨库 overlap 仍未线性化；
 2. 对 transcript `run_command` 的变量、命令替换、重定向、symlink/hardlink
    和 `cd` 后相对路径语法做明确的 fail-closed 边界决策；当前 dev 子代理
    前台 fresh registry 已绑定并有 WSL 回归覆盖，dev 面的 read/grep/glob
    仍按既有设计不注册；
 3. 只在这些证据通过后，才评估 G3-05 的阶段退出。
+
+此外，transfer 的 staged fixup 目前仍依赖导入前的 tombstone 过滤，尚未把
+epoch 递增语义扩展到独立的 staged 数据库；这不是运行时在线读写路径，仍需
+专门的 transfer/crash regression 后再决定是否纳入同一屏障。
 
 现有 read barrier 对未知 legacy carrier 默认拒绝；它对手工拼接的相对 shell
    路径尚未宣称覆盖。不得用“结构化 tool-call 可拒绝”替代任意 shell 语法

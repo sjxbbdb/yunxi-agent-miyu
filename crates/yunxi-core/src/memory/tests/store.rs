@@ -548,7 +548,10 @@ async fn async_semantic_evicted_recall_rechecks_tombstones_before_write_and_retu
     let server = tokio::spawn(async move {
         let mut documents_seen_tx = Some(documents_seen_tx);
         let mut documents_release_rx = Some(documents_release_rx);
-        for request_index in 0..2 {
+        // The first semantic attempt is invalidated by the tombstone epoch;
+        // the bounded retry reuses the live carrier vector and asks only for
+        // one additional query embedding.
+        for request_index in 0..3 {
             let (mut stream, _) = listener.accept().await.unwrap();
             let mut request = [0_u8; 8192];
             let _ = stream.read(&mut request).await.unwrap();

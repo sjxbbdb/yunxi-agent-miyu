@@ -1,6 +1,7 @@
 //! G3-01 生命周期审计接缝回归。
 
 use super::shared::*;
+use crate::memory::browse::BrowseTable;
 use crate::memory::*;
 use rusqlite::Connection;
 use serde_json::Value;
@@ -148,6 +149,16 @@ fn lifecycle_schema_is_idempotent_and_migrates_an_old_memory_meta() {
     assert_eq!(
         old_conn
             .query_row(
+                "SELECT tombstone_epoch FROM memory_meta WHERE id=1",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        old_conn
+            .query_row(
                 "SELECT lifecycle_schema_version FROM memory_meta WHERE id=1",
                 [],
                 |row| row.get::<_, i64>(0),
@@ -155,6 +166,57 @@ fn lifecycle_schema_is_idempotent_and_migrates_an_old_memory_meta() {
             .unwrap(),
         1
     );
+}
+
+#[test]
+fn tombstone_epoch_is_monotonic_only_for_real_tombstones() {
+    let temp = tempfile::tempdir().unwrap();
+    let store = MemoryStore::new(&AppConfig::default(), &test_paths(&temp));
+    store.init().unwrap();
+    assert_eq!(store.tombstone_epoch().unwrap(), 0);
+
+    let fact_id = store.remember_fact("epoch fact", "test").unwrap();
+    assert_eq!(store.tombstone_epoch().unwrap(), 0);
+    assert!(store.delete_item(BrowseTable::Facts, fact_id).unwrap());
+    assert_eq!(store.tombstone_epoch().unwrap(), 1);
+    assert!(!store.delete_item(BrowseTable::Facts, fact_id).unwrap());
+    assert_eq!(store.tombstone_epoch().unwrap(), 1);
+
+    // A reset with no live rows writes no new tombstones, while a reset that
+    // removes a row advances the epoch exactly once for the transaction.
+    store.reset_all().unwrap();
+    assert_eq!(store.tombstone_epoch().unwrap(), 1);
+    store.remember_fact("epoch fact 2", "test").unwrap();
+    store.reset_all().unwrap();
+    assert_eq!(store.tombstone_epoch().unwrap(), 2);
+}
+
+#[test]
+fn stable_tombstone_epoch_keeps_unlinked_evicted_carrier_readable() {
+    let temp = tempfile::tempdir().unwrap();
+    let store = MemoryStore::new(&AppConfig::default(), &test_paths(&temp));
+    store.init().unwrap();
+    store
+        .remember_evicted_turns(&[EvictedTurn {
+            source_id: "stable-carrier".to_string(),
+            timestamp: "2026-01-01T00:00:00Z".to_string(),
+            role: "user".to_string(),
+            content: "stable epoch carrier".to_string(),
+            ..EvictedTurn::default()
+        }])
+        .unwrap();
+    let id = store
+        .state_conn()
+        .unwrap()
+        .query_row(
+            "SELECT id FROM evicted_turns WHERE source_id='stable-carrier'",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .unwrap();
+    assert_eq!(store.tombstone_epoch().unwrap(), 0);
+    assert!(store.browse_evicted_item(id).unwrap().is_some());
+    assert_eq!(store.tombstone_epoch().unwrap(), 0);
 }
 
 #[test]
@@ -264,7 +326,11 @@ fn expired_short_rows_are_audited_before_forget_or_delete() {
     )
     .unwrap();
     drop(conn);
+    assert_eq!(store.tombstone_epoch().unwrap(), 0);
     assert_eq!(store.cleanup_expired_short_diaries().unwrap(), 1);
+    assert_eq!(store.tombstone_epoch().unwrap(), 1);
+    assert_eq!(store.cleanup_expired_short_diaries().unwrap(), 0);
+    assert_eq!(store.tombstone_epoch().unwrap(), 1);
     let rows = event_rows(&store);
     assert_eq!(rows.len(), 2);
     assert!(rows

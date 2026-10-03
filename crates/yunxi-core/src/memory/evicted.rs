@@ -140,29 +140,18 @@ impl MemoryStore {
     /// independent: if an old state database has no provenance table, or an
     /// old data database has no tombstone table, no rows are hidden.
     pub(crate) fn tombstoned_evicted_ids(&self) -> Result<std::collections::HashSet<i64>> {
-        let mut tombstones = std::collections::HashSet::new();
-        let data = match self.data_conn_existing() {
-            Ok(conn) => conn,
-            Err(_) => return Ok(tombstones),
-        };
-        let has_tombstones: i64 = data.query_row(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='memory_tombstones'",
-            [],
-            |row| row.get(0),
-        )?;
-        if has_tombstones == 0 {
-            return Ok(tombstones);
-        }
-        let mut stmt = data.prepare("SELECT kind, id FROM memory_tombstones")?;
-        let rows = stmt.query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-        })?;
-        let tombstone_pairs =
-            rows.collect::<std::result::Result<std::collections::HashSet<_>, _>>()?;
-        if tombstone_pairs.is_empty() {
-            return Ok(tombstones);
-        }
+        let snapshot = self.tombstone_snapshot()?;
+        self.tombstoned_evicted_ids_for_snapshot(&snapshot)
+    }
 
+    pub(crate) fn tombstoned_evicted_ids_for_snapshot(
+        &self,
+        snapshot: &TombstoneSnapshot,
+    ) -> Result<std::collections::HashSet<i64>> {
+        let mut tombstones = std::collections::HashSet::new();
+        if snapshot.pairs.is_empty() {
+            return Ok(tombstones);
+        }
         let Some(state) = self.state_conn_existing()? else {
             return Ok(tombstones);
         };
@@ -188,7 +177,7 @@ impl MemoryStore {
         })?;
         for row in rows {
             let (carrier_id, kind, memory_id) = row?;
-            if tombstone_pairs.contains(&(kind, memory_id)) {
+            if snapshot.pairs.contains(&(kind, memory_id)) {
                 tombstones.insert(carrier_id);
             }
         }
@@ -264,10 +253,32 @@ impl MemoryStore {
         start: Option<&str>,
         end: Option<&str>,
     ) -> Result<Vec<Value>> {
+        const MAX_ATTEMPTS: usize = 2;
+        for _ in 0..MAX_ATTEMPTS {
+            if let Some(hits) = self
+                .semantic_evicted_hits_once(query, limit, start, end)
+                .await?
+            {
+                return Ok(hits);
+            }
+        }
+        // A constantly changing data DB is treated as unavailable for this
+        // pass. The keyword path remains the safe fallback.
+        Ok(Vec::new())
+    }
+
+    async fn semantic_evicted_hits_once(
+        &self,
+        query: &str,
+        limit: usize,
+        start: Option<&str>,
+        end: Option<&str>,
+    ) -> Result<Option<Vec<Value>>> {
         let embedder = yunxi_base::embedding::Embedder::from_config(&self.app_config)
             .context("embedding model is not configured")?;
         let model = embedder.model_id().to_string();
 
+        let barrier_epoch = self.tombstone_epoch()?;
         let corpus = self.semantic_corpus(start, end)?;
         let missing: Vec<(i64, String)> = {
             let conn = self.state_conn()?;
@@ -359,7 +370,14 @@ impl MemoryStore {
         }
         sort_json_hits(&mut hits);
         hits.truncate(limit);
-        Ok(hits)
+        // The final carrier materialisation is separated from the data DB by
+        // provider awaits and state queries.  Never return a corpus built
+        // across a tombstone transition; the keyword path has a bounded retry
+        // and remains the safe fallback for this semantic pass.
+        if self.tombstone_epoch()? != barrier_epoch {
+            return Ok(None);
+        }
+        Ok(Some(hits))
     }
 
     /// Return carrier ids that are still readable after an async semantic
@@ -462,11 +480,34 @@ impl MemoryStore {
         start: Option<&str>,
         end: Option<&str>,
     ) -> Result<Value> {
+        const MAX_ATTEMPTS: usize = 2;
+        for attempt in 0..MAX_ATTEMPTS {
+            let snapshot = self.tombstone_snapshot()?;
+            let result =
+                self.search_evicted_context_filtered_once(query, limit, start, end, &snapshot)?;
+            if self.tombstone_epoch()? == snapshot.epoch {
+                return Ok(result);
+            }
+            if attempt + 1 == MAX_ATTEMPTS {
+                return Ok(json!({ "ok": true, "query": query, "results": [] }));
+            }
+        }
+        unreachable!()
+    }
+
+    fn search_evicted_context_filtered_once(
+        &self,
+        query: &str,
+        limit: usize,
+        start: Option<&str>,
+        end: Option<&str>,
+        snapshot: &TombstoneSnapshot,
+    ) -> Result<Value> {
         let tokens = query_tokens(query);
         let conn = self.state_conn()?;
         let mut clauses = Vec::new();
         let mut params: Vec<String> = Vec::new();
-        let excluded = self.tombstoned_evicted_ids()?;
+        let excluded = self.tombstoned_evicted_ids_for_snapshot(snapshot)?;
         if let Some(principal) = self.access.principal_key() {
             params.push(principal.to_string());
             clauses.push(format!(

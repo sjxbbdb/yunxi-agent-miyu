@@ -460,7 +460,9 @@ impl MemoryStore {
             rusqlite::params![id],
         )?;
         if affected == 1 {
-            record_memory_tombstones(&tx, kind, &[id], &now())?;
+            if record_memory_tombstones(&tx, kind, &[id], &now())? > 0 {
+                bump_tombstone_epoch(&tx)?;
+            }
             if table == BrowseTable::Episodes {
                 scrub_episode_references(&tx, &[id])?;
             } else {
@@ -566,99 +568,124 @@ impl MemoryStore {
             let total = items.len() as i64;
             return Ok(BrowsePage { items, total });
         }
-        let mut clauses: Vec<String> = Vec::new();
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        push_eq(&mut clauses, &mut params, "role", &query.role);
-        if !start.is_empty() {
-            clauses.push("timestamp >= ?".into());
-            params.push(Box::new(start.to_string()));
-        }
-        if !end.is_empty() {
-            clauses.push("timestamp <= ?".into());
-            params.push(Box::new(end.to_string()));
-        }
-        // Direct browsing must enforce the same typed provenance barrier as
-        // keyword/semantic recall.  Tombstones live in the persona data DB,
-        // while carriers live in the state DB, so take the id snapshot before
-        // issuing either count or page query and exclude linked carriers by
-        // their exact `evicted_turns.id`.
-        let excluded = self.tombstoned_evicted_ids()?;
-        if !excluded.is_empty() {
-            let mut excluded = excluded.into_iter().collect::<Vec<_>>();
-            excluded.sort_unstable();
-            let placeholders = std::iter::repeat_n("?", excluded.len())
-                .collect::<Vec<_>>()
-                .join(", ");
-            clauses.push(format!("id NOT IN ({placeholders})"));
-            params.extend(
-                excluded
-                    .into_iter()
-                    .map(|id| Box::new(id) as Box<dyn rusqlite::ToSql>),
-            );
-        }
-        let where_sql = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!(" WHERE {}", clauses.join(" AND "))
-        };
-        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-        let total: i64 = conn.query_row(
-            &format!("SELECT COUNT(*) FROM evicted_turns{where_sql}"),
-            param_refs.as_slice(),
-            |row| row.get(0),
-        )?;
-        let limit = query.limit.clamp(1, 500) as i64;
-        let mut stmt = conn.prepare(&format!(
-            "SELECT t.id, t.timestamp, t.role, t.content, t.visibility, t.owner_display_name,
+        const MAX_ATTEMPTS: usize = 2;
+        for attempt in 0..MAX_ATTEMPTS {
+            let snapshot = self.tombstone_snapshot()?;
+            let mut clauses: Vec<String> = Vec::new();
+            let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+            push_eq(&mut clauses, &mut params, "role", &query.role);
+            if !start.is_empty() {
+                clauses.push("timestamp >= ?".into());
+                params.push(Box::new(start.to_string()));
+            }
+            if !end.is_empty() {
+                clauses.push("timestamp <= ?".into());
+                params.push(Box::new(end.to_string()));
+            }
+            // Direct browsing must enforce the same typed provenance barrier as
+            // keyword/semantic recall.  Tombstones live in the persona data DB,
+            // while carriers live in the state DB, so take the id snapshot before
+            // issuing either count or page query and exclude linked carriers by
+            // their exact `evicted_turns.id`.
+            let excluded = self.tombstoned_evicted_ids_for_snapshot(&snapshot)?;
+            if !excluded.is_empty() {
+                let mut excluded = excluded.into_iter().collect::<Vec<_>>();
+                excluded.sort_unstable();
+                let placeholders = std::iter::repeat_n("?", excluded.len())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                clauses.push(format!("id NOT IN ({placeholders})"));
+                params.extend(
+                    excluded
+                        .into_iter()
+                        .map(|id| Box::new(id) as Box<dyn rusqlite::ToSql>),
+                );
+            }
+            let where_sql = if clauses.is_empty() {
+                String::new()
+            } else {
+                format!(" WHERE {}", clauses.join(" AND "))
+            };
+            let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+            let total: i64 = conn.query_row(
+                &format!("SELECT COUNT(*) FROM evicted_turns{where_sql}"),
+                param_refs.as_slice(),
+                |row| row.get(0),
+            )?;
+            let limit = query.limit.clamp(1, 500) as i64;
+            let mut stmt = conn.prepare(&format!(
+                "SELECT t.id, t.timestamp, t.role, t.content, t.visibility, t.owner_display_name,
                     EXISTS(SELECT 1 FROM evicted_embeddings e WHERE e.id = t.id) AS embedded
                FROM evicted_turns t{where_sql}
               ORDER BY t.id DESC LIMIT {limit} OFFSET {}",
-            query.offset as i64
-        ))?;
-        let items = stmt
-            .query_map(param_refs.as_slice(), |row| {
-                let content: String = row.get(3)?;
-                Ok(json!({
-                    "id": row.get::<_, i64>(0)?,
-                    "timestamp": row.get::<_, String>(1)?,
-                    "role": row.get::<_, String>(2)?,
-                    "snippet": truncate_chars(&compact_line(&content), 400),
-                    "visibility": row.get::<_, String>(4)?,
-                    "owner_display_name": row.get::<_, String>(5)?,
-                    "embedded": row.get::<_, i64>(6)? != 0,
-                }))
-            })?
-            .collect::<std::result::Result<Vec<_>, _>>()?;
-        Ok(BrowsePage { items, total })
-    }
-
-    pub fn browse_evicted_item(&self, id: i64) -> Result<Option<Value>> {
-        let Some(conn) = self.state_conn_existing()? else {
-            return Ok(None);
-        };
-        // A direct id lookup is still a read barrier: never disclose a state
-        // carrier whose typed fact/episode reference has a durable tombstone.
-        if self.tombstoned_evicted_ids()?.contains(&id) {
-            return Ok(None);
-        }
-        let item = conn
-            .query_row(
-                "SELECT id, timestamp, role, content, visibility, owner_display_name
-                   FROM evicted_turns WHERE id = ?1",
-                params![id],
-                |row| {
+                query.offset as i64
+            ))?;
+            let items = stmt
+                .query_map(param_refs.as_slice(), |row| {
+                    let content: String = row.get(3)?;
                     Ok(json!({
                         "id": row.get::<_, i64>(0)?,
                         "timestamp": row.get::<_, String>(1)?,
                         "role": row.get::<_, String>(2)?,
-                        "content": row.get::<_, String>(3)?,
+                        "snippet": truncate_chars(&compact_line(&content), 400),
                         "visibility": row.get::<_, String>(4)?,
                         "owner_display_name": row.get::<_, String>(5)?,
+                        "embedded": row.get::<_, i64>(6)? != 0,
                     }))
-                },
-            )
-            .optional()?;
-        Ok(item)
+                })?
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+            let page = BrowsePage { items, total };
+            if self.tombstone_epoch()? == snapshot.epoch {
+                return Ok(page);
+            }
+            if attempt + 1 == MAX_ATTEMPTS {
+                return Ok(BrowsePage {
+                    items: Vec::new(),
+                    total: 0,
+                });
+            }
+        }
+        unreachable!()
+    }
+
+    pub fn browse_evicted_item(&self, id: i64) -> Result<Option<Value>> {
+        const MAX_ATTEMPTS: usize = 2;
+        for attempt in 0..MAX_ATTEMPTS {
+            let snapshot = self.tombstone_snapshot()?;
+            let excluded = self.tombstoned_evicted_ids_for_snapshot(&snapshot)?;
+            let item = {
+                let Some(conn) = self.state_conn_existing()? else {
+                    return Ok(None);
+                };
+                if excluded.contains(&id) {
+                    None
+                } else {
+                    conn.query_row(
+                        "SELECT id, timestamp, role, content, visibility, owner_display_name
+                           FROM evicted_turns WHERE id = ?1",
+                        params![id],
+                        |row| {
+                            Ok(json!({
+                                "id": row.get::<_, i64>(0)?,
+                                "timestamp": row.get::<_, String>(1)?,
+                                "role": row.get::<_, String>(2)?,
+                                "content": row.get::<_, String>(3)?,
+                                "visibility": row.get::<_, String>(4)?,
+                                "owner_display_name": row.get::<_, String>(5)?,
+                            }))
+                        },
+                    )
+                    .optional()?
+                }
+            };
+            if self.tombstone_epoch()? == snapshot.epoch {
+                return Ok(item);
+            }
+            if attempt + 1 == MAX_ATTEMPTS {
+                return Ok(None);
+            }
+        }
+        unreachable!()
     }
 
     pub fn delete_evicted_item(&self, id: i64) -> Result<bool> {
