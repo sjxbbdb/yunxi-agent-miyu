@@ -1013,6 +1013,13 @@ transfer --locked -- --nocapture --test-threads=1` passed 48/48. This is
 archive and filesystem rollback evidence only; it does not establish
 cross-SQLite atomicity or OS-crash safety.
 
+The G3-05-41 split-path audit passed the existing WSL Ubuntu-24.04 ext4-backed
+disposable suites for memory reset (6/6), association (4/4), embedding lifecycle (11/11),
+compact (25/25), redo (6/6), and agent context (38/38). These are distributed
+barriers, not one synthetic reset→association→compact→undo/redo fixture;
+ordinary historical tool reports stay append-only and are not free-text
+scrubbed. The disposable source and target were removed after the run.
+
 ## Explicit non-goals
 
 G3-05 must not rewrite all historical text, infer references from content,

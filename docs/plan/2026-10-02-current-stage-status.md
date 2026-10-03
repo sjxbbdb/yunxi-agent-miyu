@@ -199,6 +199,17 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   并通过 `cargo fmt --all -- --check`。该证据只覆盖 backup/archive 与文件系统
   rollback，不扩大为 live/staged SQLite 跨库原子性或 OS crash 保证。
 
+  G3-05-41 对 reset/association/compact/restore 接缝做了只读审计：通过 WSL
+  Ubuntu-24.04 ext4-backed disposable checkout 的权威运行，
+  `memory::tests::reset` 6/6、`memory::tests::association` 4/4、
+  `memory::tests::embedding_lifecycle` 11/11、`state::tests::compact` 25/25、
+  `state::tests::redo` 6/6 与 `agent::tests::context` 38/38 全部通过。现有
+  证据确认 tombstone-aware association、typed summary redaction、compact
+  undo/reset provenance 清理和 redo 既有恢复合同；没有发现需要改生产逻辑的
+  缺口。该轮计入 WSL ext4 权威证据，但仍未证明把 session reset、association、compact 与 undo/redo 串在一个
+  真实 fixture 中的统一矩阵，普通历史 tool-report 文本仍按 append-only 策略
+  保留；跨 SQLite 原子性与 OS crash 安全不在本轮保证内。
+
   本阶段逐条退出前对账见
   [`2026-10-02-g3-05-exit-audit.md`](2026-10-02-g3-05-exit-audit.md)；该文档明确
   已证明路径、跨库/legacy 未证明路径和下一施工顺序，不能当作 G3-05 完成声明。
