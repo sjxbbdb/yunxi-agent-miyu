@@ -262,9 +262,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   [`2026-10-04-g4-01-kb-provenance.md`](2026-10-04-g4-01-kb-provenance.md)。
   这一切片只提供来源标签，不提供授权能力。
 
-- **当前：G4-02 设计审计。** 下一步先定义 namespace-scoped capability 的
-  读取/写入边界，再决定最小实现；不得把 G4-01 的 provenance 字段当作权限
-  凭证，不得改变 memory/KB 的数据库、索引或删除边界。
+- **当前：G4-02-02 调用方接缝。** G4-02-01 已完成并由 `0281b062` 推送：
+  KB 数据面已能按私有 capability 隔离 `user` 与 `linux-command`，且 WSL
+  Ubuntu-24.04 ext4 定向测试为 22 passed、2 ignored、0 failed。下一步只审计
+  `ToolCallContext`/registry 的可信注入，把 capability 从 host 传到 KB handler；
+  不把 G4-01 provenance 当权限凭证，不改变 memory/KB 数据库、索引或删除边界。
 
 ## G3-05 退出决定
 
@@ -277,14 +279,15 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 ## 下一处施工边界
 
-下一施工单进入 **G4-02**：
+下一施工单继续 **G4-02-02**：
 
-1. 先审计当前 tool/host capability 入口，定义 namespace 的默认值、调用方
-   身份、读写/删除能力和拒绝路径；只做设计与失败矩阵，不新增权限系统。
-2. 设计通过后，再为 `search_knowledge_base`、统一 `read`/`kb` 写路径和
-   dashboard 选择最小兼容参数；memory 仍不共享表、索引、迁移或删除事务。
-3. 保留 G4-01 的来源标签与旧 API/旧数据库兼容，禁止把 source_revision、
-   namespace 当作现成鉴权凭证；G4-03 再处理版本失效/重建/恢复。
+1. 审计当前 tool/host capability 入口，把私有 `KnowledgeCapability` 从可信
+   `ToolCallContext` 传到 `search_knowledge_base`、统一 `read`/`kb` 写路径；
+   模型参数不能构造或扩大 capability。
+2. 为 owner、bundled maintenance、user tool-call 三类调用方建立拒绝矩阵；
+   Web identity/dashboard、MCP grant 和跨会话授权另立施工单，不在本切片实现。
+3. 保留 G4-01 来源标签、G4-02-01 数据面和旧 API/旧数据库兼容；memory 仍不共享
+   表、索引、迁移或删除事务，G4-03 再处理版本失效/重建/恢复。
 
 ## 证据与环境约束
 
