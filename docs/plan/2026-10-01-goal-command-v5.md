@@ -48,12 +48,15 @@ OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
 
 CURRENT_STAGE
-  G3-05（G0/G1/G2 已按退出审计推进；当前仍在 G3 provenance 补齐）
+  G4-02-01（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance
+  已完成；当前先做 namespace capability 数据面设计审计）
 
 CURRENT_AUTHORIZATION
-  G0 已退出，G1/G2 已有实现与退出证据；当前只允许按状态对账文档继续执行 G3-05 的 provenance 最小切片。
-  G3-05 未退出前禁止推进 G4 KB 业务扩展、G5 Laya provider、G6 自动总结、G7 新终端路由和 G8 新 TUI。
-  G3-05 可以补 provenance 的协议/边界测试和已复现 bug；不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
+  G0/G1/G2 已退出，G3-05 按标准读线性化、有界 transcript barrier 与明确非目标边界退出；
+  G4-01 已推送 `21dfb327`。当前只允许先做 G4-02-01 的 KB 数据面 capability 设计与失败矩阵，
+  不得把 namespace/source_revision 当鉴权凭证，不得修改 memory/transfer/DecisionPort/Laya。
+  G4-02-02 的 ToolCallContext/registry/Web 授权接入必须另立施工单；G4-03 的版本失效/重建/恢复
+  仍未授权。不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
 
 NON_NEGOTIABLE_PRODUCT_INVARIANTS
   N1. fish capture、daemon、IPC、TUI、session/state、prompt/cache、tool/host、MCP/Skills 各只有一套权威运行时；新模块只能挂既有 seam。
@@ -139,7 +142,8 @@ EVIDENCE_SCHEMA
 STOP_RULES
   prompt/cache 字节、隐私、权限、迁移、回放、跨域删除、故障恢复、测试或 push 失败，立即停在当前 slice；修复后重新 failing-test→verify→fault/replay→review。
   行号/trait/调用方向与施工单不一致，停止并让 Lead 重定位；不要猜测文件名或创建第二实现。
-  任一阶段未退出不得实现其后续阶段；G3-05 退出前停在 G3-05，未达到完整长期目标时保持 goal active，不用“当前阶段通过”宣称产品完成。
+  任一阶段未退出不得实现其后续阶段；G4-02-01 未通过前停在设计审计，未达到完整长期目标时保持
+  goal active，不用“当前阶段通过”宣称产品完成。
 ```
 
 ## 3. 当前交接基线（供新模型压缩后恢复）
