@@ -55,7 +55,7 @@ CURRENT_STAGE
 CURRENT_AUTHORIZATION
   G0/G1/G2 已退出，G3-05 按标准读线性化、有界 transcript barrier 与明确非目标边界退出；
   G4-01 已推送 `21dfb327`，G4-02-01 已推送 `0281b062`，G4-02-02 已推送 `58a0cbca`，
-  G4-03 已推送 `ead9968e`，G4-04 已推送 `dbcc96b5`。
+  G4-03 已推送 `ead9968e`，G4-04 已推送 `dbcc96b5`，G4-05 第一切片已推送 `f905f538`。
   当前只允许 G4-05 的 KB 更新事务故障注入、旧版本恢复、重复执行收敛与状态观测；不得修改
   memory/transfer/DecisionPort/Laya。Web identity/dashboard 与 MCP grant 仍未授权，除非另立施工单。
   不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。

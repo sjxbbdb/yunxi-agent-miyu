@@ -281,6 +281,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   的旧版本恢复、导入后的重复执行收敛和 meta/semantic 双库失败观测；不声称跨 SQLite
   OS-crash 原子性，不改变 memory/KB 目录边界。
 
+- **G4-05 第一切片已完成并推送 `f905f538`。** optimized checkout/validate 失败会回退旧
+  HEAD，update-source 采用 staging 后交换，default namespace 导入失败会恢复旧文件和
+  元数据并清理 orphan，不复制整库 semantic DB。WSL 证据为 default_kb 7 passed、KB
+  27 passed/2 ignored、apply_patch 18 passed；详见 [`2026-10-04-g4-05-kb-transaction-recovery.md`](2026-10-04-g4-05-kb-transaction-recovery.md)。
+
+- **G4-05 未退出。** 下一切片处理并发 update lock、重复运行收敛、reindex marker exhaustion
+  和 dashboard queued/exhausted 观测；完成前 goal 保持 active。
+
 ## G3-05 退出决定
 
 G3-05 按“标准读线性化 + 有界 lexical transcript barrier + 明确跨库非目标”
@@ -294,9 +302,8 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 下一施工单进入 **G4-05**：
 
-1. 对 optimized checkout、快照构建和 state 提交注入失败，证明旧 revision 与旧
-   default-kb 文件可恢复，重复运行最终收敛。
-2. 覆盖导入后 reindex 排队/失败、meta/semantic 双库提交边界，并验证失败状态可观测。
+1. 增加 update lock 和重复/并发运行回归，证明同一 revision 最终只有一份完整快照。
+2. 覆盖 reindex marker exhaustion、queued/exhausted 状态和 meta/semantic 双库提交边界。
 3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate 和旧
    API/旧数据库兼容；Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
 
