@@ -679,6 +679,161 @@ async fn async_semantic_evicted_recall_rechecks_tombstones_before_write_and_retu
     );
 }
 
+#[tokio::test]
+async fn async_semantic_final_epoch_overlap_rejects_stale_hits() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    let temp = tempfile::tempdir().unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        // The first pass and its bounded retry each need one query vector.
+        for _ in 0..2 {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = [0_u8; 8192];
+            let _ = stream.read(&mut request).await.unwrap();
+            let body = r#"{"data":[{"index":0,"embedding":[1.0,0.0]}]}"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+        }
+    });
+
+    let mut config = AppConfig::default();
+    config.embedding.enabled = true;
+    config.embedding.backend = EmbeddingBackend::Remote;
+    config.embedding.provider_id = "g305-final-overlap-embed".to_string();
+    config.embedding.model = "toy".to_string();
+    config.embedding.min_score = 0.5;
+    let mut provider = ProviderConfig::default_opencodezen();
+    provider.id = "g305-final-overlap-embed".to_string();
+    provider.base_url = format!("http://{address}");
+    provider.api_key = Some("test-key".to_string());
+    provider.models = vec!["toy".to_string()];
+    provider.default_model = "toy".to_string();
+    config.providers.push(provider);
+
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    let fact_id = store
+        .remember_fact("G305_FINAL_OVERLAP_FACT", "test")
+        .unwrap();
+    store
+        .remember_evicted_turns(&[
+            EvictedTurn {
+                source_id: "g305-final-linked".into(),
+                timestamp: "2026-10-02T13:00:00+00:00".into(),
+                role: "assistant".into(),
+                content: "G305_FINAL_OVERLAP_MARKER linked".into(),
+                refs: vec![MemoryRef {
+                    kind: "fact".into(),
+                    id: fact_id,
+                }],
+                ..EvictedTurn::default()
+            },
+            EvictedTurn {
+                source_id: "g305-final-unlinked".into(),
+                timestamp: "2026-10-02T13:01:00+00:00".into(),
+                role: "user".into(),
+                content: "G305_FINAL_OVERLAP_MARKER unlinked".into(),
+                ..EvictedTurn::default()
+            },
+        ])
+        .unwrap();
+
+    let before = store
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    let linked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "assistant")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+    let unlinked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "user")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+
+    // Seed both state-side vectors so the only provider await is the query
+    // embedding.  The test then pauses at the exact final epoch check rather
+    // than relying on provider timing to expose the overlap.
+    let state = rusqlite::Connection::open(&store.state_db).unwrap();
+    for id in [linked_id, unlinked_id] {
+        state
+            .execute(
+                "INSERT INTO evicted_embeddings
+                    (id, model, embedding_json, embedding, created_at)
+                 VALUES (?1, 'g305-final-overlap-embed/toy', '', ?2, ?3)",
+                rusqlite::params![
+                    id,
+                    yunxi_base::embedding::vector_to_blob(&[1.0_f32, 0.0]),
+                    chrono::Utc::now().to_rfc3339(),
+                ],
+            )
+            .unwrap();
+    }
+    drop(state);
+
+    let reached = Arc::new(Barrier::new(2));
+    let release = Arc::new(Barrier::new(2));
+    let once = Arc::new(AtomicBool::new(true));
+    let reader = store.clone().with_overlap_hook(Arc::new({
+        let reached = Arc::clone(&reached);
+        let release = Arc::clone(&release);
+        let once = Arc::clone(&once);
+        move |point| {
+            if point == OverlapPoint::SemanticBeforeEpoch && once.swap(false, Ordering::SeqCst) {
+                reached.wait();
+                release.wait();
+            }
+        }
+    }));
+    let search = tokio::task::spawn_blocking(move || {
+        tokio::runtime::Handle::current()
+            .block_on(reader.search_evicted_context_hybrid(
+                "completely unrelated wording",
+                10,
+                None,
+                None,
+            ))
+            .unwrap()
+    });
+
+    tokio::task::spawn_blocking({
+        let reached = Arc::clone(&reached);
+        move || reached.wait()
+    })
+    .await
+    .unwrap();
+    assert!(store.delete_item(BrowseTable::Facts, fact_id).unwrap());
+    tokio::task::spawn_blocking({
+        let release = Arc::clone(&release);
+        move || release.wait()
+    })
+    .await
+    .unwrap();
+    let result = search.await.unwrap();
+    server.await.unwrap();
+
+    let result_ids = result["results"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|item| item["id"].as_i64())
+        .collect::<Vec<_>>();
+    assert!(!result_ids.contains(&linked_id));
+    assert!(result_ids.contains(&unlinked_id));
+}
+
 #[test]
 fn old_evicted_state_database_migrates_provenance_schema() {
     let temp = tempfile::tempdir().unwrap();

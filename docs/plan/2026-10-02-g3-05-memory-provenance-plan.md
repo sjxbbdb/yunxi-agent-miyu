@@ -695,6 +695,27 @@ fixed sleep, or cross-database atomicity claim was added.
 
 ## Current evidence and boundaries
 
+## G3-05-28 implemented slice: semantic final-epoch overlap
+
+The deterministic per-store seam now covers the semantic path's final
+`tombstone_epoch` check as well as keyword fallback and state-side browse. The
+regression pre-seeds the state-side vectors so the provider request is not the
+timing mechanism: it pauses after semantic hits have been materialised and
+before the final epoch comparison, commits a linked fact tombstone, then
+releases the reader. The stale first pass is rejected and its bounded retry
+returns only the still-live unlinked carrier.
+
+The existing provider-await regression remains separate evidence for the
+earlier async boundary. Together the two tests cover both provider completion
+and final semantic read linearization without adding a production lock,
+schema, sleep, or cross-database atomicity claim. The test intentionally uses a
+per-store `cfg(test)` hook and does not assert strict post-commit exclusion for
+a result already past the final check.
+
+WSL Ubuntu-24.04 ext4 focused semantic tests passed 2/2, and the complete
+`memory::tests::store` set passed 17/17. The disposable source and target
+directories were removed after the run.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate

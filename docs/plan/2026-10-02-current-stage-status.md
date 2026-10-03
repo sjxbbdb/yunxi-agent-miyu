@@ -101,14 +101,21 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   fallback 在墓碑提交后的重试，以及 state-side 删除 overlap 后的后续浏览收敛；
   按 G3-05-25 合同不对已经越过最终检查的 raced result 宣称严格 post-commit 排除。
 
+  G3-05-28 又把同一 seam 接到 semantic provider 的最终 epoch 检查：测试预置
+  state-side 向量，在 semantic hits 已物化但尚未完成 epoch 复核时确定性暂停，
+  提交关联 fact 删除后释放；第一次 stale semantic 结果被丢弃，有限重试只返回
+  仍存活的 unlinked carrier。既有 provider-await 回归与新增最终检查回归在 WSL
+  Ubuntu-24.04 ext4 均通过（semantic 2/2）；这仍是标准读线性化证据，不把
+  调用方消费窗口扩大成严格 post-commit 保证。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
 
 1. 按 G3-05-25 合同继续补 provenance 在 concurrent delete/recall 的语义
-   覆盖；确定性 seam 已覆盖 keyword/hybrid fallback 与 state-side browse，
-   仍需评估 semantic provider、browse detail 和 transfer/restore overlap，
-   不把调用方消费窗口误写成严格保证；
+   覆盖；确定性 seam 已覆盖 keyword/hybrid fallback、semantic final-epoch
+   provider overlap 与 state-side browse，仍需评估 browse detail 和
+   transfer/restore overlap，不把调用方消费窗口误写成严格保证；
 2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
    明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
