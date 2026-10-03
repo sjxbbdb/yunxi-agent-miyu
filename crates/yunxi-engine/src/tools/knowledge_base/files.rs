@@ -93,6 +93,38 @@ impl KnowledgeBase {
         }
     }
 
+    pub(crate) fn bundled_snapshot_matches(
+        &self,
+        source: &Path,
+        source_revision: &str,
+    ) -> Result<bool> {
+        let expected = self.prepare_default_imports(source)?;
+        let actual = self
+            .list_existing()?
+            .into_iter()
+            .filter(|record| record.name == "default-kb" || record.name.starts_with("default-kb/"))
+            .collect::<Vec<_>>();
+        if expected.len() != actual.len() {
+            return Ok(false);
+        }
+        let actual = actual
+            .into_iter()
+            .map(|record| (record.name.clone(), record))
+            .collect::<std::collections::HashMap<_, _>>();
+        for (file, name) in expected {
+            let Some(record) = actual.get(&name) else {
+                return Ok(false);
+            };
+            let bytes = std::fs::read(file)?;
+            if record.content_sha256 != sha256_hex(&bytes)
+                || record.provenance.source_revision != source_revision
+            {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
     fn create_replacement_backup(&self) -> Result<ReplacementBackup> {
         let root = tempfile::tempdir_in(&self.root)?;
         let mut files = Vec::new();

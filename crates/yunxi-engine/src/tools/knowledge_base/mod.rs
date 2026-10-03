@@ -709,6 +709,36 @@ mod tests {
     }
 
     #[test]
+    fn bundled_snapshot_match_is_revision_and_content_sensitive() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let admin = KnowledgeBase::with_capability(
+            AppConfig::default(),
+            paths,
+            KnowledgeCapability::bundled_admin(),
+        )
+        .unwrap();
+        let replacement = temp.path().join("replacement");
+        std::fs::create_dir_all(&replacement).unwrap();
+        let file = replacement.join("new.md");
+        std::fs::write(&file, "new command").unwrap();
+        admin
+            .replace_default_files_with_revision(&replacement, "rev-1")
+            .unwrap();
+
+        assert!(admin
+            .bundled_snapshot_matches(&replacement, "rev-1")
+            .unwrap());
+        assert!(!admin
+            .bundled_snapshot_matches(&replacement, "rev-2")
+            .unwrap());
+        std::fs::write(&file, "changed command").unwrap();
+        assert!(!admin
+            .bundled_snapshot_matches(&replacement, "rev-1")
+            .unwrap());
+    }
+
+    #[test]
     fn upload_guard_only_blocks_yunxi_own_assets() {
         // 正经资料照收。退回这个提交之前,这四篇全被挡在门外——正文里出现
         // config / memory / 配置 / 记忆 就够了。

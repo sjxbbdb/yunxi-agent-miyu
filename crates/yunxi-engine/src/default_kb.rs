@@ -278,11 +278,26 @@ where
     let source = build_update_source(paths, &repo)?;
     mark_stage(UpdateStage::HashingSnapshot);
     let release_hash = hash_dir(&source)?;
-    mark_stage(UpdateStage::ImportingFiles);
     let kb = KnowledgeBase::bundled_maintenance(config.clone(), paths.clone())?;
+    let mut state = load_state(paths)?;
+    if state.shorin_wiki_commit == commit
+        && state.release_hash == release_hash
+        && kb.bundled_snapshot_matches(&source, &commit)?
+    {
+        mark_stage(UpdateStage::SavingState);
+        state.remote_commit = commit;
+        state.update_available = false;
+        state.last_checked_at = Utc::now().to_rfc3339();
+        state.last_notice_commit.clear();
+        state.last_failure_stage.clear();
+        state.last_failure.clear();
+        state.last_recovery.clear();
+        save_state(paths, &state)?;
+        return Ok(state);
+    }
+    mark_stage(UpdateStage::ImportingFiles);
     kb.replace_default_files_with_revision(&source, &commit)?;
     mark_stage(UpdateStage::SavingState);
-    let mut state = load_state(paths)?;
     state.release_hash = release_hash;
     state.shorin_wiki_commit = commit.clone();
     state.remote_commit = commit;
