@@ -18,7 +18,7 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   [`2026-10-02-g2-profile-schema-evidence.md`](2026-10-02-g2-profile-schema-evidence.md)、
   [`2026-10-02-g2-scope-lifecycle-evidence.md`](2026-10-02-g2-scope-lifecycle-evidence.md)
   和 [`2026-10-02-g2-isolation-evidence.md`](2026-10-02-g2-isolation-evidence.md)。
-- **G3：进行中。** G3-01 至 G3-04 已有生命周期、admission、committed-only
+- **G3：已完成阶段退出（边界保留）。** G3-01 至 G3-04 已有生命周期、admission、committed-only
   vector、embedding 生命周期和 restore barrier 证据；G3-05 已完成 evicted
   turn、summary carrier、transcript identity/write 和当前 transcript read
   barrier、session-delete/idle-sweep GC、transfer round-trip coverage、
@@ -246,44 +246,45 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 
   本阶段逐条退出前对账见
   [`2026-10-02-g3-05-exit-audit.md`](2026-10-02-g3-05-exit-audit.md)；该文档明确
-  已证明路径、跨库/legacy 未证明路径和下一施工顺序，不能当作 G3-05 完成声明。
+  已证明路径、跨库/legacy 未证明路径和下一施工顺序。最终退出决定记录在本文
+  的“G3-05 退出决定”中；未证明路径仍是后续 G9/transfer/平台专项边界，不能被
+  解释为已覆盖。
+
+  G3-05 最后两条直接回归由 `7846c90c` 与 `4b1d4fd8` 固化：reset 清理非空
+  typed provenance、persona-scoped reset 只清理目标作用域；两者均在 WSL
+  Ubuntu-24.04 ext4 通过。该阶段按既定边界退出，不引入跨 SQLite 全局锁，
+  不把有限 transcript lexical barrier 扩大成完整 shell parser。
+
+- **G4-01：已完成。** `21dfb327` 为 KB 增加可迁移的
+  `namespace/source_kind/source_uri/source_revision` provenance 读模型，旧
+  schema 自动补列并回填，default/user 导入和 keyword/semantic 结果保持
+  检索算法兼容。WSL KB suite 为 19 passed、2 ignored、0 failed；完整边界见
+  [`2026-10-04-g4-01-kb-provenance.md`](2026-10-04-g4-01-kb-provenance.md)。
+  这一切片只提供来源标签，不提供授权能力。
+
+- **当前：G4-02 设计审计。** 下一步先定义 namespace-scoped capability 的
+  读取/写入边界，再决定最小实现；不得把 G4-01 的 provenance 字段当作权限
+  凭证，不得改变 memory/KB 的数据库、索引或删除边界。
+
+## G3-05 退出决定
+
+G3-05 按“标准读线性化 + 有界 lexical transcript barrier + 明确跨库非目标”
+合同退出。退出证据包括：memory reset/association/compact/undo/redo 与
+transcript provenance 回归、typed summary/evicted carrier 删除收敛、
+transfer staged 本地事务失败/提交后进程消失、以及 4b1d4fd8 的 persona-scoped
+reset 作用域测试。退出不声称跨 SQLite 原子性、父目录 TOCTOU 闭合、完整 shell
+parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运行证据。
 
 ## 下一处施工边界
 
-下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
+下一施工单进入 **G4-02**：
 
-1. 按 G3-05-25 合同继续补 provenance 在 concurrent delete/recall 的语义
-   覆盖；确定性 seam 已覆盖 keyword/hybrid fallback、semantic final-epoch
-   provider overlap、evicted detail 与 state-side browse 已有确定性证据；
-   transfer/restore 不增加伪在线 overlap seam；staged fixup 的提交前失败、
-   重试与 memory-side 子进程 crash-after-delete 已有证据，仍需完成最终退出
-   审计，并继续明确真实 staged transfer crash 与跨库原子性不在本阶段保证内；
-2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
-   明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
-   `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
-   参数、`xargs` opaque stdin/placeholder、`find -exec` opaque matched-path
-   data-flow、process substitution 及 `$()`/反引号内嵌动态文件访问已有词法屏障与
-   29/29 回归，live
-   transcript shell 路径也已拒绝；legacy summary 的文本不再作为 memory 关联
-   依据；当前仍不做完整 shell parser，未知 wrapper
-   CLI grammar 与动态命令名继续按边界处理；
-3. 继续评估 `grep` 的 `include` 过滤与 `glob` 的目录能力是否值得进入
-   descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；当前审计
-   已确认 `ensure_transcript_identity` 与后续 open 之间存在可复现的父目录
-   TOCTOU，叶级 `O_NOFOLLOW` 不能闭合它，因此本阶段不把父目录替换写成已
-   覆盖能力；完整闭合需要 Unix 目录 FD 链/openat/fstatat 及 Windows/macOS
-   独立实现。继续审计任意 wrapper data-flow 与跨库 overlap，再评估 G3-05
-   的阶段退出；
-   `read` 与单文件 `grep` 的叶文件 capability 已落地，
-   但不等于整段完成；
-
-此外，transfer 的 staged fixup 目前仍依赖导入前的 tombstone 过滤，尚未把
-epoch 递增语义扩展到独立的 staged 数据库；这不是运行时在线读写路径，已审计
-为不应伪造在线 epoch，仍需专门的 transfer/crash regression 后再决定是否扩展。
-
-现有 read barrier 对未知 legacy carrier 默认拒绝；它对手工拼接的相对 shell
-   路径尚未宣称覆盖。不得用“结构化 tool-call 可拒绝”替代任意 shell 语法
-   的完整验收。
+1. 先审计当前 tool/host capability 入口，定义 namespace 的默认值、调用方
+   身份、读写/删除能力和拒绝路径；只做设计与失败矩阵，不新增权限系统。
+2. 设计通过后，再为 `search_knowledge_base`、统一 `read`/`kb` 写路径和
+   dashboard 选择最小兼容参数；memory 仍不共享表、索引、迁移或删除事务。
+3. 保留 G4-01 的来源标签与旧 API/旧数据库兼容，禁止把 source_revision、
+   namespace 当作现成鉴权凭证；G4-03 再处理版本失效/重建/恢复。
 
 ## 证据与环境约束
 
