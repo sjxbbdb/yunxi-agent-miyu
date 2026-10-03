@@ -14,15 +14,23 @@ pub(in crate::tools::knowledge_base) struct SearchResult {
     pub(in crate::tools::knowledge_base) score: f32,
     pub(in crate::tools::knowledge_base) snippets: Vec<String>,
     pub(in crate::tools::knowledge_base) source: &'static str,
+    pub(in crate::tools::knowledge_base) provenance: SourceMetadata,
 }
 
 impl SearchResult {
-    pub fn new(path: String, score: f32, snippets: Vec<String>, source: &'static str) -> Self {
+    pub(in crate::tools::knowledge_base) fn new(
+        path: String,
+        score: f32,
+        snippets: Vec<String>,
+        source: &'static str,
+        provenance: SourceMetadata,
+    ) -> Self {
         Self {
             path,
             score,
             snippets,
             source,
+            provenance,
         }
     }
 
@@ -33,6 +41,12 @@ impl SearchResult {
             "directory": directory_name(&self.path),
             "score": (self.score * 10.0).round() / 10.0,
             "source": self.source,
+            "provenance": {
+                "namespace": self.provenance.namespace,
+                "source_kind": self.provenance.source_kind,
+                "source_uri": self.provenance.source_uri,
+                "source_revision": self.provenance.source_revision,
+            },
             "snippets": self.snippets,
         })
     }

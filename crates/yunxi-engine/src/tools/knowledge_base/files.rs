@@ -72,8 +72,9 @@ impl KnowledgeBase {
     /// 冗余的，留着只为不动 schema。
     pub(in crate::tools::knowledge_base) fn list_existing(&self) -> Result<Vec<FileRecord>> {
         let conn = self.meta_conn()?;
-        let mut stmt =
-            conn.prepare("SELECT name, size_bytes, content_sha256 FROM files ORDER BY name")?;
+        let mut stmt = conn.prepare(
+            "SELECT name, size_bytes, content_sha256, namespace, source_kind, source_uri, source_revision FROM files ORDER BY name",
+        )?;
         let files_dir = self.files_dir.clone();
         let rows = stmt.query_map([], |row| {
             let name: String = row.get(0)?;
@@ -82,6 +83,12 @@ impl KnowledgeBase {
                 name,
                 size_bytes: row.get(1)?,
                 content_sha256: row.get(2)?,
+                provenance: SourceMetadata {
+                    namespace: row.get(3)?,
+                    source_kind: row.get(4)?,
+                    source_uri: row.get(5)?,
+                    source_revision: row.get(6)?,
+                },
             })
         })?;
         rows.collect::<rusqlite::Result<Vec<_>>>()
@@ -411,8 +418,19 @@ impl KnowledgeBase {
         let conn = self.meta_conn()?;
         init_meta_db(&conn)?;
         conn.execute(
-            "INSERT INTO files (name, path, size_bytes, mtime, content_sha256, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(name) DO UPDATE SET path=excluded.path, size_bytes=excluded.size_bytes, mtime=excluded.mtime, content_sha256=excluded.content_sha256, updated_at=excluded.updated_at",
-            params![name, dest.display().to_string(), bytes.len() as i64, mtime, hash, now_secs()],
+            "INSERT INTO files (name, path, size_bytes, mtime, content_sha256, updated_at, namespace, source_kind, source_uri, source_revision) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10) ON CONFLICT(name) DO UPDATE SET path=excluded.path, size_bytes=excluded.size_bytes, mtime=excluded.mtime, content_sha256=excluded.content_sha256, updated_at=excluded.updated_at, namespace=excluded.namespace, source_kind=excluded.source_kind, source_uri=excluded.source_uri, source_revision=excluded.source_revision",
+            params![
+                name,
+                dest.display().to_string(),
+                bytes.len() as i64,
+                mtime,
+                hash,
+                now_secs(),
+                SourceMetadata::for_file(name).namespace,
+                SourceMetadata::for_file(name).source_kind,
+                SourceMetadata::for_file(name).source_uri,
+                SourceMetadata::for_file(name).source_revision,
+            ],
         )?;
         Ok(name.to_string())
     }

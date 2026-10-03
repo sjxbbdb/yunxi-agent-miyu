@@ -248,6 +248,130 @@ mod tests {
     }
 
     #[test]
+    fn old_kb_schema_opens_and_backfills_source_provenance() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let kb_root = paths.data_dir.join("kb");
+        std::fs::create_dir_all(kb_root.join("files/default-kb/docs")).unwrap();
+        std::fs::create_dir_all(kb_root.join("files/notes")).unwrap();
+        std::fs::write(
+            kb_root.join("files/default-kb/docs/pacman.md"),
+            "pacman -Syu",
+        )
+        .unwrap();
+        std::fs::write(kb_root.join("files/notes/local.md"), "local note").unwrap();
+
+        let meta = Connection::open(kb_root.join("kb_meta.db")).unwrap();
+        meta.execute_batch(
+            "CREATE TABLE files (
+                name TEXT PRIMARY KEY,
+                path TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                mtime REAL NOT NULL,
+                content_sha256 TEXT NOT NULL,
+                updated_at REAL NOT NULL
+            );
+            INSERT INTO files VALUES
+                ('default-kb/docs/pacman.md', 'stale/default-kb/docs/pacman.md', 11, 0, 'default', 0),
+                ('notes/local.md', 'stale/notes/local.md', 10, 0, 'local', 0);",
+        )
+        .unwrap();
+        drop(meta);
+
+        let semantic = Connection::open(kb_root.join("semantic_index.db")).unwrap();
+        semantic
+            .execute_batch(
+                "CREATE TABLE semantic_chunks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    provider_id TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    file_name TEXT NOT NULL,
+                    content_sha256 TEXT NOT NULL,
+                    chunk_index INTEGER NOT NULL,
+                    start_char INTEGER NOT NULL,
+                    end_char INTEGER NOT NULL,
+                    text TEXT NOT NULL,
+                    embedding_json TEXT NOT NULL,
+                    created_at REAL NOT NULL
+                );
+                INSERT INTO semantic_chunks
+                    (provider_id, model, file_name, content_sha256, chunk_index,
+                     start_char, end_char, text, embedding_json, created_at)
+                VALUES ('test', 'test', 'default-kb/docs/pacman.md', 'default', 0,
+                        0, 11, 'pacman -Syu', '[1.0]', 0);",
+            )
+            .unwrap();
+        drop(semantic);
+
+        let kb = KnowledgeBase::new(AppConfig::default(), paths).unwrap();
+        let records = kb.list().unwrap();
+        let bundled = records
+            .iter()
+            .find(|record| record.name == "default-kb/docs/pacman.md")
+            .unwrap();
+        assert_eq!(bundled.provenance.namespace, DEFAULT_KB_NAMESPACE);
+        assert_eq!(bundled.provenance.source_kind, DEFAULT_KB_SOURCE_KIND);
+        assert_eq!(bundled.provenance.source_uri, DEFAULT_KB_SOURCE_URI);
+
+        let user = records
+            .iter()
+            .find(|record| record.name == "notes/local.md")
+            .unwrap();
+        assert_eq!(user.provenance.namespace, USER_KB_NAMESPACE);
+        assert_eq!(user.provenance.source_kind, USER_KB_SOURCE_KIND);
+        assert_eq!(user.provenance.source_uri, USER_KB_SOURCE_URI);
+
+        let semantic = kb.semantic_conn().unwrap();
+        let semantic_metadata: (String, String, String, String) = semantic
+            .query_row(
+                "SELECT namespace, source_kind, source_uri, source_revision
+                 FROM semantic_chunks WHERE file_name='default-kb/docs/pacman.md'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            semantic_metadata,
+            (
+                DEFAULT_KB_NAMESPACE.to_string(),
+                DEFAULT_KB_SOURCE_KIND.to_string(),
+                DEFAULT_KB_SOURCE_URI.to_string(),
+                String::new(),
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn default_and_user_imports_emit_provenance_without_changing_search() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = false;
+        let kb = KnowledgeBase::new(config, paths).unwrap();
+        let bundled_source = temp.path().join("bundled.md");
+        let user_source = temp.path().join("user.md");
+        std::fs::write(&bundled_source, "pacman command reference").unwrap();
+        std::fs::write(&user_source, "personal reference note").unwrap();
+        kb.import_file(&bundled_source, "default-kb/commands/pacman.md")
+            .unwrap();
+        kb.import_file(&user_source, "notes/reference.md").unwrap();
+
+        let bundled = kb.search("pacman", Some(5)).await.unwrap();
+        let result = &bundled["results"][0];
+        assert_eq!(result["path"], "default-kb/commands/pacman.md");
+        assert_eq!(result["provenance"]["namespace"], DEFAULT_KB_NAMESPACE);
+        assert_eq!(result["provenance"]["source_kind"], DEFAULT_KB_SOURCE_KIND);
+        assert_eq!(result["provenance"]["source_uri"], DEFAULT_KB_SOURCE_URI);
+
+        let user = kb.search("personal", Some(5)).await.unwrap();
+        let result = &user["results"][0];
+        assert_eq!(result["path"], "notes/reference.md");
+        assert_eq!(result["provenance"]["namespace"], USER_KB_NAMESPACE);
+        assert_eq!(result["provenance"]["source_kind"], USER_KB_SOURCE_KIND);
+        assert_eq!(result["provenance"]["source_uri"], USER_KB_SOURCE_URI);
+    }
+
+    #[test]
     fn upload_guard_only_blocks_yunxi_own_assets() {
         // 正经资料照收。退回这个提交之前,这四篇全被挡在门外——正文里出现
         // config / memory / 配置 / 记忆 就够了。

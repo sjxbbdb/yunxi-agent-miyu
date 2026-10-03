@@ -231,13 +231,20 @@ pub(in crate::tools::knowledge_base) fn keyword_search_blocking(
                     score,
                     vec![snippet],
                     "keyword",
+                    record.provenance,
                 ));
                 continue;
             }
             if score > 0.0 {
                 let snippets =
                     extract_snippets(&content, &content_lower, &tokens, snippet_context_chars);
-                results.push(SearchResult::new(record.name, score, snippets, "keyword"));
+                results.push(SearchResult::new(
+                    record.name,
+                    score,
+                    snippets,
+                    "keyword",
+                    record.provenance,
+                ));
             }
         }
         results.sort_by(|a, b| {
@@ -263,7 +270,8 @@ impl KnowledgeBase {
         // Only vectors from the current model are comparable; rows left by a
         // previous model wait for the reindex.
         let mut stmt = semantic.prepare(
-            "SELECT file_name, start_char, end_char, text, embedding, embedding_json
+            "SELECT file_name, start_char, end_char, text, embedding, embedding_json,
+                    namespace, source_kind, source_uri, source_revision
              FROM semantic_chunks WHERE model = ?1",
         )?;
         let rows = stmt.query_map(params![embedder.model_id()], |row| {
@@ -274,11 +282,26 @@ impl KnowledgeBase {
                 row.get::<_, String>(3)?,
                 row.get::<_, Option<Vec<u8>>>(4)?,
                 row.get::<_, String>(5)?,
+                row.get::<_, String>(6)?,
+                row.get::<_, String>(7)?,
+                row.get::<_, String>(8)?,
+                row.get::<_, String>(9)?,
             ))
         })?;
         let mut results = Vec::new();
         for row in rows {
-            let (file_name, _start, _end, text, blob, embedding_json) = row?;
+            let (
+                file_name,
+                _start,
+                _end,
+                text,
+                blob,
+                embedding_json,
+                namespace,
+                source_kind,
+                source_uri,
+                source_revision,
+            ) = row?;
             let embedding = match blob
                 .as_deref()
                 .and_then(yunxi_base::embedding::vector_from_blob)
@@ -298,6 +321,12 @@ impl KnowledgeBase {
                 score * 200.0,
                 vec![compact_whitespace(&text)],
                 "semantic",
+                SourceMetadata {
+                    namespace,
+                    source_kind,
+                    source_uri,
+                    source_revision,
+                },
             ));
         }
         results.sort_by(|a, b| {
@@ -403,8 +432,23 @@ impl KnowledgeBase {
             )?;
             for (chunk, vector) in chunks.iter().zip(vectors) {
                 transaction.execute(
-                    "INSERT INTO semantic_chunks (provider_id, model, file_name, content_sha256, chunk_index, start_char, end_char, text, embedding_json, embedding, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, '', ?9, ?10)",
-                    params![embedder.describe(), model, record.name, record.content_sha256, chunk.index as i64, chunk.start as i64, chunk.end as i64, chunk.text, yunxi_base::embedding::vector_to_blob(&vector), now_secs()],
+                    "INSERT INTO semantic_chunks (provider_id, model, file_name, content_sha256, chunk_index, start_char, end_char, text, embedding_json, embedding, created_at, namespace, source_kind, source_uri, source_revision) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, '', ?9, ?10, ?11, ?12, ?13, ?14)",
+                    params![
+                        embedder.describe(),
+                        model,
+                        &record.name,
+                        &record.content_sha256,
+                        chunk.index as i64,
+                        chunk.start as i64,
+                        chunk.end as i64,
+                        chunk.text,
+                        yunxi_base::embedding::vector_to_blob(&vector),
+                        now_secs(),
+                        &record.provenance.namespace,
+                        &record.provenance.source_kind,
+                        &record.provenance.source_uri,
+                        &record.provenance.source_revision,
+                    ],
                 )?;
             }
             transaction.commit()?;

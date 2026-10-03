@@ -11,6 +11,48 @@ pub struct FileRecord {
     pub(in crate::tools::knowledge_base) path: String,
     pub size_bytes: i64,
     pub(in crate::tools::knowledge_base) content_sha256: String,
+    pub(in crate::tools::knowledge_base) provenance: SourceMetadata,
+}
+
+/// Stable source labels for the first independent KB namespace seam.
+///
+/// These labels are metadata only in G4-01: they do not grant access, change
+/// ranking, or add a second storage path.  Keeping the values here means old
+/// records can be classified deterministically during schema backfill and new
+/// records use exactly the same vocabulary.
+pub(in crate::tools::knowledge_base) const DEFAULT_KB_NAMESPACE: &str = "linux-command";
+pub(in crate::tools::knowledge_base) const USER_KB_NAMESPACE: &str = "user";
+pub(in crate::tools::knowledge_base) const DEFAULT_KB_SOURCE_KIND: &str = "bundled";
+pub(in crate::tools::knowledge_base) const USER_KB_SOURCE_KIND: &str = "user_upload";
+pub(in crate::tools::knowledge_base) const DEFAULT_KB_SOURCE_URI: &str = "builtin://default-kb";
+pub(in crate::tools::knowledge_base) const USER_KB_SOURCE_URI: &str = "user://knowledge-base";
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::tools::knowledge_base) struct SourceMetadata {
+    pub(in crate::tools::knowledge_base) namespace: String,
+    pub(in crate::tools::knowledge_base) source_kind: String,
+    pub(in crate::tools::knowledge_base) source_uri: String,
+    pub(in crate::tools::knowledge_base) source_revision: String,
+}
+
+impl SourceMetadata {
+    pub(in crate::tools::knowledge_base) fn for_file(name: &str) -> Self {
+        if name == "default-kb" || name.starts_with("default-kb/") {
+            Self {
+                namespace: DEFAULT_KB_NAMESPACE.to_string(),
+                source_kind: DEFAULT_KB_SOURCE_KIND.to_string(),
+                source_uri: DEFAULT_KB_SOURCE_URI.to_string(),
+                source_revision: String::new(),
+            }
+        } else {
+            Self {
+                namespace: USER_KB_NAMESPACE.to_string(),
+                source_kind: USER_KB_SOURCE_KIND.to_string(),
+                source_uri: USER_KB_SOURCE_URI.to_string(),
+                source_revision: String::new(),
+            }
+        }
+    }
 }
 
 /// 知识库只收参考资料，不收 YunXi 自己的东西（技能文件、人格提示词、配置、
@@ -55,18 +97,42 @@ pub(in crate::tools::knowledge_base) fn ensure_enabled(config: &AppConfig) -> Re
 
 pub(in crate::tools::knowledge_base) fn init_meta_db(conn: &Connection) -> Result<()> {
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS files (name TEXT PRIMARY KEY, path TEXT NOT NULL, size_bytes INTEGER NOT NULL, mtime REAL NOT NULL, content_sha256 TEXT NOT NULL, updated_at REAL NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS files (name TEXT PRIMARY KEY, path TEXT NOT NULL, size_bytes INTEGER NOT NULL, mtime REAL NOT NULL, content_sha256 TEXT NOT NULL, updated_at REAL NOT NULL, namespace TEXT NOT NULL DEFAULT 'user', source_kind TEXT NOT NULL DEFAULT 'user_upload', source_uri TEXT NOT NULL DEFAULT 'user://knowledge-base', source_revision TEXT NOT NULL DEFAULT '')",
         [],
     )?;
+    for (name, declaration) in [
+        ("namespace", "TEXT NOT NULL DEFAULT 'user'"),
+        ("source_kind", "TEXT NOT NULL DEFAULT 'user_upload'"),
+        (
+            "source_uri",
+            "TEXT NOT NULL DEFAULT 'user://knowledge-base'",
+        ),
+        ("source_revision", "TEXT NOT NULL DEFAULT ''"),
+    ] {
+        ensure_column(conn, "files", name, declaration)?;
+    }
+    backfill_default_provenance(conn, "files", "name")?;
     Ok(())
 }
 
 pub(in crate::tools::knowledge_base) fn init_semantic_db(conn: &Connection) -> Result<()> {
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS semantic_chunks (id INTEGER PRIMARY KEY AUTOINCREMENT, provider_id TEXT NOT NULL, model TEXT NOT NULL, file_name TEXT NOT NULL, content_sha256 TEXT NOT NULL, chunk_index INTEGER NOT NULL, start_char INTEGER NOT NULL, end_char INTEGER NOT NULL, text TEXT NOT NULL, embedding_json TEXT NOT NULL, created_at REAL NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS semantic_chunks (id INTEGER PRIMARY KEY AUTOINCREMENT, provider_id TEXT NOT NULL, model TEXT NOT NULL, file_name TEXT NOT NULL, content_sha256 TEXT NOT NULL, chunk_index INTEGER NOT NULL, start_char INTEGER NOT NULL, end_char INTEGER NOT NULL, text TEXT NOT NULL, embedding_json TEXT NOT NULL, created_at REAL NOT NULL, namespace TEXT NOT NULL DEFAULT 'user', source_kind TEXT NOT NULL DEFAULT 'user_upload', source_uri TEXT NOT NULL DEFAULT 'user://knowledge-base', source_revision TEXT NOT NULL DEFAULT '')",
         [],
     )?;
     conn.execute("CREATE INDEX IF NOT EXISTS idx_semantic_file ON semantic_chunks(file_name, content_sha256)", [])?;
+    for (name, declaration) in [
+        ("namespace", "TEXT NOT NULL DEFAULT 'user'"),
+        ("source_kind", "TEXT NOT NULL DEFAULT 'user_upload'"),
+        (
+            "source_uri",
+            "TEXT NOT NULL DEFAULT 'user://knowledge-base'",
+        ),
+        ("source_revision", "TEXT NOT NULL DEFAULT ''"),
+    ] {
+        ensure_column(conn, "semantic_chunks", name, declaration)?;
+    }
+    backfill_default_provenance(conn, "semantic_chunks", "file_name")?;
     // 09-05: vectors moved from JSON text to f32 BLOBs (136 MB → 43 MB for a
     // 10k-chunk library, and no per-query parse). Legacy rows keep their JSON
     // until the next reindex rewrites them.
@@ -76,6 +142,38 @@ pub(in crate::tools::knowledge_base) fn init_semantic_db(conn: &Connection) -> R
     if !has_blob_column {
         conn.execute("ALTER TABLE semantic_chunks ADD COLUMN embedding BLOB", [])?;
     }
+    Ok(())
+}
+
+fn ensure_column(conn: &Connection, table: &str, column: &str, declaration: &str) -> Result<()> {
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
+    let columns = stmt.query_map([], |row| row.get::<_, String>(1))?;
+    let exists = columns
+        .collect::<rusqlite::Result<Vec<_>>>()?
+        .iter()
+        .any(|name| name == column);
+    if !exists {
+        conn.execute(
+            &format!("ALTER TABLE {table} ADD COLUMN {column} {declaration}"),
+            [],
+        )?;
+    }
+    Ok(())
+}
+
+fn backfill_default_provenance(conn: &Connection, table: &str, name_column: &str) -> Result<()> {
+    conn.execute(
+        &format!(
+            "UPDATE {table} SET namespace=?1, source_kind=?2, source_uri=?3 WHERE {name_column}=?4 OR {name_column} LIKE ?5"
+        ),
+        params![
+            DEFAULT_KB_NAMESPACE,
+            DEFAULT_KB_SOURCE_KIND,
+            DEFAULT_KB_SOURCE_URI,
+            "default-kb",
+            "default-kb/%"
+        ],
+    )?;
     Ok(())
 }
 
