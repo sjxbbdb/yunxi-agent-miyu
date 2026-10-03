@@ -272,7 +272,7 @@ impl KnowledgeBase {
             Err(error) => (json!({}), Some(format!("{error:#}"))),
         };
         let corrupt_progress = progress_error.is_some();
-        let phase = if corrupt_progress {
+        let raw_phase = if corrupt_progress {
             "failed".to_string()
         } else {
             progress
@@ -280,6 +280,16 @@ impl KnowledgeBase {
                 .and_then(Value::as_str)
                 .unwrap_or("idle")
                 .to_string()
+        };
+        let rerun_pending = self.reindex_rerun_path().exists()
+            || progress
+                .get("rerun_pending")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+        let phase = if !corrupt_progress && raw_phase == "done" && rerun_pending {
+            "queued".to_string()
+        } else {
+            raw_phase.clone()
         };
         let active = matches!(phase.as_str(), "starting" | "running");
         let idle_secs = progress
@@ -308,6 +318,9 @@ impl KnowledgeBase {
             "indexed": progress.get("indexed").cloned().unwrap_or(json!(0)),
             "skipped": progress.get("skipped").cloned().unwrap_or(json!(0)),
             "failed": progress.get("failed").cloned().unwrap_or(json!(0)),
+            "passes": progress.get("passes").cloned().unwrap_or(json!(0)),
+            "max_passes": progress.get("max_passes").cloned().unwrap_or(json!(0)),
+            "rerun_pending": rerun_pending,
             "current": progress.get("current").cloned().unwrap_or(json!("")),
             "started_at": progress.get("started_at").cloned().unwrap_or(Value::Null),
             "finished_at": progress.get("finished_at").cloned().unwrap_or(Value::Null),
@@ -322,7 +335,7 @@ impl KnowledgeBase {
                 "reindex process is gone (no progress for {} seconds)",
                 idle_secs.unwrap_or_default() as u64
             ))
-        } else if phase == "failed" {
+        } else if matches!(phase.as_str(), "failed" | "exhausted" | "queued") {
             let mut message = progress
                 .get("error")
                 .and_then(Value::as_str)
@@ -335,6 +348,9 @@ impl KnowledgeBase {
                 .trim();
             if !tail.is_empty() {
                 message = format!("{message}\n{tail}");
+            }
+            if message.trim().is_empty() && phase == "queued" {
+                message = "reindex queued because a previous pass left new work".to_string();
             }
             json!(message.trim())
         } else {
@@ -569,6 +585,45 @@ mod tests {
         assert_eq!(status["indexed"], 391);
         assert_eq!(status["current"], "wiki/pacman.md");
         assert_eq!(status["last_error"], "", "没失败就别挂着旧报错");
+    }
+
+    #[test]
+    fn reindex_status_exposes_queued_and_exhausted_states() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = paths(&temp);
+        let kb = KnowledgeBase::new(AppConfig::default(), paths).unwrap();
+        kb.dashboard_import("notes/a.md", "hello world".as_bytes())
+            .unwrap();
+
+        write_progress(
+            &kb,
+            json!({ "phase": "done", "updated_at": now(), "finished_at": now() }),
+        );
+        std::fs::write(kb.reindex_rerun_path(), b"").unwrap();
+        let status = kb.dashboard_reindex_status().unwrap();
+        assert_eq!(status["running"], false);
+        assert_eq!(status["phase"], "queued");
+        assert_eq!(status["rerun_pending"], true);
+        assert!(status["last_error"].as_str().unwrap().contains("queued"));
+
+        write_progress(
+            &kb,
+            json!({
+                "phase": "exhausted", "updated_at": now(), "finished_at": now(),
+                "passes": 8, "max_passes": 8, "rerun_pending": true,
+                "error": "reindex reached maximum passes with a rerun still queued",
+            }),
+        );
+        let status = kb.dashboard_reindex_status().unwrap();
+        assert_eq!(status["running"], false);
+        assert_eq!(status["phase"], "exhausted");
+        assert_eq!(status["passes"], 8);
+        assert_eq!(status["max_passes"], 8);
+        assert_eq!(status["rerun_pending"], true);
+        assert!(status["last_error"]
+            .as_str()
+            .unwrap()
+            .contains("maximum passes"));
     }
 
     /// 子进程死掉时旧代码什么都不留:输出丢 /dev/null、没人 wait、状态里也没有

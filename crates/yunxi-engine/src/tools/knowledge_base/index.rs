@@ -129,8 +129,11 @@ impl KnowledgeBase {
         drop(lock);
         let mut progress = ReindexProgress::new(self, embedder.model_id());
         let mut indexed = 0usize;
+        let mut passes = 0usize;
         let mut result = Ok(0usize);
-        for _ in 0..MAX_REINDEX_PASSES {
+        for pass in 1..=MAX_REINDEX_PASSES {
+            passes = pass;
+            progress.set_pass(pass, MAX_REINDEX_PASSES);
             // 先抹单子再取清单：抹在后面的话，这趟开始之后、抹之前写进来的文件
             // 会连同单子一起被吞掉。
             let _ = std::fs::remove_file(self.reindex_rerun_path());
@@ -149,7 +152,9 @@ impl KnowledgeBase {
                 break;
             }
         }
+        let rerun_pending = self.reindex_rerun_path().exists();
         match &result {
+            Ok(_) if rerun_pending => progress.finish_exhausted(passes),
             Ok(_) => progress.finish(None),
             Err(error) => progress.finish(Some(format!("{error:#}"))),
         }
@@ -725,6 +730,9 @@ mod progress_tests {
             failed: 0,
             current: String::new(),
             last_file_error: String::new(),
+            passes: 0,
+            max_passes: 0,
+            rerun_pending: false,
             last_flush: std::time::Instant::now(),
         };
         // temp 掉了也无所谓:flush 写不进去只是没有进度文件,计数照样对。
@@ -766,6 +774,15 @@ mod progress_tests {
             (progress.done, progress.failed, progress.indexed),
             (2, 1, 2)
         );
+    }
+
+    #[test]
+    fn exhausted_reindex_progress_is_not_reported_as_done() {
+        let mut progress = progress(1);
+        progress.finish_exhausted(MAX_REINDEX_PASSES);
+        assert_eq!(progress.passes, MAX_REINDEX_PASSES);
+        assert_eq!(progress.max_passes, MAX_REINDEX_PASSES);
+        assert!(progress.rerun_pending);
     }
 }
 
@@ -1140,6 +1157,9 @@ pub(in crate::tools::knowledge_base) struct ReindexProgress {
     failed: usize,
     current: String,
     last_file_error: String,
+    passes: usize,
+    max_passes: usize,
+    rerun_pending: bool,
     last_flush: std::time::Instant,
 }
 
@@ -1156,6 +1176,9 @@ impl ReindexProgress {
             failed: 0,
             current: String::new(),
             last_file_error: String::new(),
+            passes: 0,
+            max_passes: 0,
+            rerun_pending: false,
             last_flush: std::time::Instant::now(),
         };
         progress.flush("running", "", true);
@@ -1172,6 +1195,11 @@ impl ReindexProgress {
         self.failed = 0;
         self.last_file_error = String::new();
         self.flush("running", "", true);
+    }
+
+    fn set_pass(&mut self, passes: usize, max_passes: usize) {
+        self.passes = passes;
+        self.max_passes = max_passes;
     }
 
     fn start_file(&mut self, name: &str) {
@@ -1203,6 +1231,18 @@ impl ReindexProgress {
         self.flush(phase, &error.unwrap_or_default(), true);
     }
 
+    fn finish_exhausted(&mut self, passes: usize) {
+        self.passes = passes;
+        self.max_passes = MAX_REINDEX_PASSES;
+        self.rerun_pending = true;
+        self.current = String::new();
+        self.flush(
+            "exhausted",
+            "reindex reached maximum passes with a rerun still queued",
+            true,
+        );
+    }
+
     fn flush(&mut self, phase: &str, error: &str, force: bool) {
         if !force && self.last_flush.elapsed() < std::time::Duration::from_millis(250) {
             return;
@@ -1221,8 +1261,11 @@ impl ReindexProgress {
             "current": self.current,
             "error": error,
             "last_file_error": self.last_file_error,
+            "passes": self.passes,
+            "max_passes": self.max_passes,
+            "rerun_pending": self.rerun_pending,
         });
-        if phase == "done" || phase == "failed" {
+        if matches!(phase, "done" | "failed" | "exhausted") {
             value["finished_at"] = json!(now_secs());
         }
         write_reindex_progress_at(&self.path, &value);
