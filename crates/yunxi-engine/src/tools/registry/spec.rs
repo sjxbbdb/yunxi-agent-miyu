@@ -22,13 +22,29 @@ pub type ToolHandler =
 #[derive(Clone, Default)]
 pub struct ToolCallContext {
     pub(crate) transcript: Option<Arc<TranscriptReadCapability>>,
+    pub(crate) knowledge: Option<Arc<crate::tools::knowledge_base::KnowledgeCapability>>,
 }
 
 impl ToolCallContext {
     pub(crate) fn with_transcript(capability: TranscriptReadCapability) -> Self {
         Self {
             transcript: Some(Arc::new(capability)),
+            knowledge: None,
         }
+    }
+
+    pub(crate) fn with_knowledge_capability(
+        mut self,
+        capability: Arc<crate::tools::knowledge_base::KnowledgeCapability>,
+    ) -> Self {
+        self.knowledge = Some(capability);
+        self
+    }
+
+    pub(crate) fn knowledge_capability(
+        &self,
+    ) -> Option<Arc<crate::tools::knowledge_base::KnowledgeCapability>> {
+        self.knowledge.clone()
     }
 
     pub(crate) fn transcript_for(&self, path: &Path) -> Option<File> {

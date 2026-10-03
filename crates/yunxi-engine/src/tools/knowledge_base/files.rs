@@ -218,6 +218,26 @@ impl KnowledgeBase {
         }
     }
 
+    /// Authorize a `read` tool `kb:` path before the generic filesystem reader
+    /// receives its absolute form.  The generic reader has no KB namespace
+    /// semantics, so this check must happen while the path is still a KB name.
+    pub(crate) fn resolve_read_path(&self, name: &str) -> Result<PathBuf> {
+        let mut rel = normalize_relative_path(name)?;
+        let mut path = self.existing_file_path(&rel).unwrap_or_default();
+        if !path.exists() {
+            rel = self.resolve_stored_name(&rel)?;
+            path = self.existing_file_path(&rel)?;
+        }
+        if !path.exists()
+            || !self
+                .capability
+                .can_read(&SourceMetadata::for_file(&rel).namespace)
+        {
+            bail!("knowledge base file not found: {rel}")
+        }
+        Ok(path)
+    }
+
     pub(in crate::tools::knowledge_base) fn read_file_existing(
         &self,
         name: &str,

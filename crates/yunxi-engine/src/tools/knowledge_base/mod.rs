@@ -10,7 +10,7 @@ pub(in crate::tools) use store::reject_non_kb_upload;
 use search::*;
 use store::*;
 
-use super::{ToolRegistry, ToolSpec};
+use super::{ToolCallContext, ToolRegistry, ToolSpec};
 use anyhow::{bail, Context, Result};
 use rusqlite::{params, Connection};
 use serde_json::{json, Value};
@@ -35,7 +35,7 @@ pub fn register(registry: &mut ToolRegistry, config: AppConfig, paths: YunXiPath
 }
 
 pub fn register_readonly(registry: &mut ToolRegistry, config: AppConfig, paths: YunXiPaths) {
-    registry.register(ToolSpec::new(
+    registry.register(ToolSpec::new_with_context(
         "search_knowledge_base",
         // 内容检索与文件名检索合并(08-17):同一个知识库的两种检索口径,
         // 拆成两个工具只是让 tools 数组多背一份外壳。by 缺省 content。
@@ -53,13 +53,17 @@ pub fn register_readonly(registry: &mut ToolRegistry, config: AppConfig, paths: 
         {
             let config = config.clone();
             let paths = paths.clone();
-            move |args| {
+            move |args, _progress, context| {
                 let config = config.clone();
                 let paths = paths.clone();
                 async move {
                     match args.get("by").and_then(Value::as_str).unwrap_or("content") {
-                        "content" => tool_search_readonly(args, config, paths).await,
-                        "name" => tool_find_readonly(args, config, paths).await,
+                        "content" => {
+                            tool_search_readonly(args, config, paths, context).await
+                        }
+                        "name" => {
+                            tool_find_readonly(args, config, paths, context).await
+                        }
                         other => bail!("unknown by: {other}; expected content or name"),
                     }
                 }
@@ -81,15 +85,24 @@ pub struct KnowledgeBase {
 /// stays private to the KB module: later host/registry plumbing may mint one,
 /// but a model argument must never be able to construct or widen it.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::tools::knowledge_base) struct KnowledgeCapability {
-    pub(in crate::tools::knowledge_base) read_namespaces: HashSet<String>,
-    pub(in crate::tools::knowledge_base) write_namespaces: HashSet<String>,
-    pub(in crate::tools::knowledge_base) delete_namespaces: HashSet<String>,
-    pub(in crate::tools::knowledge_base) allow_bundled_replace: bool,
+pub(crate) struct KnowledgeCapability {
+    read_namespaces: HashSet<String>,
+    write_namespaces: HashSet<String>,
+    delete_namespaces: HashSet<String>,
+    allow_bundled_replace: bool,
 }
 
 impl KnowledgeCapability {
-    fn owner_default() -> Self {
+    pub(crate) fn denied() -> Self {
+        Self {
+            read_namespaces: HashSet::new(),
+            write_namespaces: HashSet::new(),
+            delete_namespaces: HashSet::new(),
+            allow_bundled_replace: false,
+        }
+    }
+
+    pub(crate) fn owner_default() -> Self {
         Self {
             read_namespaces: [USER_KB_NAMESPACE, DEFAULT_KB_NAMESPACE]
                 .into_iter()
@@ -162,6 +175,18 @@ impl KnowledgeBase {
             semantic_db,
             capability,
         })
+    }
+
+    pub(crate) fn with_tool_context(
+        config: AppConfig,
+        paths: YunXiPaths,
+        context: &ToolCallContext,
+    ) -> Result<Self> {
+        let capability = context
+            .knowledge_capability()
+            .map(|capability| (*capability).clone())
+            .unwrap_or_else(KnowledgeCapability::denied);
+        Self::with_capability(config, paths, capability)
     }
 
     pub fn init(&self) -> Result<()> {
@@ -259,7 +284,12 @@ impl KnowledgeBase {
     }
 }
 
-async fn tool_search_readonly(args: Value, config: AppConfig, paths: YunXiPaths) -> Result<String> {
+async fn tool_search_readonly(
+    args: Value,
+    config: AppConfig,
+    paths: YunXiPaths,
+    context: ToolCallContext,
+) -> Result<String> {
     ensure_enabled(&config)?;
     let query = args
         .get("query")
@@ -273,13 +303,18 @@ async fn tool_search_readonly(args: Value, config: AppConfig, paths: YunXiPaths)
         .get("max_results")
         .and_then(Value::as_u64)
         .map(|value| value as usize);
-    Ok(KnowledgeBase::new(config, paths)?
+    Ok(KnowledgeBase::with_tool_context(config, paths, &context)?
         .search_readonly(query, max_results)
         .await?
         .to_string())
 }
 
-async fn tool_find_readonly(args: Value, config: AppConfig, paths: YunXiPaths) -> Result<String> {
+async fn tool_find_readonly(
+    args: Value,
+    config: AppConfig,
+    paths: YunXiPaths,
+    context: ToolCallContext,
+) -> Result<String> {
     ensure_enabled(&config)?;
     // 合并后统一用 query;file_name_query 保留为兼容别名。
     let query = args
@@ -295,7 +330,7 @@ async fn tool_find_readonly(args: Value, config: AppConfig, paths: YunXiPaths) -
         .get("max_results")
         .and_then(Value::as_u64)
         .map(|value| value as usize);
-    Ok(KnowledgeBase::new(config, paths)?
+    Ok(KnowledgeBase::with_tool_context(config, paths, &context)?
         .find_by_name_readonly(query, max_results)?
         .to_string())
 }
@@ -696,6 +731,47 @@ mod tests {
             );
         }
         assert_eq!(roots[0], roots[1], "库根跟着人格走了");
+    }
+
+    #[tokio::test]
+    async fn registry_capability_is_required_for_knowledge_base_reads() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = false;
+        let admin = KnowledgeBase::with_capability(
+            config.clone(),
+            paths.clone(),
+            KnowledgeCapability::bundled_admin(),
+        )
+        .unwrap();
+        admin.init().unwrap();
+        let source = temp.path().join("pacman.md");
+        std::fs::write(&source, "pacman installs packages").unwrap();
+        admin.import_file(&source, "default-kb/pacman.md").unwrap();
+
+        let mut denied = ToolRegistry::new();
+        denied.clear_knowledge_capability();
+        register_readonly(&mut denied, config.clone(), paths.clone());
+        let denied_result = denied
+            .call("search_knowledge_base", r#"{"query":"pacman"}"#)
+            .await
+            .unwrap();
+        assert!(
+            denied_result.contains(r#""total_matches":0"#),
+            "{denied_result}"
+        );
+
+        let mut owner = ToolRegistry::new();
+        register_readonly(&mut owner, config, paths);
+        let owner_result = owner
+            .call("search_knowledge_base", r#"{"query":"pacman"}"#)
+            .await
+            .unwrap();
+        assert!(
+            owner_result.contains("default-kb/pacman.md"),
+            "{owner_result}"
+        );
     }
 
     /// G0-03 边界护栏：知识库文件及其语义索引删除只能触碰 KB 两个库，

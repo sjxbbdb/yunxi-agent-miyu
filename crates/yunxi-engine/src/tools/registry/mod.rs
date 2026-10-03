@@ -67,6 +67,10 @@ pub struct ToolRegistry {
     script_scope: ScriptScope,
     /// 脚本 id 白名单(persona.toml `[plugins].scripts`);None = 全部。
     script_allowlist: Option<BTreeSet<String>>,
+    /// Trusted host capability carried into knowledge-base handlers.  This is
+    /// registry state, never provider-visible tool input; external surfaces
+    /// clear it before applying their trust filter.
+    knowledge_capability: Option<Arc<crate::tools::knowledge_base::KnowledgeCapability>>,
 }
 
 /// 注册表收哪些脚本。
@@ -80,7 +84,15 @@ pub enum ScriptScope {
 
 impl ToolRegistry {
     pub fn new() -> Self {
-        Self::default()
+        let mut registry = Self::default();
+        registry.knowledge_capability = Some(Arc::new(
+            crate::tools::knowledge_base::KnowledgeCapability::owner_default(),
+        ));
+        registry
+    }
+
+    pub(crate) fn clear_knowledge_capability(&mut self) {
+        self.knowledge_capability = None;
     }
 
     pub fn register(&mut self, tool: ToolSpec) {
@@ -124,7 +136,7 @@ impl ToolRegistry {
         args: &Value,
         ctx: &GuardCtx,
     ) -> Result<ToolCallContext> {
-        let context = if let Some(guard) = &self.transcript_access_guard {
+        let mut context = if let Some(guard) = &self.transcript_access_guard {
             match guard(tool, args) {
                 TranscriptAccessDecision::Allow => ToolCallContext::default(),
                 TranscriptAccessDecision::AllowWith(context) => context,
@@ -133,6 +145,9 @@ impl ToolRegistry {
         } else {
             ToolCallContext::default()
         };
+        if let Some(capability) = &self.knowledge_capability {
+            context = context.with_knowledge_capability(capability.clone());
+        }
         if let Some(reason) = self.guards.iter().find_map(|guard| guard(tool, args, ctx)) {
             bail!(reason);
         }

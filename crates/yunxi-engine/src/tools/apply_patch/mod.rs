@@ -1,4 +1,4 @@
-use super::{ToolProgress, ToolRegistry, ToolSpec};
+use super::{ToolCallContext, ToolProgress, ToolRegistry, ToolSpec};
 use crate::tools::patch_preview::write_with_patch_preview;
 use anyhow::{bail, Result};
 use serde_json::{json, Map, Value};
@@ -33,11 +33,11 @@ pub fn register_kb(
     config: yunxi_base::config::AppConfig,
     paths: yunxi_base::paths::YunXiPaths,
 ) {
-    registry.register(ToolSpec::new_with_progress(
+    registry.register(ToolSpec::new_with_context(
         "kb",
         "Write knowledge-base files: create, update, or delete via patch. Paths are knowledge-base relative. The knowledge base holds persistent reference documents, not YunXi's memories (those go through remember_fact). Read entries with read using kb: paths; search with search_knowledge_base.",
         patch_parameters(),
-        move |args, progress| {
+        move |args, progress, context| {
             let config = config.clone();
             let paths = paths.clone();
             async move {
@@ -46,7 +46,7 @@ pub fn register_kb(
                     t("prepare patch", "准备修改")
                 ));
                 tokio::task::yield_now().await;
-                apply_kb_patch(args, progress, &config, &paths)
+                apply_kb_patch(args, progress, &config, &paths, &context)
             }
         },
     ).writes());
@@ -145,11 +145,16 @@ fn apply_kb_patch(
     progress: ToolProgress,
     config: &yunxi_base::config::AppConfig,
     paths: &yunxi_base::paths::YunXiPaths,
+    context: &ToolCallContext,
 ) -> Result<String> {
     if !config.plugins.knowledge_base.enabled {
         bail!("knowledge base plugin is disabled");
     }
-    let kb = crate::tools::knowledge_base::KnowledgeBase::new(config.clone(), paths.clone())?;
+    let kb = crate::tools::knowledge_base::KnowledgeBase::with_tool_context(
+        config.clone(),
+        paths.clone(),
+        context,
+    )?;
     kb.init()?;
     let patch_text = args
         .get("patchText")

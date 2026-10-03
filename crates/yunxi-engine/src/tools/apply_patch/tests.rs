@@ -1,5 +1,11 @@
 use super::*;
 
+fn owner_context() -> ToolCallContext {
+    ToolCallContext::default().with_knowledge_capability(std::sync::Arc::new(
+        crate::tools::knowledge_base::KnowledgeCapability::owner_default(),
+    ))
+}
+
 /// kb 补丁三操作全链路:写入/更新/删除都必须落到 KnowledgeBase
 /// (kb_meta.db 有行、文件在 kb 根下),而不是裸 fs 写。
 #[tokio::test]
@@ -17,6 +23,7 @@ async fn kb_patch_routes_writes_through_the_knowledge_base() {
         ToolProgress::default(),
         &config,
         &paths,
+        &owner_context(),
     )
     .unwrap();
     assert!(output.contains("kb:notes/demo.md"), "{output}");
@@ -32,6 +39,7 @@ async fn kb_patch_routes_writes_through_the_knowledge_base() {
         ToolProgress::default(),
         &config,
         &paths,
+        &owner_context(),
     )
     .unwrap();
     assert!(std::fs::read_to_string(&stored)
@@ -44,6 +52,7 @@ async fn kb_patch_routes_writes_through_the_knowledge_base() {
         ToolProgress::default(),
         &config,
         &paths,
+        &owner_context(),
     )
     .unwrap();
     assert!(!stored.exists());

@@ -123,8 +123,12 @@ fn read_dispatch(
         let resolved = crate::tools::artifact::managed_file_path(&root, &session, name)?;
         args["path"] = Value::String(resolved.to_string_lossy().to_string());
     } else if let Some(rel) = path_arg.strip_prefix("kb:") {
-        let kb = crate::tools::knowledge_base::KnowledgeBase::new(config.clone(), paths.clone())?;
-        let resolved = kb.safe_file_path(rel.trim())?;
+        let kb = crate::tools::knowledge_base::KnowledgeBase::with_tool_context(
+            config.clone(),
+            paths.clone(),
+            context,
+        )?;
+        let resolved = kb.resolve_read_path(rel.trim())?;
         args["path"] = Value::String(resolved.to_string_lossy().to_string());
     }
     read_file_with_context(args, context)

@@ -20,6 +20,12 @@ pub fn compose_registry(
     surface: Surface,
 ) -> ToolRegistry {
     let mut registry = ToolRegistry::new();
+    if surface.trust == SurfaceTrust::External {
+        // External surfaces are filtered to their declared trust set below;
+        // clear the owner KB capability as a defense-in-depth boundary in
+        // case a future owner tool is accidentally exposed there.
+        registry.clear_knowledge_capability();
+    }
     registry.set_default_timeout_secs(config.tools.default_timeout_secs);
     install_builtin_guards(&mut registry, config);
     let external = surface.trust == SurfaceTrust::External;
