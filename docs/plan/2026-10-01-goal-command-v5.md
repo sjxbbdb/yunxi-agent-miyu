@@ -48,15 +48,15 @@ OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
 
 CURRENT_STAGE
-  G4-04（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
-  G4-02-01 数据面隔离、G4-02-02 可信调用方注入与 G4-03 版本生命周期均已完成；
-  当前只做 KB source update/import 的失败矩阵、旧版本恢复与可观测状态审计）
+  G4-05（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
+  G4-02-01 数据面隔离、G4-02-02 可信调用方注入、G4-03 版本生命周期与 G4-04
+  更新/导入失败可观测性均已完成；当前只做 KB 更新事务故障注入与旧版本恢复）
 
 CURRENT_AUTHORIZATION
   G0/G1/G2 已退出，G3-05 按标准读线性化、有界 transcript barrier 与明确非目标边界退出；
   G4-01 已推送 `21dfb327`，G4-02-01 已推送 `0281b062`，G4-02-02 已推送 `58a0cbca`，
-  G4-03 已推送 `ead9968e`。
-  当前只允许 G4-04 的 KB 更新/导入失败矩阵、旧版本恢复与状态可观测性；不得修改
+  G4-03 已推送 `ead9968e`，G4-04 已推送 `dbcc96b5`。
+  当前只允许 G4-05 的 KB 更新事务故障注入、旧版本恢复、重复执行收敛与状态观测；不得修改
   memory/transfer/DecisionPort/Laya。Web identity/dashboard 与 MCP grant 仍未授权，除非另立施工单。
   不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
 

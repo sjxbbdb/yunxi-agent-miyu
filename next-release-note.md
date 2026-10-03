@@ -2,6 +2,8 @@
 
 ## 重要更新
 
+- G4-04：默认知识库更新/导入增加失败阶段与恢复状态、全量预检、状态备份回读；dashboard 索引状态识别旧 revision/旧模型，避免 partial snapshot 或旧向量伪装成 fresh。
+
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
 - 新增 `docs/YUNXI-PRODUCT-BACKGROUND.md`，固化 Miyu Linux 底座、YunXi 陪伴层、记忆/知识库边界及候选 Laya 决策层的产品背景。

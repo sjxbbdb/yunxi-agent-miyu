@@ -49,6 +49,8 @@ PHASE_CONTRACT
   G4-01: 复用现有 KB，把 Linux 命令知识的 source/版本/切片/引用和 namespace 明确化。
   G4-02: 保持 KB/memory 的数据库、索引、检索/权限/迁移/删除独立，未来支持授权私有知识。
   G4-03: 验证增量更新、重建、失效、断索引/换模型恢复和跨库隔离；预留排序接缝。
+  G4-04: 固化 source update/import 的失败阶段、全量预检、状态备份回读和 revision-aware dashboard。
+  G4-05: 对更新事务、旧版本恢复、重复执行和 meta/semantic 双库失败做故障注入。
   G5-00~06: 完成下方 DECISION_MAINLINE 的模型验证、端口、基线、shadow、接入、评测和实际启用。
   G6-01: 复用现有 idle/closing/job owner，设计可取消、不抢前台、重启幂等的总结任务。
   G6-02: 分别输出短期摘要/长期记忆候选/知识候选/profile 提案/关系事件，各走自己的存储规则。
@@ -366,13 +368,13 @@ G0 入口表的测试对应关系：fish/shell 使用 `crates/yunxi-base/src/she
 | G1 CompanionContext | 已实现并完成退出审计（见 `2026-10-02-g1-exit-audit.md`） | 保留 provider cache hit 与脱敏 request-shape 差异为未验证项 |
 | G2 Profile/关系 | 已实现并完成 schema、scope lifecycle、isolation 证据 | 保持 profile 非向量化，后续只修复已登记残余 |
 | G3 分层记忆 | 已完成阶段退出：G3-01..04 与 G3-05 provenance/边界证据已固化，跨库原子性、完整 shell parser 等仍是明确非目标 | 只维护已登记残余风险，不把非目标隐性扩张回 G3 |
-| G4 独立知识库 | G4-01、G4-02-01、G4-02-02、G4-03 已完成并推送 `ead9968e` | G4-04 更新/导入失败矩阵、旧版本恢复与状态可观测性，再处理 Web/MCP 生命周期授权 |
+| G4 独立知识库 | G4-01、G4-02-01、G4-02-02、G4-03、G4-04 已完成并推送 `dbcc96b5` | G4-05 更新事务故障注入、旧版本恢复与重复执行收敛，再处理 Web/MCP 生命周期授权 |
 | G5 DecisionPort/Laya | 未开始（主线已固化，G0 不实现模型） | G3/G4 接口稳定后按 G5-00→G5-06 完成验证、shadow 和建议采纳 |
 | G6 陪伴/总结 | 未开始 | G1–G5 的保存入口稳定后 |
 | G7 终端自然语言层 | 未开始 | 复用 Miyu 终端路径 |
 | G8 TUI | 未开始 | 终端链路稳定后 |
 | G9 硬化发布 | 未开始 | 所有功能阶段完成后 |
 
-当前允许执行 G4-04 的 source update/import 失败矩阵、旧版本恢复与状态可观测性；不得把 G4-01 provenance 当作鉴权凭证，
+当前允许执行 G4-05 的 source update/import 事务故障注入、旧版本恢复与重复执行收敛；不得把 G4-01 provenance 当作鉴权凭证，
 也不能用“能启动”替代阶段验收。
 G4–G9 仍未完成，详见 [`2026-10-02-current-stage-status.md`](2026-10-02-current-stage-status.md)。

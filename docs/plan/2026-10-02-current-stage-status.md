@@ -270,9 +270,16 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   18 passed，0 failed；隐私扫描和 metadata/diff 门禁均通过。完整记录见
   [`2026-10-04-g4-03-kb-lifecycle.md`](2026-10-04-g4-03-kb-lifecycle.md)。
 
-- **当前：G4-04 更新/导入恢复矩阵。** 下一切片只处理 KB source update/import 的
-  失败可观测性、旧版本恢复、重复执行和状态收敛；不把 G4-03 provenance 当权限凭证，
-  不改变 memory/KB 数据库独立边界。
+- **G4-04：已完成并推送 `dbcc96b5`。** default-kb 更新/初始化导入现在记录失败阶段、
+  有界错误和旧快照继续生效的恢复动作；状态文件采用临时写入加备份回读。默认快照
+  在删除前会完整预检，单文件错误不再被吞掉；dashboard 索引状态同时比较内容 hash、
+  namespace、source revision 和 embedding model。WSL Ubuntu-24.04 ext4 证据为
+  default_kb 6 passed、KB 26 passed/2 ignored、apply_patch 18 passed；隐私扫描
+  tracked_files=1891 通过。完整记录见 [`2026-10-04-g4-04-kb-recovery.md`](2026-10-04-g4-04-kb-recovery.md)。
+
+- **当前：G4-05 更新事务故障注入。** 下一切片只处理 optimized checkout/快照构建失败
+  的旧版本恢复、导入后的重复执行收敛和 meta/semantic 双库失败观测；不声称跨 SQLite
+  OS-crash 原子性，不改变 memory/KB 目录边界。
 
 ## G3-05 退出决定
 
@@ -285,12 +292,11 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 ## 下一处施工边界
 
-下一施工单进入 **G4-04**：
+下一施工单进入 **G4-05**：
 
-1. 为 default-kb update/import 记录失败阶段、旧 snapshot、恢复动作和最终状态，
-   验证重复更新/中途失败/重启后的幂等收敛。
-2. 证明旧版本恢复不会删除 user namespace、不会触碰 memory，也不会让 partial
-   semantic index 进入检索结果。
+1. 对 optimized checkout、快照构建和 state 提交注入失败，证明旧 revision 与旧
+   default-kb 文件可恢复，重复运行最终收敛。
+2. 覆盖导入后 reindex 排队/失败、meta/semantic 双库提交边界，并验证失败状态可观测。
 3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate 和旧
    API/旧数据库兼容；Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
 
