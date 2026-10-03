@@ -113,14 +113,24 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   重试与后续 detail 读取均返回空。该测试采用同步线程和 per-store seam，避免
   runtime 调度偶合；WSL Ubuntu-24.04 ext4 `memory::tests::browse` 7/7 通过。
 
+  G3-05-30 对 transfer/restore overlap 做了边界审计，决定不把它伪装成在线
+  recall seam：`apply_evicted_tombstones` 在导入 staging 阶段读取 live tombstone
+  快照，再对独立 staged evicted DB 做一次事务清理，之后才进入安装/rollback
+  流程。现有 `force_import_filters_evicted_carriers_by_persona_scope`、
+  `evicted_tombstones_remove_the_whole_linked_carrier`、重复 fixup 幂等和两条
+  rollback 回归已覆盖其实际契约；在这里加入“并发删除后必须严格排除”的测试会
+  偷渡跨 SQLite 文件原子性。该边界保留为 transfer/crash exit 前置项，不改生产
+  协议，也不宣称 G3-05 已退出。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
 
 1. 按 G3-05-25 合同继续补 provenance 在 concurrent delete/recall 的语义
    覆盖；确定性 seam 已覆盖 keyword/hybrid fallback、semantic final-epoch
-   provider overlap、evicted detail 与 state-side browse，仍需评估
-   transfer/restore overlap，不把调用方消费窗口误写成严格保证；
+   provider overlap、evicted detail 与 state-side browse 已有确定性证据；
+   transfer/restore 不增加伪在线 overlap seam，仍需完成专门的 staged
+   transfer/crash regression 与退出审计，不把调用方消费窗口误写成严格保证；
 2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
    明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置

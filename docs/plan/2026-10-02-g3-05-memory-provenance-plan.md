@@ -730,6 +730,26 @@ or stronger post-commit guarantee.
 WSL Ubuntu-24.04 ext4 `memory::tests::browse` passed 7/7, including the new
 detail overlap regression.
 
+## G3-05-30 boundary decision: transfer/restore overlap remains staged
+
+Transfer is deliberately not treated as an online recall reader. During import,
+`transfer::import` first reads the live persona tombstones, then
+`fixups::apply_evicted_tombstones` removes linked provenance, embeddings, and
+turns from an independent staged database in one local transaction; only after
+that does the staged tree enter install/rollback. There is no shared
+`MemoryStore` or single transaction spanning the live memory database and the
+staged state database.
+
+The existing evidence is the right contract for this boundary:
+`evicted_tombstones_remove_the_whole_linked_carrier`, its repeated-fixup
+idempotence assertion, `force_import_filters_evicted_carriers_by_persona_scope`,
+`import_fixup_failure_leaves_live_tree_untouched`, and the provenance/memory-KB
+rollback tests. A new test that deletes a live fact after the snapshot and
+demands strict staged exclusion would either document a known snapshot window
+or require a cross-database lock/coordination protocol. Neither belongs in the
+current G3-05 read-linearization contract. A dedicated transfer/crash
+regression remains an explicit prerequisite for the eventual G3-05 exit audit.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate
