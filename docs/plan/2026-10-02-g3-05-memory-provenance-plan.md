@@ -716,6 +716,20 @@ WSL Ubuntu-24.04 ext4 focused semantic tests passed 2/2, and the complete
 `memory::tests::store` set passed 17/17. The disposable source and target
 directories were removed after the run.
 
+## G3-05-29 implemented slice: evicted detail overlap
+
+The same read-linearization contract now has a dedicated detail endpoint
+regression. A linked evicted carrier is read through `browse_evicted_item`; the
+per-store test seam pauses immediately before its final `tombstone_epoch`
+comparison, the owning fact is deleted and committed, and the reader resumes.
+The raced snapshot is discarded by the bounded retry, and both that result and
+a subsequent detail read return no item. The test uses a plain thread because
+the detail API is synchronous; it adds no runtime lock, sleep, schema change,
+or stronger post-commit guarantee.
+
+WSL Ubuntu-24.04 ext4 `memory::tests::browse` passed 7/7, including the new
+detail overlap regression.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate

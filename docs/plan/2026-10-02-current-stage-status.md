@@ -108,13 +108,18 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   Ubuntu-24.04 ext4 均通过（semantic 2/2）；这仍是标准读线性化证据，不把
   调用方消费窗口扩大成严格 post-commit 保证。
 
+  G3-05-29 又补齐 evicted detail 读取的 overlap 回归：详情读取在最终 epoch
+  检查前暂停，主线程提交关联 fact 删除后释放，第一次 raced snapshot 被丢弃，
+  重试与后续 detail 读取均返回空。该测试采用同步线程和 per-store seam，避免
+  runtime 调度偶合；WSL Ubuntu-24.04 ext4 `memory::tests::browse` 7/7 通过。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
 
 1. 按 G3-05-25 合同继续补 provenance 在 concurrent delete/recall 的语义
    覆盖；确定性 seam 已覆盖 keyword/hybrid fallback、semantic final-epoch
-   provider overlap 与 state-side browse，仍需评估 browse detail 和
+   provider overlap、evicted detail 与 state-side browse，仍需评估
    transfer/restore overlap，不把调用方消费窗口误写成严格保证；
 2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
    明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、

@@ -456,6 +456,67 @@ fn concurrent_delete_and_browse_converge_on_tombstone_barrier() {
         .unwrap());
 }
 
+#[test]
+fn evicted_detail_overlap_retries_after_tombstone_commit() {
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Barrier,
+    };
+
+    let temp = tempfile::tempdir().unwrap();
+    let config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    let fact_id = store
+        .remember_fact("详情 overlap 回归事实", "test")
+        .unwrap();
+    store
+        .remember_evicted_turns(&[EvictedTurn {
+            source_id: "detail-overlap".into(),
+            timestamp: "2026-10-03T10:00:00+00:00".into(),
+            role: "assistant".into(),
+            content: "详情 overlap 回归事实".into(),
+            refs: vec![MemoryRef {
+                kind: "fact".into(),
+                id: fact_id,
+            }],
+            ..EvictedTurn::default()
+        }])
+        .unwrap();
+    let carrier_id = store
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap()
+        .items[0]["id"]
+        .as_i64()
+        .unwrap();
+
+    let reached = Arc::new(Barrier::new(2));
+    let release = Arc::new(Barrier::new(2));
+    let once = Arc::new(AtomicBool::new(true));
+    let reader = store.clone().with_overlap_hook(Arc::new({
+        let reached = Arc::clone(&reached);
+        let release = Arc::clone(&release);
+        let once = Arc::clone(&once);
+        move |point| {
+            if point == OverlapPoint::BrowseBeforeEpoch && once.swap(false, Ordering::SeqCst) {
+                reached.wait();
+                release.wait();
+            }
+        }
+    }));
+    let detail = std::thread::spawn(move || reader.browse_evicted_item(carrier_id).unwrap());
+
+    reached.wait();
+    assert!(store.delete_item(BrowseTable::Facts, fact_id).unwrap());
+    release.wait();
+
+    assert!(detail.join().unwrap().is_none());
+    assert!(store.browse_evicted_item(carrier_id).unwrap().is_none());
+}
+
 #[tokio::test]
 async fn hybrid_keyword_overlap_retries_after_tombstone_commit() {
     use std::sync::{
