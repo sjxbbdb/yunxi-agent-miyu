@@ -448,6 +448,35 @@ read can still overlap the tiny interval after its final epoch check and before
 the caller consumes the value. Transfer-side staged tombstone fixups and
 crash-injection evidence remain the next G3-05 boundaries.
 
+## G3-05-18 implemented slice: dynamic transcript shell-path barrier
+
+The `run_command` transcript guard now closes the first shell-indirection gap
+without becoming a general shell parser. It splits only unquoted compound
+segments, recognizes a small set of file-access command positions and
+unquoted redirections, and rejects unresolved `$NAME`/`${NAME}`, `$()` and
+backtick expansion in those contexts. Literal paths still use the existing
+typed provenance check. A substitution in a non-file command such as
+`echo "$(printf hi)"` remains allowed, so the new rule does not turn every
+shell feature into a privacy denial.
+
+The regression suite proves rejection before the handler for variable-backed
+reads, command-substitution paths, `cd` followed by a dynamic relative read,
+and dynamic redirection, while proving the non-file echo case still reaches
+the handler. The suite also covers path-qualified file commands, shallow
+wrapper/shell invocations, append-style assignments, and positional parameters.
+This is intentionally a conservative lexical boundary: arbitrary wrapper
+chains, embedded scripts, symlink/hardlink identity races, and full shell
+data-flow remain explicit residuals and are not claimed solved.
+
+Evidence (WSL Ubuntu-24.04 ext4 disposable checkout, one cargo job):
+
+- `cargo test -p yunxi-engine --lib tools::transcript_guard --locked --
+  --test-threads=1` — 15 passed;
+- `cargo fmt --all -- --check` and `git diff --check` passed.
+
+The next boundary is to decide whether deeper wrapper/embedded-script mediation
+is warranted by observed use, rather than silently growing a second shell parser.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,

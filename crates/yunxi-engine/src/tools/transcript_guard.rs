@@ -13,6 +13,15 @@ use yunxi_core::memory::MemoryStore;
 use yunxi_core::state::StateStore;
 
 const READ_TOOLS: &[&str] = &["read", "grep", "glob", "run_command"];
+const FILE_ACCESS_COMMANDS: &[&str] = &[
+    "cat", "head", "tail", "grep", "rg", "sed", "awk", "find", "ls", "stat", "readlink", "file",
+    "cp", "mv", "rm", "touch", "tee", "cd",
+];
+const FILE_ACCESS_WRAPPERS: &[&str] = &[
+    "busybox", "command", "doas", "env", "exec", "eval", "ionice", "nice", "nohup", "setsid",
+    "sudo", "time", "timeout", "watch", "xargs",
+];
+const SHELL_COMMANDS: &[&str] = &["bash", "dash", "ksh", "sh", "zsh"];
 
 /// Bind the current session's transcript policy to a tool registry.
 ///
@@ -32,9 +41,10 @@ pub(crate) fn bind(registry: &mut ToolRegistry, state: StateStore, memory: Memor
                 .and_then(Value::as_str)
                 .and_then(|raw| path_from_argument(raw))
                 .and_then(|path| check_path(state, memory, &path)),
-            // Shell parsing is intentionally not attempted.  We only block
-            // an exact compact-session root mention, which is the absolute
-            // path emitted in the transcript carrier hint.  Structured reads
+            // Shell parsing is intentionally not attempted. We block an exact
+            // compact-session root mention, which is the absolute path emitted in
+            // the transcript carrier hint, and we fail closed for opaque shell
+            // expansion when it occurs in a file-access context. Structured reads
             // nested through `yunxi tool-call` hit the same registry barrier.
             "run_command" => args
                 .get("command")
@@ -144,12 +154,11 @@ fn check_path(state: &StateStore, memory: &MemoryStore, path: &Path) -> Option<S
 fn check_command(state: &StateStore, memory: &MemoryStore, command: &str) -> Option<String> {
     let compact = compact_root(state);
     let compact_text = compact.to_string_lossy();
-    // Shell grammar is intentionally not parsed. We only inspect path-like
+    // Shell grammar is intentionally not fully parsed. We inspect path-like
     // tokens and deny when one resolves inside this session's compact root.
     // This covers absolute paths emitted by compact extras and relative/`~/`
-    // spellings that resolve to the same root, without pretending to
-    // understand shell variables, command substitutions, or embedded script
-    // strings. Those remain explicit residuals of this barrier.
+    // spellings that resolve to the same root. Opaque expansion is denied only
+    // in a file-access context; unrelated substitutions remain executable.
     for token in command_path_tokens(command) {
         let candidate = resolve_path(token);
         if let Some(reason) = check_path(state, memory, &candidate) {
@@ -163,7 +172,200 @@ fn check_command(state: &StateStore, memory: &MemoryStore, command: &str) -> Opt
     if command.contains(compact_text.as_ref()) {
         return Some("opaque compact transcript command is blocked".to_string());
     }
+    if command_has_dynamic_file_access(command) {
+        return Some("dynamic transcript path is blocked".to_string());
+    }
     None
+}
+
+/// Return whether a command contains a file-access context without trying to
+/// become a complete shell parser.  We inspect the first command in each
+/// unquoted compound segment and unquoted redirection operators.  This keeps
+/// harmless substitutions such as `echo "$(printf hi)"` available while
+/// refusing to guess about dynamic paths used by file operations.
+fn command_has_dynamic_file_access(command: &str) -> bool {
+    command_segments(command).any(|segment| {
+        let file_access = has_unquoted_redirection(segment) || segment_invokes_file_access(segment);
+        file_access && has_dynamic_shell_syntax(segment)
+    })
+}
+
+fn command_segments(command: &str) -> impl Iterator<Item = &str> {
+    let mut segments = Vec::new();
+    let mut start = 0;
+    let mut quote = None;
+    let mut escaped = false;
+    for (index, ch) in command.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if ch == '\\' && quote != Some('\'') {
+            escaped = true;
+            continue;
+        }
+        match quote {
+            Some('\'') => {
+                if ch == '\'' {
+                    quote = None;
+                }
+            }
+            Some('"') => {
+                if ch == '"' {
+                    quote = None;
+                }
+            }
+            None => match ch {
+                '\'' | '"' => quote = Some(ch),
+                ';' | '|' | '&' | '\n' => {
+                    segments.push(&command[start..index]);
+                    start = index + ch.len_utf8();
+                }
+                _ => {}
+            },
+            _ => unreachable!(),
+        }
+    }
+    segments.push(&command[start..]);
+    segments.into_iter()
+}
+
+fn segment_invokes_file_access(segment: &str) -> bool {
+    let tokens = command_path_tokens(segment).collect::<Vec<_>>();
+    let Some(first_index) = tokens.iter().position(|token| !is_shell_assignment(token)) else {
+        return false;
+    };
+    let first = command_basename(tokens[first_index]);
+    if FILE_ACCESS_COMMANDS.contains(&first) {
+        return true;
+    }
+    if FILE_ACCESS_WRAPPERS.contains(&first) {
+        return tokens
+            .iter()
+            .skip(first_index + 1)
+            .map(|token| command_basename(token))
+            .any(|token| FILE_ACCESS_COMMANDS.contains(&token));
+    }
+    if SHELL_COMMANDS.contains(&first) {
+        let mut after_c = false;
+        return tokens.iter().skip(first_index + 1).any(|token| {
+            if after_c {
+                return FILE_ACCESS_COMMANDS.contains(&command_basename(token));
+            }
+            if *token == "-c" || token.starts_with("-c") {
+                after_c = true;
+            }
+            false
+        });
+    }
+    false
+}
+
+fn command_basename(token: &str) -> &str {
+    token.rsplit('/').next().unwrap_or(token)
+}
+
+fn is_shell_assignment(token: &str) -> bool {
+    let Some((raw_name, _)) = token.split_once('=') else {
+        return false;
+    };
+    let name = raw_name.strip_suffix('+').unwrap_or(raw_name);
+    !name.is_empty()
+        && name.chars().enumerate().all(|(index, ch)| {
+            (index == 0 && (ch == '_' || ch.is_ascii_alphabetic()))
+                || (index > 0 && (ch == '_' || ch.is_ascii_alphanumeric()))
+        })
+}
+
+fn has_unquoted_redirection(segment: &str) -> bool {
+    let mut quote = None;
+    let mut escaped = false;
+    for ch in segment.chars() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if ch == '\\' && quote != Some('\'') {
+            escaped = true;
+            continue;
+        }
+        match quote {
+            Some('\'') => {
+                if ch == '\'' {
+                    quote = None;
+                }
+            }
+            Some('"') => {
+                if ch == '"' {
+                    quote = None;
+                }
+            }
+            None => match ch {
+                '\'' | '"' => quote = Some(ch),
+                '<' | '>' => return true,
+                _ => {}
+            },
+            _ => unreachable!(),
+        }
+    }
+    false
+}
+
+fn has_dynamic_shell_syntax(command: &str) -> bool {
+    let mut quote = None;
+    let mut escaped = false;
+    let chars = command.chars().collect::<Vec<_>>();
+    let mut index = 0;
+    while index < chars.len() {
+        let ch = chars[index];
+        if escaped {
+            escaped = false;
+            index += 1;
+            continue;
+        }
+        if ch == '\\' && quote != Some('\'') {
+            escaped = true;
+            index += 1;
+            continue;
+        }
+        match quote {
+            Some('\'') => {
+                if ch == '\'' {
+                    quote = None;
+                }
+            }
+            Some('"') => {
+                if ch == '"' {
+                    quote = None;
+                } else if ch == '$' && is_dynamic_dollar(&chars, index) {
+                    return true;
+                } else if ch == '`' {
+                    return true;
+                }
+            }
+            None => match ch {
+                '\'' | '"' => quote = Some(ch),
+                '`' => return true,
+                '$' if is_dynamic_dollar(&chars, index) => return true,
+                _ => {}
+            },
+            _ => unreachable!(),
+        }
+        index += 1;
+    }
+    false
+}
+
+fn is_dynamic_dollar(chars: &[char], index: usize) -> bool {
+    let Some(next) = chars.get(index + 1).copied() else {
+        return false;
+    };
+    next == '('
+        || next == '{'
+        || next == '_'
+        || next.is_ascii_alphabetic()
+        || next.is_ascii_digit()
+        || matches!(next, '@' | '*' | '?' | '#' | '!' | '-')
 }
 
 fn command_path_tokens(command: &str) -> impl Iterator<Item = &str> {
@@ -382,6 +584,77 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn dynamic_assignment_transcript_path_is_denied_before_handler() {
+        let error = call_guarded_run_command("p=$STATE_COMPACT; cat \"$p/fold.md\"")
+            .await
+            .unwrap_err();
+        assert!(
+            error.contains("dynamic transcript path"),
+            "unexpected: {error}"
+        );
+    }
+
+    #[tokio::test]
+    async fn command_substitution_transcript_path_is_denied_before_handler() {
+        let error = call_guarded_run_command("cat \"$(printf '%s' \"$STATE_COMPACT\")\"")
+            .await
+            .unwrap_err();
+        assert!(
+            error.contains("dynamic transcript path"),
+            "unexpected: {error}"
+        );
+    }
+
+    #[tokio::test]
+    async fn cd_then_dynamic_relative_read_is_denied_before_handler() {
+        let error = call_guarded_run_command("cd /tmp; cat \"$name\"")
+            .await
+            .unwrap_err();
+        assert!(
+            error.contains("dynamic transcript path"),
+            "unexpected: {error}"
+        );
+    }
+
+    #[tokio::test]
+    async fn dynamic_redirect_is_denied_but_echo_substitution_is_allowed() {
+        let error = call_guarded_run_command("printf x > \"$p/fold\"")
+            .await
+            .unwrap_err();
+        assert!(
+            error.contains("dynamic transcript path"),
+            "unexpected: {error}"
+        );
+
+        let result = call_guarded_run_command(r#"echo "$(printf hi)""#)
+            .await
+            .expect("echo without file access should reach the handler");
+        assert_eq!(result, "handler ran");
+
+        let result = call_guarded_run_command("cd /tmp; echo \"$name\"")
+            .await
+            .expect("an unrelated dynamic echo segment should reach the handler");
+        assert_eq!(result, "handler ran");
+    }
+
+    #[tokio::test]
+    async fn dynamic_file_access_aliases_and_shell_parameters_are_denied() {
+        for command in [
+            "/bin/cat \"$p/fold.md\"",
+            "./cat \"$p/fold.md\"",
+            "sudo cat \"$p/fold.md\"",
+            "A+=v cat \"$p/fold.md\"",
+            "cat \"$1\"",
+        ] {
+            let error = call_guarded_run_command(command).await.unwrap_err();
+            assert!(
+                error.contains("dynamic transcript path"),
+                "command {command:?}: unexpected error: {error}"
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn cd_into_compact_scope_is_denied_before_relative_read() {
         let temp = tempfile::tempdir().unwrap();
         let paths = test_paths(temp.path());
@@ -424,6 +697,24 @@ mod tests {
             |_| async { Ok("handler ran".to_string()) },
         ));
         registry
+    }
+
+    async fn call_guarded_run_command(command: &str) -> Result<String, String> {
+        let temp = tempfile::tempdir().map_err(|error| error.to_string())?;
+        let paths = test_paths(temp.path());
+        let state =
+            yunxi_core::state::StateStore::new(&paths).map_err(|error| error.to_string())?;
+        let memory =
+            yunxi_core::memory::MemoryStore::new(&yunxi_base::config::AppConfig::default(), &paths);
+        let mut registry = run_command_registry();
+        bind(&mut registry, state, memory);
+        registry
+            .call(
+                "run_command",
+                &serde_json::json!({"command": command}).to_string(),
+            )
+            .await
+            .map_err(|error| error.to_string())
     }
 
     fn transcript_fixture(

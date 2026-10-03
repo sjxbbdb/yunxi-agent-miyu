@@ -15,6 +15,12 @@
   lifecycle 8/8、browse 4/4、store 16/16 通过；严格跨库线性化与 crash 注入仍未
   宣称完成。
 
+- G3-05 transcript dynamic-path barrier：`run_command` 在文件访问上下文中对
+  未解析变量、命令替换、反引号和动态重定向 fail-closed，同时保留普通
+  `echo "$(...)"`；带路径文件命令、浅层 wrapper/`sh -c`、追加赋值和位置参数
+  也已 fail-closed，WSL transcript_guard 15/15 通过。任意嵌套 wrapper、嵌入脚本
+  和 symlink/hardlink 竞态仍未宣称覆盖。
+
 - G3-05 memory provenance：删除提交后的 `MemoryStore` 重建会继续隐藏已删除的
   evicted carrier；`reset_all` 保留 facts/episodes 的自增高水位，避免独立 state
   清理窗口中的 tombstone ID 复用。新增重启与 ID 复用回归测试，WSL store 测试

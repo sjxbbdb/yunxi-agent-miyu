@@ -45,6 +45,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   在预算耗尽时 fail-closed。生命周期 8/8、browse 4/4、store 16/16 已在 WSL
   ext4 通过；full core 的 5 个既有 LLM endpoint/error-message 失败与本批
   memory-only 改动无关。严格跨库 overlap 线性化仍未宣称完成。
+  G3-05-18 又把 transcript `run_command` 的动态路径缺口收窄：变量、命令替换、
+  反引号和重定向只有在文件访问上下文中才 fail-closed，普通 `echo` 的替换仍
+  可执行；带路径文件命令、浅层 wrapper/`sh -c`、追加赋值和位置参数也有回归；
+  WSL transcript_guard 15/15 通过。它仍是词法屏障，不宣称覆盖任意嵌套 wrapper、
+  嵌入脚本或 symlink/hardlink 身份竞态。
 
 ## 下一处施工边界
 
@@ -53,15 +58,16 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 1. 补 provenance 在 concurrent delete/recall 的更强 overlap 语义上的决策
    或测试 seam；当前只证明了并发调用后的 convergence，epoch 二次检查和
    异步 embedding await 边界已有有限重试，但最终跨库 overlap 仍未线性化；
-2. 对 transcript `run_command` 的变量、命令替换、重定向、symlink/hardlink
-   和 `cd` 后相对路径语法做明确的 fail-closed 边界决策；当前 dev 子代理
-   前台 fresh registry 已绑定并有 WSL 回归覆盖，dev 面的 read/grep/glob
-   仍按既有设计不注册；
+2. 对 transcript `run_command` 剩余的嵌套 wrapper/嵌入脚本、symlink/hardlink
+   身份竞态做明确的 fail-closed 边界决策；变量、命令替换、重定向、`cd` 后
+   动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值和位置参数已有
+   词法屏障与 15/15 回归，当前 dev 子代理前台 fresh registry
+   已绑定并有 WSL 回归覆盖，dev 面的 read/grep/glob 仍按既有设计不注册；
 3. 只在这些证据通过后，才评估 G3-05 的阶段退出。
 
 此外，transfer 的 staged fixup 目前仍依赖导入前的 tombstone 过滤，尚未把
-epoch 递增语义扩展到独立的 staged 数据库；这不是运行时在线读写路径，仍需
-专门的 transfer/crash regression 后再决定是否纳入同一屏障。
+epoch 递增语义扩展到独立的 staged 数据库；这不是运行时在线读写路径，已审计
+为不应伪造在线 epoch，仍需专门的 transfer/crash regression 后再决定是否扩展。
 
 现有 read barrier 对未知 legacy carrier 默认拒绝；它对手工拼接的相对 shell
    路径尚未宣称覆盖。不得用“结构化 tool-call 可拒绝”替代任意 shell 语法
