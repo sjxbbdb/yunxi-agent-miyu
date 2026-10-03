@@ -1003,6 +1003,16 @@ rows/embeddings after a restart.
 6. Concurrent delete/recall and crash-after-delete tests show no deleted id in
    keyword, semantic, association, compact, restore, or backup-import paths.
 
+Current transfer evidence includes
+`marker_failure_backup_import_preserves_linked_and_unlinked_provenance`: a
+forced import that fails while stamping a marker leaves the live tree rolled
+back, while the pre-install backup can be imported into a fresh home and keeps
+summary/transcript provenance, linked evicted carriers, and unlinked carriers
+with identical text. WSL Ubuntu-24.04 ext4 `cargo test -p yunxi-engine --lib
+transfer --locked -- --nocapture --test-threads=1` passed 48/48. This is
+archive and filesystem rollback evidence only; it does not establish
+cross-SQLite atomicity or OS-crash safety.
+
 ## Explicit non-goals
 
 G3-05 must not rewrite all historical text, infer references from content,

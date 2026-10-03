@@ -1246,6 +1246,164 @@ pub(crate) mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn marker_failure_backup_import_preserves_linked_and_unlinked_provenance() {
+        use std::os::unix::fs::symlink;
+
+        fn write_evicted_carriers(paths: &YunXiPaths) {
+            let path = paths
+                .state_dir
+                .join("personas/default/memory/evicted_context.db");
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            let conn = rusqlite::Connection::open(path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE evicted_turns (
+                    id INTEGER PRIMARY KEY,
+                    content TEXT NOT NULL
+                 );
+                 CREATE TABLE evicted_embeddings (
+                    id INTEGER PRIMARY KEY,
+                    model TEXT NOT NULL
+                 );
+                 CREATE TABLE memory_provenance (
+                    carrier_kind TEXT NOT NULL,
+                    carrier_id INTEGER NOT NULL,
+                    memory_kind TEXT NOT NULL,
+                    memory_id INTEGER NOT NULL
+                 );
+                 INSERT INTO evicted_turns VALUES
+                    (1, 'linked archived turn'),
+                    (2, 'unlinked archived turn');
+                 INSERT INTO evicted_embeddings VALUES (1, 'model'), (2, 'model');
+                 INSERT INTO memory_provenance VALUES
+                    ('evicted_turn', 1, 'fact', 7);",
+            )
+            .unwrap();
+        }
+
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = populated_home(source.path());
+        let out = tempfile::tempdir().unwrap();
+        let archive = out.path().join("source.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let target_paths = populated_home(target.path());
+        {
+            let conn =
+                rusqlite::Connection::open(target_paths.state_dir.join("conversation.db")).unwrap();
+            conn.execute(
+                "UPDATE memory_provenance SET carrier_id = 'summary-backup-target' WHERE session_id = 's1'",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "UPDATE transcript_carriers SET transcript_id = 'transcript-backup-target' WHERE session_id = 's1'",
+                [],
+            )
+            .unwrap();
+        }
+        write_evicted_carriers(&target_paths);
+
+        let outside = tempfile::tempdir().unwrap();
+        symlink(outside.path(), target.path().join(".layout-v1")).unwrap();
+        let error = super::import::import(
+            &target_paths,
+            &archive,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("symlink"), "got: {error}");
+
+        let backup = std::fs::read_dir(out.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .find(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| {
+                        name.starts_with("yunxi-backup-") && name.ends_with(".tar.gz")
+                    })
+            })
+            .expect("force import must leave an importable backup archive");
+
+        let recovery = tempfile::tempdir().unwrap();
+        let recovery_paths = test_paths(recovery.path());
+        super::import::import(
+            &recovery_paths,
+            &backup,
+            &super::import::ImportOptions::default(),
+        )
+        .unwrap();
+
+        let conversation =
+            rusqlite::Connection::open(recovery_paths.state_dir.join("conversation.db")).unwrap();
+        let carrier_id: String = conversation
+            .query_row(
+                "SELECT carrier_id FROM memory_provenance WHERE session_id = 's1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(carrier_id, "summary-backup-target");
+        let transcript_id: String = conversation
+            .query_row(
+                "SELECT transcript_id FROM transcript_carriers WHERE session_id = 's1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(transcript_id, "transcript-backup-target");
+
+        let evicted = rusqlite::Connection::open(
+            recovery_paths
+                .state_dir
+                .join("personas/default/memory/evicted_context.db"),
+        )
+        .unwrap();
+        assert_eq!(
+            evicted
+                .query_row(
+                    "SELECT COUNT(*) FROM evicted_turns WHERE id IN (1, 2)",
+                    [],
+                    |row| { row.get::<_, i64>(0) }
+                )
+                .unwrap(),
+            2,
+            "backup import must retain both linked and unlinked carriers"
+        );
+        assert_eq!(
+            evicted
+                .query_row(
+                    "SELECT COUNT(*) FROM memory_provenance WHERE carrier_id = 1",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            1,
+            "linked carrier provenance must survive backup import"
+        );
+        assert_eq!(
+            evicted
+                .query_row(
+                    "SELECT COUNT(*) FROM memory_provenance WHERE carrier_id = 2",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            0,
+            "unlinked carrier must remain unlinked after backup import"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn marker_failure_restores_memory_and_kb_together() {
         use std::os::unix::fs::symlink;
 

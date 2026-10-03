@@ -187,8 +187,17 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   `replace_visible_with_summary` API 写入无 `memory_provenance` 的摘要，并让
   摘要正文与随后删除的 fact 完全相同；删除后 checkpoint 仍保留原摘要且不出现
   redaction marker，证明 unknown/legacy carrier 不会按文本猜测被清理。WSL
-  Ubuntu-24.04 ext4 `agent::tests::context` 38/38 通过。transfer rollback 的
-  linked/unlinked 组合仍不伪造为已覆盖，待有可复用的最小入口后再补。
+  Ubuntu-24.04 ext4 `agent::tests::context` 38/38 通过；transfer rollback 的
+  linked/unlinked 组合随后由 G3-05-40 的最小 backup-import 入口补齐。
+
+  G3-05-40 补上 transfer backup-import 的最小 provenance 矩阵：
+  `marker_failure_backup_import_preserves_linked_and_unlinked_provenance` 让
+  `--force` import 在 marker stamping 失败前生成 backup，确认失败后 live
+  tree 回滚，再把该 backup 通过真实 import 入口导入空 home；summary/transcript
+  provenance、带 provenance 的 linked evicted carrier 和同文本但无 provenance
+  的 unlinked carrier 均保持。WSL Ubuntu-24.04 ext4 `transfer` 48/48 通过，
+  并通过 `cargo fmt --all -- --check`。该证据只覆盖 backup/archive 与文件系统
+  rollback，不扩大为 live/staged SQLite 跨库原子性或 OS crash 保证。
 
   本阶段逐条退出前对账见
   [`2026-10-02-g3-05-exit-audit.md`](2026-10-02-g3-05-exit-audit.md)；该文档明确

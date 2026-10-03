@@ -153,7 +153,13 @@
 - G3-05 legacy summary provenance：旧 `replace_visible_with_summary` 路径生成的
   无 provenance 摘要，在删除同文案 fact 后仍可读且不出现 redaction marker，
   防止按文本猜测 memory 关联。WSL `agent::tests::context` 38/38 通过；transfer
-  rollback 的 linked/unlinked 组合仍待专门入口。
+  普通 rollback 的 linked/unlinked 全路径仍待专门入口。
+
+- G3-05 transfer backup-import provenance：新增
+  `marker_failure_backup_import_preserves_linked_and_unlinked_provenance`，验证
+  `--force` 安装在 marker 失败后留下的 backup 可通过真实 import 入口恢复，
+  summary/transcript provenance、linked evicted carrier 与同文案 unlinked carrier
+  均保持。WSL transfer 48/48 通过；不宣称跨 SQLite 原子性或 OS crash 安全。
 
 - G0 基线稳定化：修复 YunXi 产品改名后 legacy config namespace 的正/负路径兼容，校准 TUI/replay/renderer/tool-summary 的当前产品输出夹具，修正 bundled script 与 registry fixture 漂移，并让 WSL 权限位测试使用原生 Linux 文件系统临时目录。
 - G0 验证：WSL Ubuntu-24.04 工作区单线程测试在 v4 当前提交上重新全绿（根包 yunxi 运行 508 项、yunxi-base 396、yunxi-core 651、yunxi-engine 与 yunxi-hosts 均完成且 0 failed；doctest 全部通过）。本结果对应 G0 evidence index 的 `G0-20261001-workspace-02`；Arch Linux 与 macOS M-series 仍未实机验证。
