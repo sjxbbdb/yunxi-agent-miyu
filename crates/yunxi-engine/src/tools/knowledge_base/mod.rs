@@ -120,6 +120,24 @@ impl KnowledgeCapability {
         }
     }
 
+    pub(crate) fn bundled_maintenance() -> Self {
+        Self {
+            read_namespaces: [DEFAULT_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            write_namespaces: [DEFAULT_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            delete_namespaces: [DEFAULT_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            allow_bundled_replace: true,
+        }
+    }
+
     #[cfg(test)]
     fn bundled_admin() -> Self {
         Self {
@@ -187,6 +205,10 @@ impl KnowledgeBase {
             .map(|capability| (*capability).clone())
             .unwrap_or_else(KnowledgeCapability::denied);
         Self::with_capability(config, paths, capability)
+    }
+
+    pub(crate) fn bundled_maintenance(config: AppConfig, paths: YunXiPaths) -> Result<Self> {
+        Self::with_capability(config, paths, KnowledgeCapability::bundled_maintenance())
     }
 
     pub fn init(&self) -> Result<()> {
@@ -585,6 +607,18 @@ mod tests {
         .unwrap();
         admin.import_file(&source, "default-kb/old.md").unwrap();
         admin.import_file(&source, "notes/user.md").unwrap();
+
+        let maintenance =
+            KnowledgeBase::bundled_maintenance(config.clone(), paths.clone()).unwrap();
+        assert!(maintenance
+            .import_file(&source, "notes/should-not-write.md")
+            .is_err());
+        assert!(maintenance.remove("notes/user.md").is_err());
+        assert!(maintenance
+            .list()
+            .unwrap()
+            .iter()
+            .all(|record| record.provenance.namespace == DEFAULT_KB_NAMESPACE));
 
         let replacement = temp.path().join("replacement");
         std::fs::create_dir_all(&replacement).unwrap();

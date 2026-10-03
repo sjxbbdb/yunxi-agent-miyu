@@ -40,6 +40,17 @@ impl KnowledgeBase {
     }
 
     pub fn replace_default_files(&self, source: &Path) -> Result<Vec<String>> {
+        self.replace_default_files_with_revision(source, "")
+    }
+
+    /// Replace the bundled namespace and stamp every imported row with the
+    /// source revision that produced the snapshot.  User imports retain the
+    /// empty revision and are never rewritten by this path.
+    pub(crate) fn replace_default_files_with_revision(
+        &self,
+        source: &Path,
+        source_revision: &str,
+    ) -> Result<Vec<String>> {
         if !self.capability.can_replace_bundled() {
             bail!("knowledge base bundled namespace requires an internal capability")
         }
@@ -50,7 +61,7 @@ impl KnowledgeBase {
             let rel = file.strip_prefix(source).unwrap_or(&file);
             let rel = rel.display().to_string().replace('\\', "/");
             let name = normalize_relative_path(&format!("default-kb/{rel}"))?;
-            if let Ok(name) = self.import_file(&file, &name) {
+            if let Ok(name) = self.import_file_with_revision(&file, &name, source_revision) {
                 added.push(name);
             }
         }
@@ -450,6 +461,15 @@ impl KnowledgeBase {
     }
 
     pub(in crate::tools) fn import_file(&self, source: &Path, name: &str) -> Result<String> {
+        self.import_file_with_revision(source, name, "")
+    }
+
+    pub(crate) fn import_file_with_revision(
+        &self,
+        source: &Path,
+        name: &str,
+        source_revision: &str,
+    ) -> Result<String> {
         let name = normalize_relative_path(name)?;
         let namespace = SourceMetadata::for_file(&name).namespace;
         if !self.capability.can_write(&namespace) {
@@ -470,6 +490,10 @@ impl KnowledgeBase {
         std::fs::write(&dest, &bytes)?;
         let hash = sha256_hex(&bytes);
         let mtime = unix_time(std::fs::metadata(&dest)?.modified()?);
+        let mut provenance = SourceMetadata::for_file(&name);
+        if provenance.namespace == DEFAULT_KB_NAMESPACE {
+            provenance.source_revision = source_revision.trim().to_string();
+        }
         let conn = self.meta_conn()?;
         init_meta_db(&conn)?;
         conn.execute(
@@ -481,10 +505,10 @@ impl KnowledgeBase {
                 mtime,
                 hash,
                 now_secs(),
-                SourceMetadata::for_file(&name).namespace,
-                SourceMetadata::for_file(&name).source_kind,
-                SourceMetadata::for_file(&name).source_uri,
-                SourceMetadata::for_file(&name).source_revision,
+                provenance.namespace,
+                provenance.source_kind,
+                provenance.source_uri,
+                provenance.source_revision,
             ],
         )?;
         Ok(name)

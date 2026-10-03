@@ -17,6 +17,7 @@
 //! 卡片转瞬回到「空闲」，用户实拍的就是这一幕。
 
 use crate::tools::knowledge_base::*;
+use std::collections::HashMap;
 
 /// 一趟重建最多重跑几遍。
 ///
@@ -29,6 +30,20 @@ const MAX_REINDEX_PASSES: usize = 8;
 const LOG_TAIL_BYTES: usize = 2000;
 
 impl KnowledgeBase {
+    fn record_is_current(&self, record: &FileRecord) -> Result<bool> {
+        let conn = self.meta_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT content_sha256, namespace, source_revision FROM files WHERE name=?1",
+        )?;
+        let mut rows = stmt.query(params![record.name])?;
+        let Some(row) = rows.next()? else {
+            return Ok(false);
+        };
+        Ok(row.get::<_, String>(0)? == record.content_sha256
+            && row.get::<_, String>(1)? == record.provenance.namespace
+            && row.get::<_, String>(2)? == record.provenance.source_revision)
+    }
+
     pub(in crate::tools::knowledge_base) fn reindex_lock_path(&self) -> PathBuf {
         self.root.join("embedding.lock")
     }
@@ -272,6 +287,20 @@ impl KnowledgeBase {
         if self.capability.read_namespaces.is_empty() {
             return Ok(Vec::new());
         }
+        let current_files = self
+            .list_existing()?
+            .into_iter()
+            .map(|record| {
+                (
+                    record.name,
+                    (
+                        record.content_sha256,
+                        record.provenance.namespace,
+                        record.provenance.source_revision,
+                    ),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         let mut namespaces = self
             .capability
             .read_namespaces
@@ -284,7 +313,7 @@ impl KnowledgeBase {
             .collect::<Vec<_>>()
             .join(",");
         let sql = format!(
-            "SELECT file_name, start_char, end_char, text, embedding, embedding_json,
+            "SELECT file_name, content_sha256, start_char, end_char, text, embedding, embedding_json,
                     namespace, source_kind, source_uri, source_revision
              FROM semantic_chunks WHERE model = ?1 AND namespace IN ({placeholders})"
         );
@@ -295,21 +324,23 @@ impl KnowledgeBase {
         let rows = stmt.query_map(rusqlite::params_from_iter(values.iter()), |row| {
             Ok((
                 row.get::<_, String>(0)?,
-                row.get::<_, usize>(1)?,
+                row.get::<_, String>(1)?,
                 row.get::<_, usize>(2)?,
-                row.get::<_, String>(3)?,
-                row.get::<_, Option<Vec<u8>>>(4)?,
-                row.get::<_, String>(5)?,
+                row.get::<_, usize>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, Option<Vec<u8>>>(5)?,
                 row.get::<_, String>(6)?,
                 row.get::<_, String>(7)?,
                 row.get::<_, String>(8)?,
                 row.get::<_, String>(9)?,
+                row.get::<_, String>(10)?,
             ))
         })?;
         let mut results = Vec::new();
         for row in rows {
             let (
                 file_name,
+                content_sha256,
                 _start,
                 _end,
                 text,
@@ -320,6 +351,20 @@ impl KnowledgeBase {
                 source_uri,
                 source_revision,
             ) = row?;
+            let Some((current_sha, current_namespace, current_revision)) =
+                current_files.get(&file_name)
+            else {
+                continue;
+            };
+            if current_sha != &content_sha256
+                || current_namespace != &namespace
+                || current_revision != &source_revision
+            {
+                // A file update or bundled source revision change may leave
+                // old rows until the background reindex runs.  Never return
+                // those stale vectors as if they were current knowledge.
+                continue;
+            }
             let embedding = match blob
                 .as_deref()
                 .and_then(yunxi_base::embedding::vector_from_blob)
@@ -373,16 +418,23 @@ impl KnowledgeBase {
         let mut indexed = 0usize;
         // 已经建好的一次查完,而不是每个文件问一次:一趟要走全库,而全库里
         // 绝大多数文件是「上次就建好了、这次直接跳过」的。
-        let already: std::collections::HashSet<(String, String)> = {
+        let already: std::collections::HashSet<(String, String, String, String)> = {
             let mut stmt = semantic.prepare(
-                "SELECT DISTINCT file_name, content_sha256 FROM semantic_chunks \
+                "SELECT DISTINCT file_name, content_sha256, namespace, source_revision FROM semantic_chunks \
                  WHERE model = ?1 AND embedding IS NOT NULL",
             )?;
-            let rows = stmt.query_map(params![model], |row| Ok((row.get(0)?, row.get(1)?)))?;
+            let rows = stmt.query_map(params![model], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            })?;
             rows.collect::<rusqlite::Result<_>>()?
         };
         let needs_work = |record: &FileRecord| {
-            !already.contains(&(record.name.clone(), record.content_sha256.clone()))
+            !already.contains(&(
+                record.name.clone(),
+                record.content_sha256.clone(),
+                record.provenance.namespace.clone(),
+                record.provenance.source_revision.clone(),
+            ))
         };
         // 分母是「这趟真要嵌的文件数」，不是全库文件数。传 200 个新文件进来时
         // 分母写 6707 的话，进度条会从 0 一路爬到 97% 都还没开始干活，然后在
@@ -415,6 +467,11 @@ impl KnowledgeBase {
             // 一遍——「待重建」永远清不掉零,而界面上看不出为什么。算作失败并
             // 带上原因,至少这一格数字有个交代。
             if chunks.is_empty() {
+                if !self.record_is_current(&record)? {
+                    let _ = std::fs::write(self.reindex_rerun_path(), b"");
+                    progress.fail_file("source changed before empty-index cleanup; queued a rerun");
+                    continue;
+                }
                 semantic.execute(
                     "DELETE FROM semantic_chunks WHERE file_name=?1",
                     params![record.name],
@@ -439,6 +496,14 @@ impl KnowledgeBase {
                     continue;
                 }
             };
+            // Embedding is an await boundary.  The source may have been
+            // replaced or deleted while the provider was working; never let
+            // that old snapshot delete current chunks and publish stale ones.
+            if !self.record_is_current(&record)? {
+                let _ = std::fs::write(self.reindex_rerun_path(), b"");
+                progress.fail_file("source changed while embedding; queued a rerun");
+                continue;
+            }
             // Replace one file atomically.  Without a transaction, a SQLite
             // error during a later INSERT commits the earlier chunks; the
             // next pass then sees one current-model/content-hash row and
@@ -805,6 +870,163 @@ mod reindex_tests {
             )
             .unwrap();
         assert_eq!(complete_count, 2);
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn source_revision_change_forces_reindex_even_when_content_is_same() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = super::super::tests::test_paths(temp.path());
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = [0_u8; 8192];
+            let _ = stream.read(&mut request).await.unwrap();
+            let body = r#"{"data":[{"index":0,"embedding":[1.0,0.0]}]}"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+        });
+
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = true;
+        config.plugins.knowledge_base.semantic_chunk_chars = 128;
+        config.plugins.knowledge_base.semantic_chunk_overlap = 0;
+        config.embedding.enabled = true;
+        config.embedding.backend = EmbeddingBackend::Remote;
+        config.embedding.provider_id = "g4-revision-embed".to_string();
+        config.embedding.model = "toy".to_string();
+        let mut provider = ProviderConfig::default_opencodezen();
+        provider.id = "g4-revision-embed".to_string();
+        provider.base_url = format!("http://{address}");
+        provider.api_key = Some("test-key".to_string());
+        provider.models = vec!["toy".to_string()];
+        provider.default_model = "toy".to_string();
+        config.providers.push(provider);
+
+        let kb = KnowledgeBase::bundled_maintenance(config, paths).unwrap();
+        kb.init().unwrap();
+        let source = temp.path().join("revision.md");
+        std::fs::write(&source, "same content across revisions").unwrap();
+        kb.import_file_with_revision(&source, "default-kb/revision.md", "v1")
+            .unwrap();
+        let embedder = kb.embedder().unwrap();
+        kb.semantic_conn()
+            .unwrap()
+            .execute(
+                "INSERT INTO semantic_chunks (provider_id, model, file_name, content_sha256, chunk_index, start_char, end_char, text, embedding_json, embedding, created_at, namespace, source_kind, source_uri, source_revision) VALUES (?1, ?2, ?3, ?4, 0, 0, 30, ?5, '[]', ?6, ?7, ?8, ?9, ?10, ?11)",
+                params![
+                    "old-provider",
+                    embedder.model_id(),
+                    "default-kb/revision.md",
+                    kb.list().unwrap()[0].content_sha256,
+                    "same content across revisions",
+                    vec![0_u8, 0, 0, 0],
+                    now_secs(),
+                    DEFAULT_KB_NAMESPACE,
+                    DEFAULT_KB_SOURCE_KIND,
+                    DEFAULT_KB_SOURCE_URI,
+                    "v1",
+                ],
+            )
+            .unwrap();
+        kb.import_file_with_revision(&source, "default-kb/revision.md", "v2")
+            .unwrap();
+
+        let mut progress = ReindexProgress::new(&kb, embedder.model_id());
+        let indexed = kb
+            .reindex_embeddings_inner(&embedder, true, &mut progress)
+            .await
+            .unwrap();
+        assert_eq!(
+            indexed, 1,
+            "revision changes must invalidate same-content vectors"
+        );
+        let revision: String = kb
+            .semantic_conn()
+            .unwrap()
+            .query_row(
+                "SELECT source_revision FROM semantic_chunks WHERE file_name='default-kb/revision.md'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(revision, "v2");
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn source_change_during_embedding_does_not_publish_stale_chunks() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = super::super::tests::test_paths(temp.path());
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let (release_tx, release_rx) = tokio::sync::oneshot::channel();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = [0_u8; 8192];
+            let _ = stream.read(&mut request).await.unwrap();
+            started_tx.send(()).unwrap();
+            release_rx.await.unwrap();
+            let body = r#"{"data":[{"index":0,"embedding":[1.0,0.0]}]}"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+        });
+
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = true;
+        config.plugins.knowledge_base.semantic_chunk_chars = 128;
+        config.plugins.knowledge_base.semantic_chunk_overlap = 0;
+        config.embedding.enabled = true;
+        config.embedding.backend = EmbeddingBackend::Remote;
+        config.embedding.provider_id = "g4-race-embed".to_string();
+        config.embedding.model = "toy".to_string();
+        let mut provider = ProviderConfig::default_opencodezen();
+        provider.id = "g4-race-embed".to_string();
+        provider.base_url = format!("http://{address}");
+        provider.api_key = Some("test-key".to_string());
+        provider.models = vec!["toy".to_string()];
+        provider.default_model = "toy".to_string();
+        config.providers.push(provider);
+
+        let kb = KnowledgeBase::bundled_maintenance(config, paths).unwrap();
+        kb.init().unwrap();
+        let source = temp.path().join("race.md");
+        std::fs::write(&source, "revision one").unwrap();
+        kb.import_file_with_revision(&source, "default-kb/race.md", "v1")
+            .unwrap();
+        let embedder = kb.embedder().unwrap();
+        let mut progress = ReindexProgress::new(&kb, embedder.model_id());
+        let reindex = kb.reindex_embeddings_inner(&embedder, true, &mut progress);
+        let mutate = async {
+            started_rx.await.unwrap();
+            std::fs::write(&source, "revision two").unwrap();
+            kb.import_file_with_revision(&source, "default-kb/race.md", "v2")
+                .unwrap();
+            release_tx.send(()).unwrap();
+        };
+        let (indexed, _) = tokio::join!(reindex, mutate);
+        assert_eq!(indexed.unwrap(), 0);
+        let chunk_count: i64 = kb
+            .semantic_conn()
+            .unwrap()
+            .query_row(
+                "SELECT COUNT(*) FROM semantic_chunks WHERE file_name='default-kb/race.md'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(chunk_count, 0, "stale embedding must not be published");
+        assert!(kb.reindex_rerun_path().is_file());
         server.await.unwrap();
     }
 

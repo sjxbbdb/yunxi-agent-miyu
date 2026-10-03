@@ -197,8 +197,8 @@ where
     on_progress(UpdateStage::HashingSnapshot);
     let release_hash = hash_dir(&source)?;
     on_progress(UpdateStage::ImportingFiles);
-    let kb = KnowledgeBase::new(config.clone(), paths.clone())?;
-    kb.replace_default_files(&source)?;
+    let kb = KnowledgeBase::bundled_maintenance(config.clone(), paths.clone())?;
+    kb.replace_default_files_with_revision(&source, &commit)?;
     on_progress(UpdateStage::SavingState);
     let mut state = load_state(paths)?;
     state.release_hash = release_hash;
@@ -218,11 +218,19 @@ fn import_snapshot(
     source: &Path,
     release_hash: &str,
 ) -> Result<()> {
-    let kb = KnowledgeBase::new(config.clone(), paths.clone())?;
-    kb.replace_default_files(source)?;
+    let revision = {
+        let commit = read_to_string(source.join("manifest/shorinwiki.commit"));
+        if commit.is_empty() {
+            release_hash.to_string()
+        } else {
+            commit
+        }
+    };
+    let kb = KnowledgeBase::bundled_maintenance(config.clone(), paths.clone())?;
+    kb.replace_default_files_with_revision(source, &revision)?;
     let mut state = load_state(paths)?;
     state.release_hash = release_hash.to_string();
-    state.shorin_wiki_commit = read_to_string(source.join("manifest/shorinwiki.commit"));
+    state.shorin_wiki_commit = revision;
     state.last_imported_at = Utc::now().to_rfc3339();
     save_state(paths, &state)
 }
