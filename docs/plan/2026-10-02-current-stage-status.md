@@ -27,7 +27,12 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   GC 的基线提交为 `e9bdaf32`，transcript read
    barrier 的基线提交为 `83f763b0`。本轮又将 barrier 绑定到 daemon IPC
    `ToolCall`、直连 CLI `tool`/`tool-call` 与直连 MCP `call_tool` 执行入口；
-   `ToolCatalog`、`tools/list` 等只读目录面仍刻意不绑定。
+   `ToolCatalog`、`tools/list` 等只读目录面仍刻意不绑定。新增的重启回归验证
+  见 `2026-10-02-g3-05-memory-provenance-plan.md` 的 G3-05-13：提交删除后
+  重建 `MemoryStore`，keyword/direct browse/semantic corpus 均隐藏已删除的
+  typed carrier，同时保留同文案的无关联 carrier。`reset_all` 的 facts/episodes
+  ID 复用窗口也已收窄：删除后保留自增高水位，回归测试确认 tombstone ID 不会
+  被 replacement fact 复用；独立 state 清理仍未宣称跨库原子性。
 
 ## 下一处施工边界
 

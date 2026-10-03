@@ -219,8 +219,11 @@ impl MemoryStore {
         tx.execute("DELETE FROM pending_events", [])?;
         tx.execute("DELETE FROM skill_records", [])?;
         tx.execute("DELETE FROM memory_revisions", [])?;
+        // Facts and episodes are tombstone-keyed.  Their ids must remain
+        // monotonic across a reset so a crash before the separate evicted
+        // state cleanup cannot make a new row inherit an old carrier edge.
         tx.execute(
-            "DELETE FROM sqlite_sequence WHERE name IN ('facts', 'episodes', 'pending_events', 'skill_records', 'memory_revisions')",
+            "DELETE FROM sqlite_sequence WHERE name IN ('pending_events', 'skill_records', 'memory_revisions')",
             [],
         )?;
         tx.commit()?;

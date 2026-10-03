@@ -288,6 +288,38 @@ symlink/hardlink identity races. Covering those cases requires an argv/shell
 mediation layer or a carrier inode/realpath registry; this contract does not
 silently introduce either one.
 
+## G3-05-13 implemented slice: committed-delete restart barrier
+
+The memory-store regression now closes and reopens the data/state SQLite
+handles after a fact delete has committed. The reopened store must hide the
+typed linked evicted carrier from keyword recall, direct browse, and the
+semantic corpus while retaining an unrelated carrier with identical text.
+The durable tombstone is asserted after reopen as well. This is a restart
+barrier for a committed delete; it is not a process-crash injection and does
+not claim cross-database atomicity or an overlap-after-commit guarantee.
+
+Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
+
+- `cargo test -p yunxi-core --lib memory::tests::store::committed_delete_survives_memory_store_restart_for_evicted_carriers --locked -- --exact --test-threads=1` — 1 passed, 707 filtered.
+- The disposable source and target were removed after the run; a follow-up
+  process check found no cargo or rustc process.
+
+## G3-05-14 implemented slice: reset id-reuse barrier
+
+`reset_all` still clears the data tables before it clears the separate
+evicted-context database. The data transaction therefore keeps the
+`facts`/`episodes` AUTOINCREMENT high-water marks instead of resetting them.
+This prevents a replacement row from reusing a tombstoned id if the process
+dies before the state cleanup. The other resettable bookkeeping sequences are
+unchanged. The regression keeps the deleted fact's tombstone and requires the
+replacement fact to receive a larger id.
+
+Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
+
+- `cargo test -p yunxi-core --lib memory::tests::store:: --locked -- --test-threads=1` — 15 passed, 694 filtered.
+- `cargo fmt --all -- --check`, `git diff --check`, and the privacy scan passed.
+- The disposable source and target were removed after the run.
+
 ## G3-05-08 implemented slice: concurrent browse convergence contract
 
 The memory browse regression now runs a delete and an evicted-context browse

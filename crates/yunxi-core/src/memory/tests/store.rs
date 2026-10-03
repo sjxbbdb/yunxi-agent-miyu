@@ -208,6 +208,29 @@ fn reset_all_clears_facts_and_episodes() {
 }
 
 #[test]
+fn reset_all_keeps_tombstone_ids_from_being_reused() {
+    let temp = tempfile::tempdir().unwrap();
+    let config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    let deleted_id = store.remember_fact("reset tombstone id", "test").unwrap();
+
+    store.reset_all().unwrap();
+
+    let replacement_id = store.remember_fact("replacement fact", "test").unwrap();
+    assert!(
+        replacement_id > deleted_id,
+        "reset_all must not reuse a tombstoned fact id"
+    );
+    assert!(store
+        .memory_refs_are_tombstoned(&[MemoryRef {
+            kind: "fact".into(),
+            id: deleted_id,
+        }])
+        .unwrap());
+}
+
+#[test]
 fn evicted_context_can_be_cleared() {
     let temp = tempfile::tempdir().unwrap();
     let config = AppConfig::default();
@@ -418,6 +441,100 @@ fn concurrent_recall_and_browse_honor_a_committed_memory_tombstone() {
     assert!(after_search_ids.contains(&unlinked_id));
     assert_eq!(after_browse.total, 1);
     assert_eq!(after_browse.items[0]["id"], unlinked_id);
+}
+
+#[test]
+fn committed_delete_survives_memory_store_restart_for_evicted_carriers() {
+    let temp = tempfile::tempdir().unwrap();
+    let config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    let fact_id = store
+        .remember_fact("G305_RESTART_DELETE_MARKER", "test")
+        .unwrap();
+    store
+        .remember_evicted_turns(&[
+            EvictedTurn {
+                source_id: "restart-linked-tool-report".into(),
+                timestamp: "2026-10-02T11:00:00+00:00".into(),
+                role: "assistant".into(),
+                content: "G305_RESTART_DELETE_MARKER".into(),
+                refs: vec![MemoryRef {
+                    kind: "fact".into(),
+                    id: fact_id,
+                }],
+                ..EvictedTurn::default()
+            },
+            EvictedTurn {
+                source_id: "restart-unlinked-user".into(),
+                timestamp: "2026-10-02T11:01:00+00:00".into(),
+                role: "user".into(),
+                content: "G305_RESTART_DELETE_MARKER".into(),
+                ..EvictedTurn::default()
+            },
+        ])
+        .unwrap();
+
+    let before = store
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    let linked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "assistant")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+    let unlinked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "user")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+
+    assert!(store.delete_item(BrowseTable::Facts, fact_id).unwrap());
+    drop(store);
+
+    // Re-opening both SQLite files models the next process after the delete
+    // transaction has committed.  No cleanup pass is needed to hide the
+    // carrier: the durable tombstone is the read barrier.
+    let reopened = MemoryStore::new(&config, &paths);
+    let search = reopened
+        .search_evicted_context("G305_RESTART_DELETE_MARKER", 10)
+        .unwrap();
+    let search_ids = search["results"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|item| item["id"].as_i64())
+        .collect::<Vec<_>>();
+    assert!(!search_ids.contains(&linked_id));
+    assert!(search_ids.contains(&unlinked_id));
+
+    let browse = reopened
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(browse.total, 1);
+    assert_eq!(browse.items[0]["id"], unlinked_id);
+
+    let semantic_ids = reopened
+        .semantic_corpus(None, None)
+        .unwrap()
+        .into_iter()
+        .map(|(id, _)| id)
+        .collect::<Vec<_>>();
+    assert!(!semantic_ids.contains(&linked_id));
+    assert!(reopened
+        .memory_refs_are_tombstoned(&[MemoryRef {
+            kind: "fact".into(),
+            id: fact_id,
+        }])
+        .unwrap());
 }
 
 #[test]
