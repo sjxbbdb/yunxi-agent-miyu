@@ -136,6 +136,13 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   `memory::tests::store` 19/19 通过。这覆盖进程消失后的 tombstone read barrier，
   不等于跨数据库原子性或 staged transfer 的 OS crash 保证。
 
+  G3-05-33 又收窄了 transcript shell 的一个真实词法缺口：POSIX `source` 与
+  `.` 是文件访问 builtin，却不在原有命令表中，导致 `source "$p/fold.md"`
+  这类动态路径在修复前误放行。先用新增负例复现 baseline 失败 1/1，再把两者
+  纳入现有 `FILE_ACCESS_COMMANDS`；WSL Ubuntu-24.04 ext4
+  `tools::transcript_guard` 25/25 通过。该切片仍是有限词法屏障，不宣称完整
+  shell parser，也不覆盖嵌入语言脚本的任意 data-flow。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：

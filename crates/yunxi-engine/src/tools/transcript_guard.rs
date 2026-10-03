@@ -18,7 +18,7 @@ use yunxi_core::state::StateStore;
 const READ_TOOLS: &[&str] = &["read", "grep", "glob", "run_command"];
 const FILE_ACCESS_COMMANDS: &[&str] = &[
     "cat", "head", "tail", "grep", "rg", "sed", "awk", "find", "ls", "stat", "readlink", "file",
-    "cp", "mv", "rm", "touch", "tee", "cd",
+    "cp", "mv", "rm", "touch", "tee", "cd", "source", ".",
 ];
 const FILE_ACCESS_WRAPPERS: &[&str] = &[
     "busybox", "command", "doas", "env", "exec", "eval", "ionice", "nice", "nohup", "setsid",
@@ -1373,6 +1373,8 @@ mod tests {
             "sudo cat \"$p/fold.md\"",
             "A+=v cat \"$p/fold.md\"",
             "cat \"$1\"",
+            "source \"$p/fold.md\"",
+            ". \"$p/fold.md\"",
         ] {
             let error = call_guarded_run_command(command).await.unwrap_err();
             assert!(

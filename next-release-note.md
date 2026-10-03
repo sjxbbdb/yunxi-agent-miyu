@@ -114,6 +114,11 @@
   需要 descriptor-relative `openat`/`fstatat` 链和跨平台实现，本阶段不伪造
   部分能力。
 
+- G3-05 shell lexical barrier：补上 POSIX `source` 与 `.` 两个文件访问
+  builtin；新增负例先在 baseline 复现误放行，修复后 WSL
+  `tools::transcript_guard` 25/25 通过。该切片仍不宣称完整 shell parser 或
+  嵌入语言脚本 data-flow 覆盖。
+
 - G0 基线稳定化：修复 YunXi 产品改名后 legacy config namespace 的正/负路径兼容，校准 TUI/replay/renderer/tool-summary 的当前产品输出夹具，修正 bundled script 与 registry fixture 漂移，并让 WSL 权限位测试使用原生 Linux 文件系统临时目录。
 - G0 验证：WSL Ubuntu-24.04 工作区单线程测试在 v4 当前提交上重新全绿（根包 yunxi 运行 508 项、yunxi-base 396、yunxi-core 651、yunxi-engine 与 yunxi-hosts 均完成且 0 failed；doctest 全部通过）。本结果对应 G0 evidence index 的 `G0-20261001-workspace-02`；Arch Linux 与 macOS M-series 仍未实机验证。
 - G0 计划补充 Skills/MCP 生命周期、host 权限真相源、raw/display/context 三分、长期记忆删除不可召回、memory/KB 数据边界、Laya 可行性门、自动总结独立写入协议，以及不新增 YunXi 通用审批状态机的约束。

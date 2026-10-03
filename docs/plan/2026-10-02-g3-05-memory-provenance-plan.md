@@ -791,6 +791,21 @@ directory traversal (`openat`/`fstatat` or equivalent) and matching handler /
 subprocess semantics, plus separate Windows/macOS implementations. No partial
 openat seam is added in G3-05.
 
+## G3-05-33 implemented slice: shell `source` and `.` file-access builtins
+
+The lexical run-command barrier now treats POSIX `source` and `.` as file
+access commands. Before the change, the new negative cases demonstrated that
+`source "$p/fold.md"` and `. "$p/fold.md"` reached the handler because the
+first command token was not recognized as a file-access operation. The fix only
+extends the existing command table and keeps the bounded lexical parser and
+its dynamic-path error contract unchanged.
+
+The baseline disposable WSL run failed 1/1 on the first new negative case.
+After the minimal change, WSL Ubuntu-24.04 ext4
+`tools::transcript_guard` passed 25/25. This does not parse arbitrary embedded
+Python/Node/Perl or other language data-flow; those remain explicit non-goals
+of this lexical seam.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate
