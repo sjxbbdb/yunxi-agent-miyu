@@ -176,6 +176,13 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   `tools::transcript_guard` 29/29 通过。该切片仍不宣称完整 Bash grammar、函数/别名、
   嵌入脚本或父目录 TOCTOU。
 
+  G3-05-38 又收窄了 `xargs` 外层 wrapper 的选项绕过：`sudo --`、`sudo -n` /
+  `--non-interactive`、`env --` 以及多层 `sudo env --` 现在会继续走到
+  `xargs` 专用 opaque data-flow 检查；未知或疑似带参数的 wrapper 选项直接
+  fail-closed，不把选项参数误当成安全命令。新增拒绝与 `xargs printf` 对照回归
+  在 WSL Ubuntu-24.04 ext4 的 `tools::transcript_guard` 29/29 通过。该切片仍
+  不宣称完整 sudo/env/wrapper CLI grammar。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
@@ -192,8 +199,8 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
    参数、`xargs` opaque stdin/placeholder、`find -exec` opaque matched-path
    data-flow、process substitution 及 `$()`/反引号内嵌动态文件访问已有词法屏障与
    29/29 回归，live
-   transcript shell 路径也已拒绝；`sudo -- xargs`、`env -- xargs` 等 wrapper
-   选项绕过仍待下一窄切片，当前仍不做完整 shell parser；
+   transcript shell 路径也已拒绝；当前仍不做完整 shell parser，未知 wrapper
+   CLI grammar 与动态命令名继续按边界处理；
 3. 继续评估 `grep` 的 `include` 过滤与 `glob` 的目录能力是否值得进入
    descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；当前审计
    已确认 `ensure_transcript_identity` 与后续 open 之间存在可复现的父目录

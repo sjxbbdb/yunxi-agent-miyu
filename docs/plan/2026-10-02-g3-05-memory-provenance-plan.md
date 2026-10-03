@@ -866,6 +866,21 @@ functions, aliases, embedded language scripts, and parent-directory TOCTOU are
 still explicit non-goals. WSL Ubuntu-24.04 ext4 `tools::transcript_guard`
 passed 29/29.
 
+## G3-05-38 implemented slice: xargs wrapper-option data flow
+
+The existing `xargs` opaque data-flow guard now advances through the audited
+wrapper options that previously hid the command position: `sudo --`,
+`sudo -n`/`--non-interactive`, `env --`, and the composed
+`sudo env -- xargs` form. Unknown or potentially argument-taking wrapper
+options fail closed instead of being mistaken for a command token. The
+underlying xargs option and `--` handling is unchanged, and non-file consumers
+such as `sudo -- xargs printf` remain available.
+
+This is a bounded wrapper seam, not a complete sudo/env/utility CLI parser; it
+does not claim coverage for every wrapper option, dynamic command names,
+functions/aliases, or embedded language scripts. WSL Ubuntu-24.04 ext4
+`tools::transcript_guard` passed 29/29.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate

@@ -26,6 +26,7 @@ const FILE_ACCESS_WRAPPERS: &[&str] = &[
 ];
 const SHELL_COMMANDS: &[&str] = &["bash", "dash", "ksh", "sh", "zsh"];
 const MAX_NESTED_SUBSTITUTION_DEPTH: usize = 8;
+const MAX_WRAPPER_OPTION_ADVANCE: usize = 8;
 
 /// Bind the current session's transcript policy to a tool registry.
 ///
@@ -535,14 +536,53 @@ fn segment_has_opaque_xargs_file_access(segment: &str) -> bool {
         if !FILE_ACCESS_WRAPPERS.contains(&basename) || basename == "xargs" {
             return false;
         }
-        index += 1;
-        while let Some(token) = tokens.get(index) {
-            if is_shell_assignment(&token.text) {
-                index += 1;
-            } else {
-                break;
-            }
+        index = match advance_wrapper_command(&tokens, index) {
+            Ok(next) => next,
+            Err(()) => return true,
+        };
+    }
+}
+
+/// Advance from a known wrapper to its command position without attempting to
+/// model the wrapper's full CLI grammar. Only the audited, argument-free
+/// options needed for the xargs dataflow barrier are recognized. An unknown
+/// option is not a command name: reject it conservatively instead of walking
+/// past it and allowing an opaque xargs command through.
+fn advance_wrapper_command(tokens: &[ShellToken], wrapper_index: usize) -> Result<usize, ()> {
+    let wrapper = command_basename(&tokens[wrapper_index].text);
+    let mut index = wrapper_index + 1;
+    while let Some(token) = tokens.get(index) {
+        if is_shell_assignment(&token.text) {
+            index += 1;
+        } else {
+            break;
         }
+    }
+
+    if !matches!(wrapper, "sudo" | "env") {
+        return Ok(index);
+    }
+
+    let mut advanced = 0;
+    loop {
+        let Some(token) = tokens.get(index) else {
+            return Ok(index);
+        };
+        if token.text == "--" {
+            return Ok(index + 1);
+        }
+        if wrapper == "sudo" && matches!(token.text.as_str(), "-n" | "--non-interactive") {
+            advanced += 1;
+            if advanced > MAX_WRAPPER_OPTION_ADVANCE {
+                return Err(());
+            }
+            index += 1;
+            continue;
+        }
+        if token.text.starts_with('-') {
+            return Err(());
+        }
+        return Ok(index);
     }
 }
 
@@ -1759,6 +1799,10 @@ mod tests {
             "xargs -I{} cat {}",
             "printf path | xargs cat",
             "sudo xargs -I{} cat {}",
+            "sudo -- xargs -I{} cat {}",
+            "sudo -n xargs -I{} cat {}",
+            "env -- xargs -I{} cat {}",
+            "sudo env -- xargs -I{} cat {}",
             "xargs -- cat",
         ] {
             let error = call_guarded_run_command(command).await.unwrap_err();
@@ -1768,10 +1812,16 @@ mod tests {
             );
         }
 
-        let result = call_guarded_run_command("printf path | xargs printf")
-            .await
-            .expect("xargs driving printf does not access a file");
-        assert_eq!(result, "handler ran");
+        for command in [
+            "printf path | xargs printf",
+            "sudo -- xargs printf",
+            "env -- xargs printf",
+        ] {
+            let result = call_guarded_run_command(command)
+                .await
+                .expect("xargs driving printf does not access a file");
+            assert_eq!(result, "handler ran", "command {command:?}");
+        }
     }
 
     #[tokio::test]
