@@ -21,6 +21,11 @@
   也已 fail-closed，WSL transcript_guard 15/15 通过。任意嵌套 wrapper、嵌入脚本
   和 symlink/hardlink 竞态仍未宣称覆盖。
 
+- G3-05 nested transcript dynamic-path barrier：递归检查有界的 `$()`/反引号
+  子命令，嵌套动态文件访问 fail-closed，非文件 `printf` substitution 仍可用；
+  WSL transcript_guard 16/16 通过。quoted `sh -c`/`eval` 脚本、任意 wrapper
+  data-flow 和 symlink/hardlink 竞态仍未宣称覆盖。
+
 - G3-05 memory provenance：删除提交后的 `MemoryStore` 重建会继续隐藏已删除的
   evicted carrier；`reset_all` 保留 facts/episodes 的自增高水位，避免独立 state
   清理窗口中的 tombstone ID 复用。新增重启与 ID 复用回归测试，WSL store 测试

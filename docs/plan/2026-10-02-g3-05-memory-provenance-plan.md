@@ -477,6 +477,30 @@ Evidence (WSL Ubuntu-24.04 ext4 disposable checkout, one cargo job):
 The next boundary is to decide whether deeper wrapper/embedded-script mediation
 is warranted by observed use, rather than silently growing a second shell parser.
 
+## G3-05-19 implemented slice: nested shell substitution barrier
+
+The transcript `run_command` lexical barrier now inspects bounded `$()` and
+backtick bodies in addition to the top-level compound segment. A nested file
+access command with unresolved expansion, such as `echo "$(cat \"$p/fold\")"`,
+is rejected before the handler; nested non-file substitutions such as
+`echo "$(printf hi)"` remain executable. The scan is deliberately capped at
+eight substitution levels and remains a lexical helper, not a shell parser.
+
+The regression suite covers nested `cat` in both substitution syntaxes and
+the corresponding nested `printf` allow-list. Quoted embedded scripts passed to
+`sh -c`/`eval`, arbitrary wrapper data-flow, process/arithmetic substitution,
+and filesystem identity races remain explicit residuals.
+
+Evidence (WSL Ubuntu-24.04 ext4 disposable checkout, one cargo job):
+
+- `cargo test -p yunxi-engine --lib tools::transcript_guard --locked --
+  --test-threads=1` — 16 passed;
+- `cargo fmt --all -- --check` and `git diff --check` passed.
+
+The next boundary is transcript carrier file identity/TOCTOU hardening at the
+actual file-open and shell execution seams, not further growth of this lexical
+scanner.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,

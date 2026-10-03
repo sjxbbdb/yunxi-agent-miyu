@@ -50,6 +50,10 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   可执行；带路径文件命令、浅层 wrapper/`sh -c`、追加赋值和位置参数也有回归；
   WSL transcript_guard 15/15 通过。它仍是词法屏障，不宣称覆盖任意嵌套 wrapper、
   嵌入脚本或 symlink/hardlink 身份竞态。
+  G3-05-19 又补上 `$()`/反引号内嵌的动态文件访问检测：嵌套 `cat "$p/..."`
+  被拒绝、嵌套 `printf` 仍放行，WSL transcript_guard 16/16 通过；扫描深度封顶
+  8 层，quoted `sh -c`/`eval` 脚本、任意 wrapper data-flow 与文件身份竞态仍未
+  宣称覆盖。
 
 ## 下一处施工边界
 
@@ -58,11 +62,12 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 1. 补 provenance 在 concurrent delete/recall 的更强 overlap 语义上的决策
    或测试 seam；当前只证明了并发调用后的 convergence，epoch 二次检查和
    异步 embedding await 边界已有有限重试，但最终跨库 overlap 仍未线性化；
-2. 对 transcript `run_command` 剩余的嵌套 wrapper/嵌入脚本、symlink/hardlink
-   身份竞态做明确的 fail-closed 边界决策；变量、命令替换、重定向、`cd` 后
-   动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值和位置参数已有
-   词法屏障与 15/15 回归，当前 dev 子代理前台 fresh registry
-   已绑定并有 WSL 回归覆盖，dev 面的 read/grep/glob 仍按既有设计不注册；
+2. 对 transcript `run_command` 剩余的 quoted `sh -c`/`eval` 嵌入脚本、任意
+   wrapper data-flow、symlink/hardlink 身份竞态做明确的 fail-closed 边界决策；
+   变量、命令替换、重定向、`cd` 后动态相对路径、带路径命令名、浅层
+   wrapper/`sh -c`、追加赋值、位置参数及 `$()`/反引号内嵌动态文件访问已有
+   词法屏障与 16/16 回归，当前 dev 子代理前台 fresh registry 已绑定并有 WSL
+   回归覆盖，dev 面的 read/grep/glob 仍按既有设计不注册；
 3. 只在这些证据通过后，才评估 G3-05 的阶段退出。
 
 此外，transfer 的 staged fixup 目前仍依赖导入前的 tombstone 过滤，尚未把

@@ -22,6 +22,7 @@ const FILE_ACCESS_WRAPPERS: &[&str] = &[
     "sudo", "time", "timeout", "watch", "xargs",
 ];
 const SHELL_COMMANDS: &[&str] = &["bash", "dash", "ksh", "sh", "zsh"];
+const MAX_NESTED_SUBSTITUTION_DEPTH: usize = 8;
 
 /// Bind the current session's transcript policy to a tool registry.
 ///
@@ -184,10 +185,194 @@ fn check_command(state: &StateStore, memory: &MemoryStore, command: &str) -> Opt
 /// harmless substitutions such as `echo "$(printf hi)"` available while
 /// refusing to guess about dynamic paths used by file operations.
 fn command_has_dynamic_file_access(command: &str) -> bool {
-    command_segments(command).any(|segment| {
+    if command_segments(command).any(|segment| {
         let file_access = has_unquoted_redirection(segment) || segment_invokes_file_access(segment);
         file_access && has_dynamic_shell_syntax(segment)
-    })
+    }) {
+        return true;
+    }
+
+    if command.is_empty() {
+        return false;
+    }
+
+    nested_shell_fragments(command)
+        .into_iter()
+        .any(|fragment| command_has_dynamic_file_access_at_depth(&fragment, 1))
+}
+
+fn command_has_dynamic_file_access_at_depth(command: &str, depth: usize) -> bool {
+    if command_segments(command).any(|segment| {
+        let file_access = has_unquoted_redirection(segment) || segment_invokes_file_access(segment);
+        file_access && has_dynamic_shell_syntax(segment)
+    }) {
+        return true;
+    }
+
+    if depth >= MAX_NESTED_SUBSTITUTION_DEPTH {
+        // Do not silently treat an unscanned deeply nested substitution as
+        // safe. The cap keeps this lexical guard bounded while preserving its
+        // fail-closed behavior for pathological shell input.
+        return !nested_shell_fragments(command).is_empty();
+    }
+
+    nested_shell_fragments(command)
+        .into_iter()
+        .any(|fragment| command_has_dynamic_file_access_at_depth(&fragment, depth + 1))
+}
+
+/// Extract the bodies of the first shell-level `$()` and backtick
+/// substitutions without attempting to parse the complete shell grammar.
+///
+/// The scanner skips single-quoted text, respects escapes, balances nested
+/// parentheses in `$()` and stops after a bounded recursion depth in the
+/// caller. This is deliberately a lexical helper for the transcript barrier,
+/// not a general-purpose shell parser.
+fn nested_shell_fragments(command: &str) -> Vec<String> {
+    let chars = command.chars().collect::<Vec<_>>();
+    let mut fragments = Vec::new();
+    let mut quote = None;
+    let mut escaped = false;
+    let mut index = 0;
+    while index < chars.len() {
+        let ch = chars[index];
+        if escaped {
+            escaped = false;
+            index += 1;
+            continue;
+        }
+        if ch == '\\' && quote != Some('\'') {
+            escaped = true;
+            index += 1;
+            continue;
+        }
+        match quote {
+            Some('\'') => {
+                if ch == '\'' {
+                    quote = None;
+                }
+                index += 1;
+            }
+            Some('"') => {
+                if ch == '"' {
+                    quote = None;
+                    index += 1;
+                } else if ch == '$' && chars.get(index + 1) == Some(&'(') {
+                    if let Some((fragment, end)) = extract_dollar_paren(&chars, index) {
+                        fragments.push(fragment);
+                        index = end;
+                    } else {
+                        index += 1;
+                    }
+                } else if ch == '`' {
+                    if let Some((fragment, end)) = extract_backticks(&chars, index) {
+                        fragments.push(fragment);
+                        index = end;
+                    } else {
+                        index += 1;
+                    }
+                } else {
+                    index += 1;
+                }
+            }
+            None => {
+                if ch == '\'' || ch == '"' {
+                    quote = Some(ch);
+                    index += 1;
+                } else if ch == '$' && chars.get(index + 1) == Some(&'(') {
+                    if let Some((fragment, end)) = extract_dollar_paren(&chars, index) {
+                        fragments.push(fragment);
+                        index = end;
+                    } else {
+                        index += 1;
+                    }
+                } else if ch == '`' {
+                    if let Some((fragment, end)) = extract_backticks(&chars, index) {
+                        fragments.push(fragment);
+                        index = end;
+                    } else {
+                        index += 1;
+                    }
+                } else {
+                    index += 1;
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+    fragments
+}
+
+fn extract_dollar_paren(chars: &[char], start: usize) -> Option<(String, usize)> {
+    let mut depth = 1usize;
+    let mut quote = None;
+    let mut escaped = false;
+    let mut index = start + 2;
+    while index < chars.len() {
+        let ch = chars[index];
+        if escaped {
+            escaped = false;
+            index += 1;
+            continue;
+        }
+        if ch == '\\' && quote != Some('\'') {
+            escaped = true;
+            index += 1;
+            continue;
+        }
+        match quote {
+            Some('\'') => {
+                if ch == '\'' {
+                    quote = None;
+                }
+            }
+            Some('"') => {
+                if ch == '"' {
+                    quote = None;
+                } else if ch == '$' && chars.get(index + 1) == Some(&'(') {
+                    depth += 1;
+                    index += 1;
+                }
+            }
+            None => match ch {
+                '\'' | '"' => quote = Some(ch),
+                '(' => depth += 1,
+                ')' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some((chars[start + 2..index].iter().collect(), index + 1));
+                    }
+                }
+                _ => {}
+            },
+            _ => unreachable!(),
+        }
+        index += 1;
+    }
+    None
+}
+
+fn extract_backticks(chars: &[char], start: usize) -> Option<(String, usize)> {
+    let mut escaped = false;
+    let mut index = start + 1;
+    while index < chars.len() {
+        let ch = chars[index];
+        if escaped {
+            escaped = false;
+            index += 1;
+            continue;
+        }
+        if ch == '\\' {
+            escaped = true;
+            index += 1;
+            continue;
+        }
+        if ch == '`' {
+            return Some((chars[start + 1..index].iter().collect(), index + 1));
+        }
+        index += 1;
+    }
+    None
 }
 
 fn command_segments(command: &str) -> impl Iterator<Item = &str> {
@@ -651,6 +836,27 @@ mod tests {
                 error.contains("dynamic transcript path"),
                 "command {command:?}: unexpected error: {error}"
             );
+        }
+    }
+
+    #[tokio::test]
+    async fn nested_file_access_is_denied_but_nested_printf_is_allowed() {
+        for command in [
+            r#"echo "$(cat "$p/fold.md")""#,
+            r#"echo `cat "$p/fold.md"`"#,
+        ] {
+            let error = call_guarded_run_command(command).await.unwrap_err();
+            assert!(
+                error.contains("dynamic transcript path"),
+                "command {command:?}: unexpected error: {error}"
+            );
+        }
+
+        for command in [r#"echo "$(printf hi)""#, r#"echo `printf hi`"#] {
+            let result = call_guarded_run_command(command)
+                .await
+                .expect("nested non-file substitution should reach the handler");
+            assert_eq!(result, "handler ran", "command {command:?}");
         }
     }
 
