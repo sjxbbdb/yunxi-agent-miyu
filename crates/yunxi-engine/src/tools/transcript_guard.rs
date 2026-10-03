@@ -368,6 +368,15 @@ fn command_has_dynamic_file_access(command: &str) -> bool {
         return true;
     }
 
+    // `xargs` obtains command arguments from stdin (or from its replacement
+    // placeholders), so a file-access command below it is dynamic even when
+    // the command text contains no `$`/backtick expansion.  Keep this as a
+    // narrow lexical check rather than trying to model the complete xargs
+    // grammar.
+    if command_segments(command).any(segment_has_opaque_xargs_file_access) {
+        return true;
+    }
+
     if command_segments(command).any(|segment| {
         let file_access = has_unquoted_redirection(segment) || segment_invokes_file_access(segment);
         file_access && has_dynamic_shell_syntax(segment)
@@ -386,6 +395,10 @@ fn command_has_dynamic_file_access(command: &str) -> bool {
 
 fn command_has_dynamic_file_access_at_depth(command: &str, depth: usize) -> bool {
     if command_has_dynamic_wrapper_payload(command) {
+        return true;
+    }
+
+    if command_segments(command).any(segment_has_opaque_xargs_file_access) {
         return true;
     }
 
@@ -464,6 +477,113 @@ fn segment_has_dynamic_wrapper_payload(segment: &str) -> bool {
     }
 
     false
+}
+
+/// Return true when an xargs invocation will dispatch a file-access command.
+/// The command receives data from stdin or xargs replacement fields, so its
+/// path operands are opaque to this lexical barrier even if they look static.
+/// Only the command token after xargs options is inspected; unrelated commands
+/// such as `xargs printf` remain allowed.
+fn segment_has_opaque_xargs_file_access(segment: &str) -> bool {
+    let tokens = shell_tokens(segment);
+    let Some(mut index) = tokens
+        .iter()
+        .position(|token| !is_shell_assignment(&token.text))
+    else {
+        return false;
+    };
+
+    // Walk the existing wrapper vocabulary so compositions such as
+    // `sudo xargs ...` are covered without treating arbitrary later words as
+    // command positions.
+    loop {
+        let Some(token) = tokens.get(index) else {
+            return false;
+        };
+        let basename = command_basename(&token.text);
+        if basename == "xargs" {
+            return xargs_payload_invokes_file_access(&tokens[index + 1..]);
+        }
+        if !FILE_ACCESS_WRAPPERS.contains(&basename) || basename == "xargs" {
+            return false;
+        }
+        index += 1;
+        while let Some(token) = tokens.get(index) {
+            if is_shell_assignment(&token.text) {
+                index += 1;
+            } else {
+                break;
+            }
+        }
+    }
+}
+
+fn xargs_payload_invokes_file_access(tokens: &[ShellToken]) -> bool {
+    let mut index = 0;
+    while let Some(token) = tokens.get(index) {
+        let text = token.text.as_str();
+        if text == "--" {
+            index += 1;
+            return tokens.get(index).is_some_and(|token| {
+                FILE_ACCESS_COMMANDS.contains(&command_basename(&token.text))
+            });
+        }
+        if xargs_option_takes_next_argument(text) {
+            index += 2;
+            continue;
+        }
+        if xargs_option_has_attached_argument(text) || text.starts_with('-') {
+            index += 1;
+            continue;
+        }
+        return FILE_ACCESS_COMMANDS.contains(&command_basename(text));
+    }
+    false
+}
+
+fn xargs_option_takes_next_argument(token: &str) -> bool {
+    matches!(
+        token,
+        "-I" | "-E"
+            | "-L"
+            | "-n"
+            | "-P"
+            | "-s"
+            | "-d"
+            | "-a"
+            | "--replace"
+            | "--eof"
+            | "--max-lines"
+            | "--max-args"
+            | "--max-procs"
+            | "--max-chars"
+            | "--delimiter"
+            | "--arg-file"
+            | "--process-slot-var"
+    )
+}
+
+fn xargs_option_has_attached_argument(token: &str) -> bool {
+    const SHORT_OPTIONS: &[&str] = &["-I", "-E", "-L", "-n", "-P", "-s", "-d", "-a"];
+    const LONG_OPTIONS: &[&str] = &[
+        "--replace",
+        "--eof",
+        "--max-lines",
+        "--max-args",
+        "--max-procs",
+        "--max-chars",
+        "--delimiter",
+        "--arg-file",
+        "--process-slot-var",
+    ];
+    SHORT_OPTIONS
+        .iter()
+        .any(|option| token.starts_with(option) && token.len() > option.len())
+        || LONG_OPTIONS.iter().any(|option| {
+            token
+                .strip_prefix(option)
+                .is_some_and(|rest| rest.starts_with('='))
+        })
 }
 
 fn is_shell_command_option(token: &str) -> bool {
@@ -1382,6 +1502,27 @@ mod tests {
                 "command {command:?}: unexpected error: {error}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn xargs_file_access_dataflow_is_denied() {
+        for command in [
+            "xargs -I{} cat {}",
+            "printf path | xargs cat",
+            "sudo xargs -I{} cat {}",
+            "xargs -- cat",
+        ] {
+            let error = call_guarded_run_command(command).await.unwrap_err();
+            assert!(
+                error.contains("dynamic transcript path"),
+                "command {command:?}: unexpected error: {error}"
+            );
+        }
+
+        let result = call_guarded_run_command("printf path | xargs printf")
+            .await
+            .expect("xargs driving printf does not access a file");
+        assert_eq!(result, "handler ran");
     }
 
     #[tokio::test]

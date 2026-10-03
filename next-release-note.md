@@ -125,6 +125,11 @@
   重试返回 0；WSL `transfer::fixups::tests` 7/7 通过。该证据不扩大为跨库
   原子性或后续安装/回滚文件系统 crash 保证。
 
+- G3-05 transcript `xargs` data-flow：`xargs` 从 stdin/placeholder 取得参数
+  并驱动文件访问命令时 fail-closed，覆盖直接、管道、`sudo` wrapper 与
+  `--` 选项；`xargs printf` 仍放行。WSL `tools::transcript_guard` 26/26
+  通过；仍不宣称完整 xargs grammar、函数/别名或嵌入脚本 data-flow。
+
 - G0 基线稳定化：修复 YunXi 产品改名后 legacy config namespace 的正/负路径兼容，校准 TUI/replay/renderer/tool-summary 的当前产品输出夹具，修正 bundled script 与 registry fixture 漂移，并让 WSL 权限位测试使用原生 Linux 文件系统临时目录。
 - G0 验证：WSL Ubuntu-24.04 工作区单线程测试在 v4 当前提交上重新全绿（根包 yunxi 运行 508 项、yunxi-base 396、yunxi-core 651、yunxi-engine 与 yunxi-hosts 均完成且 0 failed；doctest 全部通过）。本结果对应 G0 evidence index 的 `G0-20261001-workspace-02`；Arch Linux 与 macOS M-series 仍未实机验证。
 - G0 计划补充 Skills/MCP 生命周期、host 权限真相源、raw/display/context 三分、长期记忆删除不可召回、memory/KB 数据边界、Laya 可行性门、自动总结独立写入协议，以及不新增 YunXi 通用审批状态机的约束。

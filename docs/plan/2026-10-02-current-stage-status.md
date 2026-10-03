@@ -151,6 +151,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   证据覆盖 staged 本地提交后的进程消失，不把 live/staged 两个 SQLite 文件
   扩大成跨库原子性保证。
 
+  G3-05-35 收窄了 transcript shell 的 `xargs` data-flow 缺口：`xargs` 从
+  stdin 或 replacement placeholder 取得参数，随后驱动 `cat`/`grep`/`sed`
+  等文件访问命令时，即使命令文本没有 `$()`、反引号或重定向，也必须按
+  opaque 动态路径 fail-closed；`xargs printf` 这类非文件消费者继续放行。
+  覆盖直接、管道输入、`sudo` wrapper 和 `--` 选项，WSL
+  `tools::transcript_guard` 26/26 通过。该切片仍是有限词法屏障，不宣称
+  完整 xargs 参数/函数别名/嵌入脚本 data-flow。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
@@ -164,7 +172,7 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
    明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
-   参数及 `$()`/反引号内嵌动态文件访问已有词法屏障与 25/25 回归，live
+   参数、`xargs` opaque stdin/placeholder 及 `$()`/反引号内嵌动态文件访问已有词法屏障与 26/26 回归，live
    transcript shell 路径也已拒绝，当前仍不做完整 shell parser；
 3. 继续评估 `grep` 的 `include` 过滤与 `glob` 的目录能力是否值得进入
    descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；当前审计

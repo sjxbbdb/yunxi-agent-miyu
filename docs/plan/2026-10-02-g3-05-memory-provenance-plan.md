@@ -821,6 +821,21 @@ the staged local-commit crash boundary only; it does not claim atomicity across
 the live memory database and staged state database, nor crash safety for later
 install/rollback filesystem steps.
 
+## G3-05-35 implemented slice: opaque `xargs` file-access data flow
+
+The bounded transcript shell barrier now treats an `xargs` invocation as an
+opaque dynamic path source when its command position dispatches a file-access
+command such as `cat`, `grep`, or `sed`. `xargs` can obtain operands from stdin
+or replacement placeholders, so the absence of shell `$()`/backtick syntax is
+not proof that the path is static. The check covers direct and piped forms,
+the existing `sudo` wrapper vocabulary, and the `--` option boundary. A
+non-file consumer such as `xargs printf` remains allowed.
+
+WSL Ubuntu-24.04 ext4 `tools::transcript_guard` passed 26/26. This remains a
+bounded lexical/data-flow seam: it does not parse the complete xargs grammar,
+arbitrary functions or aliases, dynamic command names, or embedded Python,
+Node, Perl, or other language scripts.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate
