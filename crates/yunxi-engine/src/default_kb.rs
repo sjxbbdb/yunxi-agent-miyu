@@ -203,7 +203,10 @@ where
     let repo = update_repo_dir(paths);
     mark_stage(UpdateStage::PreparingRepository);
     cleanup_legacy_update_repo(paths, &repo)?;
-    if optimized_update_repo(&git, &repo) {
+    let previous_head = optimized_update_repo(&git, &repo)
+        .then(|| git_output(&git, &repo, &["rev-parse", "HEAD"]))
+        .transpose()?;
+    if previous_head.is_some() {
         mark_stage(UpdateStage::FetchingRepository);
         run_git(
             &git,
@@ -218,7 +221,7 @@ where
             ],
         )?;
         mark_stage(UpdateStage::CheckingOutRepository);
-        run_git(
+        if let Err(error) = run_git(
             &git,
             &repo,
             &[
@@ -229,13 +232,30 @@ where
                 "--force",
                 "FETCH_HEAD",
             ],
-        )?;
+        ) {
+            return Err(restore_previous_head(
+                &git,
+                &repo,
+                previous_head.as_deref(),
+                error,
+            ));
+        }
     } else {
         mark_stage(UpdateStage::CloningRepository);
         rebuild_update_repo(&git, &repo, &mut mark_stage)?;
     }
     mark_stage(UpdateStage::ValidatingRepository);
-    validate_update_repo(&repo)?;
+    if let Err(error) = validate_update_repo(&repo) {
+        if let Some(previous_head) = previous_head.as_deref() {
+            return Err(restore_previous_head(
+                &git,
+                &repo,
+                Some(previous_head),
+                error,
+            ));
+        }
+        return Err(error);
+    }
     let commit = git_output(&git, &repo, &["rev-parse", "HEAD"])?;
     mark_stage(UpdateStage::BuildingSnapshot);
     let source = build_update_source(paths, &repo)?;
@@ -258,6 +278,34 @@ where
     state.last_recovery.clear();
     save_state(paths, &state)?;
     Ok(state)
+}
+
+fn restore_previous_head(
+    git: &str,
+    repo: &Path,
+    previous_head: Option<&str>,
+    error: anyhow::Error,
+) -> anyhow::Error {
+    let Some(previous_head) = previous_head else {
+        return error;
+    };
+    match run_git(
+        git,
+        repo,
+        &[
+            "-c",
+            "advice.detachedHead=false",
+            "checkout",
+            "--quiet",
+            "--force",
+            previous_head,
+        ],
+    ) {
+        Ok(()) => error.context("default knowledge-base update failed; previous repository revision restored"),
+        Err(recovery) => error.context(format!(
+            "default knowledge-base update failed and previous repository revision recovery failed: {recovery:#}"
+        )),
+    }
 }
 
 fn import_snapshot(
@@ -589,29 +637,54 @@ fn git_output(git: &str, cwd: &Path, args: &[&str]) -> Result<String> {
 
 fn build_update_source(paths: &YunXiPaths, repo: &Path) -> Result<PathBuf> {
     let dest = update_source_dir(paths);
-    if dest.exists() {
-        std::fs::remove_dir_all(&dest)?;
-    }
+    let parent = dest.parent().context("update source has no parent")?;
+    std::fs::create_dir_all(parent)?;
+    let staging = tempfile::Builder::new()
+        .prefix("default-kb-update-source-")
+        .tempdir_in(parent)?;
+    let staged_dest = staging.path().join("snapshot");
     let bundled = default_kb_source_dir();
     let bundled_kb = bundled.join("kb");
     if bundled_kb.is_dir() {
-        copy_markdown_tree(&bundled_kb, &dest.join("kb"))?;
+        copy_markdown_tree(&bundled_kb, &staged_dest.join("kb"))?;
     }
     let wiki = repo.join("wiki");
     let wiki_source = if wiki.is_dir() { wiki.as_path() } else { repo };
-    std::fs::create_dir_all(dest.join("shorinwiki"))?;
+    std::fs::create_dir_all(staged_dest.join("shorinwiki"))?;
     for file in collect_markdown(wiki_source)? {
         let rel = file.strip_prefix(wiki_source)?;
         if excluded(rel) {
             continue;
         }
-        let target = dest.join("shorinwiki").join(rel);
+        let target = staged_dest.join("shorinwiki").join(rel);
         if let Some(parent) = target.parent() {
             std::fs::create_dir_all(parent)?;
         }
         std::fs::copy(file, target)?;
     }
+    replace_directory(&staged_dest, &dest)?;
     Ok(dest)
+}
+
+fn replace_directory(staging: &Path, destination: &Path) -> Result<()> {
+    let backup = destination.with_extension("backup");
+    if backup.exists() {
+        std::fs::remove_dir_all(&backup)?;
+    }
+    if destination.exists() {
+        std::fs::rename(destination, &backup)?;
+    }
+    if let Err(error) = std::fs::rename(staging, destination) {
+        if backup.exists() {
+            std::fs::rename(&backup, destination)
+                .context("failed to restore the previous update source")?;
+        }
+        return Err(error.into());
+    }
+    if backup.exists() {
+        std::fs::remove_dir_all(backup)?;
+    }
+    Ok(())
 }
 
 fn copy_markdown_tree(source: &Path, dest: &Path) -> Result<()> {
@@ -820,6 +893,22 @@ mod tests {
         assert_eq!(std::fs::read_to_string(repo.join("new")).unwrap(), "new");
         assert!(!repo.join("old").exists());
         assert!(!repo.with_extension("backup").exists());
+    }
+
+    #[test]
+    fn replacing_update_source_restores_previous_cache_when_swap_fails() {
+        let temp = tempfile::tempdir().unwrap();
+        let destination = temp.path().join("update-source");
+        std::fs::create_dir_all(&destination).unwrap();
+        std::fs::write(destination.join("old.md"), "old").unwrap();
+        let missing_staging = temp.path().join("missing-staging");
+
+        assert!(replace_directory(&missing_staging, &destination).is_err());
+        assert_eq!(
+            std::fs::read_to_string(destination.join("old.md")).unwrap(),
+            "old"
+        );
+        assert!(!destination.with_extension("backup").exists());
     }
 }
 

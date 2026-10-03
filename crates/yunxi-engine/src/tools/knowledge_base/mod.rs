@@ -664,6 +664,51 @@ mod tests {
     }
 
     #[test]
+    fn bundled_replace_restores_snapshot_when_import_fails_after_removal() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let config = AppConfig::default();
+        let source = temp.path().join("bundled.md");
+        std::fs::write(&source, "old command").unwrap();
+        let admin =
+            KnowledgeBase::with_capability(config, paths, KnowledgeCapability::bundled_admin())
+                .unwrap();
+        admin.import_file(&source, "default-kb/old.md").unwrap();
+        admin.import_file(&source, "notes/user.md").unwrap();
+
+        let replacement = temp.path().join("replacement");
+        std::fs::create_dir_all(&replacement).unwrap();
+        std::fs::write(replacement.join("new.md"), "new command").unwrap();
+        admin
+            .meta_conn()
+            .unwrap()
+            .execute_batch(
+                "CREATE TRIGGER fail_default_insert
+                 BEFORE INSERT ON files
+                 WHEN NEW.name = 'default-kb/new.md'
+                 BEGIN SELECT RAISE(ABORT, 'injected import failure'); END;",
+            )
+            .unwrap();
+
+        let error = admin.replace_default_files(&replacement).unwrap_err();
+        assert!(error.to_string().contains("previous snapshot restored"));
+        admin
+            .meta_conn()
+            .unwrap()
+            .execute("DROP TRIGGER fail_default_insert", [])
+            .unwrap();
+        assert!(admin
+            .read_file("default-kb/old.md", 1, Some(10))
+            .unwrap()
+            .ends_with("old command"));
+        assert!(admin.read_file("default-kb/new.md", 1, Some(10)).is_err());
+        assert!(admin
+            .read_file("notes/user.md", 1, Some(10))
+            .unwrap()
+            .ends_with("old command"));
+    }
+
+    #[test]
     fn upload_guard_only_blocks_yunxi_own_assets() {
         // 正经资料照收。退回这个提交之前,这四篇全被挡在门外——正文里出现
         // config / memory / 配置 / 记忆 就够了。

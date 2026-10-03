@@ -6,6 +6,16 @@
 
 use crate::tools::knowledge_base::*;
 
+struct DefaultFileBackup {
+    name: String,
+    source_revision: String,
+}
+
+struct ReplacementBackup {
+    root: tempfile::TempDir,
+    files: Vec<DefaultFileBackup>,
+}
+
 impl KnowledgeBase {
     pub async fn add_path(&self, source: &Path) -> Result<Vec<String>> {
         self.init()?;
@@ -59,13 +69,74 @@ impl KnowledgeBase {
         // A single malformed/unsupported file must not turn a failed update into an
         // empty or partial default namespace.
         let imports = self.prepare_default_imports(source)?;
-        self.remove_prefix("default-kb/")?;
-        let mut added = Vec::new();
-        for (file, name) in imports {
-            added.push(self.import_file_with_revision(&file, &name, source_revision)?);
+        let backup = self.create_replacement_backup()?;
+        let result = (|| -> Result<Vec<String>> {
+            self.remove_prefix("default-kb/")?;
+            let mut added = Vec::new();
+            for (file, name) in imports {
+                added.push(self.import_file_with_revision(&file, &name, source_revision)?);
+            }
+            self.spawn_embedding_reindex()?;
+            Ok(added)
+        })();
+        match result {
+            Ok(added) => Ok(added),
+            Err(error) => {
+                if let Err(recovery) = self.restore_replacement_backup(&backup) {
+                    return Err(error.context(format!(
+                        "default knowledge-base update failed and snapshot recovery failed: {recovery:#}"
+                    )));
+                }
+                Err(error
+                    .context("default knowledge-base update failed; previous snapshot restored"))
+            }
         }
+    }
+
+    fn create_replacement_backup(&self) -> Result<ReplacementBackup> {
+        let root = tempfile::tempdir_in(&self.root)?;
+        let mut files = Vec::new();
+        for record in self
+            .list_existing()?
+            .into_iter()
+            .filter(|record| record.name == "default-kb" || record.name.starts_with("default-kb/"))
+        {
+            let source = self.safe_file_path(&record.name)?;
+            let destination = root.path().join("files").join(&record.name);
+            if let Some(parent) = destination.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::copy(&source, &destination).with_context(|| {
+                format!(
+                    "failed to back up default knowledge-base file {}",
+                    record.name
+                )
+            })?;
+            files.push(DefaultFileBackup {
+                name: record.name,
+                source_revision: record.provenance.source_revision,
+            });
+        }
+        Ok(ReplacementBackup { root, files })
+    }
+
+    fn restore_replacement_backup(&self, backup: &ReplacementBackup) -> Result<()> {
+        self.remove_prefix("default-kb/")?;
+        // import_file writes bytes before the metadata upsert. If that upsert
+        // fails, the orphan has no row for remove_prefix to discover; clear only
+        // the bundled directory before restoring, never the user namespace.
+        let default_files = self.files_dir.join("default-kb");
+        if default_files.exists() {
+            std::fs::remove_dir_all(default_files)?;
+        }
+        for file in &backup.files {
+            let source = backup.root.path().join("files").join(&file.name);
+            self.import_file_with_revision(&source, &file.name, &file.source_revision)?;
+        }
+        // The failed replacement removed only bundled semantic rows. Rebuild them
+        // asynchronously from the restored default files; user vectors stay intact.
         self.spawn_embedding_reindex()?;
-        Ok(added)
+        Ok(())
     }
 
     fn prepare_default_imports(&self, source: &Path) -> Result<Vec<(PathBuf, String)>> {
