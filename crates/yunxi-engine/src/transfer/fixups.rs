@@ -126,17 +126,32 @@ pub(crate) fn apply_memory_tombstones(pairs: &[(PathBuf, PathBuf)]) -> Result<us
 /// carrier (provenance, embedding, and turn) as one transaction.  Old archives
 /// may lack any of these tables; those databases are left untouched.
 pub(crate) fn apply_evicted_tombstones(pairs: &[(PathBuf, PathBuf)]) -> Result<usize> {
-    apply_evicted_tombstones_with_before_commit(pairs, &mut || Ok(()))
+    apply_evicted_tombstones_impl(pairs, &mut || Ok(()), &mut || Ok(()))
 }
 
-/// Apply tombstones to staged evicted-context databases, with a narrow hook
-/// immediately before each local SQLite commit.  The production entry point
-/// passes a no-op callback; tests use the seam to inject a failure and prove
-/// that SQLite rolls the staged transaction back without implying any
-/// cross-database atomicity.
+/// Test-only seam for injecting a failure immediately before local commit.
+#[cfg(test)]
 fn apply_evicted_tombstones_with_before_commit(
     pairs: &[(PathBuf, PathBuf)],
     before_commit: &mut dyn FnMut() -> Result<()>,
+) -> Result<usize> {
+    apply_evicted_tombstones_with_hooks(pairs, before_commit, &mut || Ok(()))
+}
+
+/// Test-only seam for observing the boundary immediately after local commit.
+#[cfg(test)]
+fn apply_evicted_tombstones_with_hooks(
+    pairs: &[(PathBuf, PathBuf)],
+    before_commit: &mut dyn FnMut() -> Result<()>,
+    after_commit: &mut dyn FnMut() -> Result<()>,
+) -> Result<usize> {
+    apply_evicted_tombstones_impl(pairs, before_commit, after_commit)
+}
+
+fn apply_evicted_tombstones_impl(
+    pairs: &[(PathBuf, PathBuf)],
+    before_commit: &mut dyn FnMut() -> Result<()>,
+    after_commit: &mut dyn FnMut() -> Result<()>,
 ) -> Result<usize> {
     let mut removed = 0usize;
     for (live, staged) in pairs {
@@ -218,6 +233,7 @@ fn apply_evicted_tombstones_with_before_commit(
         )?;
         before_commit()?;
         tx.commit()?;
+        after_commit()?;
     }
     Ok(removed)
 }
@@ -785,6 +801,130 @@ mod tests {
             apply_evicted_tombstones(&[(live, staged)]).unwrap(),
             3,
             "a later retry must still be able to remove the linked carrier"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn evicted_tombstone_child_aborts_after_local_commit() {
+        let Ok(live_raw) = std::env::var("YUNXI_FIXUPS_ABORT_LIVE") else {
+            return;
+        };
+        let Ok(staged_raw) = std::env::var("YUNXI_FIXUPS_ABORT_STAGED") else {
+            return;
+        };
+        let live = PathBuf::from(live_raw);
+        let staged = PathBuf::from(staged_raw);
+        let mut after_commit = || -> Result<()> {
+            std::process::abort();
+        };
+        apply_evicted_tombstones_with_hooks(&[(live, staged)], &mut || Ok(()), &mut after_commit)
+            .unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn evicted_tombstone_fixup_survives_abort_after_local_commit() {
+        let temp = tempfile::tempdir().unwrap();
+        let live = temp.path().join("live.db");
+        let staged = temp.path().join("evicted.db");
+        Connection::open(&live)
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE memory_tombstones (
+                    kind TEXT NOT NULL,
+                    id INTEGER NOT NULL,
+                    deleted_at TEXT NOT NULL,
+                    PRIMARY KEY(kind, id)
+                 );
+                 INSERT INTO memory_tombstones VALUES ('fact', 1, '2026-10-02T00:00:00Z');",
+            )
+            .unwrap();
+        let live_before = std::fs::read(&live).unwrap();
+        Connection::open(&staged)
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE evicted_turns (
+                    id INTEGER PRIMARY KEY,
+                    content TEXT NOT NULL
+                 );
+                 CREATE TABLE evicted_embeddings (
+                    id INTEGER PRIMARY KEY,
+                    model TEXT NOT NULL
+                 );
+                 CREATE TABLE memory_provenance (
+                    carrier_kind TEXT NOT NULL,
+                    carrier_id INTEGER NOT NULL,
+                    memory_kind TEXT NOT NULL,
+                    memory_id INTEGER NOT NULL
+                 );
+                 INSERT INTO evicted_turns VALUES
+                    (1, 'deleted carrier'),
+                    (2, 'retained carrier'),
+                    (3, 'unassociated carrier');
+                 INSERT INTO evicted_embeddings VALUES
+                    (1, 'model'), (2, 'model'), (3, 'model');
+                 INSERT INTO memory_provenance VALUES
+                    ('evicted_turn', 1, 'fact', 1),
+                    ('evicted_turn', 2, 'fact', 2),
+                    ('evicted_turn', 3, 'fact', 3);",
+            )
+            .unwrap();
+
+        let child = std::process::Command::new(std::env::current_exe().unwrap())
+            .arg("--exact")
+            .arg("transfer::fixups::tests::evicted_tombstone_child_aborts_after_local_commit")
+            .arg("--nocapture")
+            .env("YUNXI_FIXUPS_ABORT_LIVE", &live)
+            .env("YUNXI_FIXUPS_ABORT_STAGED", &staged)
+            .status()
+            .unwrap();
+        assert!(
+            !child.success(),
+            "child must abort after the staged SQLite commit"
+        );
+
+        let conn = Connection::open(&staged).unwrap();
+        for (table, id_column) in [
+            ("evicted_turns", "id"),
+            ("evicted_embeddings", "id"),
+            ("memory_provenance", "carrier_id"),
+        ] {
+            assert_eq!(
+                conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| {
+                    row.get::<_, i64>(0)
+                })
+                .unwrap(),
+                2,
+                "the deleted carrier must stay absent from {table}"
+            );
+            assert_eq!(
+                conn.query_row(
+                    &format!("SELECT COUNT(*) FROM {table} WHERE {id_column}=1"),
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+                0,
+                "the deleted carrier must not reappear in {table}"
+            );
+        }
+        drop(conn);
+
+        assert_eq!(
+            std::fs::read(&live).unwrap(),
+            live_before,
+            "the live tombstone database must not be modified by staged fixup"
+        );
+        assert_eq!(
+            apply_evicted_tombstones(&[(live.clone(), staged.clone())]).unwrap(),
+            0,
+            "retry after a committed crash must be idempotent"
+        );
+        assert_eq!(
+            std::fs::read(&live).unwrap(),
+            live_before,
+            "retry must still leave the live tombstone database unchanged"
         );
     }
 }

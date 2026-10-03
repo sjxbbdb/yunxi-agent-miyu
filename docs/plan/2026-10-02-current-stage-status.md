@@ -143,6 +143,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   `tools::transcript_guard` 25/25 通过。该切片仍是有限词法屏障，不宣称完整
   shell parser，也不覆盖嵌入语言脚本的任意 data-flow。
 
+  G3-05-34 补上 staged transfer 的提交后 crash 回归：仅 cfg(test) 的
+  `after_commit` seam 严格位于本地 SQLite `tx.commit()` 成功之后；Unix child
+  随即 abort，父进程重开 staged DB，确认 provenance/embedding/turn 三张表均
+  保留未关联 carrier、删除 carrier 不复现，live tombstone DB 字节不变，正常
+  重试返回 0。WSL Ubuntu-24.04 ext4 `transfer::fixups::tests` 7/7 通过。该
+  证据覆盖 staged 本地提交后的进程消失，不把 live/staged 两个 SQLite 文件
+  扩大成跨库原子性保证。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：

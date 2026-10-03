@@ -806,6 +806,21 @@ After the minimal change, WSL Ubuntu-24.04 ext4
 Python/Node/Perl or other language data-flow; those remain explicit non-goals
 of this lexical seam.
 
+## G3-05-34 implemented slice: staged fixup crash after local commit
+
+The staged transfer fixup now has a test-only `after_commit` seam placed
+strictly after the local SQLite `tx.commit()` returns successfully. A Unix
+parent/child regression uses it to abort the child process at that boundary.
+The parent reopens the staged database and checks all three carrier tables:
+provenance, embedding, and turn. The tombstoned carrier remains absent, the
+two unrelated carriers remain, the live tombstone database is byte-for-byte
+unchanged, and a normal retry is idempotent with zero further removals.
+
+WSL Ubuntu-24.04 ext4 `transfer::fixups::tests` passed 7/7. This demonstrates
+the staged local-commit crash boundary only; it does not claim atomicity across
+the live memory database and staged state database, nor crash safety for later
+install/rollback filesystem steps.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate
