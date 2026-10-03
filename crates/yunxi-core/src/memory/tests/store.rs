@@ -3,10 +3,42 @@
 use super::shared::*;
 use crate::memory::browse::{BrowseTable, EvictedQuery};
 use crate::memory::*;
+#[cfg(unix)]
+use std::path::Path;
+#[cfg(unix)]
+use std::process::Command;
 use std::sync::{Arc, Barrier};
 use std::thread;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use yunxi_base::config::{AppConfig, EmbeddingBackend, ProviderConfig};
+#[cfg(unix)]
+use yunxi_base::paths::YunXiPaths;
+
+#[cfg(unix)]
+const G305_CRASH_CHILD_ENV: &str = "YUNXI_G305_CRASH_AFTER_DELETE_CHILD";
+#[cfg(unix)]
+const G305_CRASH_ROOT_ENV: &str = "YUNXI_G305_CRASH_AFTER_DELETE_ROOT";
+#[cfg(unix)]
+const G305_CRASH_FACT_ENV: &str = "YUNXI_G305_CRASH_AFTER_DELETE_FACT";
+
+#[cfg(unix)]
+fn test_paths_at(root: &Path) -> YunXiPaths {
+    YunXiPaths {
+        root_dir: root.to_path_buf(),
+        config_dir: root.join("config"),
+        config_file: root.join("config/config.jsonc"),
+        skills_dir: root.join("config/skills"),
+        data_dir: root.join("data"),
+        cache_dir: root.join("cache"),
+        state_dir: root.join("state"),
+        pictures_dir: root.join("pictures"),
+        fish_hook_file: root.join("fish/yunxi.fish"),
+        bash_hook_file: root.join("shell/bash-hook.sh"),
+        zsh_hook_file: root.join("shell/zsh-hook.zsh"),
+        scripts_dir: root.join("config/scripts"),
+        system_scripts_dir: Path::new("").to_path_buf(),
+    }
+}
 
 #[test]
 fn evicted_search_is_indexed_and_can_be_narrowed_by_time() {
@@ -536,6 +568,134 @@ fn committed_delete_survives_memory_store_restart_for_evicted_carriers() {
             id: fact_id,
         }])
         .unwrap());
+}
+
+#[cfg(unix)]
+#[test]
+fn committed_delete_survives_memory_store_process_crash_for_evicted_carriers() {
+    let temp = tempfile::tempdir().unwrap();
+    let config = AppConfig::default();
+    let paths = test_paths(&temp);
+    let store = MemoryStore::new(&config, &paths);
+    let fact_id = store
+        .remember_fact("G305_CRASH_DELETE_MARKER", "test")
+        .unwrap();
+    store
+        .remember_evicted_turns(&[
+            EvictedTurn {
+                source_id: "crash-linked-tool-report".into(),
+                timestamp: "2026-10-02T14:00:00+00:00".into(),
+                role: "assistant".into(),
+                content: "G305_CRASH_DELETE_MARKER".into(),
+                refs: vec![MemoryRef {
+                    kind: "fact".into(),
+                    id: fact_id,
+                }],
+                ..EvictedTurn::default()
+            },
+            EvictedTurn {
+                source_id: "crash-unlinked-user".into(),
+                timestamp: "2026-10-02T14:01:00+00:00".into(),
+                role: "user".into(),
+                content: "G305_CRASH_DELETE_MARKER".into(),
+                ..EvictedTurn::default()
+            },
+        ])
+        .unwrap();
+
+    let before = store
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    let linked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "assistant")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+    let unlinked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "user")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+
+    // The parent must close its handles before the child opens the same two
+    // SQLite databases.  The child aborts only after delete_item returns, so
+    // the tombstone transaction has committed before the process disappears.
+    drop(store);
+    let child_name = "memory::tests::store::committed_delete_child_aborts_after_committed_delete";
+    let child = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", child_name, "--nocapture"])
+        .env(G305_CRASH_CHILD_ENV, "1")
+        .env(G305_CRASH_ROOT_ENV, temp.path())
+        .env(G305_CRASH_FACT_ENV, fact_id.to_string())
+        .status()
+        .expect("launch crash-after-delete child test");
+    assert!(
+        !child.success(),
+        "child must terminate abnormally after its committed delete"
+    );
+
+    let reopened = MemoryStore::new(&config, &test_paths(&temp));
+    let keyword = reopened
+        .search_evicted_context("G305_CRASH_DELETE_MARKER", 10)
+        .unwrap();
+    let keyword_ids = keyword["results"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|item| item["id"].as_i64())
+        .collect::<Vec<_>>();
+    assert!(!keyword_ids.contains(&linked_id));
+    assert!(keyword_ids.contains(&unlinked_id));
+
+    let browse = reopened
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(browse.total, 1);
+    assert_eq!(browse.items[0]["id"], unlinked_id);
+
+    let semantic_ids = reopened
+        .semantic_corpus(None, None)
+        .unwrap()
+        .into_iter()
+        .map(|(id, _)| id)
+        .collect::<Vec<_>>();
+    assert!(!semantic_ids.contains(&linked_id));
+    assert!(semantic_ids.contains(&unlinked_id));
+    assert!(reopened
+        .memory_refs_are_tombstoned(&[MemoryRef {
+            kind: "fact".into(),
+            id: fact_id,
+        }])
+        .unwrap());
+}
+
+#[cfg(unix)]
+#[test]
+fn committed_delete_child_aborts_after_committed_delete() {
+    let Some(root) = std::env::var_os(G305_CRASH_ROOT_ENV) else {
+        return;
+    };
+    if std::env::var(G305_CRASH_CHILD_ENV).ok().as_deref() != Some("1") {
+        return;
+    }
+    let fact_id = std::env::var(G305_CRASH_FACT_ENV)
+        .expect("crash child fact id")
+        .parse::<i64>()
+        .expect("crash child fact id is an integer");
+    let paths = test_paths_at(Path::new(root.as_os_str()));
+    let store = MemoryStore::new(&AppConfig::default(), &paths);
+    assert!(store
+        .delete_item(BrowseTable::Facts, fact_id)
+        .expect("crash child committed fact delete"));
+    std::process::abort();
 }
 
 #[tokio::test]

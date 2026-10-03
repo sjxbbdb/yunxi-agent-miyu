@@ -766,6 +766,31 @@ WSL Ubuntu-24.04 ext4 `transfer::fixups::tests` passed 5/5. Existing import
 rollback and force-import scope tests remain part of the broader transfer
 contract.
 
+## G3-05-32 implemented slice: process crash after committed delete
+
+The memory-side crash boundary now has a real child-process regression rather
+than only a same-process reopen. A Unix-only parent test prepares one linked
+and one unlinked evicted carrier, then starts the exact child test in the same
+test binary. The child commits `delete_item` (including the durable fact
+tombstone) and immediately aborts before any state-side cleanup. The parent
+observes a non-successful child status, reopens both SQLite databases, and
+verifies that keyword recall, direct browse, and the semantic corpus hide the
+linked carrier while retaining the unlinked carrier; the tombstone remains
+durable.
+
+WSL Ubuntu-24.04 ext4 `memory::tests::store` passed 19/19. This is evidence for
+the post-crash tombstone read barrier only. It does not claim atomicity between
+the independent memory/state databases, nor an OS-crash schedule for staged
+transfer fixups.
+
+The parent-directory transcript audit remains an explicit boundary decision:
+`ensure_transcript_identity` walks parents and then opens the path, so a
+deterministic rename-and-replace between those steps reaches a different inode
+despite leaf `O_NOFOLLOW`. Closing that gap requires descriptor-relative
+directory traversal (`openat`/`fstatat` or equivalent) and matching handler /
+subprocess semantics, plus separate Windows/macOS implementations. No partial
+openat seam is added in G3-05.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate

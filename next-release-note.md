@@ -103,6 +103,17 @@
   `transfer::fixups::tests` 5/5 通过。真实进程 crash 时序与跨库原子性仍未
   被声称覆盖。
 
+- G3-05 process crash-after-delete：Unix child 在 fact tombstone transaction
+  提交后立即 abort，父进程重开数据库并验证 keyword/browse/semantic corpus
+  都隐藏已删除关联 carrier，同时保留未关联 carrier；WSL
+  `memory::tests::store` 19/19 通过。该证据只覆盖 memory-side tombstone
+  read barrier，不覆盖 staged transfer 的 OS crash 或跨数据库原子性。
+
+- G3-05 transcript parent-directory boundary：ext4 竞态审计确认叶级
+  `O_NOFOLLOW` 无法防止 identity check 与 open 之间的父目录替换；完整修复
+  需要 descriptor-relative `openat`/`fstatat` 链和跨平台实现，本阶段不伪造
+  部分能力。
+
 - G0 基线稳定化：修复 YunXi 产品改名后 legacy config namespace 的正/负路径兼容，校准 TUI/replay/renderer/tool-summary 的当前产品输出夹具，修正 bundled script 与 registry fixture 漂移，并让 WSL 权限位测试使用原生 Linux 文件系统临时目录。
 - G0 验证：WSL Ubuntu-24.04 工作区单线程测试在 v4 当前提交上重新全绿（根包 yunxi 运行 508 项、yunxi-base 396、yunxi-core 651、yunxi-engine 与 yunxi-hosts 均完成且 0 failed；doctest 全部通过）。本结果对应 G0 evidence index 的 `G0-20261001-workspace-02`；Arch Linux 与 macOS M-series 仍未实机验证。
 - G0 计划补充 Skills/MCP 生命周期、host 权限真相源、raw/display/context 三分、长期记忆删除不可召回、memory/KB 数据边界、Laya 可行性门、自动总结独立写入协议，以及不新增 YunXi 通用审批状态机的约束。

@@ -128,6 +128,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   carrier。WSL Ubuntu-24.04 ext4 `transfer::fixups::tests` 5/5 通过。该证据覆盖
   本地事务失败语义；真实进程级 crash 时序与跨库原子性仍不作声称。
 
+  G3-05-32 又补上真实子进程 crash-after-delete 回归：父测试启动精确的
+  Unix child test，child 在 fact tombstone transaction 提交后立即 abort，故意
+  不执行 state-side carrier 清理；父进程随后重新打开同一数据库，确认
+  keyword、browse、semantic corpus 都隐藏已删除关联 carrier，同时保留未关联
+  carrier，且 tombstone 仍持久存在。WSL Ubuntu-24.04 ext4
+  `memory::tests::store` 19/19 通过。这覆盖进程消失后的 tombstone read barrier，
+  不等于跨数据库原子性或 staged transfer 的 OS crash 保证。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
@@ -135,17 +143,21 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 1. 按 G3-05-25 合同继续补 provenance 在 concurrent delete/recall 的语义
    覆盖；确定性 seam 已覆盖 keyword/hybrid fallback、semantic final-epoch
    provider overlap、evicted detail 与 state-side browse 已有确定性证据；
-   transfer/restore 不增加伪在线 overlap seam；staged fixup 的提交前失败与
-   重试回归已有证据，仍需完成最终退出审计，并继续明确真实进程 crash 与跨库
-   原子性不在本阶段保证内；
+   transfer/restore 不增加伪在线 overlap seam；staged fixup 的提交前失败、
+   重试与 memory-side 子进程 crash-after-delete 已有证据，仍需完成最终退出
+   审计，并继续明确真实 staged transfer crash 与跨库原子性不在本阶段保证内；
 2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
    明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
    参数及 `$()`/反引号内嵌动态文件访问已有词法屏障与 25/25 回归，live
    transcript shell 路径也已拒绝，当前仍不做完整 shell parser；
 3. 继续评估 `grep` 的 `include` 过滤与 `glob` 的目录能力是否值得进入
-   descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；同时继续
-   审计任意 wrapper data-flow 与跨库 overlap，再评估 G3-05 的阶段退出；
+   descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；当前审计
+   已确认 `ensure_transcript_identity` 与后续 open 之间存在可复现的父目录
+   TOCTOU，叶级 `O_NOFOLLOW` 不能闭合它，因此本阶段不把父目录替换写成已
+   覆盖能力；完整闭合需要 Unix 目录 FD 链/openat/fstatat 及 Windows/macOS
+   独立实现。继续审计任意 wrapper data-flow 与跨库 overlap，再评估 G3-05
+   的阶段退出；
    `read` 与单文件 `grep` 的叶文件 capability 已落地，
    但不等于整段完成；
 
