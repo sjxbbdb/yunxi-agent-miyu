@@ -183,6 +183,13 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   在 WSL Ubuntu-24.04 ext4 的 `tools::transcript_guard` 29/29 通过。该切片仍
   不宣称完整 sudo/env/wrapper CLI grammar。
 
+  G3-05-39 补上 legacy summary 的退出矩阵证据：通过旧的
+  `replace_visible_with_summary` API 写入无 `memory_provenance` 的摘要，并让
+  摘要正文与随后删除的 fact 完全相同；删除后 checkpoint 仍保留原摘要且不出现
+  redaction marker，证明 unknown/legacy carrier 不会按文本猜测被清理。WSL
+  Ubuntu-24.04 ext4 `agent::tests::context` 38/38 通过。transfer rollback 的
+  linked/unlinked 组合仍不伪造为已覆盖，待有可复用的最小入口后再补。
+
   本阶段逐条退出前对账见
   [`2026-10-02-g3-05-exit-audit.md`](2026-10-02-g3-05-exit-audit.md)；该文档明确
   已证明路径、跨库/legacy 未证明路径和下一施工顺序，不能当作 G3-05 完成声明。
@@ -203,7 +210,8 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
    参数、`xargs` opaque stdin/placeholder、`find -exec` opaque matched-path
    data-flow、process substitution 及 `$()`/反引号内嵌动态文件访问已有词法屏障与
    29/29 回归，live
-   transcript shell 路径也已拒绝；当前仍不做完整 shell parser，未知 wrapper
+   transcript shell 路径也已拒绝；legacy summary 的文本不再作为 memory 关联
+   依据；当前仍不做完整 shell parser，未知 wrapper
    CLI grammar 与动态命令名继续按边界处理；
 3. 继续评估 `grep` 的 `include` 过滤与 `glob` 的目录能力是否值得进入
    descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；当前审计

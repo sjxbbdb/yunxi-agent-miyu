@@ -881,6 +881,21 @@ does not claim coverage for every wrapper option, dynamic command names,
 functions/aliases, or embedded language scripts. WSL Ubuntu-24.04 ext4
 `tools::transcript_guard` passed 29/29.
 
+## G3-05-39 implemented slice: legacy summary text is not provenance
+
+The legacy `replace_visible_with_summary` path now has a regression proving
+that a summary without a `memory_provenance` row remains readable after a
+fact with identical text is deleted. The test asserts the typed reference list
+is empty, the checkpoint still contains the original summary, and no redaction
+marker appears. This prevents a future cleanup from guessing a memory link by
+matching summary text. WSL Ubuntu-24.04 ext4 `agent::tests::context` passed
+38/38.
+
+The linked/unlinked carrier combination across transfer rollback is still not
+claimed: existing rollback tests use sentinel provenance and the staged/live
+databases remain separate. A dedicated test must reuse a real import fixture
+before that matrix can be closed.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate

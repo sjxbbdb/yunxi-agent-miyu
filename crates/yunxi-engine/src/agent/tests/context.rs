@@ -120,6 +120,81 @@ fn deleted_summary_memory_is_redacted_from_checkpoint() {
     assert!(!checkpoint.contains("秘密摘要正文不应再进入提示词"));
 }
 
+#[test]
+fn legacy_summary_without_provenance_is_readable_after_matching_memory_delete() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = test_paths(temp.path());
+    let config = AppConfig::default();
+    let state = StateStore::new(&paths).unwrap();
+    state.start_turn("t1", "old", 999_999).unwrap();
+    state.complete_turn("t1", "old reply", None).unwrap();
+    let client =
+        OpenAiCompatibleClient::new(config.provider(None).unwrap(), &config, &paths).unwrap();
+    let agent = Agent::new(
+        config,
+        &paths,
+        state,
+        client,
+        ToolRegistry::new(),
+        PersonaLane::Active,
+    )
+    .unwrap();
+
+    // This uses the legacy summary API, which intentionally writes no
+    // memory_provenance row.  Keep the text byte-identical to the fact so the
+    // assertion proves deletion never falls back to unsafe text matching.
+    let legacy_text = "legacy summary text that happens to equal a deleted fact";
+    let fact_id = agent
+        .memory
+        .store
+        .remember_fact(legacy_text, "test")
+        .unwrap();
+    let visible = agent.state.load_visible_turns().unwrap();
+    let ids = visible
+        .iter()
+        .map(|turn| turn.turn_id.clone())
+        .collect::<Vec<_>>();
+    agent
+        .state
+        .replace_visible_with_summary(
+            &ids,
+            &ids,
+            legacy_text,
+            Default::default(),
+            false,
+            None,
+            None,
+        )
+        .unwrap();
+    let summary = agent.state.load_last_summary().unwrap().unwrap();
+    assert!(agent
+        .state
+        .load_summary_memory_refs(&summary.turn_id)
+        .unwrap()
+        .is_empty());
+
+    agent
+        .memory
+        .store
+        .delete_item(BrowseTable::Facts, fact_id)
+        .unwrap();
+
+    let messages = agent.chat_messages("current", "继续").unwrap().0;
+    let checkpoint = messages
+        .iter()
+        .filter_map(|message| match message.content.as_ref() {
+            Some(ChatContent::Text(text)) => Some(text.as_str()),
+            _ => None,
+        })
+        .find(|text| text.contains("<conversation-checkpoint>"))
+        .expect("a legacy summary checkpoint");
+    assert!(checkpoint.contains(legacy_text), "{checkpoint}");
+    assert!(
+        !checkpoint.contains(SUMMARY_REDACTION_MARKER),
+        "{checkpoint}"
+    );
+}
+
 /// 复读轮平时原样回放(09-24):活体每一轮都发过,回放少一轮下一轮的前缀就在那里
 /// 断。折叠只在压缩那一刻做(`fold_repeated_rounds`,见下一条)。
 #[test]
