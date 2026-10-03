@@ -183,6 +183,10 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   在 WSL Ubuntu-24.04 ext4 的 `tools::transcript_guard` 29/29 通过。该切片仍
   不宣称完整 sudo/env/wrapper CLI grammar。
 
+  本阶段逐条退出前对账见
+  [`2026-10-02-g3-05-exit-audit.md`](2026-10-02-g3-05-exit-audit.md)；该文档明确
+  已证明路径、跨库/legacy 未证明路径和下一施工顺序，不能当作 G3-05 完成声明。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
