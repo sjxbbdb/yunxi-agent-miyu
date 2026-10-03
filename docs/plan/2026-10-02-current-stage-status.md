@@ -298,8 +298,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   以稳定错误快速返回，状态写入在临界区重新读取，避免旧快照覆盖新 revision。WSL
   Ubuntu-24.04 ext4 `default_kb` 8 passed、KB 29 passed/2 ignored。
 
-- **G4-05 未退出。** 下一切片处理并发 update lock、重复运行收敛和 meta/semantic
-  双库提交边界与重复更新的 no-op/收敛语义；完成前 goal 保持 active。
+- **G4-05：已完成阶段退出。** 失败恢复、reindex exhaustion、跨进程 update lock、
+  重复 revision no-op 与 namespace 恢复边界均已推送；退出证据见
+  [`2026-10-04-g4-05-exit-audit.md`](2026-10-04-g4-05-exit-audit.md)。跨 SQLite
+  OS-crash 原子性仍是明确非目标，不被写成已解决。
+
+- **当前：G5-00 Laya/DecisionPort 来源审计。** 只读核对官方来源、版本/tag、artifact
+  或 checkpoint SHA、许可证、runtime、CPU/Linux/macOS ARM、中文/Linux 术语质量、
+  p50/p95 与 RAM；未知项停止，不下载权重、不接入 provider。
 
 ## G3-05 退出决定
 
@@ -312,10 +318,11 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 ## 下一处施工边界
 
-下一施工单进入 **G4-05**：
+下一施工单进入 **G5-00**：
 
-1. 为同一 revision 的重复更新增加 no-op/收敛回归，证明不会重复破坏有效快照。
-2. 覆盖 meta/semantic 双库提交边界，并保留 update lock 的跨进程故障证据。
+1. 只读核验 Laya/DecisionPort 候选的来源、许可证、版本和运行时事实。
+2. 记录决策模型消费者、最小输入、隐私/权限边界和 deterministic fallback，不创建
+   provider、不加载权重、不修改 memory/KB/runtime。
 3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate 和旧
    API/旧数据库兼容；Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
 
@@ -326,4 +333,4 @@ DrvFS 只用于编辑和只读检查，不能冒充 Linux 运行证据。每个 
 必须执行定向测试、`cargo fmt --all -- --check`、`git diff --check`、隐私扫描，
 清理 disposable checkout/target，并立即提交、推送当前分支。
 
-G4–G9 尚未完成，goal 必须保持 active。
+G5–G9 尚未完成，goal 必须保持 active。
