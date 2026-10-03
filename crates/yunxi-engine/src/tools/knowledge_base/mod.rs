@@ -74,10 +74,82 @@ pub struct KnowledgeBase {
     files_dir: PathBuf,
     meta_db: PathBuf,
     semantic_db: PathBuf,
+    capability: KnowledgeCapability,
+}
+
+/// A local capability for one Knowledge Base view.  This type intentionally
+/// stays private to the KB module: later host/registry plumbing may mint one,
+/// but a model argument must never be able to construct or widen it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::tools::knowledge_base) struct KnowledgeCapability {
+    pub(in crate::tools::knowledge_base) read_namespaces: HashSet<String>,
+    pub(in crate::tools::knowledge_base) write_namespaces: HashSet<String>,
+    pub(in crate::tools::knowledge_base) delete_namespaces: HashSet<String>,
+    pub(in crate::tools::knowledge_base) allow_bundled_replace: bool,
+}
+
+impl KnowledgeCapability {
+    fn owner_default() -> Self {
+        Self {
+            read_namespaces: [USER_KB_NAMESPACE, DEFAULT_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            write_namespaces: [USER_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            delete_namespaces: [USER_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            allow_bundled_replace: false,
+        }
+    }
+
+    #[cfg(test)]
+    fn bundled_admin() -> Self {
+        Self {
+            write_namespaces: [USER_KB_NAMESPACE, DEFAULT_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            delete_namespaces: [USER_KB_NAMESPACE, DEFAULT_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            allow_bundled_replace: true,
+            ..Self::owner_default()
+        }
+    }
+
+    pub(in crate::tools::knowledge_base) fn can_read(&self, namespace: &str) -> bool {
+        self.read_namespaces.contains(namespace)
+    }
+
+    pub(in crate::tools::knowledge_base) fn can_write(&self, namespace: &str) -> bool {
+        self.write_namespaces.contains(namespace)
+    }
+
+    pub(in crate::tools::knowledge_base) fn can_delete(&self, namespace: &str) -> bool {
+        self.delete_namespaces.contains(namespace)
+    }
+
+    pub(in crate::tools::knowledge_base) fn can_replace_bundled(&self) -> bool {
+        self.allow_bundled_replace
+    }
 }
 
 impl KnowledgeBase {
     pub fn new(config: AppConfig, paths: YunXiPaths) -> Result<Self> {
+        Self::with_capability(config, paths, KnowledgeCapability::owner_default())
+    }
+
+    pub(in crate::tools::knowledge_base) fn with_capability(
+        config: AppConfig,
+        paths: YunXiPaths,
+        capability: KnowledgeCapability,
+    ) -> Result<Self> {
         let root = kb_root_for(&config, &paths);
         let files_dir = root.join("files");
         let meta_db = root.join("kb_meta.db");
@@ -88,6 +160,7 @@ impl KnowledgeBase {
             files_dir,
             meta_db,
             semantic_db,
+            capability,
         })
     }
 
@@ -158,8 +231,13 @@ impl KnowledgeBase {
         self.init()?;
         let files = self.list()?;
         let semantic = self.semantic_conn()?;
-        let chunks: i64 =
-            semantic.query_row("SELECT COUNT(*) FROM semantic_chunks", [], |row| row.get(0))?;
+        let mut stmt = semantic.prepare("SELECT namespace FROM semantic_chunks")?;
+        let mut chunks = 0i64;
+        for namespace in stmt.query_map([], |row| row.get::<_, String>(0))? {
+            if self.capability.can_read(&namespace?) {
+                chunks += 1;
+            }
+        }
         let embedder = self.embedder();
         Ok(json!({
             "ok": true,
@@ -347,7 +425,9 @@ mod tests {
         let paths = test_paths(temp.path());
         let mut config = AppConfig::default();
         config.plugins.knowledge_base.embedding_enabled = false;
-        let kb = KnowledgeBase::new(config, paths).unwrap();
+        let kb =
+            KnowledgeBase::with_capability(config, paths, KnowledgeCapability::bundled_admin())
+                .unwrap();
         let bundled_source = temp.path().join("bundled.md");
         let user_source = temp.path().join("user.md");
         std::fs::write(&bundled_source, "pacman command reference").unwrap();
@@ -369,6 +449,124 @@ mod tests {
         assert_eq!(result["provenance"]["namespace"], USER_KB_NAMESPACE);
         assert_eq!(result["provenance"]["source_kind"], USER_KB_SOURCE_KIND);
         assert_eq!(result["provenance"]["source_uri"], USER_KB_SOURCE_URI);
+    }
+
+    #[tokio::test]
+    async fn namespace_capability_filters_reads_and_protects_bundled_writes() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = false;
+        let bundled_source = temp.path().join("bundled.md");
+        let user_source = temp.path().join("user.md");
+        std::fs::write(&bundled_source, "pacman command reference").unwrap();
+        std::fs::write(&user_source, "personal reference note").unwrap();
+
+        let admin = KnowledgeBase::with_capability(
+            config.clone(),
+            paths.clone(),
+            KnowledgeCapability::bundled_admin(),
+        )
+        .unwrap();
+        admin
+            .import_file(&bundled_source, "default-kb/commands/pacman.md")
+            .unwrap();
+        admin
+            .import_file(&user_source, "notes/reference.md")
+            .unwrap();
+
+        let user_only = KnowledgeCapability {
+            read_namespaces: [USER_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            write_namespaces: [USER_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            delete_namespaces: [USER_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            allow_bundled_replace: false,
+        };
+        let user_view =
+            KnowledgeBase::with_capability(config.clone(), paths.clone(), user_only).unwrap();
+        let files = user_view.list().unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].name, "notes/reference.md");
+        assert_eq!(
+            user_view.find_by_name_readonly("pacman", Some(10)).unwrap()["total_matches"],
+            0
+        );
+        assert!(user_view.read_file("pacman.md", 1, Some(10)).is_err());
+        assert!(user_view
+            .read_file("default-kb/commands/pacman.md", 1, Some(10))
+            .is_err());
+        assert_eq!(
+            user_view.search("pacman", Some(10)).await.unwrap()["total_matches"],
+            0
+        );
+        assert_eq!(
+            user_view.search("personal", Some(10)).await.unwrap()["total_matches"],
+            1
+        );
+
+        let linux_only = KnowledgeCapability {
+            read_namespaces: [DEFAULT_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            write_namespaces: HashSet::new(),
+            delete_namespaces: HashSet::new(),
+            allow_bundled_replace: false,
+        };
+        let linux_view =
+            KnowledgeBase::with_capability(config.clone(), paths.clone(), linux_only).unwrap();
+        assert!(linux_view
+            .read_file("pacman.md", 1, Some(10))
+            .unwrap()
+            .contains("pacman command reference"));
+
+        let owner = KnowledgeBase::new(config, paths.clone()).unwrap();
+        assert!(owner
+            .import_file(&bundled_source, "default-kb/commands/other.md")
+            .is_err());
+        assert!(owner.remove("default-kb/commands/pacman.md").is_err());
+    }
+
+    #[test]
+    fn bundled_replace_requires_internal_capability_and_replaces_only_bundled_rows() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let config = AppConfig::default();
+        let source = temp.path().join("bundled.md");
+        std::fs::write(&source, "old command").unwrap();
+        let admin = KnowledgeBase::with_capability(
+            config.clone(),
+            paths.clone(),
+            KnowledgeCapability::bundled_admin(),
+        )
+        .unwrap();
+        admin.import_file(&source, "default-kb/old.md").unwrap();
+        admin.import_file(&source, "notes/user.md").unwrap();
+
+        let replacement = temp.path().join("replacement");
+        std::fs::create_dir_all(&replacement).unwrap();
+        std::fs::write(replacement.join("new.md"), "new command").unwrap();
+        admin.replace_default_files(&replacement).unwrap();
+        let names = admin
+            .list()
+            .unwrap()
+            .into_iter()
+            .map(|record| record.name)
+            .collect::<Vec<_>>();
+        assert!(names.contains(&"default-kb/new.md".to_string()));
+        assert!(!names.contains(&"default-kb/old.md".to_string()));
+        assert!(names.contains(&"notes/user.md".to_string()));
+
+        let owner = KnowledgeBase::new(config, paths).unwrap();
+        assert!(owner.replace_default_files(&replacement).is_err());
     }
 
     #[test]

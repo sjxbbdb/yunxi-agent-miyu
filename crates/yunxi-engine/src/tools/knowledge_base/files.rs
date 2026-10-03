@@ -40,6 +40,9 @@ impl KnowledgeBase {
     }
 
     pub fn replace_default_files(&self, source: &Path) -> Result<Vec<String>> {
+        if !self.capability.can_replace_bundled() {
+            bail!("knowledge base bundled namespace requires an internal capability")
+        }
         self.init()?;
         self.remove_prefix("default-kb/")?;
         let mut added = Vec::new();
@@ -77,22 +80,33 @@ impl KnowledgeBase {
         )?;
         let files_dir = self.files_dir.clone();
         let rows = stmt.query_map([], |row| {
-            let name: String = row.get(0)?;
-            Ok(FileRecord {
-                path: files_dir.join(&name).display().to_string(),
-                name,
-                size_bytes: row.get(1)?,
-                content_sha256: row.get(2)?,
-                provenance: SourceMetadata {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                SourceMetadata {
                     namespace: row.get(3)?,
                     source_kind: row.get(4)?,
                     source_uri: row.get(5)?,
                     source_revision: row.get(6)?,
                 },
-            })
+            ))
         })?;
-        rows.collect::<rusqlite::Result<Vec<_>>>()
-            .map_err(Into::into)
+        let mut records = Vec::new();
+        for row in rows {
+            let (name, size_bytes, content_sha256, provenance) = row?;
+            if !self.capability.can_read(&provenance.namespace) {
+                continue;
+            }
+            records.push(FileRecord {
+                path: files_dir.join(&name).display().to_string(),
+                name,
+                size_bytes,
+                content_sha256,
+                provenance,
+            });
+        }
+        Ok(records)
     }
 
     pub fn find_by_name(&self, query: &str, max_results: Option<usize>) -> Result<Value> {
@@ -230,6 +244,12 @@ impl KnowledgeBase {
         if !path.exists() {
             bail!("knowledge base file not found: {rel}")
         }
+        let resolved_namespace = SourceMetadata::for_file(&rel).namespace;
+        if !self.capability.can_read(&resolved_namespace) {
+            // Do not disclose that a protected namespace contains a matching
+            // path; callers see the same not-found shape as a missing file.
+            bail!("knowledge base file not found: {rel}")
+        }
         let content = std::fs::read_to_string(&path)?;
         let start = start_line.max(1);
         let max_lines = max_lines
@@ -265,6 +285,10 @@ impl KnowledgeBase {
     pub fn remove(&self, name: &str) -> Result<()> {
         self.init()?;
         let rel = normalize_relative_path(name)?;
+        let namespace = SourceMetadata::for_file(&rel).namespace;
+        if !self.capability.can_delete(&namespace) {
+            bail!("knowledge base namespace is not deletable: {namespace}")
+        }
         let path = self.safe_file_path(&rel)?;
         // `exists` follows symlinks (and reports a dangling link as absent), while
         // remove_file historically removed the link itself.  Keep that behavior,
@@ -329,6 +353,12 @@ impl KnowledgeBase {
                 .query_map(params![format!("{prefix}%")], |row| row.get::<_, String>(0))?
                 .collect::<rusqlite::Result<Vec<_>>>()?;
             names
+                .into_iter()
+                .filter(|name| {
+                    let namespace = SourceMetadata::for_file(name).namespace;
+                    self.capability.can_delete(&namespace)
+                })
+                .collect::<Vec<_>>()
         };
         // Keep the historical empty-prefix no-op: do not create a tomb when there
         // is nothing to delete.
@@ -400,6 +430,11 @@ impl KnowledgeBase {
     }
 
     pub(in crate::tools) fn import_file(&self, source: &Path, name: &str) -> Result<String> {
+        let name = normalize_relative_path(name)?;
+        let namespace = SourceMetadata::for_file(&name).namespace;
+        if !self.capability.can_write(&namespace) {
+            bail!("knowledge base namespace is not writable: {namespace}")
+        }
         // 先看元数据再整读:超大文件不该先撑满 RAM 再被大小校验拒绝。
         let max_bytes = self.config.plugins.knowledge_base.max_file_size_kb * 1024;
         let size = std::fs::metadata(source)?.len();
@@ -407,8 +442,8 @@ impl KnowledgeBase {
             bail!("file too large: {size} bytes");
         }
         let bytes = std::fs::read(source)?;
-        self.validate_file(name, &bytes)?;
-        let dest = self.safe_file_path(name)?;
+        self.validate_file(&name, &bytes)?;
+        let dest = self.safe_file_path(&name)?;
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -420,19 +455,19 @@ impl KnowledgeBase {
         conn.execute(
             "INSERT INTO files (name, path, size_bytes, mtime, content_sha256, updated_at, namespace, source_kind, source_uri, source_revision) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10) ON CONFLICT(name) DO UPDATE SET path=excluded.path, size_bytes=excluded.size_bytes, mtime=excluded.mtime, content_sha256=excluded.content_sha256, updated_at=excluded.updated_at, namespace=excluded.namespace, source_kind=excluded.source_kind, source_uri=excluded.source_uri, source_revision=excluded.source_revision",
             params![
-                name,
+                &name,
                 dest.display().to_string(),
                 bytes.len() as i64,
                 mtime,
                 hash,
                 now_secs(),
-                SourceMetadata::for_file(name).namespace,
-                SourceMetadata::for_file(name).source_kind,
-                SourceMetadata::for_file(name).source_uri,
-                SourceMetadata::for_file(name).source_revision,
+                SourceMetadata::for_file(&name).namespace,
+                SourceMetadata::for_file(&name).source_kind,
+                SourceMetadata::for_file(&name).source_uri,
+                SourceMetadata::for_file(&name).source_revision,
             ],
         )?;
-        Ok(name.to_string())
+        Ok(name)
     }
 
     pub(in crate::tools::knowledge_base) fn validate_file(

@@ -269,12 +269,30 @@ impl KnowledgeBase {
         let semantic = self.semantic_conn()?;
         // Only vectors from the current model are comparable; rows left by a
         // previous model wait for the reindex.
-        let mut stmt = semantic.prepare(
+        if self.capability.read_namespaces.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut namespaces = self
+            .capability
+            .read_namespaces
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        namespaces.sort();
+        let placeholders = (2..=namespaces.len() + 1)
+            .map(|index| format!("?{index}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        let sql = format!(
             "SELECT file_name, start_char, end_char, text, embedding, embedding_json,
                     namespace, source_kind, source_uri, source_revision
-             FROM semantic_chunks WHERE model = ?1",
-        )?;
-        let rows = stmt.query_map(params![embedder.model_id()], |row| {
+             FROM semantic_chunks WHERE model = ?1 AND namespace IN ({placeholders})"
+        );
+        let values = std::iter::once(embedder.model_id().to_string())
+            .chain(namespaces)
+            .collect::<Vec<_>>();
+        let mut stmt = semantic.prepare(&sql)?;
+        let rows = stmt.query_map(rusqlite::params_from_iter(values.iter()), |row| {
             Ok((
                 row.get::<_, String>(0)?,
                 row.get::<_, usize>(1)?,
@@ -457,10 +475,14 @@ impl KnowledgeBase {
         }
         // Vectors from other models are dead weight once the current model
         // has covered the library; the reindex is the natural sweep point.
-        semantic.execute(
-            "DELETE FROM semantic_chunks WHERE model != ?1",
-            params![model],
-        )?;
+        // Keep the sweep inside this capability's read set: a user-scoped
+        // rebuild must not delete bundled/Linux-command vectors it cannot see.
+        for namespace in &self.capability.read_namespaces {
+            semantic.execute(
+                "DELETE FROM semantic_chunks WHERE model != ?1 AND namespace = ?2",
+                params![&model, namespace],
+            )?;
+        }
         Ok(indexed)
     }
 
@@ -784,6 +806,104 @@ mod reindex_tests {
             .unwrap();
         assert_eq!(complete_count, 2);
         server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn scoped_reindex_does_not_sweep_hidden_namespace_vectors() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = super::super::tests::test_paths(temp.path());
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = [0_u8; 8192];
+            let _ = stream.read(&mut request).await.unwrap();
+            let body = r#"{"data":[{"index":0,"embedding":[1.0,0.0]}]}"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+        });
+
+        let mut config = AppConfig::default();
+        config.plugins.knowledge_base.embedding_enabled = true;
+        config.plugins.knowledge_base.semantic_chunk_chars = 128;
+        config.plugins.knowledge_base.semantic_chunk_overlap = 0;
+        config.embedding.enabled = true;
+        config.embedding.backend = EmbeddingBackend::Remote;
+        config.embedding.provider_id = "g4-scope-embed".to_string();
+        config.embedding.model = "toy".to_string();
+        let mut provider = ProviderConfig::default_opencodezen();
+        provider.id = "g4-scope-embed".to_string();
+        provider.base_url = format!("http://{address}");
+        provider.api_key = Some("test-key".to_string());
+        provider.models = vec!["toy".to_string()];
+        provider.default_model = "toy".to_string();
+        config.providers.push(provider);
+
+        let capability = super::super::KnowledgeCapability {
+            read_namespaces: [USER_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            write_namespaces: [USER_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            delete_namespaces: [USER_KB_NAMESPACE]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            allow_bundled_replace: false,
+        };
+        let kb = KnowledgeBase::with_capability(config, paths, capability).unwrap();
+        kb.init().unwrap();
+        let source = temp.path().join("user.md");
+        std::fs::write(&source, "user command reference").unwrap();
+        kb.import_file(&source, "notes/user.md").unwrap();
+        kb.semantic_conn()
+            .unwrap()
+            .execute(
+                "INSERT INTO semantic_chunks (provider_id, model, file_name, content_sha256, chunk_index, start_char, end_char, text, embedding_json, embedding, created_at, namespace, source_kind, source_uri, source_revision) VALUES (?1, ?2, ?3, '', 0, 0, 1, 'bundled', '[]', ?4, ?5, ?6, ?7, ?8, '')",
+                params![
+                    "old-provider",
+                    "old-model",
+                    "default-kb/hidden.md",
+                    vec![0_u8, 0, 0, 0],
+                    now_secs(),
+                    DEFAULT_KB_NAMESPACE,
+                    DEFAULT_KB_SOURCE_KIND,
+                    DEFAULT_KB_SOURCE_URI,
+                ],
+            )
+            .unwrap();
+
+        let embedder = kb.embedder().unwrap();
+        let mut progress = ReindexProgress::new(&kb, embedder.model_id());
+        kb.reindex_embeddings_inner(&embedder, true, &mut progress)
+            .await
+            .unwrap();
+        server.await.unwrap();
+
+        let semantic = kb.semantic_conn().unwrap();
+        let bundled_old: i64 = semantic
+            .query_row(
+                "SELECT COUNT(*) FROM semantic_chunks WHERE namespace=?1 AND model=?2",
+                params![DEFAULT_KB_NAMESPACE, "old-model"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let user_old: i64 = semantic
+            .query_row(
+                "SELECT COUNT(*) FROM semantic_chunks WHERE namespace=?1 AND model=?2",
+                params![USER_KB_NAMESPACE, "old-model"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(bundled_old, 1, "hidden namespace vectors must survive");
+        assert_eq!(user_old, 0, "visible namespace stale vectors are swept");
     }
 }
 
