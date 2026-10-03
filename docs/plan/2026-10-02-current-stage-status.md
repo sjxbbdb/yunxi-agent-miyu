@@ -292,8 +292,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   WSL Ubuntu-24.04 ext4 定向测试为 index progress 3/3、dashboard exhaustion 1/1，
   fmt、metadata 通过。
 
+- **G4-05-03 已完成并推送 `69698f8d`。** 默认知识库更新、启动时初始化导入、更新
+  检查与通知共用 `default-kb/update.lock`；Linux 使用 `flock(LOCK_EX|LOCK_NB)`，
+  lease 由 RAII 持有，进程异常退出后由内核释放，不依赖 stale marker。第二持有者
+  以稳定错误快速返回，状态写入在临界区重新读取，避免旧快照覆盖新 revision。WSL
+  Ubuntu-24.04 ext4 `default_kb` 8 passed、KB 29 passed/2 ignored。
+
 - **G4-05 未退出。** 下一切片处理并发 update lock、重复运行收敛和 meta/semantic
-  双库提交边界；完成前 goal 保持 active。
+  双库提交边界与重复更新的 no-op/收敛语义；完成前 goal 保持 active。
 
 ## G3-05 退出决定
 
@@ -308,8 +314,8 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 下一施工单进入 **G4-05**：
 
-1. 增加 update lock 和重复/并发运行回归，证明同一 revision 最终只有一份完整快照。
-2. 覆盖 meta/semantic 双库提交边界，并继续为 update lock 与重复运行收敛补证据。
+1. 为同一 revision 的重复更新增加 no-op/收敛回归，证明不会重复破坏有效快照。
+2. 覆盖 meta/semantic 双库提交边界，并保留 update lock 的跨进程故障证据。
 3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate 和旧
    API/旧数据库兼容；Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
 
