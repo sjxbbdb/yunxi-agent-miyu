@@ -286,8 +286,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   元数据并清理 orphan，不复制整库 semantic DB。WSL 证据为 default_kb 7 passed、KB
   27 passed/2 ignored、apply_patch 18 passed；详见 [`2026-10-04-g4-05-kb-transaction-recovery.md`](2026-10-04-g4-05-kb-transaction-recovery.md)。
 
-- **G4-05 未退出。** 下一切片处理并发 update lock、重复运行收敛、reindex marker exhaustion
-  和 dashboard queued/exhausted 观测；完成前 goal 保持 active。
+- **G4-05-02 已完成并推送 `e4187b98`。** 重索引在第 8 轮结束仍有 rerun marker
+  时写入 `phase=exhausted`，保留 marker 供下一次重试，不再伪装成 `done`；状态面板
+  暴露 `passes/max_passes/rerun_pending`，旧的 `done+marker` 状态归一为 `queued`。
+  WSL Ubuntu-24.04 ext4 定向测试为 index progress 3/3、dashboard exhaustion 1/1，
+  fmt、metadata 通过。
+
+- **G4-05 未退出。** 下一切片处理并发 update lock、重复运行收敛和 meta/semantic
+  双库提交边界；完成前 goal 保持 active。
 
 ## G3-05 退出决定
 
@@ -303,7 +309,7 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 下一施工单进入 **G4-05**：
 
 1. 增加 update lock 和重复/并发运行回归，证明同一 revision 最终只有一份完整快照。
-2. 覆盖 reindex marker exhaustion、queued/exhausted 状态和 meta/semantic 双库提交边界。
+2. 覆盖 meta/semantic 双库提交边界，并继续为 update lock 与重复运行收敛补证据。
 3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate 和旧
    API/旧数据库兼容；Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
 
