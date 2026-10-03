@@ -237,6 +237,13 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   只补齐 reset 的证据，不扩大为 `reset_persona_contexts`、跨 SQLite 原子性或
   OS crash 保证。
 
+  G3-05-45 又补上 `StateStore::reset_persona_contexts` 的作用域回归：
+  `state::tests::sessions::persona_reset_clears_memory_and_transcript_provenance_for_targets_only`
+  通过生产 compact API 为目标人格与非目标人格各写入 typed summary/transcript
+  provenance，执行按 persona/platform 的 reset 后确认目标两类索引均清空、非目标
+  两类索引仍保留。WSL Ubuntu-24.04 ext4 的 `state::tests::sessions` 17/17
+  通过；这仍不扩大为跨 SQLite 原子性或 OS crash 保证。
+
   本阶段逐条退出前对账见
   [`2026-10-02-g3-05-exit-audit.md`](2026-10-02-g3-05-exit-audit.md)；该文档明确
   已证明路径、跨库/legacy 未证明路径和下一施工顺序，不能当作 G3-05 完成声明。

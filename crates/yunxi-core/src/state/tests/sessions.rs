@@ -151,6 +151,103 @@ fn persona_reset_clears_active_local_and_onebot_contexts_only() {
 }
 
 #[test]
+fn persona_reset_clears_memory_and_transcript_provenance_for_targets_only() {
+    let (_temp, store) = test_store();
+    let target = store
+        .create_session("yunxi", "target", "user", None)
+        .unwrap();
+    let untouched = store
+        .create_session("other", "untouched", "user", None)
+        .unwrap();
+
+    let seed = |session_id: &str, turn_id: &str, transcript_id: &str, path: &str| {
+        let pinned = store.pinned(session_id);
+        pinned
+            .start_turn(turn_id, "before reset", std::process::id())
+            .unwrap();
+        pinned.complete_turn(turn_id, "reply", None).unwrap();
+        let visible = pinned.load_visible_turns().unwrap();
+        let fold_ids = visible
+            .iter()
+            .filter(|turn| !turn.is_summary)
+            .map(|turn| turn.turn_id.clone())
+            .collect::<Vec<_>>();
+        let visible_ids = visible
+            .iter()
+            .map(|turn| turn.turn_id.clone())
+            .collect::<Vec<_>>();
+        let refs = [yunxi_base::memory_types::MemoryRef {
+            kind: "fact".to_string(),
+            id: 73,
+        }];
+        pinned
+            .replace_visible_with_summary_with_refs_and_transcripts(
+                &fold_ids,
+                &visible_ids,
+                "summary",
+                TurnTokens::default(),
+                false,
+                None,
+                None,
+                &refs,
+                &[TranscriptCarrier {
+                    transcript_id: transcript_id.to_string(),
+                    path: path.to_string(),
+                }],
+            )
+            .unwrap();
+        let summary = pinned.load_last_summary().unwrap().unwrap();
+        (summary.turn_id, refs)
+    };
+
+    let (target_summary, target_refs) = seed(
+        &target.session_id,
+        "target-turn",
+        "target-transcript",
+        "/state/compact/target/fold.md",
+    );
+    let (untouched_summary, untouched_refs) = seed(
+        &untouched.session_id,
+        "untouched-turn",
+        "untouched-transcript",
+        "/state/compact/untouched/fold.md",
+    );
+
+    let target_store = store.pinned(&target.session_id);
+    assert_eq!(
+        target_store
+            .load_summary_memory_refs(&target_summary)
+            .unwrap(),
+        target_refs
+    );
+
+    let cleared = store.reset_persona_contexts("yunxi", "onebot").unwrap();
+    assert!(cleared.contains(&target.session_id));
+    assert!(!cleared.contains(&untouched.session_id));
+
+    assert!(target_store
+        .load_summary_memory_refs(&target_summary)
+        .unwrap()
+        .is_empty());
+    assert!(target_store
+        .load_transcript_provenance_by_path("/state/compact/target/fold.md")
+        .unwrap()
+        .is_none());
+
+    let untouched_store = store.pinned(&untouched.session_id);
+    assert_eq!(
+        untouched_store
+            .load_summary_memory_refs(&untouched_summary)
+            .unwrap(),
+        untouched_refs
+    );
+    assert!(untouched_store
+        .load_transcript_provenance_by_path("/state/compact/untouched/fold.md")
+        .unwrap()
+        .is_some());
+}
+
+#[test]
 fn persona_scope_rename_migrates_sessions_bindings_and_affection() {
     let (_temp, store) = test_store();
     let session = store
