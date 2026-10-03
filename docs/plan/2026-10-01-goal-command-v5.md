@@ -25,15 +25,15 @@ GOAL_ID
 
 MODEL_ROLES
   lead_model: GPT-6Astra
-  worker_model: gpt-6.1-sol
-  verifier_model: gpt-6.1-sol
-  research_model: gpt-6.1-sol
+  worker_model: GPT-6Astra
+  verifier_model: GPT-6Astra
+  research_model: GPT-6Astra
 
 ROLE_CONTRACT
   Lead/GPT-6Astra 负责理解用户意图、读取计划和当前源码、做架构归属判断、拆分任务、确定是否允许实施、审查 diff、判断测试证据、决定提交边界和报告残余风险。Lead 不把未验证的 worker 输出当作事实，不把计划中的 API 写成已存在，不在 G0 实现 G1-G9 业务代码，不加载 Laya 权重。
-  Worker/gpt-6.1-sol 只执行 Lead 发出的一个受限施工单。施工单必须列出绝对仓库路径、当前函数/trait/测试锚点、允许修改的文件、禁止修改的文件、输入输出契约、逐步命令、测试命令、临时目录、清理命令和停止条件。Worker 不得扩展范围、重命名公共 API、改变权限语义、删除数据、修改 secrets、运行 cargo fix、reset/rebase/force-push、提交不在施工单内的文件，锚点对不上或发现第二运行时就停下报告。
-  Research/gpt-6.1-sol 只做源码/文档/GitHub/许可证/模型来源调查；输出 URL、commit/tag、许可证、版本、事实与推断分栏；不把未经核验的开源项目、模型或 API 写进实现计划，不下载权重，不修改仓库。
-  Verifier/gpt-6.1-sol 只做独立检查：读取 diff、运行指定测试和隐私扫描、检查进程/临时目录/远端 SHA、报告通过或失败及未覆盖项；不得顺手修代码。失败后由 Lead 重写施工单，再派新的 worker。
+  Worker/GPT-6Astra 只执行 Lead 发出的一个受限施工单。施工单必须列出绝对仓库路径、当前函数/trait/测试锚点、允许修改的文件、禁止修改的文件、输入输出契约、逐步命令、测试命令、临时目录、清理命令和停止条件。Worker 不得扩展范围、重命名公共 API、改变权限语义、删除数据、修改 secrets、运行 cargo fix、reset/rebase/force-push、提交不在施工单内的文件，锚点对不上或发现第二运行时就停下报告。
+  Research/GPT-6Astra 只做源码/文档/GitHub/许可证/模型来源调查；输出 URL、commit/tag、许可证、版本、事实与推断分栏；不把未经核验的开源项目、模型或 API 写进实现计划，不下载权重，不修改仓库。
+  Verifier/GPT-6Astra 只做独立检查：读取 diff、运行指定测试和隐私扫描、检查进程/临时目录/远端 SHA、报告通过或失败及未覆盖项；不得顺手修代码。失败后由 Lead 重写施工单，再派新的 worker。
   一棵 worktree 同时只允许一个会话写文件；其它 agent 只能只读。Worker 完成后必须发送结构化交接：改动文件、函数锚点、测试命令/退出码/计数、故障注入、清理证明、commit SHA、push SHA、残余风险。
 
 REPOSITORY
@@ -42,19 +42,21 @@ REPOSITORY
   base: shorin/miyu
   historical_reference: sjxbbdb/YunXi-Native
   branch: codex/yunxi-product-rename
-  current_head_at_activation: fcd89d63
+  current_head: ead9968e
 
 OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
 
 CURRENT_STAGE
-  G4-03（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
-  G4-02-01 数据面隔离与 G4-02-02 可信调用方注入均已完成；当前只做 KB 版本失效/重建/恢复）
+  G4-04（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
+  G4-02-01 数据面隔离、G4-02-02 可信调用方注入与 G4-03 版本生命周期均已完成；
+  当前只做 KB source update/import 的失败矩阵、旧版本恢复与可观测状态审计）
 
 CURRENT_AUTHORIZATION
   G0/G1/G2 已退出，G3-05 按标准读线性化、有界 transcript barrier 与明确非目标边界退出；
-  G4-01 已推送 `21dfb327`，G4-02-01 已推送 `0281b062`，G4-02-02 已推送 `58a0cbca`。
-  当前只允许 G4-03 的 KB source_revision 失效检测、可观测重建与回滚失败矩阵；不得修改
+  G4-01 已推送 `21dfb327`，G4-02-01 已推送 `0281b062`，G4-02-02 已推送 `58a0cbca`，
+  G4-03 已推送 `ead9968e`。
+  当前只允许 G4-04 的 KB 更新/导入失败矩阵、旧版本恢复与状态可观测性；不得修改
   memory/transfer/DecisionPort/Laya。Web identity/dashboard 与 MCP grant 仍未授权，除非另立施工单。
   不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
 
@@ -68,6 +70,14 @@ NON_NEGOTIABLE_PRODUCT_INVARIANTS
   N7. Linux 是主平台；WSL 证据不能冒充 Arch 实机，macOS 只要求 M-series 可编译边界；三者证据分开记录。
   N8. 普通 shell 语法不被自然语言层破坏；危险、覆盖、批量、提权和不明确操作必须走现有权限/澄清/预览边界，不能由 prompt 自我授权。
   N9. DecisionPort/Laya 只能建议选择或排序，不能执行工具、提权、鉴权、写删 memory/KB/profile、改变 scheduler 或主动发消息。
+
+GOAL_LIFECYCLE
+  阶段验收只推进 CURRENT_STAGE，不是长期 goal 的终止条件。goal 必须持续保持 active，
+  跨越 G0→G9 逐项施工、测试、修复、审查、清理和推送；闲置、阶段完成、一次测试通过、
+  子代理完成或用户暂时没有新消息都不能终止 goal。唯一终止条件是：①可用额度耗尽；或
+  ② G0–G9 全部任务、验收、故障矩阵、隐私扫描、跨平台证据和发布准备全部完成。若额度
+  耗尽，保留最后一个已推送 SHA、当前阶段、未决风险和下一施工单；若全部完成，必须先
+  给出逐阶段证据索引和远端 SHA，再结束 goal。
 
 SOURCE_MAP_CURRENT_ANCHORS
   行号只是当前 commit 的定位锚点；每次 worker 开工前必须用 rg 重新确认，锚点漂移即停止并回报。
@@ -143,14 +153,15 @@ STOP_RULES
   prompt/cache 字节、隐私、权限、迁移、回放、跨域删除、故障恢复、测试或 push 失败，立即停在当前 slice；修复后重新 failing-test→verify→fault/replay→review。
   行号/trait/调用方向与施工单不一致，停止并让 Lead 重定位；不要猜测文件名或创建第二实现。
   任一阶段未退出不得实现其后续阶段；G4-02-01 未通过前停在设计审计，未达到完整长期目标时保持
-  goal active，不用“当前阶段通过”宣称产品完成。
+  goal active，不用“当前阶段通过”宣称产品完成。除额度耗尽或 G0–G9 全部完成外，不得
+  调用 goal complete/blocked，也不得自行暂停长期执行。
 ```
 
 ## 3. 当前交接基线（供新模型压缩后恢复）
 
 - 当前分支：`codex/yunxi-product-rename`。
-- 当前 HEAD/远端：`320b39a5`（当前代码基线仍为 `8710652e`，其后为证据与退出审计文档提交）。
-- 最近已推送：`320b39a5`（残余风险 owner 校正）、`287a6bde`（最新黑盒证据）、`e7bcfaf1`（最新 workspace 证据）、`e12ffa74`（G0 残余校正）、`8710652e`（KB 前缀删除批量回滚）、`6fd3eb49`（KB 删除回滚证据）、`243481ae`（KB 单文件删除回滚）、`e7ecae61`（transfer staging fixup 隔离）、`de0e389b`（非法 manifest 回归）、`eda02d33`（transfer 父目录竞态）、`1b8d44e3`（MCP 权限矩阵）、`e5366eaf`（MCP request-shape 测试）。
+- 当前 HEAD/远端：`ead9968e`。
+- 最近已推送：`ead9968e`（G4-03 source revision 失效与并发重建保护）、`58a0cbca`（G4-02-02 可信调用方注入）、`0281b062`（G4-02-01 KB scope）、`21dfb327`（G4-01 provenance）；更早证据仍以 Git 历史和阶段文档为准。
 - MCP 当前完整套件：37/37；最新 HEAD 代码门禁 `e12ffa74` 已通过，root 504/0/4、base 396/0/6、core 651/0/8、engine 673/0/13、hosts 920/0/10，doctest 全过；当前 HEAD 的 fish/daemon/IPC/REPL/MCP/TUI 黑盒也已有证据；相关临时 target、日志和进程已清理。
 - 当前 G0 残余：transfer export 输出/source/SQLite 路径 TOCTOU、锁/磁盘满/权限撤销/组合故障矩阵、跨 SQLite 文件提交非原子性、legacy `state/profile.md` 迁移策略、Arch 实机和 macOS M-series 证据。最新 HEAD workspace 与 fish/daemon/IPC/REPL/MCP/TUI 黑盒已有证据；MCP 权限、既有断连/超时、Unix import 父目录竞态和非法 manifest 已有对应证据，不再重复列为未覆盖项。
 - 当前绝不能写成已实现：`DecisionPort` trait/provider、Laya provider、G1-G9 业务模块；G0 只做 seam/边界盘点和 deterministic/fallback 合同。
@@ -159,5 +170,5 @@ STOP_RULES
 
 1. 用户删除旧 goal 后，将本文件 `GOAL_COMMAND` 原样作为新 goal objective。
 2. 新模型第一轮只读 `AGENTS.md`、本文、evidence index、当前 `git status/log/remote`，不得直接写 G1 代码。
-3. 新模型先恢复当前阶段状态表和未决风险，再向用户报告“当前阶段、已证据、下一最小 slice、预计验收命令”，之后才派 6.1-sol worker。
+3. 新模型先恢复当前阶段状态表和未决风险，再向用户报告“当前阶段、已证据、下一最小 slice、预计验收命令”，之后才派 GPT-6Astra worker。
 4. 若 worker 没有按施工单返回文件/函数/测试/清理/commit/push 证据，Lead 不得采纳其“完成”结论。

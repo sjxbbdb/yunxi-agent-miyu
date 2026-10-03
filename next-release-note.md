@@ -8,6 +8,11 @@
 
 ## 修复
 
+- G4-03 knowledge-base source revision lifecycle：默认知识库快照写入来源 revision，
+  语义召回过滤旧 hash/namespace/revision 向量；embedding 等待期间若源被更新或删除，
+  旧任务不会覆盖新索引，并会排队重建。默认维护 capability 收窄为 `default-kb`，
+  WSL KB 25/25 与 apply_patch 18/18 通过。
+
 - G3-05 tombstone epoch read barrier：memory 数据库新增可迁移的
   `tombstone_epoch`，真实删除/reset/过期清理在同一事务递增；evicted browse、
   keyword/semantic recall 在快照与状态物化之间进行 epoch 复核，变化时有限重试，

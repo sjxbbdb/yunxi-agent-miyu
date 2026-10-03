@@ -262,11 +262,17 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   [`2026-10-04-g4-01-kb-provenance.md`](2026-10-04-g4-01-kb-provenance.md)。
   这一切片只提供来源标签，不提供授权能力。
 
-- **当前：G4-03 版本生命周期。** G4-02-01 已由 `0281b062` 推送，G4-02-02
-  已由 `58a0cbca` 推送；最新 WSL Ubuntu-24.04 ext4 定向证据为 KB 23 passed、
-  2 ignored 与 apply_patch 18 passed、0 failed。下一步只处理 KB `source_revision`
-  的失效检测、可观测重建和失败回滚；不把 G4-01 provenance 当权限凭证，不改变
-  memory/KB 数据库独立边界。
+- **G4-03：已完成并推送 `ead9968e`。** 在 G4-02-01/02 的 capability 与调用链之上，
+  默认知识库维护已收窄为 `default-kb`，默认快照会写入 manifest commit/release
+  revision，语义检索会过滤与当前 `(content_sha256, namespace, source_revision)`
+  不匹配的旧向量；embedding await 返回后再次校验 source，更新/删除竞态不会发布
+  旧 chunk。WSL Ubuntu-24.04 ext4 证据为 KB 25 passed、2 ignored，apply_patch
+  18 passed，0 failed；隐私扫描和 metadata/diff 门禁均通过。完整记录见
+  [`2026-10-04-g4-03-kb-lifecycle.md`](2026-10-04-g4-03-kb-lifecycle.md)。
+
+- **当前：G4-04 更新/导入恢复矩阵。** 下一切片只处理 KB source update/import 的
+  失败可观测性、旧版本恢复、重复执行和状态收敛；不把 G4-03 provenance 当权限凭证，
+  不改变 memory/KB 数据库独立边界。
 
 ## G3-05 退出决定
 
@@ -279,14 +285,14 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 ## 下一处施工边界
 
-下一施工单进入 **G4-03**：
+下一施工单进入 **G4-04**：
 
-1. 为 `source_revision` 定义 stale 判定、当前 revision 记录和版本不匹配的只读降级；
-   不把版本字段当鉴权凭证。
-2. 为语义重建建立可观测状态、幂等重试和失败回滚矩阵；不能删除仍属于其他
-   namespace 或其他 revision 的向量，不能触碰 memory 数据库。
-3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入和旧 API/旧数据库兼容；
-   Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
+1. 为 default-kb update/import 记录失败阶段、旧 snapshot、恢复动作和最终状态，
+   验证重复更新/中途失败/重启后的幂等收敛。
+2. 证明旧版本恢复不会删除 user namespace、不会触碰 memory，也不会让 partial
+   semantic index 进入检索结果。
+3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate 和旧
+   API/旧数据库兼容；Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
 
 ## 证据与环境约束
 
