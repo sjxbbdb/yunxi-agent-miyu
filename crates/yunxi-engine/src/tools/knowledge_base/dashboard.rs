@@ -60,9 +60,9 @@ impl KnowledgeBase {
         }
         let meta = self.meta_conn()?;
         let mut stmt = meta.prepare(
-            "SELECT name, size_bytes, mtime, content_sha256, updated_at FROM files ORDER BY name",
+            "SELECT name, size_bytes, mtime, content_sha256, updated_at, namespace, source_revision FROM files ORDER BY name",
         )?;
-        let files: Vec<(String, i64, f64, String, f64)> = stmt
+        let files: Vec<(String, i64, f64, String, f64, String, String)> = stmt
             .query_map([], |row| {
                 Ok((
                     row.get(0)?,
@@ -70,42 +70,74 @@ impl KnowledgeBase {
                     row.get(2)?,
                     row.get(3)?,
                     row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
                 ))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
-        // 每个文件的 chunk 数与其被嵌入时的 sha;文件改过而 chunk 没跟上就是陈旧。
-        let mut chunk_info: HashMap<String, (i64, String)> = HashMap::new();
+        let file_metadata = files
+            .iter()
+            .map(|(name, _, _, sha, _, namespace, source_revision)| {
+                (
+                    name.clone(),
+                    (sha.clone(), namespace.clone(), source_revision.clone()),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        // 每个文件的 chunk 数以及与当前文件元数据完全匹配的 chunk 数。
+        // source_revision 是更新生命周期的一部分：同一内容在新 revision 下
+        // 也必须重新索引，不能被旧 revision 的向量伪装成 fresh。
+        let current_model = embedder
+            .as_ref()
+            .map(|embedder| embedder.model_id().to_string())
+            .unwrap_or_default();
+        let mut chunk_info: HashMap<String, (i64, i64)> = HashMap::new();
         let mut total_chunks = 0i64;
         if self.semantic_db.is_file() {
             let semantic = self.semantic_conn()?;
             let mut stmt = semantic.prepare(
-                "SELECT file_name, content_sha256, COUNT(*) FROM semantic_chunks
-                 GROUP BY file_name, content_sha256",
+                "SELECT file_name, content_sha256, namespace, source_revision, model, COUNT(*) FROM semantic_chunks
+                 GROUP BY file_name, content_sha256, namespace, source_revision, model",
             )?;
             let rows = stmt.query_map([], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, String>(1)?,
-                    row.get::<_, i64>(2)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, i64>(5)?,
                 ))
             })?;
             for row in rows {
-                let (name, sha, count) = row?;
+                let (name, sha, namespace, source_revision, model, count) = row?;
                 total_chunks += count;
-                let entry = chunk_info.entry(name).or_insert((0, String::new()));
+                let entry = chunk_info.entry(name.clone()).or_insert((0, 0));
                 entry.0 += count;
-                entry.1 = sha;
+                // The matching count must cover all chunks, not just one group,
+                // so mixed old/new vectors remain visibly stale.
+                let matches_current = file_metadata.get(&name).is_some_and(
+                    |(file_sha, file_namespace, file_revision)| {
+                        file_sha == &sha
+                            && file_namespace == &namespace
+                            && file_revision == &source_revision
+                            && model == current_model
+                    },
+                );
+                if matches_current {
+                    entry.1 += count;
+                }
             }
         }
         let mut items = Vec::with_capacity(files.len());
         let mut total_size = 0i64;
         let mut stale = 0usize;
         let mut unindexed = 0usize;
-        for (name, size_bytes, mtime, sha, updated_at) in files {
+        for (name, size_bytes, mtime, sha, updated_at, _namespace, _source_revision) in files {
             total_size += size_bytes;
             let (chunks, state) = match chunk_info.get(&name) {
                 None => (0, IndexState::Unindexed),
-                Some((count, chunk_sha)) if *chunk_sha == sha => (*count, IndexState::Fresh),
+                Some((count, matching)) if *matching == *count => (*count, IndexState::Fresh),
                 Some((count, _)) => (*count, IndexState::Stale),
             };
             match state {

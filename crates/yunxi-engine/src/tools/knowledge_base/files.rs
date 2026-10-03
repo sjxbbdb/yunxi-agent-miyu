@@ -55,18 +55,42 @@ impl KnowledgeBase {
             bail!("knowledge base bundled namespace requires an internal capability")
         }
         self.init()?;
+        // Validate the complete incoming snapshot before removing the active one.
+        // A single malformed/unsupported file must not turn a failed update into an
+        // empty or partial default namespace.
+        let imports = self.prepare_default_imports(source)?;
         self.remove_prefix("default-kb/")?;
         let mut added = Vec::new();
-        for file in collect_files(source)? {
-            let rel = file.strip_prefix(source).unwrap_or(&file);
-            let rel = rel.display().to_string().replace('\\', "/");
-            let name = normalize_relative_path(&format!("default-kb/{rel}"))?;
-            if let Ok(name) = self.import_file_with_revision(&file, &name, source_revision) {
-                added.push(name);
-            }
+        for (file, name) in imports {
+            added.push(self.import_file_with_revision(&file, &name, source_revision)?);
         }
         self.spawn_embedding_reindex()?;
         Ok(added)
+    }
+
+    fn prepare_default_imports(&self, source: &Path) -> Result<Vec<(PathBuf, String)>> {
+        let mut files = collect_files(source)?;
+        files.sort();
+        let mut imports = Vec::with_capacity(files.len());
+        for file in files {
+            let rel = file.strip_prefix(source).unwrap_or(&file);
+            let rel = rel.display().to_string().replace('\\', "/");
+            let name = normalize_relative_path(&format!("default-kb/{rel}"))?;
+            let bytes = std::fs::read(&file).with_context(|| {
+                format!(
+                    "failed to read default knowledge-base file {}",
+                    file.display()
+                )
+            })?;
+            self.validate_file(&name, &bytes).with_context(|| {
+                format!("invalid default knowledge-base file {}", file.display())
+            })?;
+            imports.push((file, name));
+        }
+        if imports.is_empty() {
+            bail!("default knowledge base snapshot contains no files")
+        }
+        Ok(imports)
     }
 
     pub fn list(&self) -> Result<Vec<FileRecord>> {

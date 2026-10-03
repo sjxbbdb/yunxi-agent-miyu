@@ -29,6 +29,15 @@ pub struct DefaultKbState {
     pub last_checked_at: String,
     pub last_imported_at: String,
     pub last_notice_commit: String,
+    /// Stable stage label from the most recent failed update/import attempt.
+    #[serde(default)]
+    pub last_failure_stage: String,
+    /// Bounded error text for diagnostics; never replaces the active snapshot.
+    #[serde(default)]
+    pub last_failure: String,
+    /// Explicit recovery/rollback decision taken after the last failure.
+    #[serde(default)]
+    pub last_recovery: String,
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +60,21 @@ pub enum UpdateStage {
 }
 
 impl UpdateStage {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::CheckingPrerequisites => "checking_prerequisites",
+            Self::PreparingRepository => "preparing_repository",
+            Self::FetchingRepository => "fetching_repository",
+            Self::CloningRepository => "cloning_repository",
+            Self::CheckingOutRepository => "checking_out_repository",
+            Self::ValidatingRepository => "validating_repository",
+            Self::BuildingSnapshot => "building_snapshot",
+            Self::HashingSnapshot => "hashing_snapshot",
+            Self::ImportingFiles => "importing_files",
+            Self::SavingState => "saving_state",
+        }
+    }
+
     pub fn message(self) -> &'static str {
         match self {
             Self::CheckingPrerequisites => {
@@ -153,13 +177,34 @@ pub fn update<F>(
 where
     F: FnMut(UpdateStage),
 {
-    on_progress(UpdateStage::CheckingPrerequisites);
+    let mut current_stage = None;
+    let result = update_inner(paths, config, &mut current_stage, &mut on_progress);
+    if let Err(error) = &result {
+        // The imported snapshot is the source of truth. Failure metadata is best effort so
+        // diagnostics can never hide the original update error or make a retry impossible.
+        let _ = record_update_failure(paths, current_stage, &error.to_string());
+    }
+    result
+}
+
+fn update_inner<F>(
+    paths: &YunXiPaths,
+    config: &AppConfig,
+    current_stage: &mut Option<UpdateStage>,
+    on_progress: &mut F,
+) -> Result<DefaultKbState>
+where
+    F: FnMut(UpdateStage),
+{
+    let mut mark_stage = |stage| emit_stage(current_stage, on_progress, stage);
+
+    mark_stage(UpdateStage::CheckingPrerequisites);
     let git = git_command()?;
     let repo = update_repo_dir(paths);
-    on_progress(UpdateStage::PreparingRepository);
+    mark_stage(UpdateStage::PreparingRepository);
     cleanup_legacy_update_repo(paths, &repo)?;
     if optimized_update_repo(&git, &repo) {
-        on_progress(UpdateStage::FetchingRepository);
+        mark_stage(UpdateStage::FetchingRepository);
         run_git(
             &git,
             &repo,
@@ -172,7 +217,7 @@ where
                 "HEAD",
             ],
         )?;
-        on_progress(UpdateStage::CheckingOutRepository);
+        mark_stage(UpdateStage::CheckingOutRepository);
         run_git(
             &git,
             &repo,
@@ -186,20 +231,20 @@ where
             ],
         )?;
     } else {
-        on_progress(UpdateStage::CloningRepository);
-        rebuild_update_repo(&git, &repo, &mut on_progress)?;
+        mark_stage(UpdateStage::CloningRepository);
+        rebuild_update_repo(&git, &repo, &mut mark_stage)?;
     }
-    on_progress(UpdateStage::ValidatingRepository);
+    mark_stage(UpdateStage::ValidatingRepository);
     validate_update_repo(&repo)?;
     let commit = git_output(&git, &repo, &["rev-parse", "HEAD"])?;
-    on_progress(UpdateStage::BuildingSnapshot);
+    mark_stage(UpdateStage::BuildingSnapshot);
     let source = build_update_source(paths, &repo)?;
-    on_progress(UpdateStage::HashingSnapshot);
+    mark_stage(UpdateStage::HashingSnapshot);
     let release_hash = hash_dir(&source)?;
-    on_progress(UpdateStage::ImportingFiles);
+    mark_stage(UpdateStage::ImportingFiles);
     let kb = KnowledgeBase::bundled_maintenance(config.clone(), paths.clone())?;
     kb.replace_default_files_with_revision(&source, &commit)?;
-    on_progress(UpdateStage::SavingState);
+    mark_stage(UpdateStage::SavingState);
     let mut state = load_state(paths)?;
     state.release_hash = release_hash;
     state.shorin_wiki_commit = commit.clone();
@@ -208,11 +253,27 @@ where
     state.last_checked_at = Utc::now().to_rfc3339();
     state.last_imported_at = Utc::now().to_rfc3339();
     state.last_notice_commit.clear();
+    state.last_failure_stage.clear();
+    state.last_failure.clear();
+    state.last_recovery.clear();
     save_state(paths, &state)?;
     Ok(state)
 }
 
 fn import_snapshot(
+    paths: &YunXiPaths,
+    config: &AppConfig,
+    source: &Path,
+    release_hash: &str,
+) -> Result<()> {
+    let result = import_snapshot_inner(paths, config, source, release_hash);
+    if let Err(error) = &result {
+        let _ = record_update_failure(paths, Some(UpdateStage::ImportingFiles), &error.to_string());
+    }
+    result
+}
+
+fn import_snapshot_inner(
     paths: &YunXiPaths,
     config: &AppConfig,
     source: &Path,
@@ -232,7 +293,37 @@ fn import_snapshot(
     state.release_hash = release_hash.to_string();
     state.shorin_wiki_commit = revision;
     state.last_imported_at = Utc::now().to_rfc3339();
+    state.last_failure_stage.clear();
+    state.last_failure.clear();
+    state.last_recovery.clear();
     save_state(paths, &state)
+}
+
+fn emit_stage<F>(current_stage: &mut Option<UpdateStage>, on_progress: &mut F, stage: UpdateStage)
+where
+    F: FnMut(UpdateStage),
+{
+    *current_stage = Some(stage);
+    on_progress(stage);
+}
+
+fn record_update_failure(
+    paths: &YunXiPaths,
+    stage: Option<UpdateStage>,
+    error: &str,
+) -> Result<()> {
+    let mut state = load_state(paths)?;
+    apply_update_failure(&mut state, stage, error);
+    save_state(paths, &state)
+}
+
+fn apply_update_failure(state: &mut DefaultKbState, stage: Option<UpdateStage>, error: &str) {
+    state.last_failure_stage = stage
+        .map(UpdateStage::as_str)
+        .unwrap_or("unknown")
+        .to_string();
+    state.last_failure = error.chars().take(512).collect();
+    state.last_recovery = "previous imported snapshot remains active; retry update".to_string();
 }
 
 fn default_kb_source_dir() -> PathBuf {
@@ -241,6 +332,10 @@ fn default_kb_source_dir() -> PathBuf {
 
 fn state_file(paths: &YunXiPaths) -> PathBuf {
     paths.data_dir.join("default-kb/state.json")
+}
+
+fn state_backup_file(paths: &YunXiPaths) -> PathBuf {
+    paths.data_dir.join("default-kb/state.json.bak")
 }
 
 fn update_repo_dir(paths: &YunXiPaths) -> PathBuf {
@@ -374,17 +469,45 @@ fn validate_update_repo(repo: &Path) -> Result<()> {
 fn load_state(paths: &YunXiPaths) -> Result<DefaultKbState> {
     let path = state_file(paths);
     if !path.is_file() {
-        return Ok(DefaultKbState::default());
+        let backup = state_backup_file(paths);
+        if !backup.is_file() {
+            return Ok(DefaultKbState::default());
+        }
+        return Ok(serde_json::from_str(&std::fs::read_to_string(backup)?)?);
     }
-    Ok(serde_json::from_str(&std::fs::read_to_string(path)?)?)
+    match serde_json::from_str(&std::fs::read_to_string(&path)?) {
+        Ok(state) => Ok(state),
+        Err(error) => {
+            let backup = state_backup_file(paths);
+            if !backup.is_file() {
+                return Err(error.into());
+            }
+            Ok(serde_json::from_str(&std::fs::read_to_string(backup)?)?)
+        }
+    }
 }
 
 fn save_state(paths: &YunXiPaths, state: &DefaultKbState) -> Result<()> {
     let path = state_file(paths);
+    let backup = state_backup_file(paths);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::write(path, serde_json::to_string_pretty(state)?)?;
+    let temp = path.with_extension(format!("json.tmp.{}", std::process::id()));
+    std::fs::write(&temp, serde_json::to_string_pretty(state)?)?;
+    if path.exists() {
+        if backup.exists() {
+            std::fs::remove_file(&backup)?;
+        }
+        std::fs::rename(&path, &backup)?;
+    }
+    if let Err(error) = std::fs::rename(&temp, &path) {
+        if backup.exists() {
+            let _ = std::fs::rename(&backup, &path);
+        }
+        let _ = std::fs::remove_file(&temp);
+        return Err(error.into());
+    }
     Ok(())
 }
 
@@ -613,6 +736,58 @@ mod tests {
             .into_iter()
             .collect::<std::collections::HashSet<_>>();
         assert_eq!(unique.len(), stages.len());
+    }
+
+    #[test]
+    fn update_stages_have_stable_machine_labels() {
+        let stages = [
+            UpdateStage::CheckingPrerequisites,
+            UpdateStage::PreparingRepository,
+            UpdateStage::FetchingRepository,
+            UpdateStage::CloningRepository,
+            UpdateStage::CheckingOutRepository,
+            UpdateStage::ValidatingRepository,
+            UpdateStage::BuildingSnapshot,
+            UpdateStage::HashingSnapshot,
+            UpdateStage::ImportingFiles,
+            UpdateStage::SavingState,
+        ];
+
+        let labels = stages.map(UpdateStage::as_str);
+        assert!(labels.iter().all(|label| !label.is_empty()));
+        assert!(labels.iter().all(|label| label.is_ascii()));
+        assert!(labels.iter().all(|label| label.contains('_')));
+        assert_eq!(
+            labels
+                .into_iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            stages.len()
+        );
+    }
+
+    #[test]
+    fn update_failure_keeps_previous_revision_and_records_recovery() {
+        let mut state = DefaultKbState {
+            shorin_wiki_commit: "good-revision".to_string(),
+            last_imported_at: "2026-10-04T00:00:00Z".to_string(),
+            ..Default::default()
+        };
+
+        apply_update_failure(
+            &mut state,
+            Some(UpdateStage::ImportingFiles),
+            &"x".repeat(600),
+        );
+
+        assert_eq!(state.shorin_wiki_commit, "good-revision");
+        assert_eq!(state.last_imported_at, "2026-10-04T00:00:00Z");
+        assert_eq!(state.last_failure_stage, "importing_files");
+        assert_eq!(state.last_failure.chars().count(), 512);
+        assert_eq!(
+            state.last_recovery,
+            "previous imported snapshot remains active; retry update"
+        );
     }
 
     #[test]
