@@ -229,6 +229,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   `tools::transcript_guard` 29/29 通过。函数/别名、动态命令名、嵌入脚本与
   父目录 TOCTOU，以及通用 wrapper option walker 的完整 CLI 语义，仍是明确边界。
 
+  G3-05-44 补上 `StateStore::reset_conversation` 的非空 provenance 直接回归：
+  `state::tests::compact::reset_cleans_transcript_carriers_without_deleting_files`
+  先写入一个 typed `memory_provenance` 与一个 `transcript_carriers`，再执行
+  reset，确认两张表均清空且 transcript 文件语义仍只由数据库索引控制，未触碰
+  文件本体。WSL Ubuntu-24.04 ext4 的 `state::tests::compact` 25/25 通过；这
+  只补齐 reset 的证据，不扩大为 `reset_persona_contexts`、跨 SQLite 原子性或
+  OS crash 保证。
+
   本阶段逐条退出前对账见
   [`2026-10-02-g3-05-exit-audit.md`](2026-10-02-g3-05-exit-audit.md)；该文档明确
   已证明路径、跨库/legacy 未证明路径和下一施工顺序，不能当作 G3-05 完成声明。

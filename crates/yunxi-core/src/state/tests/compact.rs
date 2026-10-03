@@ -166,6 +166,10 @@ fn reset_cleans_transcript_carriers_without_deleting_files() {
     store.start_turn("t1", "one", 999999).unwrap();
     store.complete_turn("t1", "reply", None).unwrap();
     let (fold_ids, turn_ids) = visible_snapshot(&store);
+    let refs = [yunxi_base::memory_types::MemoryRef {
+        kind: "fact".to_string(),
+        id: 52,
+    }];
     let path = "/state/compact/s/fold-1.md";
     store
         .replace_visible_with_summary_with_refs_and_transcripts(
@@ -176,14 +180,28 @@ fn reset_cleans_transcript_carriers_without_deleting_files() {
             false,
             None,
             None,
-            &[],
+            &refs,
             &[TranscriptCarrier {
                 transcript_id: "transcript-reset".to_string(),
                 path: path.to_string(),
             }],
         )
         .unwrap();
+    let summary = store.load_last_summary().unwrap().unwrap();
+    assert_eq!(
+        store.load_summary_memory_refs(&summary.turn_id).unwrap(),
+        refs
+    );
+    assert!(store
+        .load_transcript_provenance_by_path(path)
+        .unwrap()
+        .is_some());
+
     store.reset_conversation().unwrap();
+    assert!(store
+        .load_summary_memory_refs(&summary.turn_id)
+        .unwrap()
+        .is_empty());
     assert!(store
         .load_transcript_provenance_by_path(path)
         .unwrap()
