@@ -387,6 +387,30 @@ The direct browse path still retains its pre-existing visibility/pagination
 semantics; changing those contracts is outside this slice. Summary and
 transcript barriers remain separate G3-05 slices.
 
+## G3-05-16 implemented slice: async semantic eviction barrier
+
+The semantic evicted-context path performs embedding work across an `await`.
+Before this slice, a carrier could pass the initial tombstone snapshot, wait
+for document or query embeddings, and then be written or returned after the
+linked memory had been deleted. The new barrier re-reads the typed tombstone
+set and confirms that each candidate still exists in `evicted_turns` after
+embedding completes. Candidates that became stale are skipped before an
+embedding write and before final hit materialization; unrelated live carriers
+continue through the same path.
+
+This is an await-boundary protection slice, not a strict cross-database
+linearization claim. It deliberately avoids holding a process-wide lock or
+claiming atomicity between the data and state SQLite files. The remaining
+post-check overlap window is tracked in the next G3-05 施工边界.
+
+Evidence (WSL Ubuntu-24.04, ext4 disposable checkout, one cargo job):
+
+- `cargo test -p yunxi-core --lib memory::tests::store::async_semantic_evicted_recall_rechecks_tombstones_before_write_and_return --locked -- --exact --test-threads=1` — 1 passed.
+- `cargo test -p yunxi-core --lib memory::tests::store:: --locked -- --test-threads=1` — 16 passed.
+- `cargo fmt --all -- --check`, `git diff --check`, and the privacy scan passed.
+- The disposable checkout and target were removed; no cargo or rustc process
+  remained after verification.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,

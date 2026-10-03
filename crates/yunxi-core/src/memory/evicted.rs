@@ -7,6 +7,7 @@
 //! 嵌入不可用就退回纯关键词。
 
 use crate::memory::*;
+use rusqlite::OptionalExtension;
 
 impl MemoryStore {
     #[allow(dead_code)]
@@ -291,8 +292,18 @@ impl MemoryStore {
         if !missing.is_empty() {
             let texts: Vec<String> = missing.iter().map(|(_, content)| content.clone()).collect();
             if let Ok(vectors) = embedder.embed(&texts).await {
+                // The embedding call is an await boundary.  A fact can be
+                // tombstoned, or its state-side carrier can be deleted, while
+                // the provider is working.  Re-check immediately before the
+                // state write so a stale corpus snapshot cannot recreate a
+                // vector for a carrier that is no longer readable.
+                let missing_ids = missing.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+                let live_ids = self.live_semantic_evicted_ids(&missing_ids)?;
                 let conn = self.state_conn()?;
                 for ((id, _), vector) in missing.iter().zip(vectors) {
+                    if !live_ids.contains(id) {
+                        continue;
+                    }
                     conn.execute(
                         "INSERT INTO evicted_embeddings (id, model, embedding_json, embedding, created_at)
                          VALUES (?1, ?2, '', ?3, ?4)
@@ -308,9 +319,19 @@ impl MemoryStore {
         }
 
         let query_vector = embedder.embed_query(query).await?;
+        // The query embedding is another await boundary.  Re-check both
+        // databases before materialising hits, because a carrier may have
+        // been deleted after the corpus snapshot or during either provider
+        // request.  This is deliberately a read barrier, not a cross-DB
+        // transaction; the state and memory databases remain independent.
+        let corpus_ids = corpus.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+        let live_ids = self.live_semantic_evicted_ids(&corpus_ids)?;
         let conn = self.state_conn()?;
         let mut hits = Vec::new();
         for (id, content) in &corpus {
+            if !live_ids.contains(id) {
+                continue;
+            }
             let stored: Option<Vec<u8>> = conn
                 .query_row(
                     "SELECT embedding FROM evicted_embeddings WHERE id = ?1 AND model = ?2",
@@ -339,6 +360,27 @@ impl MemoryStore {
         sort_json_hits(&mut hits);
         hits.truncate(limit);
         Ok(hits)
+    }
+
+    /// Return carrier ids that are still readable after an async semantic
+    /// boundary.  Tombstones are authoritative in the data database, while
+    /// carrier existence is checked in the separate state database.  The
+    /// helper intentionally takes a snapshot and does not introduce a global
+    /// lock or claim cross-database atomicity.
+    fn live_semantic_evicted_ids(&self, ids: &[i64]) -> Result<std::collections::HashSet<i64>> {
+        let tombstoned = self.tombstoned_evicted_ids()?;
+        let conn = self.state_conn()?;
+        let mut stmt = conn.prepare("SELECT 1 FROM evicted_turns WHERE id = ?1")?;
+        let mut live = std::collections::HashSet::new();
+        for id in ids.iter().copied() {
+            if tombstoned.contains(&id) {
+                continue;
+            }
+            if stmt.query_row([id], |_| Ok(())).optional()?.is_some() {
+                live.insert(id);
+            }
+        }
+        Ok(live)
     }
 
     /// Newest rows only, and bounded: this pass answers "what were we talking

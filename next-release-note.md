@@ -17,6 +17,10 @@
   传递到 staged evicted-context，删除关联 carrier 的 provenance、embedding 和
   turn，避免旧归档复活已删除记忆；真实 export→force-import 回归与独立 fixup
   回归均在 WSL ext4 通过。
+- G3-05 async semantic barrier：语义召回在 embedding await 完成后重新检查
+  tombstone 与 `evicted_turns` 存在性，删除在等待期间提交时不会再写入或返回
+  已删除 carrier；定向异步回归与 store 测试在 WSL ext4 通过。严格跨库
+  overlap 线性化和 crash 注入仍属于后续边界。
 
 - G0 基线稳定化：修复 YunXi 产品改名后 legacy config namespace 的正/负路径兼容，校准 TUI/replay/renderer/tool-summary 的当前产品输出夹具，修正 bundled script 与 registry fixture 漂移，并让 WSL 权限位测试使用原生 Linux 文件系统临时目录。
 - G0 验证：WSL Ubuntu-24.04 工作区单线程测试在 v4 当前提交上重新全绿（根包 yunxi 运行 508 项、yunxi-base 396、yunxi-core 651、yunxi-engine 与 yunxi-hosts 均完成且 0 failed；doctest 全部通过）。本结果对应 G0 evidence index 的 `G0-20261001-workspace-02`；Arch Linux 与 macOS M-series 仍未实机验证。

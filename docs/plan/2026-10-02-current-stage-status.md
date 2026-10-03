@@ -36,14 +36,18 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   G3-05-15 又把同一 tombstone barrier 接到 force-import：按 persona scope
   配对 live memory 与 staged evicted-context，导入前清除 typed linked carrier
   的 provenance/embedding/turn，同时保留无关联 carrier；真实 export→import
-  回归已在 WSL ext4 通过。
+  回归已在 WSL ext4 通过。G3-05-16 又补上语义召回 embedding await 边界：
+  embedding 完成后重新检查 tombstone 与 evicted_turn 存在性，避免删除在
+  await 期间提交后仍写入或返回已删除 carrier；定向异步回归与 store 测试
+  已在 WSL ext4 通过。严格跨库 overlap 线性化仍未宣称完成。
 
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
 
 1. 补 provenance 在 concurrent delete/recall 的更强 overlap 语义上的决策
-   或测试 seam；当前只证明了并发调用后的 convergence；
+   或测试 seam；当前只证明了并发调用后的 convergence，异步 embedding
+   await 边界已有二次检查，但最终跨库 overlap 仍未线性化；
 2. 对 transcript `run_command` 的变量、命令替换、重定向、symlink/hardlink
    和 `cd` 后相对路径语法做明确的 fail-closed 边界决策；当前 dev 子代理
    前台 fresh registry 已绑定并有 WSL 回归覆盖，dev 面的 read/grep/glob

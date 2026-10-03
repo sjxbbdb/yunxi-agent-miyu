@@ -5,7 +5,8 @@ use crate::memory::browse::{BrowseTable, EvictedQuery};
 use crate::memory::*;
 use std::sync::{Arc, Barrier};
 use std::thread;
-use yunxi_base::config::AppConfig;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use yunxi_base::config::{AppConfig, EmbeddingBackend, ProviderConfig};
 
 #[test]
 fn evicted_search_is_indexed_and_can_be_narrowed_by_time() {
@@ -535,6 +536,144 @@ fn committed_delete_survives_memory_store_restart_for_evicted_carriers() {
             id: fact_id,
         }])
         .unwrap());
+}
+
+#[tokio::test]
+async fn async_semantic_evicted_recall_rechecks_tombstones_before_write_and_return() {
+    let temp = tempfile::tempdir().unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let (documents_seen_tx, documents_seen_rx) = tokio::sync::oneshot::channel();
+    let (documents_release_tx, documents_release_rx) = tokio::sync::oneshot::channel();
+    let server = tokio::spawn(async move {
+        let mut documents_seen_tx = Some(documents_seen_tx);
+        let mut documents_release_rx = Some(documents_release_rx);
+        for request_index in 0..2 {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = [0_u8; 8192];
+            let _ = stream.read(&mut request).await.unwrap();
+            if request_index == 0 {
+                documents_seen_tx.take().unwrap().send(()).unwrap();
+                documents_release_rx.take().unwrap().await.unwrap();
+            }
+            let body = if request_index == 0 {
+                r#"{"data":[{"index":0,"embedding":[1.0,0.0]},{"index":1,"embedding":[1.0,0.0]}]}"#
+            } else {
+                r#"{"data":[{"index":0,"embedding":[1.0,0.0]}]}"#
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+        }
+    });
+
+    let mut config = AppConfig::default();
+    config.embedding.enabled = true;
+    config.embedding.backend = EmbeddingBackend::Remote;
+    config.embedding.provider_id = "g305-async-embed".to_string();
+    config.embedding.model = "toy".to_string();
+    config.embedding.min_score = 0.5;
+    let mut provider = ProviderConfig::default_opencodezen();
+    provider.id = "g305-async-embed".to_string();
+    provider.base_url = format!("http://{address}");
+    provider.api_key = Some("test-key".to_string());
+    provider.models = vec!["toy".to_string()];
+    provider.default_model = "toy".to_string();
+    config.providers.push(provider);
+
+    let store = MemoryStore::new(&config, &test_paths(&temp));
+    let fact_id = store
+        .remember_fact("G305_ASYNC_SEMANTIC_FACT", "test")
+        .unwrap();
+    store
+        .remember_evicted_turns(&[
+            EvictedTurn {
+                source_id: "g305-async-linked".into(),
+                timestamp: "2026-10-02T12:00:00+00:00".into(),
+                role: "assistant".into(),
+                content: "G305_ASYNC_SEMANTIC_MARKER".into(),
+                refs: vec![MemoryRef {
+                    kind: "fact".into(),
+                    id: fact_id,
+                }],
+                ..EvictedTurn::default()
+            },
+            EvictedTurn {
+                source_id: "g305-async-unlinked".into(),
+                timestamp: "2026-10-02T12:01:00+00:00".into(),
+                role: "user".into(),
+                content: "G305_ASYNC_SEMANTIC_MARKER".into(),
+                ..EvictedTurn::default()
+            },
+        ])
+        .unwrap();
+
+    let before = store
+        .browse_evicted(&EvictedQuery {
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap();
+    let linked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "assistant")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+    let unlinked_id = before
+        .items
+        .iter()
+        .find(|item| item["role"] == "user")
+        .and_then(|item| item["id"].as_i64())
+        .unwrap();
+
+    let search_store = store.clone();
+    let search = tokio::spawn(async move {
+        search_store
+            .search_evicted_context_hybrid("completely unrelated wording", 10, None, None)
+            .await
+            .unwrap()
+    });
+    documents_seen_rx.await.unwrap();
+    assert!(store.delete_item(BrowseTable::Facts, fact_id).unwrap());
+    documents_release_tx.send(()).unwrap();
+    let result = search.await.unwrap();
+    server.await.unwrap();
+
+    let result_ids = result["results"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|item| item["id"].as_i64())
+        .collect::<Vec<_>>();
+    assert!(!result_ids.contains(&linked_id));
+    assert!(result_ids.contains(&unlinked_id));
+
+    let state = rusqlite::Connection::open(&store.state_db).unwrap();
+    assert_eq!(
+        state
+            .query_row(
+                "SELECT COUNT(*) FROM evicted_embeddings WHERE id=?1",
+                [linked_id],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap(),
+        0,
+        "a tombstoned carrier must not receive an async semantic vector"
+    );
+    assert_eq!(
+        state
+            .query_row(
+                "SELECT COUNT(*) FROM evicted_embeddings WHERE id=?1",
+                [unlinked_id],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap(),
+        1
+    );
 }
 
 #[test]
