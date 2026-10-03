@@ -320,6 +320,31 @@ Evidence (WSL Ubuntu-24.04, ext4 disposable copy, one cargo job):
 - `cargo fmt --all -- --check`, `git diff --check`, and the privacy scan passed.
 - The disposable source and target were removed after the run.
 
+## G3-05-15 implemented slice: import-side evicted carrier barrier
+
+Force-import already carried the live data-memory tombstones into staged
+`memory.db` files, but an archive could still bring back an older
+`state/personas/<scope>/memory/evicted_context.db`. This slice extends the
+same protection to the state-side archive before the staged tree is installed.
+
+The import fixup pairs `data/personas/<scope>/memory/memory.db` with the
+matching `state/personas/<scope>/memory/evicted_context.db` (and keeps the
+legacy `personas/<scope>/memory/memory.db` layout as a fallback). It reads only
+typed tombstone ids from the live memory database, selects linked
+`evicted_turn` carrier ids through `memory_provenance`, then deletes that
+carrier's provenance, embedding, and turn in one state-database transaction.
+Missing/legacy tables are left untouched, and scopes are never mixed.
+
+Evidence (WSL Ubuntu-24.04 ext4 disposable checkouts, one cargo job at a time):
+
+- `cargo test -p yunxi-engine --lib transfer::fixups::tests::evicted_tombstones_remove_the_whole_linked_carrier --locked -- --exact --test-threads=1` — 1 passed.
+- `cargo test -p yunxi-engine --lib transfer::tests::force_import_filters_evicted_carriers_by_persona_scope --locked -- --exact --test-threads=1` — 1 passed.
+
+The second regression creates a source archive with linked and unlinked
+evicted carriers, imports it over a target that already owns a fact tombstone,
+and verifies that only the typed linked carrier is removed. This proves the
+real export→force-import wiring, not just the SQL helper in isolation.
+
 ## G3-05-08 implemented slice: concurrent browse convergence contract
 
 The memory browse regression now runs a delete and an evicted-context browse

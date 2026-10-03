@@ -869,6 +869,155 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn force_import_filters_evicted_carriers_by_persona_scope() {
+        let source = tempfile::tempdir().unwrap();
+        let source_paths = test_paths(source.path());
+        std::fs::create_dir_all(&source_paths.config_dir).unwrap();
+        std::fs::write(&source_paths.config_file, b"{}").unwrap();
+
+        let source_memory = source_paths
+            .data_dir
+            .join("personas/alice/memory/memory.db");
+        std::fs::create_dir_all(source_memory.parent().unwrap()).unwrap();
+        rusqlite::Connection::open(&source_memory)
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE facts (
+                    id INTEGER PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    source_episode_ids TEXT NOT NULL DEFAULT '[]'
+                 );
+                 CREATE TABLE episodes (
+                    id INTEGER PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    source_episode_ids TEXT NOT NULL DEFAULT '[]'
+                 );
+                 INSERT INTO facts VALUES (1, 'old fact', '[]');",
+            )
+            .unwrap();
+
+        let source_evicted = source_paths
+            .state_dir
+            .join("personas/alice/memory/evicted_context.db");
+        std::fs::create_dir_all(source_evicted.parent().unwrap()).unwrap();
+        rusqlite::Connection::open(&source_evicted)
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE evicted_turns (
+                    id INTEGER PRIMARY KEY,
+                    content TEXT NOT NULL
+                 );
+                 CREATE TABLE evicted_embeddings (
+                    id INTEGER PRIMARY KEY,
+                    model TEXT NOT NULL
+                 );
+                 CREATE TABLE memory_provenance (
+                    carrier_kind TEXT NOT NULL,
+                    carrier_id INTEGER NOT NULL,
+                    memory_kind TEXT NOT NULL,
+                    memory_id INTEGER NOT NULL
+                 );
+                 INSERT INTO evicted_turns VALUES
+                    (1, 'same archived turn text'),
+                    (2, 'same archived turn text');
+                 INSERT INTO evicted_embeddings VALUES (1, 'model'), (2, 'model');
+                 INSERT INTO memory_provenance VALUES
+                    ('evicted_turn', 1, 'fact', 1);",
+            )
+            .unwrap();
+
+        let archive_dir = tempfile::tempdir().unwrap();
+        let archive = archive_dir.path().join("source.tar.gz");
+        super::export::export(
+            &source_paths,
+            &archive,
+            &super::export::ExportOptions::default(),
+        )
+        .unwrap();
+
+        let target = tempfile::tempdir().unwrap();
+        let target_paths = test_paths(target.path());
+        let target_memory = target_paths
+            .data_dir
+            .join("personas/alice/memory/memory.db");
+        std::fs::create_dir_all(target_memory.parent().unwrap()).unwrap();
+        rusqlite::Connection::open(&target_memory)
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE memory_tombstones (
+                    kind TEXT NOT NULL,
+                    id INTEGER NOT NULL,
+                    deleted_at TEXT NOT NULL,
+                    PRIMARY KEY(kind, id)
+                 );
+                 INSERT INTO memory_tombstones VALUES
+                    ('fact', 1, '2026-10-02T00:00:00Z');",
+            )
+            .unwrap();
+
+        super::import::import(
+            &target_paths,
+            &archive,
+            &super::import::ImportOptions { force: true },
+        )
+        .unwrap();
+
+        let imported = rusqlite::Connection::open(
+            target_paths
+                .state_dir
+                .join("personas/alice/memory/evicted_context.db"),
+        )
+        .unwrap();
+        assert_eq!(
+            imported
+                .query_row("SELECT COUNT(*) FROM evicted_turns WHERE id=1", [], |row| {
+                    row.get::<_, i64>(0)
+                })
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            imported
+                .query_row(
+                    "SELECT COUNT(*) FROM evicted_embeddings WHERE id=1",
+                    [],
+                    |row| { row.get::<_, i64>(0) }
+                )
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            imported
+                .query_row(
+                    "SELECT COUNT(*) FROM memory_provenance WHERE carrier_id=1",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            imported
+                .query_row("SELECT COUNT(*) FROM evicted_turns WHERE id=2", [], |row| {
+                    row.get::<_, i64>(0)
+                })
+                .unwrap(),
+            1,
+            "an unlinked carrier remains searchable",
+        );
+        assert_eq!(
+            imported
+                .query_row(
+                    "SELECT COUNT(*) FROM evicted_embeddings WHERE id=2",
+                    [],
+                    |row| { row.get::<_, i64>(0) }
+                )
+                .unwrap(),
+            1
+        );
+    }
+
+    #[test]
     fn import_fixup_failure_leaves_live_tree_untouched() {
         // Build a valid archive whose conversation database is openable but
         // deliberately lacks the tables required by the staging fixup.

@@ -118,6 +118,97 @@ pub(crate) fn apply_memory_tombstones(pairs: &[(PathBuf, PathBuf)]) -> Result<us
     Ok(removed)
 }
 
+/// Carry data-memory tombstones into staged evicted-context databases.
+///
+/// Evicted turns are a separate state-side store, so removing only the
+/// provenance row would make the turn look like an unlinked legacy carrier.
+/// When a carrier references a tombstoned fact/episode, remove the complete
+/// carrier (provenance, embedding, and turn) as one transaction.  Old archives
+/// may lack any of these tables; those databases are left untouched.
+pub(crate) fn apply_evicted_tombstones(pairs: &[(PathBuf, PathBuf)]) -> Result<usize> {
+    let mut removed = 0usize;
+    for (live, staged) in pairs {
+        let live_tombstones = match read_tombstones(live)? {
+            Some(rows) => rows,
+            None => continue,
+        };
+        if live_tombstones.is_empty() || !staged.is_file() {
+            continue;
+        }
+
+        let mut staged_conn = Connection::open(staged).with_context(|| {
+            format!(
+                "opening staged evicted-context database {}",
+                staged.display()
+            )
+        })?;
+        if !has_table(&staged_conn, "memory_provenance")?
+            || !has_table(&staged_conn, "evicted_turns")?
+        {
+            continue;
+        }
+
+        let tx = staged_conn.transaction()?;
+        if !has_column_tx(&tx, "memory_provenance", "carrier_kind")?
+            || !has_column_tx(&tx, "memory_provenance", "carrier_id")?
+            || !has_column_tx(&tx, "memory_provenance", "memory_kind")?
+            || !has_column_tx(&tx, "memory_provenance", "memory_id")?
+            || !has_column_tx(&tx, "evicted_turns", "id")?
+        {
+            continue;
+        }
+        tx.execute_batch(
+            "CREATE TEMP TABLE transfer_memory_tombstones (
+                 kind TEXT NOT NULL,
+                 id INTEGER NOT NULL,
+                 PRIMARY KEY (kind, id)
+             );
+             CREATE TEMP TABLE transfer_evicted_carriers (
+                 id INTEGER PRIMARY KEY
+             );",
+        )?;
+        for (kind, id, _) in live_tombstones {
+            tx.execute(
+                "INSERT OR IGNORE INTO transfer_memory_tombstones (kind, id)
+                 VALUES (?1, ?2)",
+                rusqlite::params![kind, id],
+            )?;
+        }
+        tx.execute(
+            "INSERT OR IGNORE INTO transfer_evicted_carriers (id)
+             SELECT DISTINCT p.carrier_id
+               FROM memory_provenance p
+               JOIN transfer_memory_tombstones t
+                 ON t.kind = p.memory_kind AND t.id = p.memory_id
+              WHERE p.carrier_kind='evicted_turn'",
+            [],
+        )?;
+
+        removed += tx.execute(
+            "DELETE FROM memory_provenance
+              WHERE carrier_kind='evicted_turn'
+                AND carrier_id IN (SELECT id FROM transfer_evicted_carriers)",
+            [],
+        )?;
+        if has_table_tx(&tx, "evicted_embeddings")?
+            && has_column_tx(&tx, "evicted_embeddings", "id")?
+        {
+            removed += tx.execute(
+                "DELETE FROM evicted_embeddings
+                  WHERE id IN (SELECT id FROM transfer_evicted_carriers)",
+                [],
+            )?;
+        }
+        removed += tx.execute(
+            "DELETE FROM evicted_turns
+              WHERE id IN (SELECT id FROM transfer_evicted_carriers)",
+            [],
+        )?;
+        tx.commit()?;
+    }
+    Ok(removed)
+}
+
 fn read_tombstones(path: &Path) -> Result<Option<Vec<(String, i64, String)>>> {
     if !path.is_file() {
         return Ok(None);
@@ -493,5 +584,87 @@ mod tests {
             )
             .unwrap();
         assert_eq!(sources, "[]");
+    }
+
+    #[test]
+    fn evicted_tombstones_remove_the_whole_linked_carrier() {
+        let temp = tempfile::tempdir().unwrap();
+        let live = temp.path().join("live.db");
+        let staged = temp.path().join("evicted.db");
+        Connection::open(&live)
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE memory_tombstones (
+                    kind TEXT NOT NULL,
+                    id INTEGER NOT NULL,
+                    deleted_at TEXT NOT NULL,
+                    PRIMARY KEY(kind, id)
+                 );
+                 INSERT INTO memory_tombstones VALUES ('fact', 1, '2026-10-02T00:00:00Z');",
+            )
+            .unwrap();
+        Connection::open(&staged)
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE evicted_turns (
+                    id INTEGER PRIMARY KEY,
+                    content TEXT NOT NULL
+                 );
+                 CREATE TABLE evicted_embeddings (
+                    id INTEGER PRIMARY KEY,
+                    model TEXT NOT NULL
+                 );
+                 CREATE TABLE memory_provenance (
+                    carrier_kind TEXT NOT NULL,
+                    carrier_id INTEGER NOT NULL,
+                    memory_kind TEXT NOT NULL,
+                    memory_id INTEGER NOT NULL
+                 );
+                 INSERT INTO evicted_turns VALUES
+                    (1, 'same archived text'),
+                    (2, 'same archived text'),
+                    (3, 'same archived text');
+                 INSERT INTO evicted_embeddings VALUES (1, 'model'), (2, 'model'), (3, 'model');
+                 INSERT INTO memory_provenance VALUES
+                    ('evicted_turn', 1, 'fact', 1),
+                    ('evicted_turn', 2, 'fact', 2);",
+            )
+            .unwrap();
+
+        let removed = apply_evicted_tombstones(&[(live, staged.clone())]).unwrap();
+        assert_eq!(removed, 3, "provenance, embedding, and turn are removed");
+        let conn = Connection::open(staged).unwrap();
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM evicted_turns", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+            2
+        );
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM evicted_embeddings", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+            2
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT COUNT(*) FROM memory_provenance WHERE carrier_id=1",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap(),
+            0
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT COUNT(*) FROM memory_provenance WHERE carrier_id=2",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap(),
+            1
+        );
     }
 }

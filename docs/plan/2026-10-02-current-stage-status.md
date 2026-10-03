@@ -33,6 +33,10 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   typed carrier，同时保留同文案的无关联 carrier。`reset_all` 的 facts/episodes
   ID 复用窗口也已收窄：删除后保留自增高水位，回归测试确认 tombstone ID 不会
   被 replacement fact 复用；独立 state 清理仍未宣称跨库原子性。
+  G3-05-15 又把同一 tombstone barrier 接到 force-import：按 persona scope
+  配对 live memory 与 staged evicted-context，导入前清除 typed linked carrier
+  的 provenance/embedding/turn，同时保留无关联 carrier；真实 export→import
+  回归已在 WSL ext4 通过。
 
 ## 下一处施工边界
 

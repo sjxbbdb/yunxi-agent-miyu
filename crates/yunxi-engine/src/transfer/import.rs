@@ -165,6 +165,55 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
         .collect::<Vec<_>>();
     super::fixups::apply_memory_tombstones(&staged_memory_databases)?;
 
+    // Evicted context lives under state/personas/<scope>, while its durable
+    // memory tombstones live under data/personas/<scope>.  Pair by scope so a
+    // tombstone from one persona can never filter another persona's archive.
+    let mut live_memory_by_scope = BTreeMap::new();
+    let mut staged_evicted_by_scope = BTreeMap::new();
+    for entry in &manifest.entries {
+        match unit_for(&entry.path).map(|unit| unit.id) {
+            Some("data.persona_memory") => {
+                if let Some(scope) =
+                    persona_memory_scope(&entry.path, "data/personas/", "/memory/memory.db")
+                {
+                    live_memory_by_scope.insert(scope.to_owned(), root.join(&entry.path));
+                }
+            }
+            Some("personas.memory") => {
+                // Home-layout archives use the same per-persona memory shape.
+                // Keep it as a compatibility fallback when no data/ path for
+                // this scope is present.
+                if let Some(scope) =
+                    persona_memory_scope(&entry.path, "personas/", "/memory/memory.db")
+                {
+                    live_memory_by_scope
+                        .entry(scope.to_owned())
+                        .or_insert_with(|| root.join(&entry.path));
+                }
+            }
+            Some("state.evicted_context") => {
+                if let Some(scope) = persona_memory_scope(
+                    &entry.path,
+                    "state/personas/",
+                    "/memory/evicted_context.db",
+                ) {
+                    staged_evicted_by_scope.insert(scope.to_owned(), staged.join(&entry.path));
+                }
+            }
+            _ => {}
+        }
+    }
+    let staged_evicted_pairs = staged_evicted_by_scope
+        .into_iter()
+        .filter_map(|(scope, staged)| {
+            live_memory_by_scope
+                .get(&scope)
+                .cloned()
+                .map(|live| (live, staged))
+        })
+        .collect::<Vec<_>>();
+    super::fixups::apply_evicted_tombstones(&staged_evicted_pairs)?;
+
     let mut unknown_units = BTreeSet::new();
     for entry in &manifest.entries {
         if unit_for(&entry.path).is_none() {
@@ -208,6 +257,11 @@ pub fn import(paths: &YunXiPaths, archive: &Path, options: &ImportOptions) -> Re
         cleared_workspaces,
         removed_stale,
     })
+}
+
+fn persona_memory_scope<'a>(path: &'a str, prefix: &str, suffix: &str) -> Option<&'a str> {
+    let scope = path.strip_prefix(prefix)?.strip_suffix(suffix)?;
+    (!scope.is_empty() && !scope.contains('/')).then_some(scope)
 }
 
 /// Why importing here would destroy something, or `None` when the target is
