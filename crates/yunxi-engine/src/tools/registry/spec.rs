@@ -7,11 +7,56 @@
 //! 用户输入，那条路走 question 机制。
 
 use crate::tools::registry::*;
+use std::fs::File;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
 pub type ToolFuture = Pin<Box<dyn Future<Output = Result<String>> + Send>>;
 
-pub type ToolHandler = Arc<dyn Fn(Value, ToolProgress) -> ToolFuture + Send + Sync>;
+pub type ToolHandler =
+    Arc<dyn Fn(Value, ToolProgress, ToolCallContext) -> ToolFuture + Send + Sync>;
+
+/// Local execution capabilities prepared by the registry guard.  Capabilities
+/// never enter the provider-facing tool contract or model transcript.
+#[derive(Clone, Default)]
+pub struct ToolCallContext {
+    pub(crate) transcript: Option<Arc<TranscriptReadCapability>>,
+}
+
+impl ToolCallContext {
+    pub(crate) fn with_transcript(capability: TranscriptReadCapability) -> Self {
+        Self {
+            transcript: Some(Arc::new(capability)),
+        }
+    }
+
+    pub(crate) fn transcript_for(&self, path: &Path) -> Option<File> {
+        let capability = self.transcript.as_ref()?;
+        if capability.path != path {
+            return None;
+        }
+        capability.file.try_clone().ok()
+    }
+}
+
+/// A read-only handle opened after transcript provenance and filesystem
+/// identity checks.  The handler consumes a cloned descriptor, so a later
+/// rename or replacement of the path cannot change the bytes being read.
+#[derive(Clone)]
+pub(crate) struct TranscriptReadCapability {
+    path: PathBuf,
+    file: Arc<File>,
+}
+
+impl TranscriptReadCapability {
+    pub(crate) fn new(path: PathBuf, file: File) -> Self {
+        Self {
+            path,
+            file: Arc::new(file),
+        }
+    }
+}
 
 /// 单调执行守卫:返回 Some(理由) 即拒绝本次调用,返回 None 放行。
 /// 只拒不放——任何 guard 拒绝后,后续 guard 与调用方都无法翻案
@@ -265,7 +310,7 @@ impl ToolSpec {
             requires_prior: Vec::new(),
             exposed: true,
             concurrent: false,
-            handler: Arc::new(move |args, _progress| Box::pin(handler(args))),
+            handler: Arc::new(move |args, _progress, _context| Box::pin(handler(args))),
         }
     }
 
@@ -296,7 +341,40 @@ impl ToolSpec {
             requires_prior: Vec::new(),
             exposed: true,
             concurrent: false,
-            handler: Arc::new(move |args, progress| Box::pin(handler(args, progress))),
+            handler: Arc::new(move |args, progress, _context| Box::pin(handler(args, progress))),
+        }
+    }
+
+    pub fn new_with_context<F, Fut>(
+        name: impl Into<String>,
+        description: impl Into<String>,
+        parameters: Value,
+        handler: F,
+    ) -> Self
+    where
+        F: Fn(Value, ToolProgress, ToolCallContext) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<String>> + Send + 'static,
+    {
+        Self {
+            name: name.into(),
+            description: description.into(),
+            parameters,
+            permission: ToolPermission::ReadOnly,
+            display_name: None,
+            always_loaded: true,
+            is_script: false,
+            load_policy: LoadPolicy::Summary,
+            groups: Vec::new(),
+            timeout_seconds: None,
+            stub_example: None,
+            trust: ToolTrust::Owner,
+            cross_hints: Vec::new(),
+            requires_prior: Vec::new(),
+            exposed: true,
+            concurrent: false,
+            handler: Arc::new(move |args, progress, context| {
+                Box::pin(handler(args, progress, context))
+            }),
         }
     }
 
@@ -423,12 +501,22 @@ impl ToolSpec {
         }
     }
 
-    pub(crate) async fn call(&self, args: Value, progress: ToolProgress) -> Result<String> {
-        (self.handler)(args, progress).await
+    pub(crate) async fn call(
+        &self,
+        args: Value,
+        progress: ToolProgress,
+        context: ToolCallContext,
+    ) -> Result<String> {
+        (self.handler)(args, progress, context).await
     }
 
-    pub(crate) fn call_future(&self, args: Value, progress: ToolProgress) -> ToolFuture {
-        (self.handler)(args, progress)
+    pub(crate) fn call_future(
+        &self,
+        args: Value,
+        progress: ToolProgress,
+        context: ToolCallContext,
+    ) -> ToolFuture {
+        (self.handler)(args, progress, context)
     }
 }
 

@@ -5,7 +5,10 @@
 //! because a model asks `read`, `grep`, or `run_command` to open the file.
 //! The check is carrier/provenance based: it never searches transcript text.
 
-use super::{ToolRegistry, TranscriptAccessGuard};
+use super::{
+    ToolCallContext, ToolRegistry, TranscriptAccessDecision, TranscriptAccessGuard,
+    TranscriptReadCapability,
+};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -32,16 +35,51 @@ const MAX_NESTED_SUBSTITUTION_DEPTH: usize = 8;
 pub(crate) fn bind(registry: &mut ToolRegistry, state: StateStore, memory: MemoryStore) {
     let guard: TranscriptAccessGuard = Arc::new(move |tool, args| {
         if !READ_TOOLS.contains(&tool.name.as_str()) {
-            return None;
+            return TranscriptAccessDecision::Allow;
         }
         let state = &state;
         let memory = &memory;
         match tool.name.as_str() {
-            "read" | "grep" | "glob" => args
-                .get("path")
-                .and_then(Value::as_str)
-                .and_then(|raw| path_from_argument(raw))
-                .and_then(|path| check_path(state, memory, &path)),
+            "read" => {
+                let Some(path) = args
+                    .get("path")
+                    .and_then(Value::as_str)
+                    .and_then(path_from_argument)
+                else {
+                    return TranscriptAccessDecision::Allow;
+                };
+                if let Some(reason) = check_path(state, memory, &path) {
+                    return TranscriptAccessDecision::Deny(reason);
+                }
+                if has_live_provenance(state, memory, &path) {
+                    return match open_transcript_capability(state, &path) {
+                        Ok(capability) => TranscriptAccessDecision::AllowWith(
+                            ToolCallContext::with_transcript(capability),
+                        ),
+                        Err(reason) => TranscriptAccessDecision::Deny(reason),
+                    };
+                }
+                TranscriptAccessDecision::Allow
+            }
+            "grep" | "glob" => {
+                let Some(path) = args
+                    .get("path")
+                    .and_then(Value::as_str)
+                    .and_then(path_from_argument)
+                else {
+                    return TranscriptAccessDecision::Allow;
+                };
+                if let Some(reason) = check_path(state, memory, &path) {
+                    return TranscriptAccessDecision::Deny(reason);
+                }
+                if has_live_provenance(state, memory, &path) {
+                    return TranscriptAccessDecision::Deny(format!(
+                        "transcript `{}` cannot be searched safely because the search handler uses a path/subprocess seam; use read instead",
+                        path.display()
+                    ));
+                }
+                TranscriptAccessDecision::Allow
+            }
             // Shell parsing is intentionally not attempted. We block an exact
             // compact-session root mention, which is the absolute path emitted in
             // the transcript carrier hint, and we fail closed for opaque shell
@@ -50,8 +88,12 @@ pub(crate) fn bind(registry: &mut ToolRegistry, state: StateStore, memory: Memor
             "run_command" => args
                 .get("command")
                 .and_then(Value::as_str)
-                .and_then(|command| check_command(state, memory, command)),
-            _ => None,
+                .and_then(|command| check_command(state, memory, command))
+                .map_or(
+                    TranscriptAccessDecision::Allow,
+                    TranscriptAccessDecision::Deny,
+                ),
+            _ => TranscriptAccessDecision::Allow,
         }
     });
     registry.bind_transcript_access_guard(guard);
@@ -170,11 +212,51 @@ fn check_path(state: &StateStore, memory: &MemoryStore, path: &Path) -> Option<S
     }
 }
 
-/// Verify the filesystem identity immediately before a structured transcript
-/// read.  The registry does not have an open-file capability to pass to the
-/// handler, so this is deliberately a fail-closed check rather than a claim
-/// that it closes every rename race.  In particular, reject symlink parents or
-/// leaves and Unix files with more than one hard link.
+fn has_live_provenance(state: &StateStore, memory: &MemoryStore, path: &Path) -> bool {
+    let compact = compact_root(state);
+    let session_root = transcript_root(state);
+    if !path.starts_with(&compact) || !is_transcript_scope(path, &session_root) {
+        return false;
+    }
+    let Ok(Some(provenance)) = state
+        .conv_db()
+        .load_transcript_provenance_by_path(state.session_id().as_ref(), &path.to_string_lossy())
+    else {
+        return false;
+    };
+    !memory
+        .memory_refs_are_tombstoned(&provenance.refs)
+        .unwrap_or(true)
+}
+
+fn open_transcript_capability(
+    state: &StateStore,
+    path: &Path,
+) -> Result<TranscriptReadCapability, String> {
+    let compact = compact_root(state);
+    if let Some(reason) = ensure_transcript_identity(path, &compact) {
+        return Err(reason);
+    }
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW);
+    }
+    let file = options.open(path).map_err(|error| {
+        format!(
+            "transcript `{}` could not be opened for a protected read: {error}",
+            path.display()
+        )
+    })?;
+    Ok(TranscriptReadCapability::new(path.to_path_buf(), file))
+}
+
+/// Verify the filesystem identity immediately before opening a structured
+/// transcript read.  The opened descriptor is then passed to the handler, so
+/// a later leaf rename/replacement cannot change the bytes being read. Parent
+/// replacement and arbitrary shell data-flow remain outside this narrow seam.
 fn ensure_transcript_identity(path: &Path, compact: &Path) -> Option<String> {
     let mut ancestor = path;
     loop {
@@ -741,6 +823,66 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn opened_transcript_capability_survives_path_replacement() {
+        let (temp, state, memory, path) = transcript_fixture(&[]);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "original").unwrap();
+        let replacement = path.with_extension("replacement");
+        let mut registry = ToolRegistry::new();
+        registry.register(super::super::ToolSpec::new_with_context(
+            "read",
+            "read",
+            serde_json::json!({"type":"object"}),
+            move |args, _progress, context| {
+                let replacement = replacement.clone();
+                async move {
+                    let path = PathBuf::from(args.get("path").unwrap().as_str().unwrap());
+                    std::fs::rename(&path, &replacement).unwrap();
+                    std::fs::write(&path, "replacement").unwrap();
+                    let mut file = context
+                        .transcript_for(&path)
+                        .ok_or_else(|| anyhow::anyhow!("missing transcript capability"))?;
+                    let mut content = String::new();
+                    std::io::Read::read_to_string(&mut file, &mut content)?;
+                    Ok(content)
+                }
+            },
+        ));
+        bind(&mut registry, state, memory);
+        let result = registry
+            .call("read", &serde_json::json!({"path": path}).to_string())
+            .await
+            .unwrap();
+        assert_eq!(result, "original");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "replacement");
+        drop(temp);
+    }
+
+    #[tokio::test]
+    async fn live_registered_transcript_search_is_denied_without_opened_capability() {
+        let (temp, state, memory, path) = transcript_fixture(&[]);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "safe").unwrap();
+        let mut registry = search_registry();
+        bind(&mut registry, state, memory);
+        for tool in ["grep", "glob"] {
+            let error = registry
+                .call(
+                    tool,
+                    &serde_json::json!({"path": path, "pattern": "safe"}).to_string(),
+                )
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(
+                error.contains("cannot be searched safely"),
+                "{tool}: unexpected: {error}"
+            );
+        }
+        drop(temp);
+    }
+
+    #[tokio::test]
     async fn live_registered_transcript_is_denied_to_run_command() {
         let (temp, state, memory, path) = transcript_fixture(&[]);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -1131,6 +1273,19 @@ mod tests {
             serde_json::json!({"type":"object"}),
             |_| async { Ok("handler ran".to_string()) },
         ));
+        registry
+    }
+
+    fn search_registry() -> ToolRegistry {
+        let mut registry = ToolRegistry::new();
+        for name in ["grep", "glob"] {
+            registry.register(super::super::ToolSpec::new(
+                name,
+                name,
+                serde_json::json!({"type":"object"}),
+                |_| async { Ok("handler ran".to_string()) },
+            ));
+        }
         registry
     }
 

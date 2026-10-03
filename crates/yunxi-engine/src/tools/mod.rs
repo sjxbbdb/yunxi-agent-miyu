@@ -87,6 +87,7 @@ pub use registry::{
     CommandOutputStream, GuardCtx, ScriptScope, ToolFuture, ToolGuard, ToolPermission,
     ToolProgress, ToolProgressEvent, ToolRegistry, ToolSpec, ToolTrust, TranscriptAccessGuard,
 };
+pub(crate) use registry::{ToolCallContext, TranscriptAccessDecision, TranscriptReadCapability};
 pub use scripts::{
     apply_script_refresh, builtin_scripts_dir, list_global_scripts, list_scripts_for_features,
     list_scripts_with_origin, prepare_script_refresh, scripts_dashboard_delete,

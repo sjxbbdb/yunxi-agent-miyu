@@ -538,9 +538,70 @@ Evidence (WSL Ubuntu-24.04 ext4 disposable checkout, one cargo job):
   intentionally contains Unix-only modules; the baseline host failure is
   unrelated to this slice.
 
-The next boundary is to choose between a structured opened-file capability for
-the read/grep/glob handlers and a further conservative denial policy. No
-general shell parser or cross-database memory change is implied by this slice.
+The next boundary is to choose the remaining search and shell seams: whether
+`grep`/`glob` should receive an opened capability, how parent-directory
+replacement should be handled (for example with a future `openat`/dirfd
+design), and whether quoted `sh -c`/`eval` wrappers need a narrower policy.
+No general shell parser or cross-database memory change is implied by this
+slice.
+
+## G3-05-21 implemented slice: opened transcript capability for `read`
+
+The registry now carries an opaque, local-only `ToolCallContext` from the
+transcript guard to a context-aware handler. For a live, provenance-backed
+transcript, the guard repeats the existing scope, tombstone, symlink, regular
+file, and hard-link checks, then opens a read-only descriptor. On Unix the
+open uses `O_NOFOLLOW` for the leaf. The structured `read` handler consumes a
+clone of that descriptor instead of reopening the path, so a leaf rename and
+replacement after the guard cannot switch the bytes returned to the model.
+The capability never enters the provider-facing tool contract or transcript.
+
+Ordinary files and legacy paths keep the previous path-based behavior. The
+slice is intentionally narrow: `grep`/`glob` still use their existing
+path/subprocess seams; parent-directory replacement, full `openat`/dirfd
+semantics, external hard-link aliases, quoted embedded scripts, arbitrary
+wrapper data-flow, and a general shell parser remain explicit residuals.
+
+The regression suite includes both a handler-level path-replacement test and a
+default `read` test proving that the opened descriptor returns the original
+bytes after the pathname is replaced. The targeted WSL Ubuntu-24.04 ext4
+checkout passed `cargo test -p yunxi-engine transcript_guard::tests --locked
+-- --nocapture`: 23 passed, 0 failed. The disposable ext4 checkout and target
+were removed after the run.
+
+The next boundary is the search-handler decision (`grep`/`glob`), the parent
+replacement/openat decision, and the remaining quoted-shell/wrapper and
+cross-database overlap audits; G3-05 is not complete.
+
+## G3-05-22 implemented slice: deny live transcript search without a descriptor
+
+The `grep` and `glob` handlers remain subprocess/path based and do not yet
+accept `ToolCallContext`. Rather than leave a live transcript's narrow
+rename/replacement window open, the transcript guard now denies those two
+structured searches when their exact path has live provenance. Unknown,
+tombstoned, out-of-scope, and identity-invalid transcript paths retain their
+existing fail-closed errors; ordinary non-transcript searches remain allowed.
+The error explicitly directs the caller to `read`, which is the only
+structured transcript path currently backed by an opened descriptor.
+
+The regression suite covers both search tool names against a live registered
+transcript. This is a conservative interim boundary, not a claim that search
+is permanently unsupported: a future descriptor-aware search implementation
+may replace the denial after its own identity and subprocess-inheritance
+tests. Parent-directory replacement, `openat`/dirfd semantics, quoted shell
+wrappers, and cross-database overlap remain outside this slice.
+
+## G3-05-23 implemented slice: staged evicted fixup idempotence
+
+The transfer-side regression now reruns `apply_evicted_tombstones` against the
+same staged evicted-context database after the first successful cleanup. The
+second pass removes zero rows, proving that deleting the provenance row,
+embedding, and carrier is an idempotent operation rather than a one-shot
+assumption. This is evidence for repeated import/fixup retries, not a claim of
+cross-database atomicity or crash recovery. SQLite transaction rollback and the
+existing staged-install rollback tests remain the authoritative failure path;
+crash injection between the live tombstone read and staged commit is still a
+follow-up boundary.
 
 ## Current evidence and boundaries
 

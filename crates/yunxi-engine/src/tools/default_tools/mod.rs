@@ -5,7 +5,9 @@ use command::*;
 // claude_code 复用同一套进程组击杀语义,不再抄一份。
 pub(crate) use files::*;
 
-use super::{CommandOutputStream, ToolProgress, ToolRegistry, ToolSpec};
+#[cfg(test)]
+use super::TranscriptReadCapability;
+use super::{CommandOutputStream, ToolCallContext, ToolProgress, ToolRegistry, ToolSpec};
 use anyhow::{bail, Result};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Read};
@@ -66,14 +68,14 @@ pub fn register_readonly(
     // (Artifact 库与知识库的读取工具随之退场)。
     let read_config = config.clone();
     let read_paths = paths.clone();
-    registry.register(ToolSpec::new(
+    registry.register(ToolSpec::new_with_context(
         "read",
         "Read a UTF-8 text file by 1-based line offset, or list a directory page. Use absolute paths, workspace-relative paths, or ~/ paths. Large files are paged and binary files are refused.",
         json!({"type":"object","properties":{"path":{"type":"string","description": "File or directory path."},"offset":{"type":"integer","description": "Starting line, 1-based."},"limit":{"type":"integer","description": "Maximum lines to read."}},"required":["path"],"additionalProperties":false}),
-        move |args| {
+        move |args, _progress, context| {
             let config = read_config.clone();
             let paths = read_paths.clone();
-            async move { read_dispatch(args, &config, &paths) }
+            async move { read_dispatch(args, &config, &paths, &context) }
         },
     )
     .concurrent());
@@ -99,6 +101,7 @@ fn read_dispatch(
     mut args: Value,
     config: &yunxi_base::config::AppConfig,
     paths: &yunxi_base::paths::YunXiPaths,
+    context: &ToolCallContext,
 ) -> Result<String> {
     let path_arg = args
         .get("path")
@@ -124,7 +127,7 @@ fn read_dispatch(
         let resolved = kb.safe_file_path(rel.trim())?;
         args["path"] = Value::String(resolved.to_string_lossy().to_string());
     }
-    read_file(args)
+    read_file_with_context(args, context)
 }
 
 fn clip_output_with_meta(value: &str) -> ClippedOutput {
@@ -227,6 +230,10 @@ fn search_exclude_args(search_root: &Path) -> Vec<String> {
 
 fn ensure_not_binary_file(path: &Path) -> Result<()> {
     let mut file = std::fs::File::open(path)?;
+    ensure_not_binary_reader(&mut file, path)
+}
+
+fn ensure_not_binary_reader(file: &mut std::fs::File, path: &Path) -> Result<()> {
     let mut buffer = [0u8; 8192];
     let read = file.read(&mut buffer)?;
     let sample = &buffer[..read];
@@ -492,6 +499,25 @@ mod tests {
                 path.display()
             )
         );
+    }
+
+    #[test]
+    fn read_file_uses_opened_transcript_capability_after_path_replacement() {
+        let cwd = std::env::current_dir().unwrap();
+        let temp = tempfile::tempdir_in(cwd).unwrap();
+        let path = temp.path().join("transcript.md");
+        std::fs::write(&path, "original\n").unwrap();
+        let file = std::fs::File::open(&path).unwrap();
+        let context =
+            ToolCallContext::with_transcript(TranscriptReadCapability::new(path.clone(), file));
+        let replacement = temp.path().join("transcript.replaced");
+        std::fs::rename(&path, replacement).unwrap();
+        std::fs::write(&path, "replacement\n").unwrap();
+
+        let result =
+            read_file_with_context(json!({"path": path.display().to_string()}), &context).unwrap();
+        assert!(result.contains("1: original"), "{result}");
+        assert!(!result.contains("replacement"), "{result}");
     }
 
     /// 09-24 B8：输出被截断时全文存盘，结果里给出路径（模型只看得到末尾两万字）。

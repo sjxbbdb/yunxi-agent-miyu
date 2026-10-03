@@ -29,9 +29,25 @@
 - G3-05 transcript identity boundary：结构化读取要求 compact/session 范围内无
   symlink、叶文件为 regular file，Unix 上拒绝多硬链接叶文件；`run_command` 对
   已登记的 live transcript 路径 fail-closed，避免通用 `sh -lc` 在 guard 后替换
-  路径。WSL transcript_guard 22/22 通过；registry 尚未传递 opened-file
-  capability，因此 read/grep/glob 的极窄 rename window、compact 外硬链接 alias、quoted 嵌入脚本和任意
-  wrapper data-flow 仍未宣称覆盖。
+  路径。WSL transcript_guard 22/22 通过。
+
+- G3-05 opened transcript capability：registry 通过本地 opaque
+  `ToolCallContext` 将 guard 打开的只读 transcript descriptor 传给结构化
+  `read` handler；Unix 叶文件使用 `O_NOFOLLOW`，路径替换回归证明 handler
+  仍读取原始内容。普通文件行为保持不变。WSL Ubuntu-24.04 ext4
+  transcript_guard 23/23 通过。grep/glob 的路径/子进程 seam、父目录替换、
+  compact 外硬链接 alias、quoted 嵌入脚本与任意 wrapper data-flow 仍未宣称
+  覆盖。
+
+- G3-05 transcript search boundary：由于 `grep`/`glob` 仍走路径/子进程 seam，
+  live provenance transcript 的结构化搜索暂时 fail-closed，并提示改用
+  descriptor-backed `read`；普通非 transcript 搜索继续放行。新增双工具回归，
+  不宣称永久取消搜索，也不覆盖未来 descriptor-aware search、父目录替换或
+  跨库 overlap。
+
+- G3-05 staged evicted fixup idempotence：对已清理的 staged evicted-context
+  数据库重复执行 tombstone fixup 返回 0，保证导入重试不会重复删除或改变
+  结果。该回归不宣称跨库原子性或 crash injection 已完成。
 
 - G3-05 memory provenance：删除提交后的 `MemoryStore` 重建会继续隐藏已删除的
   evicted carrier；`reset_all` 保留 facts/episodes 的自增高水位，避免独立 state

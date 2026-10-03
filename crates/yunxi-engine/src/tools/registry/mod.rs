@@ -3,16 +3,24 @@ mod spec;
 #[cfg(test)]
 pub(crate) use lazy::empty_parameters;
 pub(crate) use lazy::*;
+pub(crate) use spec::TranscriptReadCapability;
 pub(crate) use spec::*;
 pub use spec::{
-    GuardCtx, ToolFuture, ToolGuard, ToolPermission, ToolProgress, ToolProgressEvent, ToolSpec,
-    ToolTrust,
+    GuardCtx, ToolCallContext, ToolFuture, ToolGuard, ToolPermission, ToolProgress,
+    ToolProgressEvent, ToolSpec, ToolTrust,
 };
 
 /// A per-session barrier for files that carry conversation provenance.  This
 /// is deliberately kept outside the provider-visible tool contract: it is a
 /// local read-time policy, not another tool or prompt instruction.
-pub type TranscriptAccessGuard = Arc<dyn Fn(&ToolSpec, &Value) -> Option<String> + Send + Sync>;
+pub enum TranscriptAccessDecision {
+    Allow,
+    AllowWith(ToolCallContext),
+    Deny(String),
+}
+
+pub type TranscriptAccessGuard =
+    Arc<dyn Fn(&ToolSpec, &Value) -> TranscriptAccessDecision + Send + Sync>;
 
 use crate::tools::load_tools::TOOL_NAME as LOAD_TOOLS_TOOL_NAME;
 use crate::tools::tool_descriptions::LoadPolicy;
@@ -20,7 +28,6 @@ use anyhow::{bail, Result};
 use serde_json::{json, Value};
 use std::collections::{BTreeSet, HashMap};
 use std::future::Future;
-use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
@@ -111,13 +118,25 @@ impl ToolRegistry {
         self.tools.values().cloned().collect()
     }
 
-    fn guard_denial(&self, tool: &ToolSpec, args: &Value, ctx: &GuardCtx) -> Option<String> {
-        if let Some(guard) = &self.transcript_access_guard {
-            if let Some(reason) = guard(tool, args) {
-                return Some(reason);
+    fn call_context(
+        &self,
+        tool: &ToolSpec,
+        args: &Value,
+        ctx: &GuardCtx,
+    ) -> Result<ToolCallContext> {
+        let context = if let Some(guard) = &self.transcript_access_guard {
+            match guard(tool, args) {
+                TranscriptAccessDecision::Allow => ToolCallContext::default(),
+                TranscriptAccessDecision::AllowWith(context) => context,
+                TranscriptAccessDecision::Deny(reason) => bail!(reason),
             }
+        } else {
+            ToolCallContext::default()
+        };
+        if let Some(reason) = self.guards.iter().find_map(|guard| guard(tool, args, ctx)) {
+            bail!(reason);
         }
-        self.guards.iter().find_map(|guard| guard(tool, args, ctx))
+        Ok(context)
     }
 
     fn effective_timeout(&self, tool: &ToolSpec) -> Option<std::time::Duration> {
@@ -403,17 +422,20 @@ impl ToolRegistry {
         if name == "load_tools" {
             return super::load_tools::execute(args, self);
         }
-        if let Some(reason) = self.guard_denial(tool, &args, &GuardCtx::default()) {
-            bail!("{reason}");
-        }
+        let context = self.call_context(tool, &args, &GuardCtx::default())?;
         match self.effective_timeout(tool) {
             Some(limit) => {
-                match tokio::time::timeout(limit, tool.call(args, ToolProgress::default())).await {
+                match tokio::time::timeout(
+                    limit,
+                    tool.call(args, ToolProgress::default(), context.clone()),
+                )
+                .await
+                {
                     Ok(result) => result,
                     Err(_) => Err(Self::timeout_error(name, limit)),
                 }
             }
-            None => tool.call(args, ToolProgress::default()).await,
+            None => tool.call(args, ToolProgress::default(), context).await,
         }
     }
 
@@ -437,10 +459,11 @@ impl ToolRegistry {
             let result = super::load_tools::execute(args, self);
             return Ok(Box::pin(async move { result }));
         }
-        if let Some(reason) = self.guard_denial(tool, &args, guard_ctx) {
-            return Ok(Box::pin(async move { Err(anyhow::anyhow!("{reason}")) }));
-        }
-        let future = tool.call_future(args, ToolProgress::new(sender));
+        let context = match self.call_context(tool, &args, guard_ctx) {
+            Ok(context) => context,
+            Err(error) => return Ok(Box::pin(async move { Err(error) })),
+        };
+        let future = tool.call_future(args, ToolProgress::new(sender), context);
         Ok(match self.effective_timeout(tool) {
             Some(limit) => {
                 let tool_name = tool.name.clone();

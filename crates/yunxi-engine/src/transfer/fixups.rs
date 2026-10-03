@@ -631,7 +631,7 @@ mod tests {
             )
             .unwrap();
 
-        let removed = apply_evicted_tombstones(&[(live, staged.clone())]).unwrap();
+        let removed = apply_evicted_tombstones(&[(live.clone(), staged.clone())]).unwrap();
         assert_eq!(removed, 3, "provenance, embedding, and turn are removed");
         let conn = Connection::open(staged).unwrap();
         assert_eq!(
@@ -665,6 +665,13 @@ mod tests {
             )
             .unwrap(),
             1
+        );
+        drop(conn);
+        let removed_again =
+            apply_evicted_tombstones(&[(live, temp.path().join("evicted.db"))]).unwrap();
+        assert_eq!(
+            removed_again, 0,
+            "a repeated import fixup must be idempotent after the carrier is removed"
         );
     }
 }

@@ -58,10 +58,22 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   范围内路径无 symlink 且叶文件为 regular file；Unix 上拒绝多硬链接叶文件；
   `run_command` 对已登记的 live transcript 路径直接 fail-closed，避免通用
   `sh -lc` 在 guard 后替换路径。WSL Ubuntu-24.04 ext4 transcript_guard 22/22
-  通过，普通文件命令仍放行。当前 registry 尚未传递 opened-file capability，
-  因而 read/grep/glob 的极窄 rename window、compact 根之外的父目录替换、
-  compact 外硬链接 alias、quoted 嵌入脚本与任意 wrapper data-flow 仍明确未覆盖；
-  compact 外路径的 canonicalize 只作为本地 alias 探针，不是通用文件系统策略。
+  通过，普通文件命令仍放行。G3-05-21 又把一个极窄的 opened-file
+  capability 接入 registry→`read` handler：guard 在 provenance、tombstone、
+  scope、身份和 Unix `O_NOFOLLOW` 检查后打开只读描述符，handler 复用该描述符，
+  叶路径替换回归证明仍返回原始内容；WSL Ubuntu-24.04 ext4
+  transcript_guard 23/23 通过。grep/glob 仍是原来的路径/子进程 seam，
+  compact 根之外父目录替换、compact 外硬链接 alias、quoted 嵌入脚本与任意
+  wrapper data-flow 仍明确未覆盖；compact 外路径的 canonicalize 只作为本地
+  alias 探针，不是通用文件系统策略。
+  G3-05-22 又对 live provenance transcript 的 `grep`/`glob` 做了保守收口：
+  这两个 handler 仍走路径/子进程 seam，暂时拒绝直接搜索并提示改用已有
+  descriptor-backed `read`；普通非 transcript 搜索继续放行。新增的双工具回归
+  覆盖已登记 live transcript 的拒绝路径；这不是永久取消搜索能力，未来若做
+  descriptor-aware search，需另行证明子进程继承和身份语义。
+  G3-05-23 补上 staged evicted tombstone fixup 的重复执行回归：同一 staged
+  数据库第一次清理后再次执行返回 0，不重复删除，证明导入重试的幂等性；这
+  仍不等于跨库原子性或 crash injection 覆盖。
 
 ## 下一处施工边界
 
@@ -75,8 +87,10 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
    参数及 `$()`/反引号内嵌动态文件访问已有词法屏障与 16/16 回归，live
    transcript shell 路径也已拒绝，当前仍不做完整 shell parser；
-3. 决定 read/grep/glob 是否引入 opened-file capability 或继续保持当前
-   fail-closed 身份检查，再评估 G3-05 的阶段退出；
+3. 评估 `grep`/`glob` 是否替换当前保守拒绝为 descriptor-aware search，并单独决定
+   父目录替换是否值得进入 `openat`/dirfd 设计；同时继续审计 quoted
+   `sh -c`/`eval`、任意 wrapper data-flow 与跨库 overlap，再评估 G3-05
+   的阶段退出；`read` 的叶文件 capability 已落地，但不等于整段完成；
 
 此外，transfer 的 staged fixup 目前仍依赖导入前的 tombstone 过滤，尚未把
 epoch 递增语义扩展到独立的 staged 数据库；这不是运行时在线读写路径，已审计

@@ -5,7 +5,9 @@
 //!
 //! 删除走系统回收站（`trash_one`）而不是 `rm`：模型判断错的代价必须可撤销。
 
+use super::ToolCallContext;
 use crate::tools::default_tools::*;
+use std::io::{Seek, SeekFrom};
 
 pub(in crate::tools) const MAX_READ_BYTES: u64 = 50 * 1024;
 
@@ -16,6 +18,10 @@ pub(in crate::tools) const MAX_LINE_CHARS: usize = 2_000;
 pub(in crate::tools) const SEARCH_TIMEOUT_SECONDS: u64 = 30;
 
 pub(crate) fn read_file(args: Value) -> Result<String> {
+    read_file_with_context(args, &ToolCallContext::default())
+}
+
+pub(crate) fn read_file_with_context(args: Value, context: &ToolCallContext) -> Result<String> {
     let path = path_arg(&args, "path")?;
     yunxi_base::sandbox::guard_read(&path)?;
     let offset = args
@@ -53,12 +59,26 @@ pub(crate) fn read_file(args: Value) -> Result<String> {
         );
         return Ok(format!("{header}\n{}", selected.join("\n")));
     }
-    let metadata = std::fs::metadata(&path)?;
+    let mut capability_file = context.transcript_for(&path);
+    let using_capability = capability_file.is_some();
+    let metadata = match capability_file.as_ref() {
+        Some(file) => file.metadata()?,
+        None => std::fs::metadata(&path)?,
+    };
     if !metadata.is_file() {
         bail!("not a regular file or directory: {}", path.display())
     }
-    ensure_not_binary_file(&path)?;
-    let file = std::fs::File::open(&path)?;
+    let mut file = match capability_file.take() {
+        Some(file) => file,
+        None => {
+            ensure_not_binary_file(&path)?;
+            std::fs::File::open(&path)?
+        }
+    };
+    if using_capability {
+        ensure_not_binary_reader(&mut file, &path)?;
+        file.seek(SeekFrom::Start(0))?;
+    }
     let reader = BufReader::new(file);
     let mut lines = Vec::new();
     let mut bytes = 0usize;
