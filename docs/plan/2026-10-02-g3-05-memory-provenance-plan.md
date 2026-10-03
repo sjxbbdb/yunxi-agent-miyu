@@ -750,6 +750,22 @@ or require a cross-database lock/coordination protocol. Neither belongs in the
 current G3-05 read-linearization contract. A dedicated transfer/crash
 regression remains an explicit prerequisite for the eventual G3-05 exit audit.
 
+## G3-05-31 implemented slice: staged fixup failure before commit
+
+The staged evicted-tombstone fixup now has a narrow internal
+`before_commit` seam. The production entry point passes a no-op; the regression
+injects one failure after the provenance, embedding, and turn deletes have
+executed but before the local SQLite transaction commits. It verifies all
+staged rows roll back to their original counts, the live tombstone database is
+byte-for-byte unchanged, and a normal retry still removes the three linked
+carrier rows. This is local transaction failure evidence only: it does not
+claim an OS-level process crash schedule or atomicity across the independent
+live and staged databases.
+
+WSL Ubuntu-24.04 ext4 `transfer::fixups::tests` passed 5/5. Existing import
+rollback and force-import scope tests remain part of the broader transfer
+contract.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate

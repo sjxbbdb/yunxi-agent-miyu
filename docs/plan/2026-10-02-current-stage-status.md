@@ -122,6 +122,12 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   偷渡跨 SQLite 文件原子性。该边界保留为 transfer/crash exit 前置项，不改生产
   协议，也不宣称 G3-05 已退出。
 
+  G3-05-31 又补上 staged fixup 的提交前失败回归：生产入口仍传入 no-op，测试在
+  本地 SQLite commit 前注入一次失败，确认 staged 的 provenance/embedding/turn
+  行全部回滚、live tombstone 数据库字节不变，随后正常重试仍删除 3 个关联
+  carrier。WSL Ubuntu-24.04 ext4 `transfer::fixups::tests` 5/5 通过。该证据覆盖
+  本地事务失败语义；真实进程级 crash 时序与跨库原子性仍不作声称。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
@@ -129,8 +135,9 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 1. 按 G3-05-25 合同继续补 provenance 在 concurrent delete/recall 的语义
    覆盖；确定性 seam 已覆盖 keyword/hybrid fallback、semantic final-epoch
    provider overlap、evicted detail 与 state-side browse 已有确定性证据；
-   transfer/restore 不增加伪在线 overlap seam，仍需完成专门的 staged
-   transfer/crash regression 与退出审计，不把调用方消费窗口误写成严格保证；
+   transfer/restore 不增加伪在线 overlap seam；staged fixup 的提交前失败与
+   重试回归已有证据，仍需完成最终退出审计，并继续明确真实进程 crash 与跨库
+   原子性不在本阶段保证内；
 2. 对 transcript `run_command` 剩余的任意 wrapper data-flow 和嵌入脚本做
    明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置

@@ -126,6 +126,18 @@ pub(crate) fn apply_memory_tombstones(pairs: &[(PathBuf, PathBuf)]) -> Result<us
 /// carrier (provenance, embedding, and turn) as one transaction.  Old archives
 /// may lack any of these tables; those databases are left untouched.
 pub(crate) fn apply_evicted_tombstones(pairs: &[(PathBuf, PathBuf)]) -> Result<usize> {
+    apply_evicted_tombstones_with_before_commit(pairs, &mut || Ok(()))
+}
+
+/// Apply tombstones to staged evicted-context databases, with a narrow hook
+/// immediately before each local SQLite commit.  The production entry point
+/// passes a no-op callback; tests use the seam to inject a failure and prove
+/// that SQLite rolls the staged transaction back without implying any
+/// cross-database atomicity.
+fn apply_evicted_tombstones_with_before_commit(
+    pairs: &[(PathBuf, PathBuf)],
+    before_commit: &mut dyn FnMut() -> Result<()>,
+) -> Result<usize> {
     let mut removed = 0usize;
     for (live, staged) in pairs {
         let live_tombstones = match read_tombstones(live)? {
@@ -204,6 +216,7 @@ pub(crate) fn apply_evicted_tombstones(pairs: &[(PathBuf, PathBuf)]) -> Result<u
               WHERE id IN (SELECT id FROM transfer_evicted_carriers)",
             [],
         )?;
+        before_commit()?;
         tx.commit()?;
     }
     Ok(removed)
@@ -672,6 +685,106 @@ mod tests {
         assert_eq!(
             removed_again, 0,
             "a repeated import fixup must be idempotent after the carrier is removed"
+        );
+    }
+
+    #[test]
+    fn evicted_tombstone_fixup_rolls_back_when_staged_delete_fails() {
+        let temp = tempfile::tempdir().unwrap();
+        let live = temp.path().join("live.db");
+        let staged = temp.path().join("evicted.db");
+        Connection::open(&live)
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE memory_tombstones (
+                    kind TEXT NOT NULL,
+                    id INTEGER NOT NULL,
+                    deleted_at TEXT NOT NULL,
+                    PRIMARY KEY(kind, id)
+                 );
+                 INSERT INTO memory_tombstones VALUES ('fact', 1, '2026-10-02T00:00:00Z');",
+            )
+            .unwrap();
+        let live_before = std::fs::read(&live).unwrap();
+        Connection::open(&staged)
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE evicted_turns (
+                    id INTEGER PRIMARY KEY,
+                    content TEXT NOT NULL
+                 );
+                 CREATE TABLE evicted_embeddings (
+                    id INTEGER PRIMARY KEY,
+                    model TEXT NOT NULL
+                 );
+                 CREATE TABLE memory_provenance (
+                    carrier_kind TEXT NOT NULL,
+                    carrier_id INTEGER NOT NULL,
+                    memory_kind TEXT NOT NULL,
+                    memory_id INTEGER NOT NULL
+                 );
+                 INSERT INTO evicted_turns VALUES
+                    (1, 'deleted carrier'),
+                    (2, 'retained carrier');
+                 INSERT INTO evicted_embeddings VALUES (1, 'model'), (2, 'model');
+                 INSERT INTO memory_provenance VALUES
+                    ('evicted_turn', 1, 'fact', 1),
+                    ('evicted_turn', 2, 'fact', 2);",
+            )
+            .unwrap();
+
+        let mut fail_once = true;
+        let error = apply_evicted_tombstones_with_before_commit(
+            &[(live.clone(), staged.clone())],
+            &mut || {
+                if fail_once {
+                    fail_once = false;
+                    anyhow::bail!("injected staged fixup failure before commit");
+                }
+                Ok(())
+            },
+        )
+        .unwrap_err();
+        assert!(
+            error.to_string().contains("injected staged fixup failure"),
+            "the injected staged failure should be observable: {error:#}"
+        );
+
+        let conn = Connection::open(&staged).unwrap();
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM evicted_turns", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+            2,
+            "the turn delete must roll back with the whole staged transaction"
+        );
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM evicted_embeddings", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+            2,
+            "the embedding delete must roll back with the turn delete"
+        );
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM memory_provenance", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+            2,
+            "the provenance delete must roll back with the turn delete"
+        );
+        drop(conn);
+        assert_eq!(
+            std::fs::read(&live).unwrap(),
+            live_before,
+            "a staged fixup failure must not modify the live tombstone database"
+        );
+        assert_eq!(
+            apply_evicted_tombstones(&[(live, staged)]).unwrap(),
+            3,
+            "a later retry must still be able to remove the linked carrier"
         );
     }
 }
