@@ -1831,6 +1831,7 @@ mod tests {
             r#"find . -execdir cp {} /tmp \;"#,
             r#"find . -exec sh -c 'cat {}' sh {} \;"#,
             r#"find . -ok grep pattern {} \;"#,
+            r#"sudo --unknown find . -exec cat {} \;"#,
         ] {
             let error = call_guarded_run_command(command).await.unwrap_err();
             assert!(

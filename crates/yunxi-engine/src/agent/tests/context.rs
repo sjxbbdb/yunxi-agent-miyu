@@ -85,6 +85,9 @@ fn deleted_summary_memory_is_redacted_from_checkpoint() {
         kind: "fact".to_string(),
         id: fact_id,
     };
+    // This is the state-side commit primitive used by Compactor after its
+    // summary response; keeping the fixture LLM-free makes the barrier
+    // assertions deterministic while still exercising the production write.
     agent
         .state
         .replace_visible_with_summary_with_refs(
@@ -118,6 +121,126 @@ fn deleted_summary_memory_is_redacted_from_checkpoint() {
         "{checkpoint}"
     );
     assert!(!checkpoint.contains("秘密摘要正文不应再进入提示词"));
+}
+
+#[test]
+fn session_reset_association_compact_undo_keeps_deleted_memory_out() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = test_paths(temp.path());
+    let config = AppConfig::default();
+    let state = StateStore::new(&paths).unwrap();
+    state
+        .start_turn("t1", "统一 fixture 的问题", 999_999)
+        .unwrap();
+    state
+        .complete_turn("t1", "统一 fixture 的回答", None)
+        .unwrap();
+    let client =
+        OpenAiCompatibleClient::new(config.provider(None).unwrap(), &config, &paths).unwrap();
+    let mut agent = Agent::new(
+        config,
+        &paths,
+        state,
+        client,
+        ToolRegistry::new(),
+        PersonaLane::Active,
+    )
+    .unwrap();
+
+    // Start from the same public session-reset entry point as the command
+    // surface, then create a real memory row for this session.
+    assert_eq!(
+        agent.wipe_session_memory().unwrap(),
+        yunxi_core::memory::MemoryResetSummary::default()
+    );
+    let content = "统一 fixture 的记忆";
+    let fact_id = agent.memory.store.remember_fact(content, "test").unwrap();
+    let association = agent
+        .memory
+        .store
+        .association("统一 fixture 的记忆", None)
+        .unwrap()
+        .expect("the live fact is recallable before reset");
+    assert!(association.facts.iter().any(|hit| hit.id == fact_id));
+
+    let visible = agent.state.load_visible_turns().unwrap();
+    let ids = visible
+        .iter()
+        .map(|turn| turn.turn_id.clone())
+        .collect::<Vec<_>>();
+    let memory_ref = yunxi_base::memory_types::MemoryRef {
+        kind: "fact".to_string(),
+        id: fact_id,
+    };
+    agent
+        .state
+        .replace_visible_with_summary_with_refs(
+            &ids,
+            &ids,
+            "统一 fixture 的摘要正文",
+            Default::default(),
+            false,
+            None,
+            None,
+            std::slice::from_ref(&memory_ref),
+        )
+        .unwrap();
+    let summary = agent.state.load_last_summary().unwrap().unwrap();
+    assert_eq!(
+        agent
+            .state
+            .load_summary_memory_refs(&summary.turn_id)
+            .unwrap(),
+        vec![memory_ref]
+    );
+
+    // Reset through the same production API after compaction.  The summary
+    // remains in the state DB, but its typed reference now points at a durable
+    // tombstone and must not bring the deleted text back into the checkpoint.
+    let reset = agent.wipe_session_memory().unwrap();
+    assert_eq!(reset.facts, 1);
+    assert!(agent
+        .memory
+        .store
+        .association("统一 fixture 的记忆", None)
+        .unwrap()
+        .is_none());
+    let messages = agent.chat_messages("current", "继续").unwrap().0;
+    let checkpoint = messages
+        .iter()
+        .filter_map(|message| match message.content.as_ref() {
+            Some(ChatContent::Text(text)) => Some(text.as_str()),
+            _ => None,
+        })
+        .find(|text| text.contains("<conversation-checkpoint>"))
+        .expect("the compact summary checkpoint remains visible");
+    assert!(checkpoint.contains(SUMMARY_REDACTION_MARKER));
+    assert!(!checkpoint.contains("统一 fixture 的摘要正文"));
+
+    // Undo is the history restore boundary: it must remove the typed carrier
+    // edge and restore the pre-compaction turn without resurrecting the fact.
+    assert_eq!(agent.state.undo_last_turn().unwrap(), (1, None));
+    assert!(agent
+        .state
+        .load_summary_memory_refs(&summary.turn_id)
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        agent
+            .state
+            .load_visible_turns()
+            .unwrap()
+            .iter()
+            .map(|turn| turn.turn_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["t1"]
+    );
+    assert!(agent
+        .memory
+        .store
+        .association("统一 fixture 的记忆", None)
+        .unwrap()
+        .is_none());
 }
 
 #[test]

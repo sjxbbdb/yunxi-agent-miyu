@@ -1020,6 +1020,14 @@ barriers, not one synthetic reset→association→compact→undo/redo fixture;
 ordinary historical tool reports stay append-only and are not free-text
 scrubbed. The disposable source and target were removed after the run.
 
+The G3-05-42 unified fixture now closes the first synthetic seam without
+changing production behavior: `session_reset_association_compact_undo_keeps_deleted_memory_out`
+uses the real `Agent::wipe_session_memory`, live association, typed summary
+references, checkpoint redaction, and `StateStore::undo_last_turn` APIs in one
+scenario. WSL Ubuntu-24.04 ext4 passed the focused test 1/1. It intentionally
+does not claim redo, transfer/backup-import, cross-SQLite atomicity, OS-crash
+safety, or free-text scrubbing of ordinary historical tool reports.
+
 ## Explicit non-goals
 
 G3-05 must not rewrite all historical text, infer references from content,

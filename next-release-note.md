@@ -170,6 +170,19 @@
   session-reset→association→compact→restore 矩阵、跨 SQLite 原子性或 OS crash
   安全保证；source/target 已在测试后清理。
 
+- G3-05 unified reset/association/compact/undo fixture：新增
+  `session_reset_association_compact_undo_keeps_deleted_memory_out`，用真实
+  `Agent::wipe_session_memory`、association、typed summary refs、checkpoint
+  redaction 与 `undo_last_turn` 串起删除后不召回的接缝；WSL Ubuntu-24.04
+  ext4 定向测试 1/1 通过。该 fixture 不扩大为 redo、transfer/backup-import、
+  跨 SQLite 原子性、OS crash 或普通历史 tool-report free-text scrub 保证。
+
+- G3-05 transcript unknown-wrapper deny boundary：在既有 `find -exec` data-flow
+  回归中加入 `sudo --unknown find . -exec cat {} \;`，确认未知 wrapper option
+  不会被猜测推进，仍保持 fail-closed；仅新增测试字面量，不改生产扫描器。
+  WSL Ubuntu-24.04 ext4 `tools::transcript_guard` 29/29 通过。函数/别名、动态
+  命令名、嵌入脚本与父目录 TOCTOU 仍未宣称覆盖。
+
 - G0 基线稳定化：修复 YunXi 产品改名后 legacy config namespace 的正/负路径兼容，校准 TUI/replay/renderer/tool-summary 的当前产品输出夹具，修正 bundled script 与 registry fixture 漂移，并让 WSL 权限位测试使用原生 Linux 文件系统临时目录。
 - G0 验证：WSL Ubuntu-24.04 工作区单线程测试在 v4 当前提交上重新全绿（根包 yunxi 运行 508 项、yunxi-base 396、yunxi-core 651、yunxi-engine 与 yunxi-hosts 均完成且 0 failed；doctest 全部通过）。本结果对应 G0 evidence index 的 `G0-20261001-workspace-02`；Arch Linux 与 macOS M-series 仍未实机验证。
 - G0 计划补充 Skills/MCP 生命周期、host 权限真相源、raw/display/context 三分、长期记忆删除不可召回、memory/KB 数据边界、Laya 可行性门、自动总结独立写入协议，以及不新增 YunXi 通用审批状态机的约束。
