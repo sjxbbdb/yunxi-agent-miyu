@@ -851,6 +851,21 @@ not claim coverage for process substitution, arbitrary functions/aliases,
 embedded Python/Node/Perl or other language scripts, or parent-directory
 TOCTOU. WSL Ubuntu-24.04 ext4 `tools::transcript_guard` passed 27/27.
 
+## G3-05-37 implemented slice: process-substitution data flow
+
+The transcript shell barrier now recognizes unquoted Bash process substitutions
+`<(...)` and `>(...)` with a bounded, quote-aware parenthesis scan. If the outer
+command is a file consumer, the process-substitution descriptor is treated as
+an opaque dynamic path. The producer body is also passed through the existing
+bounded `find`/`xargs`/wrapper/variable checks, so a transcript read hidden in
+that body cannot bypass the barrier; an incomplete substitution fails closed.
+
+Plain `echo <(printf hi)` remains available, while quoted and escaped text is
+literal. This is not a complete Bash grammar or process-substitution parser:
+functions, aliases, embedded language scripts, and parent-directory TOCTOU are
+still explicit non-goals. WSL Ubuntu-24.04 ext4 `tools::transcript_guard`
+passed 29/29.
+
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,
   text, and ownership, but no memory reference.
 - `yunxi-engine/src/agent/context.rs::evicted_turn_entries` creates separate

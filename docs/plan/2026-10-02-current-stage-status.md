@@ -168,6 +168,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   完整 find grammar、shell parser、process substitution 或嵌入脚本
   data-flow。
 
+  G3-05-37 又收窄了 Bash process substitution 的 transcript data-flow 缺口：
+  对未引号的 `<(...)`/`>(...)` 做有界括号扫描；外层文件消费者会把其中的
+  opaque descriptor 当成动态路径，producer body 也递归经过既有 `find`/`xargs`/
+  shell/变量屏障，未闭合括号 fail-closed。普通 `echo <(printf hi)` 仍可用，
+  引号或转义文本保持字面量。WSL Ubuntu-24.04 ext4
+  `tools::transcript_guard` 29/29 通过。该切片仍不宣称完整 Bash grammar、函数/别名、
+  嵌入脚本或父目录 TOCTOU。
+
 ## 下一处施工边界
 
 下一施工单继续留在 **G3-05**，不提前进入 G4/G5：
@@ -182,8 +190,10 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
    明确的 fail-closed 边界决策；quoted `sh -c`/`eval`、变量、命令替换、重定向、
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
    参数、`xargs` opaque stdin/placeholder、`find -exec` opaque matched-path
-   data-flow 及 `$()`/反引号内嵌动态文件访问已有词法屏障与 27/27 回归，live
-   transcript shell 路径也已拒绝，当前仍不做完整 shell parser；
+   data-flow、process substitution 及 `$()`/反引号内嵌动态文件访问已有词法屏障与
+   29/29 回归，live
+   transcript shell 路径也已拒绝；`sudo -- xargs`、`env -- xargs` 等 wrapper
+   选项绕过仍待下一窄切片，当前仍不做完整 shell parser；
 3. 继续评估 `grep` 的 `include` 过滤与 `glob` 的目录能力是否值得进入
    descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；当前审计
    已确认 `ensure_transcript_identity` 与后续 open 之间存在可复现的父目录

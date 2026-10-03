@@ -384,6 +384,17 @@ fn command_has_dynamic_file_access(command: &str) -> bool {
         return true;
     }
 
+    // Bash process substitutions create an opaque pathname or descriptor
+    // (`<(...)`/`>(...)`). Treat a file-accessing outer command as dynamic and
+    // recurse into the producer body; otherwise a transcript read can hide in
+    // a process-substitution payload that the ordinary segment scanner never
+    // sees.
+    if command_segments(command)
+        .any(|segment| segment_has_process_substitution_dataflow(segment, 1))
+    {
+        return true;
+    }
+
     if command_segments(command).any(|segment| {
         let file_access = has_unquoted_redirection(segment) || segment_invokes_file_access(segment);
         file_access && has_dynamic_shell_syntax(segment)
@@ -410,6 +421,12 @@ fn command_has_dynamic_file_access_at_depth(command: &str, depth: usize) -> bool
     }
 
     if command_segments(command).any(segment_has_opaque_xargs_file_access) {
+        return true;
+    }
+
+    if command_segments(command)
+        .any(|segment| segment_has_process_substitution_dataflow(segment, depth))
+    {
         return true;
     }
 
@@ -685,6 +702,29 @@ fn find_payload_is_safe_printf(payload: &[ShellToken]) -> bool {
     false
 }
 
+/// Return whether an unquoted Bash process substitution can carry a dynamic
+/// transcript path. This is deliberately bounded: it recognizes only the
+/// lexical `<(` / `>(` form, balances its body, and recursively reuses the
+/// existing shell/data-flow guard for that body.
+fn segment_has_process_substitution_dataflow(segment: &str, depth: usize) -> bool {
+    let scan = scan_process_substitutions(segment);
+    if scan.malformed {
+        return true;
+    }
+    if scan.fragments.is_empty() {
+        return false;
+    }
+    if segment_invokes_file_access(segment) {
+        return true;
+    }
+    if depth >= MAX_NESTED_SUBSTITUTION_DEPTH {
+        return true;
+    }
+    scan.fragments
+        .into_iter()
+        .any(|fragment| command_has_dynamic_file_access_at_depth(&fragment, depth + 1))
+}
+
 fn is_shell_command_option(token: &str) -> bool {
     token == "-c"
         || token == "--command"
@@ -860,6 +900,116 @@ fn nested_shell_fragments(command: &str) -> Vec<String> {
         }
     }
     fragments
+}
+
+struct ProcessSubstitutionScan {
+    fragments: Vec<String>,
+    malformed: bool,
+}
+
+/// Scan unquoted `<(...)` and `>(...)` bodies without attempting to parse the
+/// complete shell grammar. A malformed process substitution fails closed.
+fn scan_process_substitutions(command: &str) -> ProcessSubstitutionScan {
+    let chars = command.chars().collect::<Vec<_>>();
+    let mut fragments = Vec::new();
+    let mut quote = None;
+    let mut escaped = false;
+    let mut index = 0;
+    while index < chars.len() {
+        let ch = chars[index];
+        if escaped {
+            escaped = false;
+            index += 1;
+            continue;
+        }
+        if ch == '\\' && quote != Some('\'') {
+            escaped = true;
+            index += 1;
+            continue;
+        }
+        match quote {
+            Some('\'') => {
+                if ch == '\'' {
+                    quote = None;
+                }
+                index += 1;
+            }
+            Some('"') => {
+                if ch == '"' {
+                    quote = None;
+                }
+                index += 1;
+            }
+            None => {
+                if ch == '\'' || ch == '"' {
+                    quote = Some(ch);
+                    index += 1;
+                } else if (ch == '<' || ch == '>') && chars.get(index + 1) == Some(&'(') {
+                    let Some((fragment, end)) = extract_parenthesized(&chars, index + 1) else {
+                        return ProcessSubstitutionScan {
+                            fragments,
+                            malformed: true,
+                        };
+                    };
+                    fragments.push(fragment);
+                    index = end;
+                } else {
+                    index += 1;
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+    ProcessSubstitutionScan {
+        fragments,
+        malformed: false,
+    }
+}
+
+fn extract_parenthesized(chars: &[char], open: usize) -> Option<(String, usize)> {
+    let mut depth = 1usize;
+    let mut quote = None;
+    let mut escaped = false;
+    let mut index = open + 1;
+    while index < chars.len() {
+        let ch = chars[index];
+        if escaped {
+            escaped = false;
+            index += 1;
+            continue;
+        }
+        if ch == '\\' && quote != Some('\'') {
+            escaped = true;
+            index += 1;
+            continue;
+        }
+        match quote {
+            Some('\'') => {
+                if ch == '\'' {
+                    quote = None;
+                }
+            }
+            Some('"') => {
+                if ch == '"' {
+                    quote = None;
+                }
+            }
+            None => match ch {
+                '\'' | '"' => quote = Some(ch),
+                '(' => depth += 1,
+                ')' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some((chars[open + 1..index].iter().collect(), index + 1));
+                    }
+                }
+                _ => {}
+            },
+            _ => unreachable!(),
+        }
+        index += 1;
+    }
+    None
 }
 
 fn extract_dollar_paren(chars: &[char], start: usize) -> Option<(String, usize)> {
@@ -1648,6 +1798,28 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn process_substitution_file_access_dataflow_is_denied() {
+        for command in [
+            r#"cat <(find ~ -type f -exec cat {} \;)"#,
+            r#"printf x > >(find ~ -type f -exec cat {} \;)"#,
+            r#"cat <(xargs cat)"#,
+            r#"echo <(cat "$p/fold.md")"#,
+            r#"echo <(printf hi"#,
+        ] {
+            let error = call_guarded_run_command(command).await.unwrap_err();
+            assert!(
+                error.contains("dynamic transcript path"),
+                "command {command:?}: unexpected error: {error}"
+            );
+        }
+
+        let result = call_guarded_run_command(r#"echo <(printf hi)"#)
+            .await
+            .expect("a non-file producer used by echo should remain available");
+        assert_eq!(result, "handler ran");
+    }
+
+    #[tokio::test]
     async fn nested_file_access_is_denied_but_nested_printf_is_allowed() {
         for command in [
             r#"echo "$(cat "$p/fold.md")""#,
@@ -1664,6 +1836,16 @@ mod tests {
             let result = call_guarded_run_command(command)
                 .await
                 .expect("nested non-file substitution should reach the handler");
+            assert_eq!(result, "handler ran", "command {command:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn quoted_process_substitution_text_remains_literal() {
+        for command in [r#"printf '<(find ~ -type f)'"#, r#"printf \<(find)"#] {
+            let result = call_guarded_run_command(command)
+                .await
+                .expect("quoted or escaped process-substitution text is literal");
             assert_eq!(result, "handler ran", "command {command:?}");
         }
     }
