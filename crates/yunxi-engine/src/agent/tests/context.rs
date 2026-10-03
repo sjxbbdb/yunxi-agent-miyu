@@ -241,6 +241,63 @@ fn session_reset_association_compact_undo_keeps_deleted_memory_out() {
         .association("统一 fixture 的记忆", None)
         .unwrap()
         .is_none());
+
+    // Redo the restored initial turn without an LLM.  Redo must reuse the
+    // state-side revision machinery while keeping the memory tombstone and
+    // the deleted summary carrier boundary intact.
+    let candidate = agent
+        .state
+        .redo_candidate()
+        .unwrap()
+        .expect("the restored initial turn is redoable");
+    assert_eq!(candidate.turn_id, "t1");
+    assert_eq!(candidate.input_kind, RedoInputKind::Initial);
+    let redo = agent
+        .state
+        .begin_redo(
+            &candidate.turn_id,
+            &candidate.input_id,
+            candidate.input_kind,
+            candidate.revision,
+            "重做后的问题",
+            "重做后的问题",
+            std::process::id(),
+        )
+        .unwrap();
+    agent
+        .state
+        .complete_turn_revision_with_usage_and_model(
+            &candidate.turn_id,
+            redo.revision,
+            "重做后的回答",
+            None,
+            None,
+            None,
+            TurnTokens::default(),
+            false,
+        )
+        .unwrap();
+    let redone = agent
+        .state
+        .load_visible_turns()
+        .unwrap()
+        .into_iter()
+        .find(|turn| turn.turn_id == "t1")
+        .expect("the redone turn remains visible");
+    assert_eq!(redone.revision, 1);
+    assert_eq!(redone.status, yunxi_core::state::TurnStatus::Completed);
+    assert_eq!(redone.assistant_content, "重做后的回答");
+    assert!(agent
+        .state
+        .load_summary_memory_refs(&summary.turn_id)
+        .unwrap()
+        .is_empty());
+    assert!(agent
+        .memory
+        .store
+        .association("统一 fixture 的记忆", None)
+        .unwrap()
+        .is_none());
 }
 
 #[test]

@@ -213,20 +213,21 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   G3-05-42 新增统一接缝回归
   `agent::tests::context::session_reset_association_compact_undo_keeps_deleted_memory_out`：
   通过真实 `Agent::wipe_session_memory`、`MemoryStore::association`、typed
-  summary refs、checkpoint redaction 与 `StateStore::undo_last_turn` 串起
-  reset→association→compact→undo，确认删除后的 fact 不再召回且 provenance
-  carrier 在 history restore 后清理。WSL Ubuntu-24.04 ext4 disposable checkout
+  summary refs、checkpoint redaction、`StateStore::undo_last_turn` 与已有 redo
+  revision API 串起 reset→association→compact→undo→redo，确认删除后的 fact
+  不再召回且 provenance carrier 在 history restore/revision rewrite 后清理。
+  WSL Ubuntu-24.04 ext4 disposable checkout
   执行 `cargo fmt --all -- --check` 与该测试定向命令，结果 1/1 通过。此证据
-  不覆盖 redo、transfer/backup-import、跨 SQLite 原子性、OS crash 或普通
-  historical tool-report 的 free-text scrub。
+  不覆盖 transfer/backup-import、跨 SQLite 原子性、OS crash 或普通 historical
+  tool-report 的 free-text scrub。
 
   G3-05-43 明确 transcript unknown-wrapper 边界：在既有
   `find_exec_file_access_dataflow_is_denied` 中加入
-  `sudo --unknown find . -exec cat {} \;`，验证未知 wrapper option 不会被
-  猜测推进到内层命令，仍按 opaque file consumer fail-closed。该改动只新增
-  回归字面量，不改生产扫描器；WSL Ubuntu-24.04 ext4 组合运行
+  `sudo --unknown find . -exec cat {} \;`，验证未知 wrapper 场景下嵌套的
+  opaque file consumer 仍被保守拒绝。该改动只新增回归字面量，不改生产扫描器；
+  WSL Ubuntu-24.04 ext4 组合运行
   `tools::transcript_guard` 29/29 通过。函数/别名、动态命令名、嵌入脚本与
-  父目录 TOCTOU 仍是明确边界。
+  父目录 TOCTOU，以及通用 wrapper option walker 的完整 CLI 语义，仍是明确边界。
 
   本阶段逐条退出前对账见
   [`2026-10-02-g3-05-exit-audit.md`](2026-10-02-g3-05-exit-audit.md)；该文档明确
