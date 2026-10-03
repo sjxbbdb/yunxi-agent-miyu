@@ -73,10 +73,18 @@ pub(crate) fn bind(registry: &mut ToolRegistry, state: StateStore, memory: Memor
                     return TranscriptAccessDecision::Deny(reason);
                 }
                 if has_live_provenance(state, memory, &path) {
-                    return TranscriptAccessDecision::Deny(format!(
-                        "transcript `{}` cannot be searched safely because the search handler uses a path/subprocess seam; use read instead",
-                        path.display()
-                    ));
+                    if tool.name == "glob" {
+                        return TranscriptAccessDecision::Deny(format!(
+                            "transcript `{}` cannot be searched safely with glob; use read instead",
+                            path.display()
+                        ));
+                    }
+                    return match open_transcript_capability(state, &path) {
+                        Ok(capability) => TranscriptAccessDecision::AllowWith(
+                            ToolCallContext::with_transcript(capability),
+                        ),
+                        Err(reason) => TranscriptAccessDecision::Deny(reason),
+                    };
                 }
                 TranscriptAccessDecision::Allow
             }
@@ -859,26 +867,29 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn live_registered_transcript_search_is_denied_without_opened_capability() {
+    async fn live_registered_transcript_search_allows_grep_but_denies_glob() {
         let (temp, state, memory, path) = transcript_fixture(&[]);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, "safe").unwrap();
         let mut registry = search_registry();
         bind(&mut registry, state, memory);
-        for tool in ["grep", "glob"] {
-            let error = registry
-                .call(
-                    tool,
-                    &serde_json::json!({"path": path, "pattern": "safe"}).to_string(),
-                )
-                .await
-                .unwrap_err()
-                .to_string();
-            assert!(
-                error.contains("cannot be searched safely"),
-                "{tool}: unexpected: {error}"
-            );
-        }
+        let grep = registry
+            .call(
+                "grep",
+                &serde_json::json!({"path": path, "pattern": "safe"}).to_string(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(grep, "handler ran");
+        let error = registry
+            .call(
+                "glob",
+                &serde_json::json!({"path": path, "pattern": "safe"}).to_string(),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("cannot be searched safely"), "{error}");
         drop(temp);
     }
 

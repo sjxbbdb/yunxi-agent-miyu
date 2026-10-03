@@ -86,11 +86,11 @@ pub fn register_readonly(
         |args| async move { glob_files(args).await },
     )
     .concurrent());
-    registry.register(ToolSpec::new(
+    registry.register(ToolSpec::new_with_context(
         "grep",
         "Search file contents using ripgrep under a directory or single file. Defaults to workspace; use ~ or /home for user files, or / for protected global search. No matches are returned as an empty ok result.",
         json!({"type":"object","properties":{"path":{"type":"string","description": "Directory or file to search. Defaults to workspace; use ~ or /home for user files, or / for protected global search."},"pattern":{"type":"string","description": "Regex pattern."},"include":{"type":"string","description": "Optional case-insensitive file glob filter."},"max_results":{"type":"integer","description": "Maximum matches."}},"required":["pattern"],"additionalProperties":false}),
-        |args| async move { grep_text(args).await },
+        |args, _progress, context| async move { grep_text_with_context(args, &context).await },
     )
     .concurrent());
 }
@@ -606,6 +606,58 @@ mod tests {
         // rg 的"无匹配"是退出码 1 + 空 stdout,不能渲染成失败。
         // 工具结果是模型可见面,恒为英文,不随系统 locale 变化。
         assert_eq!(result, "no matches");
+    }
+
+    #[tokio::test]
+    async fn grep_uses_opened_transcript_capability_after_path_replacement() {
+        let cwd = std::env::current_dir().unwrap();
+        let temp = tempfile::tempdir_in(cwd).unwrap();
+        let path = temp.path().join("transcript.md");
+        std::fs::write(&path, "original\nother\n").unwrap();
+        let file = std::fs::File::open(&path).unwrap();
+        let context =
+            ToolCallContext::with_transcript(TranscriptReadCapability::new(path.clone(), file));
+        let replacement = temp.path().join("transcript.replaced");
+        std::fs::rename(&path, replacement).unwrap();
+        std::fs::write(&path, "replacement\n").unwrap();
+
+        let result = grep_text_with_context(
+            json!({
+                "path": path.display().to_string(),
+                "pattern": "original",
+            }),
+            &context,
+        )
+        .await
+        .unwrap();
+        assert!(
+            result.contains(&format!("{}:1:original", path.display())),
+            "{result}"
+        );
+        assert!(!result.contains("replacement"), "{result}");
+    }
+
+    #[tokio::test]
+    async fn grep_rejects_include_for_opened_transcript_capability() {
+        let cwd = std::env::current_dir().unwrap();
+        let temp = tempfile::tempdir_in(cwd).unwrap();
+        let path = temp.path().join("transcript.md");
+        std::fs::write(&path, "original\n").unwrap();
+        let file = std::fs::File::open(&path).unwrap();
+        let context =
+            ToolCallContext::with_transcript(TranscriptReadCapability::new(path.clone(), file));
+        let error = grep_text_with_context(
+            json!({
+                "path": path.display().to_string(),
+                "pattern": "original",
+                "include": "*.md",
+            }),
+            &context,
+        )
+        .await
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("does not support `include`"), "{error}");
     }
 
     #[test]

@@ -74,6 +74,13 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   G3-05-23 补上 staged evicted tombstone fixup 的重复执行回归：同一 staged
   数据库第一次清理后再次执行返回 0，不重复删除，证明导入重试的幂等性；这
   仍不等于跨库原子性或 crash injection 覆盖。
+  G3-05-24 又把 descriptor-backed capability 接到单文件 `grep`：live
+  provenance transcript 通过 guard 打开的 descriptor 走 `rg` stdin，路径
+  替换回归仍返回原始匹配；`include` 在受保护路径上明确拒绝，避免伪造
+  filename glob 语义；`glob` 仍拒绝，因为它需要目录能力。WSL
+  transcript_guard 24/24 与 grep 定向回归通过。普通非 transcript grep
+  继续走原来的路径搜索；父目录替换、目录 glob、复杂 shell wrapper 和
+  跨库 overlap 仍未宣称覆盖。
 
 ## 下一处施工边界
 
@@ -87,10 +94,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
    `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
    参数及 `$()`/反引号内嵌动态文件访问已有词法屏障与 16/16 回归，live
    transcript shell 路径也已拒绝，当前仍不做完整 shell parser；
-3. 评估 `grep`/`glob` 是否替换当前保守拒绝为 descriptor-aware search，并单独决定
-   父目录替换是否值得进入 `openat`/dirfd 设计；同时继续审计 quoted
-   `sh -c`/`eval`、任意 wrapper data-flow 与跨库 overlap，再评估 G3-05
-   的阶段退出；`read` 的叶文件 capability 已落地，但不等于整段完成；
+3. 继续评估 `grep` 的 `include` 过滤与 `glob` 的目录能力是否值得进入
+   descriptor/openat/dirfd 设计，并单独决定父目录替换是否值得覆盖；同时继续
+   审计 quoted `sh -c`/`eval`、任意 wrapper data-flow 与跨库 overlap，再评估
+   G3-05 的阶段退出；`read` 与单文件 `grep` 的叶文件 capability 已落地，
+   但不等于整段完成；
 
 此外，transfer 的 staged fixup 目前仍依赖导入前的 tombstone 过滤，尚未把
 epoch 递增语义扩展到独立的 staged 数据库；这不是运行时在线读写路径，已审计

@@ -278,8 +278,18 @@ pub(in crate::tools) async fn glob_files(args: Value) -> Result<String> {
 }
 
 pub(in crate::tools) async fn grep_text(args: Value) -> Result<String> {
+    grep_text_with_context(args, &ToolCallContext::default()).await
+}
+
+pub(in crate::tools) async fn grep_text_with_context(
+    args: Value,
+    context: &ToolCallContext,
+) -> Result<String> {
     let path = optional_path(&args).unwrap_or_else(yunxi_base::workspace::effective_workdir);
     yunxi_base::sandbox::guard_read(&path)?;
+    if let Some(mut file) = context.transcript_for(&path) {
+        return grep_transcript_file(args, &path, &mut file).await;
+    }
     let is_file = path.is_file();
     let search_root = if is_file {
         path.parent()
@@ -325,5 +335,61 @@ pub(in crate::tools) async fn grep_text(args: Value) -> Result<String> {
         )
         .await?,
     )?;
+    search_output_limited(output, max_results)
+}
+
+/// Search a live transcript through the descriptor opened by the registry
+/// guard.  Feeding the descriptor to `rg` keeps the checked inode stable even
+/// if the transcript path is renamed or replaced while the search runs.
+async fn grep_transcript_file(
+    args: Value,
+    path: &Path,
+    file: &mut std::fs::File,
+) -> Result<String> {
+    let include = args
+        .get("include")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    if include.is_some() {
+        bail!(
+            "live transcript grep does not support `include` with descriptor-backed search; omit `include` or use read"
+        );
+    }
+    ensure_not_binary_reader(file, path)?;
+    file.seek(SeekFrom::Start(0))?;
+    let pattern = required(&args, "pattern")?;
+    let max_results = max_results(&args);
+    let mut command = Command::new("rg");
+    command
+        .arg("--no-config")
+        .arg("--line-number")
+        .arg("--no-heading")
+        .arg("--no-messages")
+        .arg("--hidden")
+        .arg("--with-filename")
+        .arg(pattern)
+        .arg("-")
+        .current_dir(path.parent().unwrap_or_else(|| Path::new(".")))
+        .stdin(Stdio::from(file.try_clone()?))
+        .kill_on_drop(true);
+    yunxi_base::sandbox::confine(&mut command);
+    let mut output = ripgrep_output(
+        tokio::time::timeout(
+            std::time::Duration::from_secs(SEARCH_TIMEOUT_SECONDS),
+            command.output(),
+        )
+        .await?,
+    )?;
+    let stdin_label = "<stdin>:";
+    let path_label = format!("{}:", path.display());
+    if output
+        .stdout
+        .windows(stdin_label.len())
+        .any(|window| window == stdin_label.as_bytes())
+    {
+        let rendered = String::from_utf8_lossy(&output.stdout).replace(stdin_label, &path_label);
+        output.stdout = rendered.into_bytes();
+    }
     search_output_limited(output, max_results)
 }

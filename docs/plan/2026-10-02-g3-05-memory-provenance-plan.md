@@ -603,6 +603,34 @@ existing staged-install rollback tests remain the authoritative failure path;
 crash injection between the live tombstone read and staged commit is still a
 follow-up boundary.
 
+## G3-05-24 implemented slice: descriptor-backed single-file transcript grep
+
+The live transcript `grep` path now receives the same opened read capability
+as `read`. When the requested path exactly matches a live provenance-backed
+transcript, the handler feeds a cloned descriptor to `rg` through stdin and
+rewrites the stdin label back to the requested path in the result. A leaf
+rename or replacement after the guard therefore cannot redirect the search to
+new bytes. Ordinary files retain the existing path-based `rg` behavior.
+
+`include` is deliberately rejected for this protected path until its glob
+semantics can be reproduced without relying on a pathname. `glob` remains
+denied for live transcripts because it needs a directory capability rather
+than a single-file descriptor. This keeps the interim search surface explicit
+instead of silently weakening filename-filter behavior.
+
+Evidence (WSL Ubuntu-24.04 ext4 disposable checkout, one cargo job):
+
+- `grep_uses_opened_transcript_capability_after_path_replacement` — 1 passed;
+- `grep_rejects_include_for_opened_transcript_capability` — covered by the same
+  default-tools test target;
+- `live_registered_transcript_search_allows_grep_but_denies_glob` — 1 passed;
+- `transcript_guard::tests` — 24 passed, 0 failed;
+- `cargo fmt --all -- --check`, `git diff --check`, and the privacy scan passed.
+
+The disposable ext4 source and target were removed after verification. Parent
+directory replacement, directory `glob`, quoted embedded scripts, arbitrary
+wrapper data-flow, and cross-database overlap remain explicit boundaries.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,

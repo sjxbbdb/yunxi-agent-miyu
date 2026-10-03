@@ -40,10 +40,10 @@
   覆盖。
 
 - G3-05 transcript search boundary：由于 `grep`/`glob` 仍走路径/子进程 seam，
-  live provenance transcript 的结构化搜索暂时 fail-closed，并提示改用
-  descriptor-backed `read`；普通非 transcript 搜索继续放行。新增双工具回归，
-  不宣称永久取消搜索，也不覆盖未来 descriptor-aware search、父目录替换或
-  跨库 overlap。
+  `glob` 仍对 live provenance transcript fail-closed；单文件 `grep` 已改为
+  通过 guard 打开的 descriptor 走 stdin，叶路径替换不会切换搜索内容。受保护
+  路径的 `include` 暂时明确拒绝，普通非 transcript 搜索继续放行；目录能力、
+  父目录替换与跨库 overlap 仍未宣称覆盖。
 
 - G3-05 staged evicted fixup idempotence：对已清理的 staged evicted-context
   数据库重复执行 tombstone fixup 返回 0，保证导入重试不会重复删除或改变
