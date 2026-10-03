@@ -110,6 +110,24 @@ fn is_transcript_scope(path: &Path, root: &Path) -> bool {
 
 fn check_path(state: &StateStore, memory: &MemoryStore, path: &Path) -> Option<String> {
     let compact = compact_root(state);
+    let path = if path.starts_with(&compact) {
+        path.to_path_buf()
+    } else {
+        // A symlink alias outside `state/compact` must not turn a registered
+        // transcript into an ordinary file. Canonicalize only as an alias
+        // probe; ordinary paths that do not resolve remain outside this
+        // transcript-specific barrier.
+        let Ok(canonical) = std::fs::canonicalize(path) else {
+            return None;
+        };
+        if !canonical.starts_with(&compact) {
+            return None;
+        }
+        return Some(format!(
+            "transcript `{}` is blocked because it uses a symlink alias",
+            path.display()
+        ));
+    };
     let Some(relative) = path.strip_prefix(&compact).ok() else {
         return None;
     };
@@ -125,7 +143,7 @@ fn check_path(state: &StateStore, memory: &MemoryStore, path: &Path) -> Option<S
         ));
     }
     let root = transcript_root(state);
-    if !is_transcript_scope(path, &root) {
+    if !is_transcript_scope(&path, &root) {
         return Some("transcript path is outside the active session scope".to_string());
     }
     let path = path.to_string_lossy();
@@ -142,7 +160,7 @@ fn check_path(state: &StateStore, memory: &MemoryStore, path: &Path) -> Option<S
                 "transcript `{path}` is unavailable because its linked memory was deleted"
             ))
         }
-        Ok(Some(_)) => None,
+        Ok(Some(_)) => ensure_transcript_identity(Path::new(path.as_ref()), &compact),
         Ok(None) => Some(format!(
             "transcript `{path}` has unknown provenance and is blocked"
         )),
@@ -150,6 +168,62 @@ fn check_path(state: &StateStore, memory: &MemoryStore, path: &Path) -> Option<S
             "transcript `{path}` provenance could not be verified and is blocked"
         )),
     }
+}
+
+/// Verify the filesystem identity immediately before a structured transcript
+/// read.  The registry does not have an open-file capability to pass to the
+/// handler, so this is deliberately a fail-closed check rather than a claim
+/// that it closes every rename race.  In particular, reject symlink parents or
+/// leaves and Unix files with more than one hard link.
+fn ensure_transcript_identity(path: &Path, compact: &Path) -> Option<String> {
+    let mut ancestor = path;
+    loop {
+        let metadata = match std::fs::symlink_metadata(ancestor) {
+            Ok(metadata) => metadata,
+            Err(error) => {
+                return Some(format!(
+                    "transcript `{}` identity could not be verified: {error}",
+                    path.display()
+                ));
+            }
+        };
+        if metadata.file_type().is_symlink() {
+            return Some(format!(
+                "transcript `{}` is blocked because its path contains a symlink",
+                path.display()
+            ));
+        }
+        if ancestor == path {
+            if !metadata.is_file() {
+                return Some(format!(
+                    "transcript `{}` is blocked because it is not a regular file",
+                    path.display()
+                ));
+            }
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::MetadataExt;
+                if metadata.nlink() != 1 {
+                    return Some(format!(
+                        "transcript `{}` is blocked because its file identity has {} hard links",
+                        path.display(),
+                        metadata.nlink()
+                    ));
+                }
+            }
+        }
+        if ancestor == compact {
+            break;
+        }
+        let Some(parent) = ancestor.parent() else {
+            break;
+        };
+        if parent == ancestor {
+            break;
+        }
+        ancestor = parent;
+    }
+    None
 }
 
 fn check_command(state: &StateStore, memory: &MemoryStore, command: &str) -> Option<String> {
@@ -164,6 +238,21 @@ fn check_command(state: &StateStore, memory: &MemoryStore, command: &str) -> Opt
         let candidate = resolve_path(token);
         if let Some(reason) = check_path(state, memory, &candidate) {
             return Some(reason);
+        }
+        if state
+            .conv_db()
+            .load_transcript_provenance_by_path(
+                state.session_id().as_ref(),
+                &candidate.to_string_lossy(),
+            )
+            .ok()
+            .flatten()
+            .is_some()
+        {
+            return Some(format!(
+                "run_command cannot access protected transcript `{}`",
+                candidate.display()
+            ));
         }
     }
     // Preserve conservative behavior for a compact root embedded in shell
@@ -649,6 +738,146 @@ mod tests {
             .unwrap();
         assert!(result.contains("handler ran"));
         drop(temp);
+    }
+
+    #[tokio::test]
+    async fn live_registered_transcript_is_denied_to_run_command() {
+        let (temp, state, memory, path) = transcript_fixture(&[]);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "safe").unwrap();
+        let mut registry = run_command_registry();
+        bind(&mut registry, state, memory);
+        let error = registry
+            .call(
+                "run_command",
+                &serde_json::json!({"command": format!("cat '{}'", path.display())}).to_string(),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("run_command cannot access protected transcript"),
+            "unexpected: {error}"
+        );
+        drop(temp);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn transcript_leaf_symlink_replacement_is_denied() {
+        use std::os::unix::fs::symlink;
+
+        let (temp, state, memory, path) = transcript_fixture(&[]);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let outside = temp.path().join("outside.md");
+        std::fs::write(&outside, "outside").unwrap();
+        symlink(&outside, &path).unwrap();
+        let mut registry = read_registry();
+        bind(&mut registry, state, memory);
+        let error = registry
+            .call("read", &serde_json::json!({"path": path}).to_string())
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("contains a symlink"), "unexpected: {error}");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn transcript_symlink_alias_outside_compact_is_denied() {
+        use std::os::unix::fs::symlink;
+
+        let (temp, state, memory, path) = transcript_fixture(&[]);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "safe").unwrap();
+        let alias = temp.path().join("transcript-alias.md");
+        symlink(&path, &alias).unwrap();
+        let mut registry = read_registry();
+        bind(&mut registry, state, memory);
+        let error = registry
+            .call("read", &serde_json::json!({"path": alias}).to_string())
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("symlink alias") || error.contains("identity"),
+            "unexpected: {error}"
+        );
+        drop(temp);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn transcript_compact_root_symlink_is_denied() {
+        use std::os::unix::fs::symlink;
+
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let state = yunxi_core::state::StateStore::new(&paths).unwrap();
+        let memory =
+            yunxi_core::memory::MemoryStore::new(&yunxi_base::config::AppConfig::default(), &paths);
+        let path = register_transcript(&state, &[]);
+        let compact = compact_root(&state);
+        if let Ok(metadata) = std::fs::symlink_metadata(&compact) {
+            if metadata.file_type().is_dir() {
+                std::fs::remove_dir_all(&compact).unwrap();
+            } else {
+                std::fs::remove_file(&compact).unwrap();
+            }
+        }
+        let real_compact = temp.path().join("real-compact");
+        std::fs::create_dir_all(&real_compact).unwrap();
+        symlink(&real_compact, &compact).unwrap();
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "safe").unwrap();
+        let mut registry = read_registry();
+        bind(&mut registry, state, memory);
+        let error = registry
+            .call("read", &serde_json::json!({"path": path}).to_string())
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("contains a symlink"), "unexpected: {error}");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn transcript_hardlink_replacement_is_denied() {
+        let (temp, state, memory, path) = transcript_fixture(&[]);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let outside = temp.path().join("outside.md");
+        std::fs::write(&outside, "outside").unwrap();
+        std::fs::hard_link(&outside, &path).unwrap();
+        let mut registry = read_registry();
+        bind(&mut registry, state, memory);
+        let error = registry
+            .call("read", &serde_json::json!({"path": path}).to_string())
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("hard links"), "unexpected: {error}");
+    }
+
+    #[tokio::test]
+    async fn ordinary_file_command_remains_allowed() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = test_paths(temp.path());
+        let state = yunxi_core::state::StateStore::new(&paths).unwrap();
+        let memory =
+            yunxi_core::memory::MemoryStore::new(&yunxi_base::config::AppConfig::default(), &paths);
+        let mut registry = run_command_registry();
+        bind(&mut registry, state, memory);
+        let ordinary = temp.path().join("ordinary.txt");
+        std::fs::write(&ordinary, "ordinary").unwrap();
+        let result = registry
+            .call(
+                "run_command",
+                &serde_json::json!({"command": format!("cat '{}'", ordinary.display())})
+                    .to_string(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result, "handler ran");
     }
 
     #[tokio::test]

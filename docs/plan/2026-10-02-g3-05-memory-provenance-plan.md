@@ -501,6 +501,47 @@ The next boundary is transcript carrier file identity/TOCTOU hardening at the
 actual file-open and shell execution seams, not further growth of this lexical
 scanner.
 
+## G3-05-20 implemented slice: transcript identity and shell access boundary
+
+The transcript guard now adds a narrow filesystem-identity barrier for
+structured transcript reads. A registered live carrier must resolve to a
+regular file without a symlink in its compact/session path; on Unix, a leaf
+with more than one hard link is rejected as well. This is intentionally scoped
+from the active compact root through the session directory, so platform-level
+symlinks such as macOS `/var` are not treated as transcript violations.
+
+`run_command` is now fail-closed for a path that resolves to a registered
+protected transcript, even when the transcript is live. The generic `sh -lc`
+handler cannot carry an opened-file capability across arbitrary shell syntax,
+so allowing that path would leave a deterministic replacement window between
+the guard and shell open. Ordinary files and non-transcript commands retain
+their previous behavior.
+
+The 22-test regression suite covers live structured reads, shell denial for
+live transcripts, leaf symlink replacement, compact-root symlink replacement,
+an external symlink alias, hard-link replacement, and an ordinary file command
+allow-list. It does not claim to close every rename race: the
+current registry API still passes only a denial string, and `read`/`grep`/`glob`
+handlers still open after the guard. Parent replacement outside the compact
+root, an external hard-link alias (which canonicalizes outside the compact
+root), quoted embedded scripts, arbitrary wrapper data-flow, and a future
+open-file capability remain explicit follow-up boundaries. The alias probe is
+also an extra canonicalization on paths outside the compact root, so it is not
+presented as a general filesystem policy.
+
+Evidence (WSL Ubuntu-24.04 ext4 disposable checkout, one cargo job):
+
+- `cargo test -p yunxi-engine transcript_guard::tests -- --nocapture` — 22
+  passed, 0 failed;
+- `cargo fmt --all -- --check` and `git diff --check` passed;
+- the Windows host build was not used as Linux evidence because this workspace
+  intentionally contains Unix-only modules; the baseline host failure is
+  unrelated to this slice.
+
+The next boundary is to choose between a structured opened-file capability for
+the read/grep/glob handlers and a further conservative denial policy. No
+general shell parser or cross-database memory change is implied by this slice.
+
 ## Current evidence and boundaries
 
 - `yunxi-base/src/memory_types.rs::EvictedTurn` has `source_id`, role, time,

@@ -54,6 +54,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   被拒绝、嵌套 `printf` 仍放行，WSL transcript_guard 16/16 通过；扫描深度封顶
   8 层，quoted `sh -c`/`eval` 脚本、任意 wrapper data-flow 与文件身份竞态仍未
   宣称覆盖。
+  G3-05-20 又补上 transcript 身份边界：结构化 transcript 读取要求 compact/session
+  范围内路径无 symlink 且叶文件为 regular file；Unix 上拒绝多硬链接叶文件；
+  `run_command` 对已登记的 live transcript 路径直接 fail-closed，避免通用
+  `sh -lc` 在 guard 后替换路径。WSL Ubuntu-24.04 ext4 transcript_guard 22/22
+  通过，普通文件命令仍放行。当前 registry 尚未传递 opened-file capability，
+  因而 read/grep/glob 的极窄 rename window、compact 根之外的父目录替换、
+  compact 外硬链接 alias、quoted 嵌入脚本与任意 wrapper data-flow 仍明确未覆盖；
+  compact 外路径的 canonicalize 只作为本地 alias 探针，不是通用文件系统策略。
 
 ## 下一处施工边界
 
@@ -63,12 +71,12 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
    或测试 seam；当前只证明了并发调用后的 convergence，epoch 二次检查和
    异步 embedding await 边界已有有限重试，但最终跨库 overlap 仍未线性化；
 2. 对 transcript `run_command` 剩余的 quoted `sh -c`/`eval` 嵌入脚本、任意
-   wrapper data-flow、symlink/hardlink 身份竞态做明确的 fail-closed 边界决策；
-   变量、命令替换、重定向、`cd` 后动态相对路径、带路径命令名、浅层
-   wrapper/`sh -c`、追加赋值、位置参数及 `$()`/反引号内嵌动态文件访问已有
-   词法屏障与 16/16 回归，当前 dev 子代理前台 fresh registry 已绑定并有 WSL
-   回归覆盖，dev 面的 read/grep/glob 仍按既有设计不注册；
-3. 只在这些证据通过后，才评估 G3-05 的阶段退出。
+   wrapper data-flow 做明确的 fail-closed 边界决策；变量、命令替换、重定向、
+   `cd` 后动态相对路径、带路径命令名、浅层 wrapper/`sh -c`、追加赋值、位置
+   参数及 `$()`/反引号内嵌动态文件访问已有词法屏障与 16/16 回归，live
+   transcript shell 路径也已拒绝，当前仍不做完整 shell parser；
+3. 决定 read/grep/glob 是否引入 opened-file capability 或继续保持当前
+   fail-closed 身份检查，再评估 G3-05 的阶段退出；
 
 此外，transfer 的 staged fixup 目前仍依赖导入前的 tombstone 过滤，尚未把
 epoch 递增语义扩展到独立的 staged 数据库；这不是运行时在线读写路径，已审计

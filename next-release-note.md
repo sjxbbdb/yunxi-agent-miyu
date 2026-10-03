@@ -26,6 +26,13 @@
   WSL transcript_guard 16/16 通过。quoted `sh -c`/`eval` 脚本、任意 wrapper
   data-flow 和 symlink/hardlink 竞态仍未宣称覆盖。
 
+- G3-05 transcript identity boundary：结构化读取要求 compact/session 范围内无
+  symlink、叶文件为 regular file，Unix 上拒绝多硬链接叶文件；`run_command` 对
+  已登记的 live transcript 路径 fail-closed，避免通用 `sh -lc` 在 guard 后替换
+  路径。WSL transcript_guard 22/22 通过；registry 尚未传递 opened-file
+  capability，因此 read/grep/glob 的极窄 rename window、compact 外硬链接 alias、quoted 嵌入脚本和任意
+  wrapper data-flow 仍未宣称覆盖。
+
 - G3-05 memory provenance：删除提交后的 `MemoryStore` 重建会继续隐藏已删除的
   evicted carrier；`reset_all` 保留 facts/episodes 的自增高水位，避免独立 state
   清理窗口中的 tombstone ID 复用。新增重启与 ID 复用回归测试，WSL store 测试
