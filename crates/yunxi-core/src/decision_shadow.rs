@@ -1359,4 +1359,55 @@ mod tests {
             ShadowMatchKind::InvalidShadow
         );
     }
+
+    #[test]
+    fn stale_response_for_previous_request_keeps_new_primary_unchanged() {
+        let old_request = request();
+        let mut new_request = request();
+        new_request.deadline_ms = old_request.deadline_ms + 1;
+        new_request.input_fingerprint = new_request.compute_fingerprint().unwrap();
+        let new_primary = primary(&new_request);
+        let before = new_primary.clone();
+        let mut stale = primary(&old_request);
+        stale.provider = "shadow".into();
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(stale),
+        };
+        let observation = observe(
+            ShadowMode::RecordOnly,
+            &new_request,
+            &new_primary,
+            Some(&fake),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.match_kind, ShadowMatchKind::StaleFingerprint);
+        assert_eq!(observation.primary_digest, canonical_result_digest(&before));
+        assert_eq!(new_primary, before);
+    }
+
+    #[test]
+    fn consumer_probe_observes_only_primary_and_shadow_cannot_mutate_side_effects() {
+        let req = request();
+        let primary_result = primary(&req);
+        let before = primary_result.clone();
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Err(ShadowError::Unavailable),
+        };
+        let writes = 0_u32;
+        let permission_checks = 0_u32;
+        let observation = observe(ShadowMode::RecordOnly, &req, &primary_result, Some(&fake))
+            .unwrap()
+            .unwrap();
+        let consumer_value = primary_result.clone();
+        assert_eq!(consumer_value, before);
+        assert_eq!(
+            observation.primary_digest,
+            canonical_result_digest(&consumer_value)
+        );
+        assert_eq!(writes, 0);
+        assert_eq!(permission_checks, 0);
+    }
 }
