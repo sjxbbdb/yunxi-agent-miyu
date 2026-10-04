@@ -41,6 +41,10 @@
   `validate_result → stale gate → in-memory apply` 顺序，fresh fake response 恰好应用一次，
   invalid/stale 只丢弃，生产路径不变。WSL admission 20/20、Windows 静态门禁和清理通过；
   证据见 `docs/plan/2026-10-04-g5-04-05-consumer-harness-evidence.md`。
+- G5-04-06：推送 `af0306f2`，在测试夹具内增加 bounded `sync_channel(1)`、Barrier 和短命
+  线程，验证跨线程 fresh/stale、queue-full、取消、timeout、unavailable、关闭和单次
+  drain；WSL admission 22/22、Windows 静态门禁和清理通过。真实异步 runtime、模型和
+  生产 consumer 仍未接入，证据见 `docs/plan/2026-10-04-g5-04-06-async-boundary-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。

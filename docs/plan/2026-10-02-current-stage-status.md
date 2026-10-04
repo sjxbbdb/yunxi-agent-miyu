@@ -387,9 +387,15 @@ G5-04-05 已完成并推送 `7a7afb3b`，证据见
 它只在测试夹具内验证 `validate_result → stale gate → in-memory apply` 顺序，WSL
 admission 20/20 通过；生产 consumer、异步 runtime 和模型仍未接入。
 
-下一施工单进入 **G5-04-06 无模型异步边界设计**：只允许先设计跨线程/迟到响应的边界、
-取消与 replay 语义及故障矩阵，不允许创建第二 runtime、接入 Laya 或改变 production
-write path。
+G5-04-06 已完成并推送 `af0306f2`，证据见
+[`2026-10-04-g5-04-06-async-boundary-evidence.md`](2026-10-04-g5-04-06-async-boundary-evidence.md)。
+它只在测试夹具内用 bounded `sync_channel(1)`、Barrier 和短命线程验证跨线程 fresh/stale、
+queue-full、取消、timeout、unavailable、关闭和单次消费；WSL admission 22/22 通过，
+生产异步 runtime、模型和写入路径仍未接入。
+
+下一施工单进入 **G5-04-07 无模型 fault/replay 边界设计**：只允许先设计 response
+fault 分类、primary 等价、内存 replay 证据和隐私边界，不允许创建第二 runtime、接入
+Laya 或改变 production write path。
 
 ## 证据与环境约束
 
