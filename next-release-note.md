@@ -13,10 +13,11 @@
 - G5-02（已完成，`2b458d39`）：已在 `yunxi-core` 建立无模型、无副作用的版本化协议、
   fingerprint/隐私/预算校验与 abstain-only deterministic provider；WSL decision 8/8
   通过。Laya/shadow provider 和消费者接入仍未实现，下一阶段进入 G5-03 设计。
-- G5-03（进行中，`a941db50`）：在 `a5f48982` 的无模型、同步、record-only shadow
+- G5-03（进行中，`3bb11f12`）：在 `a5f48982` 的无模型、同步、record-only shadow
   observer 上补齐 `ShadowQueue` 原子容量/RAII permit、有效 deadline、协作式
   `ShadowCallContext`、完整错误映射、replay golden 向量，并固化 `ShadowMode` 默认关闭；
-  WSL shadow 24/24、decision 回归 33/33。尚未接入消费者、调度或 Laya 权重，G5-03-D/E
+  fault matrix 已覆盖 precheck 主摘要、queue RAII、ranking/score 与非法结果，WSL
+  shadow 28/28、decision 回归 37/37。尚未接入消费者、调度或 Laya 权重，G5-03-D/E
   故障矩阵与退出证据仍在推进。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。

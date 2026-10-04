@@ -332,9 +332,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   `ShadowMode::default() == Disabled`。`ShadowMode::Disabled`
   不调用 provider，`RecordOnly` 只写最小 observation；主结果始终是 deterministic
   baseline。WSL Ubuntu-24.04 ext4 disposable checkout 的 shadow 定向测试为
-  24/24，decision 回归为 33/33；Windows fmt、metadata、架构依赖门禁、隐私扫描和
-  diff check 通过。尚未下载/加载 Laya、接入消费者、调度、memory/KB、权限或主动
-  消息；G5-03-D/E 的完整故障矩阵与阶段退出证据仍未完成。
+  28/28，decision 回归为 37/37；Windows fmt、metadata、架构依赖门禁、隐私扫描和
+  diff check 通过。WSL full `yunxi-core` 在 `a941db50` 基线为 739 passed、5 个
+  既有 `llm::openai_compatible` 失败、8 ignored；本批只增加测试，不把该基线结果
+  伪装成全绿。尚未下载/加载 Laya、接入消费者、调度、memory/KB、权限或主动消息；
+  G5-03-D/E 的完整故障矩阵与阶段退出证据仍未完成。
 
 ## G3-05 退出决定
 

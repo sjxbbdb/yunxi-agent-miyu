@@ -112,6 +112,11 @@ ShadowObservation {
 
 禁止记录或发送原始用户消息、完整 profile、relationship、memory/KB 内容、终端原始命令、个人路径、secret、token、password、credential、私钥、API key、未经脱敏的模型输入/输出/prompt/cache。错误信息只能引用稳定协议类别，不得回显 caller-controlled candidate ID、payload 片段或路径。provider identity 先经过 ASCII 安全字符和长度校验，非法值只记录 `unknown`。
 
+请求本身未通过 DecisionPort privacy gate 时，observer 返回稳定的
+`DecisionError::PrivacyRejected` 且不调用 provider；provider 主动返回
+`ShadowError::PrivacyRejected` 时，才在已通过 gate 的 request 上记录
+`ShadowMatchKind::PrivacyRejected`。两者不能混写成“原文已被记录”。
+
 指标只存计数和延迟：`shadow_started`、`shadow_completed`、`shadow_exact_match`、`shadow_outcome_match`、`shadow_mismatch`、`shadow_invalid`、`shadow_timeout`、`shadow_cancelled`、`shadow_unavailable`、`shadow_privacy_rejected`、`shadow_queue_full`，以及 shadow/主路径各自的 p50/p95/p99。队列、采样、环形缓存有硬上限，满载时丢弃观测；指标失败不得使主请求失败。禁用时不启动后台任务或创建模型缓存。
 
 ## 8. 故障、超时与回放矩阵
@@ -157,7 +162,7 @@ envelope 字段序列化，`observation_replay_digest` 用 SHA-256 生成稳定�
 后台线程或模型 runtime。主结果仍直接来自 deterministic
 provider；不接入 memory、KB、terminal、companion 或用户可见路径。
 
-### G5-03-D：权威环境验收（进行中，代码硬化已推送 `a735444b`）
+### G5-03-D：权威环境验收（进行中，代码硬化与 fault matrix 已推送 `3bb11f12`）
 
 Windows 只做格式、metadata、架构依赖和隐私扫描；WSL ext4 disposable checkout 运行定向测试，并分别记录完整测试的通过、忽略和既有失败；测试后删除临时 checkout、日志、缓存和模型工件。
 
