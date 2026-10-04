@@ -7,7 +7,7 @@ use crate::decision_shadow::{
 use crate::memory::*;
 use serde_json::json;
 use std::cell::Cell;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{sync_channel, TryRecvError, TrySendError};
 use std::sync::{Arc, Barrier};
@@ -1166,6 +1166,45 @@ fn admission_fault_replay_is_stable_and_closed_transport_has_no_observation() {
         sender.try_send(pending),
         Err(TrySendError::Disconnected(_))
     ));
+}
+
+#[test]
+fn admission_replay_convergence_is_test_only_and_primary_stays_unchanged() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let primary = envelope.primary.clone();
+    let metrics = AdmissionShadowMetrics::default();
+    let mut unique_replays = HashSet::new();
+    let observations = [
+        (shadow_observation(ShadowMatchKind::OutcomeMatch), 20),
+        (shadow_observation(ShadowMatchKind::OutcomeMatch), 20),
+        (shadow_observation(ShadowMatchKind::Timeout), 100),
+        (shadow_observation(ShadowMatchKind::Timeout), 100),
+    ];
+    for (observation, elapsed_ms) in observations {
+        let bytes = observation_replay_bytes(&observation);
+        let digest = observation_replay_digest(&observation);
+        assert_eq!(bytes, observation_replay_bytes(&observation));
+        assert_eq!(digest, observation_replay_digest(&observation));
+        assert!(digest.starts_with("sha256:"));
+        assert_eq!(digest.len(), 71);
+        assert!(!String::from_utf8(bytes)
+            .unwrap()
+            .contains("ADMISSION_RAW_MARKER"));
+        if unique_replays.insert(digest) {
+            metrics.record_started();
+            assert!(metrics.record_completed(&observation, elapsed_ms));
+        }
+    }
+    assert_eq!(unique_replays.len(), 2);
+    let snapshot = metrics.snapshot();
+    assert_eq!(snapshot.shadow_started, 2);
+    assert_eq!(snapshot.shadow_completed, 2);
+    assert_eq!(snapshot.shadow_outcome_match, 1);
+    assert_eq!(snapshot.shadow_timeout, 1);
+    assert_eq!(snapshot.shadow_latency_p50_ms, 50);
+    assert_eq!(snapshot.shadow_latency_p95_ms, 100);
+    assert_eq!(snapshot.shadow_latency_p99_ms, 100);
+    assert_eq!(envelope.primary, primary);
 }
 
 #[test]
