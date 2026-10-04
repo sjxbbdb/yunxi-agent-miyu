@@ -314,9 +314,21 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   矩阵已写入 [`2026-10-04-g5-01-decision-port-contract.md`](2026-10-04-g5-01-decision-port-contract.md)，
   并推送 `e4b329f6`；没有创建 provider 或加载模型。
 
-- **当前：G5-02 deterministic provider。** 只允许在窄协议模块中实现请求/结果校验、
-  deterministic provider 和无模型契约测试；禁止 Laya/shadow provider、权重、memory/KB/runtime
-  业务接入。
+- **G5-02：已完成并推送 `2b458d39`。** 在窄的 `yunxi-core::decision` 模块中落地
+  `yunxi.decision.v1` 的 request/result、SHA-256 canonical fingerprint、candidate/
+  scope/capability 校验、敏感 payload gate、payload/provider/deadline 边界，以及
+  abstain-only deterministic provider。WSL Ubuntu-24.04 ext4 disposable checkout
+  的 `decision` 定向测试为 8 passed、0 failed；Windows fmt、metadata、架构依赖门禁、
+  隐私扫描和 diff check 通过。没有下载权重、增加依赖或接入消费者。完整证据见
+  [`2026-10-04-g5-02-deterministic-decision-port.md`](2026-10-04-g5-02-deterministic-decision-port.md)。
+  WSL full `yunxi-core` 仍有 5 个既有 `llm::openai_compatible` 测试失败（711 passed、
+  8 ignored），与本切片无关，未伪装成全绿。
+
+- **当前：G5-03 shadow provider 设计。** 只固化默认关闭、只读观测、deterministic
+  baseline 唯一权威、最小化审计和故障/回放合同；禁止下载/加载 Laya 权重、引入
+  Python/Node/ONNX/网络依赖、修改消费者或让 shadow 结果影响 memory/KB/tool/
+  permission/scheduler/主动消息。设计完成并通过审查后，才允许建立无模型 fake/slow/
+  invalid provider 测试夹具。
 
 ## G3-05 退出决定
 
@@ -329,14 +341,14 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 ## 下一处施工边界
 
-下一施工单进入 **G5-02**：
+下一施工单进入 **G5-03**：
 
-1. 在既有 `yunxi-core` 边界内实现 `DecisionRequest`/`DecisionResult` 的校验器和
-   deterministic provider，不泄漏 Laya/ONNX 类型。
-2. 固定 deterministic fallback、超时/断连/非法输出/未知 id/越界 score/过期响应矩阵，
-   用无模型测试证明 provider 关闭时行为不变。
-3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate 和旧
-   API/旧数据库兼容；Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
+1. 写入并审核 shadow provider 的 disabled/record-only 状态机、预算、审计字段和
+   deterministic 主结果不变合同。
+2. 仅在无模型夹具中覆盖 slow/timeout/invalid/unknown/stale/privacy/cancel 故障，
+   证明 shadow 关闭或失败时主结果字节、写入资格和权限判定不变。
+3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate、
+   G5-02 协议和旧 API/旧数据库兼容；Laya 适配器、消费者接入和模型资源另立施工单。
 
 ## 证据与环境约束
 
