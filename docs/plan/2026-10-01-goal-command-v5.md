@@ -95,7 +95,10 @@ SOURCE_MAP_CURRENT_ANCHORS
   S6 KB：crates/yunxi-engine/src/tools/knowledge_base/mod.rs:71 KnowledgeBase、:80 new、:107 search、:112 search_readonly；index.rs:75 reindex_embeddings、:254 semantic_search、:316 reindex_embeddings_inner、:652 failed_chunk_write_rolls_back_the_file_and_a_retry_rebuilds_it；files/index/store/dashboard 必须保持分层。
   S7 MCP/Skills/权限：crates/yunxi-engine/src/tools/mcp/{mod.rs,connection.rs,pool.rs,scope.rs,protocol.rs,protocol_tests.rs,tests.rs}；mcp/mod.rs:46 register、:106 call_tool；pool.rs:76 enable、:337 forget_session、:355 retire_changed、:378 shutdown_all；crates/yunxi-core/src/skills/mod.rs:128 discover、:219 load；crates/yunxi-engine/src/tools/skills.rs:14 register_skills、:163 load_skill；config/mod.rs:396 McpConfig、:404 McpServerConfig、:456 McpSandbox；权限真相在 yunxi-base/src/host_ports/* 与 yunxi-hosts/src/platforms/access_control.rs，不能由 prompt 声明。
   S8 transfer：crates/yunxi-engine/src/transfer/{registry.rs,export.rs,import.rs,manifest.rs,fixups.rs}；registry.rs:35 DataUnit、:596 unit_for；export.rs:52 export；import.rs:88 import；现有跨域回滚测试 marker_failure_restores_memory_and_kb_together。
-  S9 Decision seam：当前不存在 DecisionPort trait/provider。G0 只记录 compact、memory admission、recall/rerank、terminal intent、proactive ranking 的真实消费者和输入/输出/fallback；不得把计划中的接口写成已实现。
+  S9 Decision seam：G5-02 仅已实现 yunxi-core 的版本化 DecisionPort 协议、校验器和
+  abstain-only deterministic provider；尚不存在 Laya/shadow provider 或消费者接入。
+  compact、memory admission、recall/rerank、terminal intent、proactive ranking 仍须
+  保持既有 deterministic 规则为权威，不能把计划中的模型行为写成已实现。
 
 EXECUTION_LOOP_FOR_EVERY_SLICE
   1 LOCATE：Lead 读取就近 AGENTS、计划、当前 worktree、远端 SHA；用 rg/CodeGraph（若存在）确认入口和行号。
@@ -170,7 +173,7 @@ STOP_RULES
 - 最近已推送：`13f1b43b`（G5-00 Laya 来源审计）、`5399b8aa`（G4-05 退出审计）、`2dc988bc`（G4-05-04 重复 revision 收敛）、`fb2f09da`（G4-05-03 文档）、`69698f8d`（G4-05-03 更新锁）；更早证据仍以 Git 历史和阶段文档为准。
 - MCP 当前完整套件：37/37；最新 HEAD 代码门禁 `e12ffa74` 已通过，root 504/0/4、base 396/0/6、core 651/0/8、engine 673/0/13、hosts 920/0/10，doctest 全过；当前 HEAD 的 fish/daemon/IPC/REPL/MCP/TUI 黑盒也已有证据；相关临时 target、日志和进程已清理。
 - 当前 G0 残余：transfer export 输出/source/SQLite 路径 TOCTOU、锁/磁盘满/权限撤销/组合故障矩阵、跨 SQLite 文件提交非原子性、legacy `state/profile.md` 迁移策略、Arch 实机和 macOS M-series 证据。最新 HEAD workspace 与 fish/daemon/IPC/REPL/MCP/TUI 黑盒已有证据；MCP 权限、既有断连/超时、Unix import 父目录竞态和非法 manifest 已有对应证据，不再重复列为未覆盖项。
-- 当前绝不能写成已实现：`DecisionPort` trait/provider、Laya provider、G1-G9 业务模块；G5-01 只做契约/失败矩阵设计，尚未创建 trait 或 provider。
+- 当前绝不能写成已实现：Laya/shadow provider、DecisionPort 消费者接入和 G1-G9 其余业务模块；当前仅有 G5-02 的协议、校验器和 abstain-only deterministic provider。
 
 ## 4. 启动新 Goal 前的验收
 

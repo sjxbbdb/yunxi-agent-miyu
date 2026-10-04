@@ -67,7 +67,7 @@
 - `deadline_ms` 是从调用开始计算的单调预算，不使用可回拨的墙上时钟；零值表示
   立即回退，不表示无限等待。
 - `capabilities` 是允许 provider 做什么的声明，最小集合只有 `rank_only`、
-  `choice_only`、`abstain`。任何 `execute_tool`、`write_memory`、`write_kb`、
+  `choice_only`、`score`、`abstain`。任何 `execute_tool`、`write_memory`、`write_kb`、
   `change_permission`、`schedule_job` 等能力均非法，不能被调用方或模型添加。
 - payload 只允许任务所需的最小化元数据；调用方在进入 `DecisionPort` 前完成 secret、
   credential、完整 profile 和未经授权私密内容的剥离。
@@ -147,7 +147,8 @@ G5-02 实现前必须把下列向量固化为无模型、无网络的测试：
 
 ### 正向
 
-- 固定候选和 payload 得到稳定 fingerprint；deterministic provider 返回同一 choice。
+- 固定候选、deadline 和 payload 得到稳定 fingerprint；deterministic provider 返回同一
+  abstain baseline。
 - ranking 只返回候选子序列；候选顺序改变会改变 fingerprint 并拒绝旧结果。
 - 明确 abstain 的结果保留 abstain 和 reason，不伪造 choice。
 
