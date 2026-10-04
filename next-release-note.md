@@ -7,6 +7,7 @@
 - G4-05-02：重索引达到最大重试轮次仍有 rerun marker 时进入 `exhausted`，保留 marker 供重试；dashboard 暴露轮次与 queued/exhausted 状态，避免把未收敛任务显示为成功。
 - G4-05-03：默认知识库更新、启动导入、检查和通知共用跨进程 `flock` lease；第二更新请求快速返回稳定 busy 错误，状态写入在锁内重新读取，避免并发覆盖。
 - G4-05-04：同一来源 revision 与快照 hash 且默认文件内容一致时走 no-op；内容、revision 或文件集合变化仍进入完整替换，避免重复更新破坏有效快照。
+- G5-00：完成 Laya/DecisionPort 只读来源审计，固定 Python/Node-ONNX 来源、Git/HF revision、模型 LFS OID 与许可证分界；明确零样本质量、中文/Linux 术语、资源和故障回退仍未验证，未下载权重、未接入 provider。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。

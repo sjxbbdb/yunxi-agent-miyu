@@ -303,9 +303,15 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   [`2026-10-04-g4-05-exit-audit.md`](2026-10-04-g4-05-exit-audit.md)。跨 SQLite
   OS-crash 原子性仍是明确非目标，不被写成已解决。
 
-- **当前：G5-00 Laya/DecisionPort 来源审计。** 只读核对官方来源、版本/tag、artifact
-  或 checkpoint SHA、许可证、runtime、CPU/Linux/macOS ARM、中文/Linux 术语质量、
-  p50/p95 与 RAM；未知项停止，不下载权重、不接入 provider。
+- **G5-00 已完成只读来源审计。** 证据见
+  [`2026-10-04-g5-00-laya-source-audit.md`](2026-10-04-g5-00-laya-source-audit.md)。
+  已固定 Python 参考实现、Node/ONNX wrapper、Git/HF revision 和 LFS OID，并明确
+  wrapper/model 许可证分界；YunXi 中文/Linux 质量、真实 p50/p95/RAM 与故障回退仍
+  未验证。没有下载权重、没有增加依赖、没有创建 provider。
+
+- **当前：G5-01 DecisionPort 契约设计。** 只允许定义版本化
+  `DecisionRequest`/`DecisionResult`、deterministic baseline、失败/过期/非法输出
+  回退矩阵与 provider 权限边界；不实现 provider、不加载模型、不修改 memory/KB/runtime。
 
 ## G3-05 退出决定
 
@@ -318,11 +324,11 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 ## 下一处施工边界
 
-下一施工单进入 **G5-00**：
+下一施工单进入 **G5-01**：
 
-1. 只读核验 Laya/DecisionPort 候选的来源、许可证、版本和运行时事实。
-2. 记录决策模型消费者、最小输入、隐私/权限边界和 deterministic fallback，不创建
-   provider、不加载权重、不修改 memory/KB/runtime。
+1. 设计 `DecisionRequest`/`DecisionResult` 的字段、版本、scope 和 fingerprint 合同。
+2. 固定 deterministic fallback、超时/断连/非法输出/未知 id/越界 score/过期响应矩阵，
+   通过契约测试证明模型关闭时行为不变。
 3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate 和旧
    API/旧数据库兼容；Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
 
