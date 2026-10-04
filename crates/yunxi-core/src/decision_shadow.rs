@@ -1100,4 +1100,263 @@ mod tests {
             "sha256:472dfde10227d2825f0157139d7dfcfb7dd56791e053e0a05708ac5d2d82f09f"
         );
     }
+
+    #[test]
+    fn privacy_rejection_is_classified_before_provider() {
+        let mut req = request();
+        req.payload = json!({"token": "not-recorded"});
+        let baseline = primary(&request());
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(baseline.clone()),
+        };
+        assert!(matches!(
+            observe(ShadowMode::RecordOnly, &req, &baseline, Some(&fake)),
+            Err(DecisionError::PrivacyRejected)
+        ));
+        assert_eq!(fake.calls.get(), 0);
+    }
+
+    #[test]
+    fn precheck_observations_preserve_primary_digest() {
+        let req = request();
+        let baseline = primary(&req);
+        let expected = canonical_result_digest(&baseline);
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(baseline.clone()),
+        };
+        for (budget, cancelled, kind) in [
+            (
+                ShadowBudget {
+                    deadline_ms: req.deadline_ms,
+                    queue_slots: 1,
+                },
+                true,
+                ShadowMatchKind::Cancelled,
+            ),
+            (
+                ShadowBudget {
+                    deadline_ms: 0,
+                    queue_slots: 1,
+                },
+                false,
+                ShadowMatchKind::Timeout,
+            ),
+            (
+                ShadowBudget {
+                    deadline_ms: req.deadline_ms,
+                    queue_slots: 0,
+                },
+                false,
+                ShadowMatchKind::QueueFull,
+            ),
+        ] {
+            let observation = observe_with_budget(
+                ShadowMode::RecordOnly,
+                &req,
+                &baseline,
+                Some(&fake),
+                budget,
+                cancelled,
+            )
+            .unwrap()
+            .unwrap();
+            assert_eq!(observation.match_kind, kind);
+            assert_eq!(observation.primary_digest, expected);
+            assert_eq!(baseline, primary(&req));
+        }
+        assert_eq!(fake.calls.get(), 0);
+
+        let queue = ShadowQueue::new(1);
+        let held = queue.try_acquire().unwrap();
+        let observation = observe_with_queue(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&fake),
+            ShadowBudget {
+                deadline_ms: req.deadline_ms,
+                queue_slots: 1,
+            },
+            false,
+            &queue,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.match_kind, ShadowMatchKind::QueueFull);
+        assert_eq!(observation.primary_digest, expected);
+        drop(held);
+        assert_eq!(queue.in_flight(), 0);
+    }
+
+    #[test]
+    fn queue_permit_releases_on_provider_error_invalid_and_timeout() {
+        let req = request();
+        let baseline = primary(&req);
+        let queue = ShadowQueue::new(1);
+        let mut invalid = baseline.clone();
+        invalid.provider = "bad/provider".into();
+        invalid.elapsed_ms = 0;
+        let mut over_budget = baseline.clone();
+        over_budget.provider = "shadow".into();
+        over_budget.elapsed_ms = req.deadline_ms + 1;
+        for response in [Err(ShadowError::Unavailable), Ok(invalid), Ok(over_budget)] {
+            let fake = FakeProvider {
+                calls: Cell::new(0),
+                response,
+            };
+            let observation = observe_with_queue(
+                ShadowMode::RecordOnly,
+                &req,
+                &baseline,
+                Some(&fake),
+                ShadowBudget {
+                    deadline_ms: req.deadline_ms,
+                    queue_slots: 1,
+                },
+                false,
+                &queue,
+            )
+            .unwrap()
+            .unwrap();
+            assert!(matches!(
+                observation.match_kind,
+                ShadowMatchKind::Unavailable
+                    | ShadowMatchKind::InvalidShadow
+                    | ShadowMatchKind::Timeout
+            ));
+            assert_eq!(queue.in_flight(), 0);
+        }
+    }
+
+    #[test]
+    fn ranking_and_score_outcomes_are_compared_and_invalidated() {
+        let req = request();
+        let ranking = result(
+            &req,
+            DecisionOutcome::Ranking {
+                ordered_ids: vec!["keep".into(), "drop".into()],
+            },
+            "primary",
+        );
+        let same_ranking = result(
+            &req,
+            DecisionOutcome::Ranking {
+                ordered_ids: vec!["keep".into(), "drop".into()],
+            },
+            "shadow",
+        );
+        let reversed_ranking = result(
+            &req,
+            DecisionOutcome::Ranking {
+                ordered_ids: vec!["drop".into(), "keep".into()],
+            },
+            "shadow",
+        );
+        for (shadow, kind) in [
+            (same_ranking, ShadowMatchKind::OutcomeMatch),
+            (reversed_ranking, ShadowMatchKind::OutcomeMismatch),
+        ] {
+            let fake = FakeProvider {
+                calls: Cell::new(0),
+                response: Ok(shadow),
+            };
+            assert_eq!(
+                observe(ShadowMode::RecordOnly, &req, &ranking, Some(&fake))
+                    .unwrap()
+                    .unwrap()
+                    .match_kind,
+                kind
+            );
+        }
+
+        let score = result(
+            &req,
+            DecisionOutcome::Score {
+                score: 0.5,
+                min: 0.0,
+                max: 1.0,
+            },
+            "primary",
+        );
+        let score_mismatch = result(
+            &req,
+            DecisionOutcome::Score {
+                score: 0.9,
+                min: 0.0,
+                max: 1.0,
+            },
+            "shadow",
+        );
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(score_mismatch),
+        };
+        assert_eq!(
+            observe(ShadowMode::RecordOnly, &req, &score, Some(&fake))
+                .unwrap()
+                .unwrap()
+                .match_kind,
+            ShadowMatchKind::OutcomeMismatch
+        );
+
+        let score_same = result(
+            &req,
+            DecisionOutcome::Score {
+                score: 0.5,
+                min: 0.0,
+                max: 1.0,
+            },
+            "shadow",
+        );
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(score_same),
+        };
+        assert_eq!(
+            observe(ShadowMode::RecordOnly, &req, &score, Some(&fake))
+                .unwrap()
+                .unwrap()
+                .match_kind,
+            ShadowMatchKind::OutcomeMatch
+        );
+
+        let mut duplicate = ranking.clone();
+        duplicate.outcome = DecisionOutcome::Ranking {
+            ordered_ids: vec!["keep".into(), "keep".into()],
+        };
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(duplicate),
+        };
+        assert_eq!(
+            observe(ShadowMode::RecordOnly, &req, &ranking, Some(&fake))
+                .unwrap()
+                .unwrap()
+                .match_kind,
+            ShadowMatchKind::InvalidShadow
+        );
+
+        let out_of_range = result(
+            &req,
+            DecisionOutcome::Score {
+                score: 2.0,
+                min: 0.0,
+                max: 1.0,
+            },
+            "shadow",
+        );
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(out_of_range),
+        };
+        assert_eq!(
+            observe(ShadowMode::RecordOnly, &req, &score, Some(&fake))
+                .unwrap()
+                .unwrap()
+                .match_kind,
+            ShadowMatchKind::InvalidShadow
+        );
+    }
 }
