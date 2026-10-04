@@ -1,8 +1,12 @@
 //! Record-only comparison of a decision result with an optional shadow provider.
 //!
 //! This module deliberately has no scheduling, storage, network, or model
-//! implementation.  A shadow provider is called synchronously and its result
+//! implementation. A shadow provider is called synchronously and its result
 //! is reduced to a small observation; the primary result is never changed.
+//! Budget and cancellation are cooperative at this seam: preflight checks
+//! prevent a call from starting, while a provider that has already started
+//! must honor [`ShadowCallContext`] itself. This module never force-stops a
+//! blocking provider.
 
 use crate::decision::{
     canonical_result_digest, validate_result, DecisionError, DecisionOutcome, DecisionRequest,
@@ -11,6 +15,7 @@ use crate::decision::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fmt;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Controls whether the optional shadow branch is entered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,6 +39,85 @@ impl ShadowBudget {
             deadline_ms: u64::MAX,
             queue_slots: usize::MAX,
         }
+    }
+}
+
+/// Cooperative context supplied to a shadow provider.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ShadowCallContext {
+    deadline_ms: u64,
+    cancelled: bool,
+}
+
+impl ShadowCallContext {
+    pub const fn new(deadline_ms: u64, cancelled: bool) -> Self {
+        Self {
+            deadline_ms,
+            cancelled,
+        }
+    }
+
+    pub const fn deadline_ms(self) -> u64 {
+        self.deadline_ms
+    }
+
+    pub const fn is_cancelled(self) -> bool {
+        self.cancelled
+    }
+}
+
+/// Bounded caller-owned capacity for synchronous shadow calls.
+#[derive(Debug)]
+pub struct ShadowQueue {
+    capacity: usize,
+    in_flight: AtomicUsize,
+}
+
+impl ShadowQueue {
+    pub const fn new(capacity: usize) -> Self {
+        Self {
+            capacity,
+            in_flight: AtomicUsize::new(0),
+        }
+    }
+
+    pub const fn capacity(&self) -> usize {
+        self.capacity
+    }
+
+    pub fn in_flight(&self) -> usize {
+        self.in_flight.load(Ordering::Acquire)
+    }
+
+    fn try_acquire(&self) -> Option<ShadowPermit<'_>> {
+        if self.capacity == 0 {
+            return None;
+        }
+        let mut current = self.in_flight.load(Ordering::Acquire);
+        loop {
+            if current >= self.capacity {
+                return None;
+            }
+            match self.in_flight.compare_exchange_weak(
+                current,
+                current + 1,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => return Some(ShadowPermit { queue: self }),
+                Err(observed) => current = observed,
+            }
+        }
+    }
+}
+
+struct ShadowPermit<'a> {
+    queue: &'a ShadowQueue,
+}
+
+impl Drop for ShadowPermit<'_> {
+    fn drop(&mut self) {
+        self.queue.in_flight.fetch_sub(1, Ordering::AcqRel);
     }
 }
 
@@ -97,6 +181,17 @@ pub struct ShadowObservation {
 /// Synchronous seam for a read-only shadow decision provider.
 pub trait ShadowDecisionProvider {
     fn observe(&self, request: &DecisionRequest) -> Result<DecisionResult, ShadowError>;
+
+    /// Cooperative extension point. Legacy providers continue to work via
+    /// the default implementation; new providers should check this context
+    /// before and during their own work.
+    fn observe_with_context(
+        &self,
+        request: &DecisionRequest,
+        _context: ShadowCallContext,
+    ) -> Result<DecisionResult, ShadowError> {
+        self.observe(request)
+    }
 }
 
 /// Validate the request and primary result, then optionally record a shadow
@@ -129,6 +224,41 @@ pub fn observe_with_budget(
     budget: ShadowBudget,
     cancelled: bool,
 ) -> Result<Option<ShadowObservation>, DecisionError> {
+    observe_inner(mode, request, primary, provider, budget, cancelled, None)
+}
+
+/// Observe through a caller-owned queue with real bounded capacity. A permit
+/// is held only for the synchronous provider call and is released on every
+/// return path, including validation failures.
+pub fn observe_with_queue(
+    mode: ShadowMode,
+    request: &DecisionRequest,
+    primary: &DecisionResult,
+    provider: Option<&dyn ShadowDecisionProvider>,
+    budget: ShadowBudget,
+    cancelled: bool,
+    queue: &ShadowQueue,
+) -> Result<Option<ShadowObservation>, DecisionError> {
+    observe_inner(
+        mode,
+        request,
+        primary,
+        provider,
+        budget,
+        cancelled,
+        Some(queue),
+    )
+}
+
+fn observe_inner(
+    mode: ShadowMode,
+    request: &DecisionRequest,
+    primary: &DecisionResult,
+    provider: Option<&dyn ShadowDecisionProvider>,
+    budget: ShadowBudget,
+    cancelled: bool,
+    queue: Option<&ShadowQueue>,
+) -> Result<Option<ShadowObservation>, DecisionError> {
     request.validate()?;
     validate_result(request, primary)?;
 
@@ -148,7 +278,8 @@ pub fn observe_with_budget(
             0,
         )));
     }
-    if budget.deadline_ms == 0 {
+    let effective_deadline_ms = request.deadline_ms.min(budget.deadline_ms);
+    if effective_deadline_ms == 0 {
         return Ok(Some(observation(
             request,
             primary_digest,
@@ -159,6 +290,18 @@ pub fn observe_with_budget(
         )));
     }
     if budget.queue_slots == 0 {
+        return Ok(Some(observation(
+            request,
+            primary_digest,
+            None,
+            ShadowMatchKind::QueueFull,
+            "unknown".to_owned(),
+            0,
+        )));
+    }
+
+    let _permit = queue.and_then(ShadowQueue::try_acquire);
+    if queue.is_some() && _permit.is_none() {
         return Ok(Some(observation(
             request,
             primary_digest,
@@ -180,10 +323,11 @@ pub fn observe_with_budget(
         )));
     };
 
-    match provider.observe(request) {
+    let context = ShadowCallContext::new(effective_deadline_ms, false);
+    match provider.observe_with_context(request, context) {
         Ok(shadow) => {
             let elapsed_ms = shadow.elapsed_ms;
-            if elapsed_ms > budget.deadline_ms {
+            if elapsed_ms > effective_deadline_ms {
                 return Ok(Some(observation(
                     request,
                     primary_digest,
@@ -376,6 +520,26 @@ mod tests {
     impl ShadowDecisionProvider for FakeProvider {
         fn observe(&self, _request: &DecisionRequest) -> Result<DecisionResult, ShadowError> {
             self.calls.set(self.calls.get() + 1);
+            self.response.clone()
+        }
+    }
+
+    struct ContextProvider {
+        seen: Cell<Option<ShadowCallContext>>,
+        response: Result<DecisionResult, ShadowError>,
+    }
+
+    impl ShadowDecisionProvider for ContextProvider {
+        fn observe(&self, _request: &DecisionRequest) -> Result<DecisionResult, ShadowError> {
+            self.response.clone()
+        }
+
+        fn observe_with_context(
+            &self,
+            _request: &DecisionRequest,
+            context: ShadowCallContext,
+        ) -> Result<DecisionResult, ShadowError> {
+            self.seen.set(Some(context));
             self.response.clone()
         }
     }
@@ -753,5 +917,176 @@ mod tests {
             true,
         );
         assert_eq!(baseline, before);
+    }
+
+    #[test]
+    fn effective_deadline_allows_equal_elapsed_and_passes_context() {
+        let req = request();
+        let baseline = result(
+            &req,
+            DecisionOutcome::Choice {
+                candidate_id: "keep".into(),
+                confidence: 0.5,
+            },
+            "primary",
+        );
+        let mut shadow = baseline.clone();
+        shadow.provider = "shadow".into();
+        shadow.elapsed_ms = req.deadline_ms;
+        let provider = ContextProvider {
+            seen: Cell::new(None),
+            response: Ok(shadow),
+        };
+        let observation = observe_with_budget(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&provider),
+            ShadowBudget {
+                deadline_ms: req.deadline_ms + 10,
+                queue_slots: 1,
+            },
+            false,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.match_kind, ShadowMatchKind::OutcomeMatch);
+        assert_eq!(provider.seen.get().unwrap().deadline_ms(), req.deadline_ms);
+        assert!(!provider.seen.get().unwrap().is_cancelled());
+        assert_eq!(
+            observation.primary_digest,
+            canonical_result_digest(&baseline)
+        );
+    }
+
+    #[test]
+    fn queue_capacity_is_reserved_and_released() {
+        let req = request();
+        let baseline = primary(&req);
+        let queue = ShadowQueue::new(1);
+        let held = queue.try_acquire().expect("first permit");
+        assert_eq!(queue.in_flight(), 1);
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(baseline.clone()),
+        };
+        let full = observe_with_queue(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&fake),
+            ShadowBudget {
+                deadline_ms: req.deadline_ms,
+                queue_slots: 1,
+            },
+            false,
+            &queue,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(full.match_kind, ShadowMatchKind::QueueFull);
+        assert_eq!(fake.calls.get(), 0);
+        drop(held);
+        assert_eq!(queue.in_flight(), 0);
+        let completed = observe_with_queue(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&fake),
+            ShadowBudget {
+                deadline_ms: req.deadline_ms,
+                queue_slots: 1,
+            },
+            false,
+            &queue,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(completed.match_kind, ShadowMatchKind::BothAbstain);
+        assert_eq!(fake.calls.get(), 1);
+        assert_eq!(queue.in_flight(), 0);
+    }
+
+    #[test]
+    fn provider_error_classes_are_all_preserved() {
+        let req = request();
+        let baseline = primary(&req);
+        for (error, kind) in [
+            (ShadowError::Unavailable, ShadowMatchKind::Unavailable),
+            (ShadowError::Timeout, ShadowMatchKind::Timeout),
+            (ShadowError::Cancelled, ShadowMatchKind::Cancelled),
+            (
+                ShadowError::PrivacyRejected,
+                ShadowMatchKind::PrivacyRejected,
+            ),
+            (ShadowError::QueueFull, ShadowMatchKind::QueueFull),
+        ] {
+            let fake = FakeProvider {
+                calls: Cell::new(0),
+                response: Err(error),
+            };
+            let observation = observe(ShadowMode::RecordOnly, &req, &baseline, Some(&fake))
+                .unwrap()
+                .unwrap();
+            assert_eq!(observation.match_kind, kind);
+            assert_eq!(
+                observation.primary_digest,
+                canonical_result_digest(&baseline)
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_provider_identity_is_redacted() {
+        let req = request();
+        let baseline = primary(&req);
+        let mut shadow = baseline.clone();
+        shadow.provider = "bad/provider".into();
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(shadow),
+        };
+        let observation = observe(ShadowMode::RecordOnly, &req, &baseline, Some(&fake))
+            .unwrap()
+            .unwrap();
+        assert_eq!(observation.match_kind, ShadowMatchKind::InvalidShadow);
+        assert_eq!(observation.provider_id, "unknown");
+    }
+
+    #[test]
+    fn privacy_rejected_request_never_calls_provider() {
+        let mut req = request();
+        req.payload = json!({"api_key": "not-recorded"});
+        let baseline = primary(&request());
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(baseline.clone()),
+        };
+        assert!(observe(ShadowMode::RecordOnly, &req, &baseline, Some(&fake)).is_err());
+        assert_eq!(fake.calls.get(), 0);
+    }
+
+    #[test]
+    fn replay_golden_bytes_and_digest_are_stable() {
+        let observation = ShadowObservation {
+            schema_version: DECISION_SCHEMA_V1.into(),
+            task: DecisionTask::MemoryAdmission,
+            scope: DecisionScope::Memory,
+            input_fingerprint: "sha256:input".into(),
+            primary_digest: "sha256:primary".into(),
+            shadow_digest: None,
+            match_kind: ShadowMatchKind::Unavailable,
+            provider_id: "unknown".into(),
+            elapsed_ms: 0,
+        };
+        let bytes = observation_replay_bytes(&observation);
+        assert_eq!(
+            String::from_utf8(bytes).unwrap(),
+            "{\"schema_version\":\"yunxi.decision.v1\",\"task\":\"memory_admission\",\"scope\":\"memory\",\"input_fingerprint\":\"sha256:input\",\"primary_digest\":\"sha256:primary\",\"shadow_digest\":null,\"match_kind\":\"unavailable\",\"provider_id\":\"unknown\",\"elapsed_ms\":0}"
+        );
+        assert_eq!(
+            observation_replay_digest(&observation),
+            "sha256:472dfde10227d2825f0157139d7dfcfb7dd56791e053e0a05708ac5d2d82f09f"
+        );
     }
 }
