@@ -360,17 +360,21 @@ G5-04-02 observer 接入已推送 `3c4aed3a`，证据见
 [`2026-10-05-g5-04-02-observer-evidence.md`](2026-10-05-g5-04-02-observer-evidence.md)。生产
 调用仍固定为 `ShadowMode::Disabled + provider=None`，结果不会进入 memory/KB/lifecycle。
 
-下一施工单进入 **G5-04-03 metrics/replay 与 async token 设计**（不加载 Laya 权重）：
+G5-04-03 metrics/replay 与 async token 设计已推送 `b683d750`，证据见
+[`2026-10-04-g5-04-03-metrics-token-evidence.md`](2026-10-04-g5-04-03-metrics-token-evidence.md)。
+它只增加 memory-local metrics、无序列化 token 与测试 wrapper，不改变生产写入。
+
+下一施工单进入 **G5-04-04 stale-response harness**（不加载 Laya 权重）：
 
 设计合同已写入 [`2026-10-05-g5-04-memory-admission-design.md`](2026-10-05-g5-04-memory-admission-design.md)，
 首个 consumer 固定为 memory admission；当前仍只允许设计和无模型 fake，不允许真实模型或
 生产写入语义变更。
 
-1. 固化 observer metrics/replay 的脱敏字段、计数边界和故障采样，不扩大主路径预算或写权限。
-2. 设计异步/迟到响应 token、取消和丢弃语义，证明旧响应不能覆盖新 request；先用
-   无模型 fake，不引入网络、模型 runtime 或第二 scheduler。
-3. 单独定义写入资格、权限、memory/KB 隔离和回放边界；在 G5-04 合同与门禁通过前，
-   不接入 Laya 权重、不修改真实消费者写入、不扩大权限。
+1. 用无模型 fake 构造旧 batch、旧 generation、旧 consumer epoch 与新 envelope，验证
+   stale token 只被丢弃/分类，不能调用 apply、写 DB、触发 organizer 或 scheduler。
+2. 保持 token harness 同步、内存内、无网络、无模型 runtime、无第二 scheduler；取消和
+   fault 只验证 primary 等价。
+3. 在 G5-04 合同与门禁通过前，不接入 Laya 权重、不修改真实消费者写入、不扩大权限。
 
 ## 证据与环境约束
 

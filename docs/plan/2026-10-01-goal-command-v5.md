@@ -42,18 +42,18 @@ REPOSITORY
   base: shorin/miyu
   historical_reference: sjxbbdb/YunXi-Native
   branch: codex/yunxi-product-rename
-  current_head: 444e156a
+  current_head: b683d750
 
 OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
 
 CURRENT_STAGE
-  G5-04-03-DESIGN（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
+  G5-04-04-DESIGN（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
   G4-02-01 数据面隔离、G4-02-02 可信调用方注入、G4-03 版本生命周期、G4-04
   更新/导入失败可观测性与 G4-05 更新事务恢复/收敛均已完成；G5-00 来源审计、
   G5-01 DecisionPort 契约与 G5-02 abstain-only deterministic provider 已固化，
-  G5-03 已按限定边界退出，G5-04-01 raw-free adapter 与 G5-04-02 默认关闭 observer
-  已完成，当前进入 metrics/replay 与 async token 设计）
+  G5-03 已按限定边界退出，G5-04-01 raw-free adapter、G5-04-02 默认关闭 observer
+  与 G5-04-03 metrics/token 设计均已完成；当前进入无模型 stale-response harness 设计）
 
 CURRENT_AUTHORIZATION
   G0/G1/G2 已退出，G3-05 按标准读线性化、有界 transcript barrier 与明确非目标边界退出；
@@ -68,7 +68,8 @@ CURRENT_AUTHORIZATION
   G5-03 限定退出审计见 `2026-10-04-g5-03-exit-audit.md`；G5-04-01 adapter 证据见
   `2026-10-05-g5-04-01-adapter-evidence.md`，G5-04-02 observer 证据见
   `2026-10-05-g5-04-02-observer-evidence.md`；当前只允许 G5-04-03 metrics/replay 与
-  async token 设计、无模型 fake/slow/invalid 测试夹具和异步迟到响应契约；不得
+  `2026-10-04-g5-04-03-metrics-token-evidence.md` 已记录 G5-04-03；当前只允许
+  G5-04-04 无模型 stale-response harness 与异步迟到响应契约；不得
   下载/加载权重、创建真实 Laya provider、接入消费者或修改 memory/KB/runtime。Web identity/dashboard 与
   MCP grant 仍未授权，除非另立施工单。
   不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。

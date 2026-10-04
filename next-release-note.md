@@ -28,7 +28,10 @@
   回归；WSL memory 98/98 通过。尚未接入 `apply_organized_batch`、真实 provider 或模型。
 - G5-04-02：推送 `3c4aed3a`，在 `apply_organized_batch` 的 admission 单点接入默认关闭
   record-only observer；WSL memory 100/100 通过（1 ignored），生产仍为 provider=None。
-  下一步只做 metrics/replay 与 async token 设计，不加载 Laya。
+- G5-04-03：推送 `b683d750`，增加 admission shadow 的 started/completed、11 类结果计数、
+  有界 p50/p95/p99 延迟快照，以及只由已校验 envelope 构造的不可序列化 stale token；
+  WSL admission 17/17 通过，默认 Disabled 与生产写入路径不变。异步 runtime、真实
+  provider 与 Laya 权重仍未接入；证据见 `docs/plan/2026-10-04-g5-04-03-metrics-token-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
