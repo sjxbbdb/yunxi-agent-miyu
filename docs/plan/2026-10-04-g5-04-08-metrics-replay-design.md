@@ -29,7 +29,9 @@ provider、TUI/Web、fish、daemon、scheduler 和 voice。
    `AdmissionShadowMetrics` 仍按调用次数计数，证明职责分离。
 2. 跨两个模拟 batch，重复 digest 不增加 unique 数，新 digest 增加一次；snapshot 的
    p50/p95/p99 只由 latency bucket 决定，primary envelope 前后相等。
-3. replay bytes/digest 必须字节稳定、`sha256:` + 64 hex、无 raw/private/token 字段。
+3. replay bytes/digest 必须字节稳定、`sha256:` + 64 hex、无 raw/private/token 字段；
+   digest 包含 `elapsed_ms`，所以只有 canonical bytes 完全相同才去重，耗时变化视为新
+   observation，不做语义级合并。
 4. empty/closed transport 不产生 observation、replay 或 metrics completed；invalid/stale
    先在既有顺序中丢弃。
 

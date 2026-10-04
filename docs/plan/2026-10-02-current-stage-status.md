@@ -403,8 +403,18 @@ G5-04-07 已完成并推送 `5daf238b`，证据见
 fault、privacy gate、RAII queue 与 primary 不变性由既有 decision_shadow 回归覆盖，WSL
 admission 23/23 通过。
 
-下一施工单进入 **G5-04-08 无模型指标/回放收敛设计**：只允许先设计跨批次计数、重复
-回放和观测收敛的边界，不允许创建第二 runtime、接入 Laya 或改变 production write path。
+G5-04-08 指标/回放收敛施工摘要：只允许先设计跨批次计数、重复
+回放和观测收敛的边界，不允许创建第二 runtime、接入 Laya 或改变 production write path；
+该阶段已按下方证据完成。
+
+G5-04-08 已完成并推送 `d52bc357`，证据见
+[`2026-10-04-g5-04-08-metrics-replay-evidence.md`](2026-10-04-g5-04-08-metrics-replay-evidence.md)。
+测试夹具仅对完整 replay digest 去重，验证跨模拟批次的 started/completed、分类计数、
+latency bucket、隐私字段和 primary 等价；WSL admission 24/24 通过。
+
+下一施工单进入 **G5-04-09 无模型 consumer 退出审计**：对 G5-04-01 至 G5-04-08 的
+memory admission seam 做事实/测试/隐私/清理汇总，必要时只补缺口测试，不接入 Laya、
+真实 provider、第二 runtime 或生产写入。
 
 ## 证据与环境约束
 

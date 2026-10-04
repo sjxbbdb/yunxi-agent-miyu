@@ -49,6 +49,10 @@
   metrics/replay 稳定性、私有字段排除和 mpsc disconnected 断言。实际 observer fault、
   privacy gate、RAII queue 与 primary 不变性沿用既有回归；WSL admission 23/23、Windows
   静态门禁和清理通过，证据见 `docs/plan/2026-10-04-g5-04-07-fault-replay-evidence.md`。
+- G5-04-08：推送 `d52bc357`，增加 test-only replay digest 收敛夹具；相同 canonical replay
+  只计一次，elapsed 变化产生新 digest，并验证 metrics snapshot、latency bucket、隐私
+  字段和 primary 等价。WSL admission 24/24、Windows 静态门禁和清理通过，证据见
+  `docs/plan/2026-10-04-g5-04-08-metrics-replay-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
