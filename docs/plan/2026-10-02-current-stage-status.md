@@ -364,11 +364,17 @@ G5-04-03 metrics/replay 与 async token 设计已推送 `b683d750`，证据见
 [`2026-10-04-g5-04-03-metrics-token-evidence.md`](2026-10-04-g5-04-03-metrics-token-evidence.md)。
 它只增加 memory-local metrics、无序列化 token 与测试 wrapper，不改变生产写入。
 
-下一施工单进入 **G5-04-04 stale-response harness**（不加载 Laya 权重）：
+G5-04-04 stale-response harness 已完成并推送 `0e820f54`，证据见
+[`2026-10-04-g5-04-04-stale-gate-evidence.md`](2026-10-04-g5-04-04-stale-gate-evidence.md)。
+它只在 memory admission seam 增加同步 token/context 门禁，stale 响应返回
+`DecisionError::StaleFingerprint`，不触发 callback、数据库、organizer 或 scheduler；
+WSL admission 18/18、Windows 静态门禁和清理均通过。
 
-设计合同已写入 [`2026-10-05-g5-04-memory-admission-design.md`](2026-10-05-g5-04-memory-admission-design.md)，
-首个 consumer 固定为 memory admission；当前仍只允许设计和无模型 fake，不允许真实模型或
-生产写入语义变更。
+下一施工单进入 **G5-04-05 consumer-facing harness 设计**（不加载 Laya 权重）：
+
+设计合同仍以 [`2026-10-05-g5-04-memory-admission-design.md`](2026-10-05-g5-04-memory-admission-design.md) 为准，
+首个 consumer 固定为 memory admission；当前仍只允许 G5-04-05 的设计和无模型 fake，
+不允许真实模型或生产写入语义变更。
 
 1. 用无模型 fake 构造旧 batch、旧 generation、旧 consumer epoch 与新 envelope，验证
    stale token 只被丢弃/分类，不能调用 apply、写 DB、触发 organizer 或 scheduler。

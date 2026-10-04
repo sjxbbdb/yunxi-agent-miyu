@@ -32,6 +32,11 @@
   有界 p50/p95/p99 延迟快照，以及只由已校验 envelope 构造的不可序列化 stale token；
   WSL admission 17/17 通过，默认 Disabled 与生产写入路径不变。异步 runtime、真实
   provider 与 Laya 权重仍未接入；证据见 `docs/plan/2026-10-04-g5-04-03-metrics-token-evidence.md`。
+- G5-04-04：推送 `0e820f54`，增加 memory admission 的同步 stale-response 门禁；task、
+  scope、fingerprint、diary、database、generation、epoch、mode 任一漂移均返回
+  `StaleFingerprint`，不触发 callback、数据库、organizer 或 scheduler。WSL admission
+  18/18、Windows 静态门禁和清理通过；仍未接入真实异步 provider、Laya 权重或生产消费者，
+  证据见 `docs/plan/2026-10-04-g5-04-04-stale-gate-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
