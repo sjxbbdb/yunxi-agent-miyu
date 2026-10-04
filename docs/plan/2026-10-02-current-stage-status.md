@@ -25,6 +25,12 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   通过且 primary digest 不变、privacy provider calls 为 0。证据见
   [`2026-10-04-g5-05-decision-fallback-evidence.md`](2026-10-04-g5-05-decision-fallback-evidence.md)。
   这仍不是生产 provider 或异步 runtime，G5-05 尚未退出。
+- **G5-05-03：完成 memory/KB 隔离回归。** 复用既有测试证明 KB 30 passed/2 ignored、
+  memory dedup 6 passed、semantic 5 passed/1 ignored；覆盖 namespace capability、
+  delete/recovery、memory reset 不触碰 KB、KB remove 不触碰 memory、duplicate/no-op 与
+  no-runtime fallback。证据见
+  [`2026-10-04-g5-05-isolation-evidence.md`](2026-10-04-g5-05-isolation-evidence.md)。
+  ONNX Runtime 语义样本、intent、指标摘要和真实 provider 仍未验证。
 
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、

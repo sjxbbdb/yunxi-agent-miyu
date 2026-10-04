@@ -74,6 +74,10 @@
   调用 provider；WSL decision_shadow 31/31、Windows 静态门禁和隐私扫描通过。仍未接入
   真实 provider/异步 runtime，证据见
   `docs/plan/2026-10-04-g5-05-decision-fallback-evidence.md`。
+- G5-05-03：复用既有隔离/重复/semantic 回归完成评测：KB 30 passed/2 ignored、memory
+  dedup 6 passed、semantic 5 passed/1 ignored；确认 namespace、删除恢复、memory/KB
+  边界与无 ONNX fallback 没有交叉污染。该批无生产代码变更，证据见
+  `docs/plan/2026-10-04-g5-05-isolation-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
