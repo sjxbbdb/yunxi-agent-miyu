@@ -42,6 +42,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   和敏感写入为零；RAM 明确记录为 `unavailable`，不虚构性能门槛。证据见
   [`2026-10-04-g5-05-evaluation-summary-evidence.md`](2026-10-04-g5-05-evaluation-summary-evidence.md)。
   该批仍未接入真实 provider，G5-05 仍未退出。
+- **G5-05-06：完成 recall/rerank 当前 HEAD 回归。** 复用生产 recall/rerank 与生命周期
+  测试，ranking 4/4、store 19/19 通过；覆盖 recall fatigue、truth/confidence 排序、
+  tombstone、恢复、principal 过滤和 profile prompt-only 边界。证据见
+  [`2026-10-04-g5-05-recall-rerank-evidence.md`](2026-10-04-g5-05-recall-rerank-evidence.md)。
+  仍不代表真实 provider 或 ONNX 语义模型已接入。
 
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、

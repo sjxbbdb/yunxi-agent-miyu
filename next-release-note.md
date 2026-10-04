@@ -86,6 +86,9 @@
   行为混淆矩阵、各 consumer 的 p50/p95/p99、超时/断连/非法输出/closed transport 回退、
   primary 等价、memory/KB 零交叉污染和敏感写入为零；RAM 保持 `unavailable`，不宣称
   性能达标。证据见 `docs/plan/2026-10-04-g5-05-evaluation-summary-evidence.md`。
+- G5-05-06：复用当前 HEAD 的 recall/rerank 与 store 生命周期回归，ranking 4/4、store 19/19
+  通过；覆盖 recall fatigue、truth/confidence 排序、tombstone、恢复、principal 过滤与
+  profile prompt-only 边界。证据见 `docs/plan/2026-10-04-g5-05-recall-rerank-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
