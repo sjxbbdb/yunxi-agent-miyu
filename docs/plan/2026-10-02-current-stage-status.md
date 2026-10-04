@@ -354,6 +354,10 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 下一施工单进入 **G5-04 前置设计**（不加载 Laya 权重）：
 
+设计合同已写入 [`2026-10-05-g5-04-memory-admission-design.md`](2026-10-05-g5-04-memory-admission-design.md)，
+首个 consumer 固定为 memory admission；当前仍只允许设计和无模型 fake，不允许真实模型或
+生产写入语义变更。
+
 1. 为首个真实 consumer 选择窄切片（优先 context salience 或 memory admission），
    固定输入 allowlist、脱敏、primary-only fallback、独立开关、预算和指标。
 2. 设计异步/迟到响应 token、取消和丢弃语义，证明旧响应不能覆盖新 request；先用

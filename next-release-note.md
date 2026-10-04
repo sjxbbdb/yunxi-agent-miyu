@@ -21,6 +21,9 @@
   不变性回归。真实消费者、调度或 Laya 权重尚未接入；退出审计见
   `docs/plan/2026-10-04-g5-03-exit-audit.md`。下一阶段进入 G5-04 consumer admission
   前置设计，仍不加载 Laya 权重。
+- G5-04-DESIGN：首个 DecisionPort consumer 固定为 memory admission；设计
+  `2026-10-05-g5-04-memory-admission-design.md` 明确 request allowlist、primary-only
+  fallback、lifecycle/KB 隔离、异步迟到 token 边界与无模型测试矩阵，尚未修改运行时代码。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
