@@ -2145,8 +2145,7 @@ mod tests {
         let config = GateProbeConfig::for_control(control);
         let targeted = target == consumer;
         let audit_recorded = !(targeted && control == GateProbeControl::AuditOff);
-        let (result, reason, provider_calls) = if targeted && control == GateProbeControl::Disabled
-        {
+        let (result, reason, provider_calls) = if targeted && !config.enabled {
             let provider = FakeProvider {
                 calls: Cell::new(0),
                 response: Ok(baseline.clone()),
