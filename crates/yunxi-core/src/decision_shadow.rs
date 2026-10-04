@@ -25,6 +25,12 @@ pub enum ShadowMode {
     RecordOnly,
 }
 
+impl Default for ShadowMode {
+    fn default() -> Self {
+        Self::Disabled
+    }
+}
+
 /// Synchronous limits for one record-only shadow call.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShadowBudget {
@@ -560,6 +566,11 @@ mod tests {
             None
         );
         assert_eq!(fake.calls.get(), 0);
+    }
+
+    #[test]
+    fn shadow_mode_defaults_to_disabled() {
+        assert_eq!(ShadowMode::default(), ShadowMode::Disabled);
     }
 
     #[test]
