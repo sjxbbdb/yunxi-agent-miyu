@@ -1,7 +1,7 @@
 # G5-05-05 统一 deterministic 评测摘要证据
 
 - 任务：G5-05-05
-- 代码提交：`df4b0f36`（`G5-05 add deterministic evaluation summary`）
+- 代码提交：`df4b0f36`（摘要）与 `9f5e1713`（实际 fallback seam 回归）
 - 记录时间：2026-10-04（Asia/Singapore）
 - 阶段：G5-05-DESIGN；本证据不推进 G5-06
 
@@ -36,7 +36,9 @@ running 32 tests
 test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 748 filtered out
 ```
 
-其中新增摘要测试与既有 fallback、replay、privacy、queue、primary 不变性测试均通过。
+其中新增摘要测试会实际调用 `observe` 的 invalid、over-deadline、provider unavailable
+和 absent-provider（closed transport 映射）分支，并逐项核对 `primary_digest` 与回退分类；
+新增摘要测试与既有 fallback、replay、privacy、queue、primary 不变性测试均通过。
 清理复核：`/tmp/g5-05-05-target` 不存在；没有启动 daemon、MCP、provider 或监听端口。
 
 ## Windows 门禁

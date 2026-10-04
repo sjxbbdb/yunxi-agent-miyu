@@ -36,7 +36,8 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   不执行命令、不产生澄清副作用。证据见
   [`2026-10-04-g5-05-terminal-intent-evidence.md`](2026-10-04-g5-05-terminal-intent-evidence.md)。
   这不是 fish/权限/真实 intent consumer，G5-05 仍未退出。
-- **G5-05-05：完成统一 deterministic 评测摘要 test-only 断言。** `df4b0f36` 覆盖七类行为、
+- **G5-05-05：完成统一 deterministic 评测摘要 test-only 断言。** `df4b0f36` 与后续
+  `9f5e1713` 覆盖七类行为、
   混淆矩阵、各 consumer 的 p50/p95/p99、回退计数、primary 等价、memory/KB 零交叉污染
   和敏感写入为零；RAM 明确记录为 `unavailable`，不虚构性能门槛。证据见
   [`2026-10-04-g5-05-evaluation-summary-evidence.md`](2026-10-04-g5-05-evaluation-summary-evidence.md)。

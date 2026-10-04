@@ -82,7 +82,7 @@
   回归；decision 10/10 通过，确认 baseline 不执行命令、不产生澄清副作用。该批仍不实现
   fish/权限/真实 intent consumer，证据见
   `docs/plan/2026-10-04-g5-05-terminal-intent-evidence.md`。
-- G5-05-05：推送 `df4b0f36`，新增统一 deterministic 评测摘要（test-only），记录七类
+- G5-05-05：推送 `df4b0f36`、`9f5e1713`，新增统一 deterministic 评测摘要（test-only），记录七类
   行为混淆矩阵、各 consumer 的 p50/p95/p99、超时/断连/非法输出/closed transport 回退、
   primary 等价、memory/KB 零交叉污染和敏感写入为零；RAM 保持 `unavailable`，不宣称
   性能达标。证据见 `docs/plan/2026-10-04-g5-05-evaluation-summary-evidence.md`。
