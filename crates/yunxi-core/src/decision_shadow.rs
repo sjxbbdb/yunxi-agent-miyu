@@ -1647,6 +1647,73 @@ mod tests {
         consumers.insert("memory_admission", consumer_metrics(&[8, 12, 20], 0));
         consumers.insert("decision_shadow", consumer_metrics(&[25, 42, 60, 75], 1));
 
+        let request = request();
+        let baseline = primary(&request);
+        let expected_digest = canonical_result_digest(&baseline);
+        let mut fallback_rows = Vec::new();
+
+        let mut invalid = baseline.clone();
+        invalid.provider = "bad/provider".to_owned();
+        let invalid_provider = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(invalid),
+        };
+        let observation = observe(
+            ShadowMode::RecordOnly,
+            &request,
+            &baseline,
+            Some(&invalid_provider),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.primary_digest, expected_digest);
+        assert_eq!(observation.match_kind, ShadowMatchKind::InvalidShadow);
+        fallback_rows.push(("invalid_output", observation.match_kind));
+
+        let mut over_deadline = baseline.clone();
+        over_deadline.provider = "shadow".to_owned();
+        over_deadline.elapsed_ms = request.deadline_ms + 1;
+        let timeout_provider = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(over_deadline),
+        };
+        let observation = observe(
+            ShadowMode::RecordOnly,
+            &request,
+            &baseline,
+            Some(&timeout_provider),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.primary_digest, expected_digest);
+        assert_eq!(observation.match_kind, ShadowMatchKind::Timeout);
+        fallback_rows.push(("timeout", observation.match_kind));
+
+        let disconnect_provider = FakeProvider {
+            calls: Cell::new(0),
+            response: Err(ShadowError::Unavailable),
+        };
+        let observation = observe(
+            ShadowMode::RecordOnly,
+            &request,
+            &baseline,
+            Some(&disconnect_provider),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.primary_digest, expected_digest);
+        assert_eq!(observation.match_kind, ShadowMatchKind::Unavailable);
+        fallback_rows.push(("disconnect", observation.match_kind));
+
+        // A closed transport is represented by an absent provider at this
+        // synchronous seam; the dedicated fallback test covers the channel.
+        let observation = observe(ShadowMode::RecordOnly, &request, &baseline, None)
+            .unwrap()
+            .unwrap();
+        assert_eq!(observation.primary_digest, expected_digest);
+        assert_eq!(observation.match_kind, ShadowMatchKind::Unavailable);
+        fallback_rows.push(("closed_transport", observation.match_kind));
+
         let summary = EvaluationSummary {
             total: rows.len() as u32,
             accepted,
@@ -1657,16 +1724,28 @@ mod tests {
             confusion_matrix,
             consumers,
             fallback: FallbackMetrics {
-                invalid_output_count: 1,
-                disconnect_count: 1,
-                closed_transport_count: 1,
-                timeout_count: 1,
-                primary_preserved_count: 4,
+                invalid_output_count: fallback_rows
+                    .iter()
+                    .filter(|(label, _)| *label == "invalid_output")
+                    .count() as u32,
+                disconnect_count: fallback_rows
+                    .iter()
+                    .filter(|(label, _)| *label == "disconnect")
+                    .count() as u32,
+                closed_transport_count: fallback_rows
+                    .iter()
+                    .filter(|(label, _)| *label == "closed_transport")
+                    .count() as u32,
+                timeout_count: fallback_rows
+                    .iter()
+                    .filter(|(label, _)| *label == "timeout")
+                    .count() as u32,
+                primary_preserved_count: fallback_rows.len() as u32,
             },
             // RAM is intentionally not guessed on this host. A later provider
             // gate may replace this with a measured disposable-process value.
             ram: "unavailable",
-            primary_digest_equal: true,
+            primary_digest_equal: fallback_rows.len() == 4,
             memory_kb_cross_pollution: 0,
             sensitive_write_count: 0,
         };
