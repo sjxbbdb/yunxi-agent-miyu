@@ -2,7 +2,7 @@
 
 日期：2026-10-04  
 阶段：G5-03  
-性质：设计合同；无模型、无网络、无运行时 provider 实现。  
+性质：设计合同；当前实现仍无模型、无网络、无运行时 provider。
 前置：G5-00 Laya 来源审计、G5-01 DecisionPort 契约、G5-02 deterministic provider；前置实现锚点为 `2b458d39`，G5-02 的测试证据由阶段验收文档补充。
 
 ## 1. 目标与边界
@@ -58,15 +58,16 @@ request 脱敏 / 规范化 / fingerprint / DecisionPort 校验
 
 配置变更只影响后续请求，不得让正在执行的 observation 改变主路径。
 
-## 5. 建议接口（设计级，不授权实现）
+## 5. 接口边界（当前实现仍不授权模型接入）
 
 接口应复用 G5-01 的 `DecisionRequest`、`DecisionResult` 和 `validate_result`，不引入 Laya 专用类型：
 
 ```text
 ShadowDecisionProvider::observe(
     request: &DecisionRequest,
-    budget: ShadowBudget,
 ) -> Result<DecisionResult, ShadowError>
+
+observe_with_budget(mode, request, primary, provider, budget, cancelled)
 ```
 
 provider 只能读取已通过隐私门禁的 request，不能取得 `MemoryStore`、知识库、host grant、MCP pool、fish executor 或 scheduler 的写句柄。
@@ -134,15 +135,21 @@ ShadowObservation {
 
 注入 match、mismatch、slow、cancel、断连、非法 schema、未知 candidate、越界 score 和 stale fingerprint 的 fake provider；验证 fake provider 无法取得写句柄；仅测试协议与 orchestrator。
 
-### G5-03-C：record-only dry-run
+### G5-03-C：record-only dry-run（已推送 `a5f48982`）
 
-默认 disabled；显式启用后只记录最小 observation；主结果仍直接来自 deterministic provider；不接入 memory、KB、terminal、companion 或用户可见路径。
+默认 disabled；显式启用后只记录最小 observation。`observe_with_budget` 在 provider
+调用前执行取消、零 deadline、队列满预检；provider 返回的 `elapsed_ms` 超过 shadow
+budget 时分类为 `timeout`。`observation_replay_bytes` 使用固定的 observation
+envelope 字段序列化，`observation_replay_digest` 用 SHA-256 生成稳定摘要。该实现是
+同步 best-effort：不会强行中断一个已经进入 provider 的阻塞调用；它只根据预检和返回的
+elapsed budget 分类，不启动后台线程或模型 runtime。主结果仍直接来自 deterministic
+provider；不接入 memory、KB、terminal、companion 或用户可见路径。
 
-### G5-03-D：权威环境验收
+### G5-03-D：权威环境验收（进行中）
 
 Windows 只做格式、metadata、架构依赖和隐私扫描；WSL ext4 disposable checkout 运行定向测试，并分别记录完整测试的通过、忽略和既有失败；测试后删除临时 checkout、日志、缓存和模型工件。
 
-### G5-03-E：证据与推进门
+### G5-03-E：证据与推进门（待完成）
 
 记录默认关闭、主路径等价、故障矩阵、隐私扫描、回放和清理证据；每批代码/文档变更单独验收并推送；只有证据完整后才可另立 Laya adapter/离线评测施工单。
 

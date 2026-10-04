@@ -324,12 +324,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   WSL full `yunxi-core` 仍有 5 个既有 `llm::openai_compatible` 测试失败（711 passed、
   8 ignored），与本切片无关，未伪装成全绿。
 
-- **当前：G5-03 shadow provider 观测层。** 设计合同已固化；G5-03-A/B 的第一批
-  无模型同步 observer 已推送 `65f9319d`。`ShadowMode::Disabled` 不调用 provider，
-  `RecordOnly` 只写最小 observation；主结果始终是 deterministic baseline。WSL
-  Ubuntu-24.04 ext4 的 shadow 定向测试为 10/10，decision 回归为 19/19；Windows
-  fmt、metadata、架构依赖门禁和隐私扫描通过。尚未下载/加载 Laya、接入消费者、
-  调度、memory/KB、权限或主动消息；G5-03-C/D 的状态机/回放/容量证据仍未完成。
+- **当前：G5-03 shadow provider 观测层。** G5-03-A/B 的无模型同步 observer
+  已推送 `65f9319d`；G5-03-C 的预算/取消/队列预检、provider elapsed 超预算分类、
+  稳定 observation replay bytes/digest 已推送 `a5f48982`。`ShadowMode::Disabled`
+  不调用 provider，`RecordOnly` 只写最小 observation；主结果始终是 deterministic
+  baseline。WSL Ubuntu-24.04 ext4 disposable checkout 的 shadow 定向测试为
+  17/17，decision 回归为 26/26；Windows fmt、metadata、架构依赖门禁、隐私扫描和
+  diff check 通过。尚未下载/加载 Laya、接入消费者、调度、memory/KB、权限或主动
+  消息；G5-03-D/E 的完整故障矩阵与阶段退出证据仍未完成。
 
 ## G3-05 退出决定
 
@@ -344,12 +346,13 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 下一施工单仍在 **G5-03**：
 
-1. 为 observer 补齐 record-only 的预算/取消/队列容量和回放字节状态机，不引入后台
-   任务或模型运行时。
-2. 在无模型 fake 中覆盖 slow/timeout/invalid/unknown/stale/privacy/cancel 故障，
-   证明 shadow 关闭或失败时主结果字节、写入资格和权限判定不变。
-3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate、
-   G5-02 协议和旧 API/旧数据库兼容；Laya 适配器、消费者接入和模型资源另立施工单。
+1. 以无模型 fake 完成 Disabled/Cancelled/Timeout/QueueFull/Unavailable/
+   ProviderError/InvalidShadow/StaleFingerprint/Exact/OutcomeMismatch/BothAbstain
+   故障矩阵，证明 shadow 开关、失败、迟到响应都不改变 primary、写入资格和权限判定。
+2. 固化 replay envelope 的版本、字段顺序、digest 与容量/清理证据；补齐 privacy
+   gate、非法 provider identity、边界 deadline 与重复观测的回归。
+3. 更新 G5-03-D/E 证据并完成阶段退出审计；在此之前不得接入 Laya、消费者、
+   memory/KB、权限或 scheduler。Laya 适配器、消费者接入和模型资源另立施工单。
 
 ## 证据与环境约束
 
