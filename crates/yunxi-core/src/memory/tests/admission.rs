@@ -1520,3 +1520,83 @@ fn sensitive_source_cannot_be_promoted_by_organizer_output() {
         .unwrap();
     assert_eq!(reason, "organizer_rejected:sensitive_credential");
 }
+
+#[test]
+fn g5_05_deterministic_admission_evaluation_matrix_is_replayable() {
+    #[derive(Clone, Copy)]
+    struct Case {
+        id: &'static str,
+        text: &'static str,
+        force_long_term: bool,
+        verdict: AdmissionVerdict,
+        class: AdmissionClass,
+    }
+
+    let cases = [
+        Case {
+            id: "important-project-constraint",
+            text: "项目仓库必须运行 cargo fmt",
+            force_long_term: false,
+            verdict: AdmissionVerdict::Admit,
+            class: AdmissionClass::ProjectConstraint,
+        },
+        Case {
+            id: "chitchat-no-long-term-signal",
+            text: "你好，谢谢",
+            force_long_term: false,
+            verdict: AdmissionVerdict::Abstain,
+            class: AdmissionClass::Ambiguous,
+        },
+        Case {
+            id: "sensitive-password",
+            text: "password: <redacted>",
+            force_long_term: false,
+            verdict: AdmissionVerdict::Reject,
+            class: AdmissionClass::SensitiveCredential,
+        },
+        Case {
+            id: "sensitive-secret",
+            text: "这是一个 secret",
+            force_long_term: false,
+            verdict: AdmissionVerdict::Reject,
+            class: AdmissionClass::SensitiveSecret,
+        },
+        Case {
+            id: "stable-preference",
+            text: "我的终端偏好是使用 fish",
+            force_long_term: false,
+            verdict: AdmissionVerdict::Admit,
+            class: AdmissionClass::StablePreference,
+        },
+        Case {
+            id: "forced-sensitive-still-rejected",
+            text: "请记住 password: <redacted>",
+            force_long_term: true,
+            verdict: AdmissionVerdict::Reject,
+            class: AdmissionClass::SensitiveCredential,
+        },
+    ];
+
+    let mut replay = Vec::new();
+    for case in cases {
+        let decision = deterministic_admission_text(case.text, case.force_long_term);
+        assert_eq!(decision.verdict, case.verdict, "case {}", case.id);
+        assert_eq!(decision.class, case.class, "case {}", case.id);
+        replay.push((case.id, decision.verdict, decision.class));
+    }
+
+    let second_pass = cases
+        .into_iter()
+        .map(|case| {
+            let decision = deterministic_admission_text(case.text, case.force_long_term);
+            (case.id, decision.verdict, decision.class)
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(replay, second_pass);
+
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let primary_before = envelope.primary.clone();
+    validate_admission_request(&envelope.request).unwrap();
+    validate_result(&envelope.request, &envelope.primary).unwrap();
+    assert_eq!(envelope.primary, primary_before);
+}
