@@ -15,6 +15,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   [`2026-10-04-g5-05-evaluation-design.md`](2026-10-04-g5-05-evaluation-design.md)。当前只
   固定脱敏样本、deterministic oracle、七类行为、指标和故障边界；尚未新增测试代码、
   provider、模型权重或生产 consumer。
+- **G5-05-01：已完成 admission 第一切片。** `1af476ca` 在 test-only admission
+  matrix 中覆盖项目约束、闲聊、敏感拒绝、稳定偏好和 force-sensitive rejection，WSL
+  admission 25/25 通过；primary envelope 前后相等。完整证据见
+  [`2026-10-04-g5-05-admission-evaluation-evidence.md`](2026-10-04-g5-05-admission-evaluation-evidence.md)。
+  recall/rerank、intent、memory/KB 隔离、故障 fallback 与指标摘要仍未完成。
 
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、

@@ -64,6 +64,11 @@
   RAM、超时、非法输出和断连回退指标。第一批只允许 `#[cfg(test)]` 夹具与证据文档，
   不创建 provider、不下载 Laya、不改变生产写入；合同见
   `docs/plan/2026-10-04-g5-05-evaluation-design.md`。
+- G5-05-01：推送 `1af476ca`，新增 test-only deterministic admission matrix，覆盖项目
+  约束、闲聊、敏感拒绝、稳定偏好和 force-sensitive rejection，并验证两次回放结果与
+  primary envelope 一致；WSL admission 25/25、Windows 静态门禁和隐私扫描通过。recall/
+  rerank、terminal intent、memory/KB 隔离、故障 fallback 和指标摘要仍待后续切片，证据见
+  `docs/plan/2026-10-04-g5-05-admission-evaluation-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
