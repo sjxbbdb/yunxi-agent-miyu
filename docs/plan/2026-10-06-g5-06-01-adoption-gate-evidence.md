@@ -26,7 +26,7 @@ consumer adoption harness。它以既有 `DecisionRequest`、deterministic prima
 在 Ubuntu-24.04 ext4 disposable target 上执行：
 
 ```text
-wsl.exe -d Ubuntu-24.04 -- bash -lc 'cd /mnt/d/YunXi-Miyu && rm -rf /tmp/g5-06-01-target && mkdir -p /tmp/g5-06-01-target && CARGO_TARGET_DIR=/tmp/g5-06-01-target cargo test -p yunxi-core --lib decision_shadow --locked -- --nocapture --test-threads=1'
+wsl.exe -d Ubuntu-24.04 -- bash -lc 'cd <disposable-checkout> && rm -rf /tmp/g5-06-01-target && mkdir -p /tmp/g5-06-01-target && CARGO_TARGET_DIR=/tmp/g5-06-01-target cargo test -p yunxi-core --lib decision_shadow --locked -- --nocapture --test-threads=1'
 ```
 
 结果：`33 passed; 0 failed; 0 ignored; 748 filtered out`。新增测试

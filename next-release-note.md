@@ -99,6 +99,11 @@
   副作用为零、privacy 在 provider 前拒绝、replay bytes 稳定。没有真实 provider、Laya
   权重、网络、数据库、scheduler 或生产 consumer；证据见
   `docs/plan/2026-10-06-g5-06-01-adoption-gate-evidence.md`，阶段仍为 G5-06-DESIGN。
+- G5-06-02：推送 `b7bc6df9`，在 `decision_shadow` 测试区增加五类 consumer 的独立
+  开关/预算/隐私/审计矩阵；5×5 控制批次共 125 行，目标故障不污染其他 consumer，
+  primary digest 不变、副作用为零、replay bytes 稳定。WSL `decision_shadow` 34/34
+  通过，未加载 Laya、未接入真实 provider 或生产调用；证据见
+  `docs/plan/2026-10-06-g5-06-02-gate-matrix-evidence.md`，阶段仍为 G5-06-DESIGN。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。

@@ -62,6 +62,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   scheduler 或生产 consumer，阶段仍停在 G5-06-DESIGN。完整证据见
   [`2026-10-06-g5-06-01-adoption-gate-evidence.md`](2026-10-06-g5-06-01-adoption-gate-evidence.md)。
 
+- **G5-06-02：完成独立开关/预算/隐私/审计矩阵 test-only slice。** `b7bc6df9` 对五类
+  consumer 逐一注入 disabled、zero-deadline、privacy rejection、audit-off，并验证四个
+  非目标 consumer 的 provider/fallback/audit 行为不受污染；125 行矩阵、primary digest
+  不变、副作用为零、replay bytes 稳定。WSL `decision_shadow` 34/34 通过，Windows
+  fmt/diff/privacy 门禁和 disposable target 清理通过。没有真实 provider、Laya 权重或
+  生产调用，阶段仍停在 G5-06-DESIGN。证据见
+  [`2026-10-06-g5-06-02-gate-matrix-evidence.md`](2026-10-06-g5-06-02-gate-matrix-evidence.md)。
+
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、
   macOS、部分故障注入和跨 SQLite 文件原子性仍是明确的未验证项。
