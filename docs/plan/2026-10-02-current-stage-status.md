@@ -326,10 +326,12 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 
 - **当前：G5-03 shadow provider 观测层。** G5-03-A/B 的无模型同步 observer
   已推送 `65f9319d`；G5-03-C 的预算/取消/队列预检、provider elapsed 超预算分类、
-  稳定 observation replay bytes/digest 已推送 `a5f48982`。`ShadowMode::Disabled`
+  稳定 observation replay bytes/digest 已推送 `a5f48982`；G5-03-D 第一批硬化已推送
+  `a735444b`，加入 `ShadowQueue` 原子容量/RAII permit、有效 deadline、协作式
+  `ShadowCallContext`、完整错误映射与 replay golden 向量。`ShadowMode::Disabled`
   不调用 provider，`RecordOnly` 只写最小 observation；主结果始终是 deterministic
   baseline。WSL Ubuntu-24.04 ext4 disposable checkout 的 shadow 定向测试为
-  17/17，decision 回归为 26/26；Windows fmt、metadata、架构依赖门禁、隐私扫描和
+  23/23，decision 回归为 32/32；Windows fmt、metadata、架构依赖门禁、隐私扫描和
   diff check 通过。尚未下载/加载 Laya、接入消费者、调度、memory/KB、权限或主动
   消息；G5-03-D/E 的完整故障矩阵与阶段退出证据仍未完成。
 

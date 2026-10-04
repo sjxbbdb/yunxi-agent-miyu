@@ -13,7 +13,8 @@
 
 1. `deterministic baseline` 是唯一权威结果；主路径只返回它的结果。
 2. shadow 默认 `disabled`，即使启用也只能记录观测，不得替换、修正或延迟主结果。
-3. shadow 只读、无副作用、可取消、可限时、可回放；不持有任何写句柄。
+3. shadow 只读、无副作用、可回放；调用前可取消/限时，已进入 provider 的同步调用
+   只能通过 `ShadowCallContext` 协作式取消/限时，模块不强行中断阻塞 provider；不持有任何写句柄。
 4. 输入必须先经过 DecisionPort 的最小化和隐私校验；shadow 不得绕过校验。
 5. 当前不下载或加载 Laya 权重，不引入 Python、Node、ONNX、HTTP 或其他模型依赖。
 
@@ -52,7 +53,8 @@ request 脱敏 / 规范化 / fingerprint / DecisionPort 校验
 
 - `deadline_ms = 0` 立即跳过 shadow；
 - 正值不得超过调用方为主请求保留的预算；
-- 取消、deadline 到期、队列满或进程断连立即结束 shadow；
+- 取消、零有效 deadline 或队列满在 provider 调用前立即结束 shadow；已进入 provider
+  的同步调用必须自行检查 `ShadowCallContext`，本模块不启动线程或强行中断阻塞调用；
 - 迟到响应必须带有原始 `input_fingerprint`，不匹配时丢弃；
 - 关闭 shadow 前后，主结果、消费者写入资格、权限结果、回放字节必须相同。
 
@@ -67,10 +69,19 @@ ShadowDecisionProvider::observe(
     request: &DecisionRequest,
 ) -> Result<DecisionResult, ShadowError>
 
+ShadowDecisionProvider::observe_with_context(
+    request: &DecisionRequest,
+    context: ShadowCallContext,
+) -> Result<DecisionResult, ShadowError>
+
 observe_with_budget(mode, request, primary, provider, budget, cancelled)
+observe_with_queue(mode, request, primary, provider, budget, cancelled, queue)
 ```
 
-provider 只能读取已通过隐私门禁的 request，不能取得 `MemoryStore`、知识库、host grant、MCP pool、fish executor 或 scheduler 的写句柄。
+`observe_with_budget` 是兼容的无队列入口；需要并发容量保证的调用方必须持有并传入
+`ShadowQueue`。queue 使用原子 in-flight 计数和 RAII permit，正容量会真实消耗并在
+所有返回路径释放。provider 只能读取已通过隐私门禁的 request，不能取得 `MemoryStore`、
+知识库、host grant、MCP pool、fish executor 或 scheduler 的写句柄。
 
 建议的最小观测 envelope：
 
@@ -141,11 +152,12 @@ ShadowObservation {
 调用前执行取消、零 deadline、队列满预检；provider 返回的 `elapsed_ms` 超过 shadow
 budget 时分类为 `timeout`。`observation_replay_bytes` 使用固定的 observation
 envelope 字段序列化，`observation_replay_digest` 用 SHA-256 生成稳定摘要。该实现是
-同步 best-effort：不会强行中断一个已经进入 provider 的阻塞调用；它只根据预检和返回的
-elapsed budget 分类，不启动后台线程或模型 runtime。主结果仍直接来自 deterministic
+同步 best-effort：不会强行中断一个已经进入 provider 的阻塞调用；provider 可通过
+`ShadowCallContext` 协作式检查 deadline。需要并发容量保证时使用 `ShadowQueue`，不启动
+后台线程或模型 runtime。主结果仍直接来自 deterministic
 provider；不接入 memory、KB、terminal、companion 或用户可见路径。
 
-### G5-03-D：权威环境验收（进行中）
+### G5-03-D：权威环境验收（进行中，代码硬化已推送 `a735444b`）
 
 Windows 只做格式、metadata、架构依赖和隐私扫描；WSL ext4 disposable checkout 运行定向测试，并分别记录完整测试的通过、忽略和既有失败；测试后删除临时 checkout、日志、缓存和模型工件。
 
