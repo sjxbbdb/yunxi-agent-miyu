@@ -31,6 +31,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   no-runtime fallback。证据见
   [`2026-10-04-g5-05-isolation-evidence.md`](2026-10-04-g5-05-isolation-evidence.md)。
   ONNX Runtime 语义样本、intent、指标摘要和真实 provider 仍未验证。
+- **G5-05-04：完成 terminal intent deterministic baseline 回归。** `72d801df` 新增
+  脱敏 TerminalIntent/TerminalTurn abstain 测试，decision 10/10 通过；明确 baseline
+  不执行命令、不产生澄清副作用。证据见
+  [`2026-10-04-g5-05-terminal-intent-evidence.md`](2026-10-04-g5-05-terminal-intent-evidence.md)。
+  这不是 fish/权限/真实 intent consumer，G5-05 仍未退出。
 
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、

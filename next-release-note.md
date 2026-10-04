@@ -78,6 +78,10 @@
   dedup 6 passed、semantic 5 passed/1 ignored；确认 namespace、删除恢复、memory/KB
   边界与无 ONNX fallback 没有交叉污染。该批无生产代码变更，证据见
   `docs/plan/2026-10-04-g5-05-isolation-evidence.md`。
+- G5-05-04：推送 `72d801df`，补充 TerminalIntent/TerminalTurn deterministic abstain
+  回归；decision 10/10 通过，确认 baseline 不执行命令、不产生澄清副作用。该批仍不实现
+  fish/权限/真实 intent consumer，证据见
+  `docs/plan/2026-10-04-g5-05-terminal-intent-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
