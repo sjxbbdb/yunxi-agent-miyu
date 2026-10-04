@@ -2291,4 +2291,125 @@ mod tests {
         assert!(!encoded.contains("password"));
         assert!(!encoded.contains("profile"));
     }
+
+    #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+    struct AdoptionEvidence {
+        provider_revision: Option<&'static str>,
+        quality: bool,
+        latency: bool,
+        resources: bool,
+        privacy: bool,
+        fallback: bool,
+        isolation: bool,
+        replay: bool,
+        manual_audit: bool,
+    }
+
+    impl AdoptionEvidence {
+        const fn unavailable() -> Self {
+            Self {
+                provider_revision: None,
+                quality: false,
+                latency: false,
+                resources: false,
+                privacy: false,
+                fallback: false,
+                isolation: false,
+                replay: false,
+                manual_audit: false,
+            }
+        }
+
+        const fn complete_for_fixture() -> Self {
+            Self {
+                provider_revision: Some("fixture-revision"),
+                quality: true,
+                latency: true,
+                resources: true,
+                privacy: true,
+                fallback: true,
+                isolation: true,
+                replay: true,
+                manual_audit: true,
+            }
+        }
+
+        const fn eligible(self) -> bool {
+            self.provider_revision.is_some()
+                && self.quality
+                && self.latency
+                && self.resources
+                && self.privacy
+                && self.fallback
+                && self.isolation
+                && self.replay
+                && self.manual_audit
+        }
+    }
+
+    #[derive(Debug, Serialize, PartialEq, Eq)]
+    struct EligibilityRow {
+        consumer: &'static str,
+        decision: &'static str,
+        reason: &'static str,
+        primary_digest: String,
+        side_effects: u32,
+    }
+
+    #[test]
+    fn g5_06_missing_adoption_evidence_keeps_every_consumer_record_only() {
+        let evidence = AdoptionEvidence::unavailable();
+        assert!(!evidence.eligible());
+        let rows = AdoptionConsumer::ALL
+            .into_iter()
+            .map(|consumer| {
+                let request = adoption_request(consumer);
+                EligibilityRow {
+                    consumer: consumer.name(),
+                    decision: "record_only",
+                    reason: "evidence_unavailable",
+                    primary_digest: canonical_result_digest(&primary(&request)),
+                    side_effects: 0,
+                }
+            })
+            .collect::<Vec<_>>();
+        let encoded = serde_json::to_string(&rows).expect("eligibility is JSON");
+        let replay = serde_json::to_string(&rows).expect("eligibility replay is JSON");
+        assert_eq!(encoded, replay);
+        assert_eq!(rows.len(), AdoptionConsumer::ALL.len());
+        assert!(rows.iter().all(|row| row.decision == "record_only"));
+        assert!(rows.iter().all(|row| row.side_effects == 0));
+        assert!(!encoded.contains("fixture-revision"));
+        assert!(!encoded.contains("provider_revision"));
+
+        let complete = AdoptionEvidence::complete_for_fixture();
+        assert!(complete.eligible());
+        for field in [
+            "quality",
+            "latency",
+            "resources",
+            "privacy",
+            "fallback",
+            "isolation",
+            "replay",
+            "manual_audit",
+        ] {
+            let mut candidate = complete;
+            match field {
+                "quality" => candidate.quality = false,
+                "latency" => candidate.latency = false,
+                "resources" => candidate.resources = false,
+                "privacy" => candidate.privacy = false,
+                "fallback" => candidate.fallback = false,
+                "isolation" => candidate.isolation = false,
+                "replay" => candidate.replay = false,
+                "manual_audit" => candidate.manual_audit = false,
+                _ => unreachable!(),
+            }
+            assert!(
+                !candidate.eligible(),
+                "missing evidence must fail closed: {field}"
+            );
+        }
+    }
 }
