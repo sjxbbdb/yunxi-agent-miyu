@@ -9,6 +9,9 @@ use serde_json::json;
 use std::cell::Cell;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::mpsc::{sync_channel, TrySendError};
+use std::sync::{Arc, Barrier};
+use std::thread;
 use yunxi_base::config::AppConfig;
 
 fn diary(
@@ -629,6 +632,15 @@ struct PendingAdmissionResponse {
     token: AdmissionShadowToken,
     request: crate::decision::DecisionRequest,
     response: crate::decision::DecisionResult,
+    state: PendingAdmissionState,
+}
+
+#[derive(Clone, Copy)]
+enum PendingAdmissionState {
+    Ready,
+    Cancelled,
+    TimedOut,
+    Unavailable,
 }
 
 /// A test-only consumer model for the future async seam.
@@ -643,6 +655,9 @@ struct AdmissionResponseHarness {
     applied: Cell<usize>,
     stale_dropped: Cell<usize>,
     invalid_dropped: Cell<usize>,
+    cancelled_dropped: Cell<usize>,
+    timed_out_dropped: Cell<usize>,
+    unavailable_dropped: Cell<usize>,
 }
 
 impl AdmissionResponseHarness {
@@ -653,6 +668,9 @@ impl AdmissionResponseHarness {
             applied: Cell::new(0),
             stale_dropped: Cell::new(0),
             invalid_dropped: Cell::new(0),
+            cancelled_dropped: Cell::new(0),
+            timed_out_dropped: Cell::new(0),
+            unavailable_dropped: Cell::new(0),
         }
     }
 
@@ -662,15 +680,44 @@ impl AdmissionResponseHarness {
         request: crate::decision::DecisionRequest,
         response: crate::decision::DecisionResult,
     ) {
+        self.push_with_state(token, request, response, PendingAdmissionState::Ready);
+    }
+
+    fn push_with_state(
+        &mut self,
+        token: AdmissionShadowToken,
+        request: crate::decision::DecisionRequest,
+        response: crate::decision::DecisionResult,
+        state: PendingAdmissionState,
+    ) {
         self.pending.push_back(PendingAdmissionResponse {
             token,
             request,
             response,
+            state,
         });
     }
 
     fn drain(&mut self) {
         while let Some(pending) = self.pending.pop_front() {
+            match pending.state {
+                PendingAdmissionState::Ready => {}
+                PendingAdmissionState::Cancelled => {
+                    self.cancelled_dropped
+                        .set(self.cancelled_dropped.get().saturating_add(1));
+                    continue;
+                }
+                PendingAdmissionState::TimedOut => {
+                    self.timed_out_dropped
+                        .set(self.timed_out_dropped.get().saturating_add(1));
+                    continue;
+                }
+                PendingAdmissionState::Unavailable => {
+                    self.unavailable_dropped
+                        .set(self.unavailable_dropped.get().saturating_add(1));
+                    continue;
+                }
+            }
             if validate_result(&pending.request, &pending.response).is_err() {
                 self.invalid_dropped
                     .set(self.invalid_dropped.get().saturating_add(1));
@@ -857,6 +904,197 @@ fn admission_consumer_harness_drops_every_stale_context_without_applying() {
         assert_eq!(harness.stale_dropped.get(), 1);
         assert!(harness.pending.is_empty());
     }
+}
+
+fn pending_response(
+    envelope: &AdmissionDecisionEnvelope,
+    token: AdmissionShadowToken,
+    response: crate::decision::DecisionResult,
+    state: PendingAdmissionState,
+) -> PendingAdmissionResponse {
+    PendingAdmissionResponse {
+        token,
+        request: envelope.request.clone(),
+        response,
+        state,
+    }
+}
+
+fn threaded_drain(
+    current: AdmissionShadowContext,
+    pending: PendingAdmissionResponse,
+) -> AdmissionResponseHarness {
+    let (sender, receiver) = sync_channel(1);
+    let barrier = Arc::new(Barrier::new(2));
+    let producer_barrier = Arc::clone(&barrier);
+    let producer = thread::spawn(move || {
+        sender.send(pending).unwrap();
+        producer_barrier.wait();
+    });
+    let consumer_barrier = Arc::clone(&barrier);
+    let consumer = thread::spawn(move || {
+        consumer_barrier.wait();
+        let mut harness = AdmissionResponseHarness::new(current);
+        let pending = receiver.recv().unwrap();
+        harness.push_with_state(
+            pending.token,
+            pending.request,
+            pending.response,
+            pending.state,
+        );
+        harness.drain();
+        harness
+    });
+    producer.join().unwrap();
+    consumer.join().unwrap()
+}
+
+#[test]
+fn admission_async_like_harness_delivers_fresh_and_stale_across_threads() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let provider = MatchingAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    let response = provider.observe(&envelope.request).unwrap();
+    let token = AdmissionShadowToken::from_envelope(
+        &envelope,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    )
+    .unwrap();
+    let current =
+        admission_shadow_context_for(&envelope, 41, "memory-db-a", 7, 3, ShadowMode::RecordOnly);
+    let fresh = threaded_drain(
+        current.clone(),
+        pending_response(
+            &envelope,
+            token.clone(),
+            response.clone(),
+            PendingAdmissionState::Ready,
+        ),
+    );
+    assert_eq!(fresh.applied.get(), 1);
+    assert_eq!(fresh.stale_dropped.get(), 0);
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+
+    let stale = threaded_drain(
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation + 1,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        pending_response(&envelope, token, response, PendingAdmissionState::Ready),
+    );
+    assert_eq!(stale.applied.get(), 0);
+    assert_eq!(stale.stale_dropped.get(), 1);
+}
+
+#[test]
+fn admission_async_like_harness_is_bounded_and_drops_cancelled_faults() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let token = AdmissionShadowToken::from_envelope(
+        &envelope,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    )
+    .unwrap();
+    let response = envelope.primary.clone();
+    let current =
+        admission_shadow_context_for(&envelope, 41, "memory-db-a", 7, 3, ShadowMode::RecordOnly);
+
+    let (sender, receiver) = sync_channel(1);
+    let first = pending_response(
+        &envelope,
+        token.clone(),
+        response.clone(),
+        PendingAdmissionState::Ready,
+    );
+    let second = pending_response(
+        &envelope,
+        token.clone(),
+        response.clone(),
+        PendingAdmissionState::Ready,
+    );
+    sender.send(first).unwrap();
+    assert!(matches!(
+        sender.try_send(second),
+        Err(TrySendError::Full(_))
+    ));
+
+    let consumer = thread::spawn(move || {
+        let mut harness = AdmissionResponseHarness::new(current);
+        let pending = receiver.recv().unwrap();
+        harness.push_with_state(
+            pending.token,
+            pending.request,
+            pending.response,
+            pending.state,
+        );
+        harness.push_with_state(
+            AdmissionShadowToken::from_envelope(
+                &envelope,
+                41,
+                "memory-db-a",
+                7,
+                3,
+                ShadowMode::RecordOnly,
+            )
+            .unwrap(),
+            envelope.request.clone(),
+            envelope.primary.clone(),
+            PendingAdmissionState::Cancelled,
+        );
+        harness.push_with_state(
+            AdmissionShadowToken::from_envelope(
+                &envelope,
+                41,
+                "memory-db-a",
+                7,
+                3,
+                ShadowMode::RecordOnly,
+            )
+            .unwrap(),
+            envelope.request.clone(),
+            envelope.primary.clone(),
+            PendingAdmissionState::TimedOut,
+        );
+        harness.push_with_state(
+            AdmissionShadowToken::from_envelope(
+                &envelope,
+                41,
+                "memory-db-a",
+                7,
+                3,
+                ShadowMode::RecordOnly,
+            )
+            .unwrap(),
+            envelope.request.clone(),
+            envelope.primary.clone(),
+            PendingAdmissionState::Unavailable,
+        );
+        harness.drain();
+        harness
+    });
+    drop(sender);
+    let harness = consumer.join().unwrap();
+    assert_eq!(harness.applied.get(), 1);
+    assert_eq!(harness.cancelled_dropped.get(), 1);
+    assert_eq!(harness.timed_out_dropped.get(), 1);
+    assert_eq!(harness.unavailable_dropped.get(), 1);
+    assert_eq!(harness.invalid_dropped.get(), 0);
+    assert_eq!(harness.stale_dropped.get(), 0);
+    assert!(harness.pending.is_empty());
 }
 
 #[test]
