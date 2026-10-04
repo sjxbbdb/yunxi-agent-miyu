@@ -356,14 +356,17 @@ G5-04-01 adapter 已推送 `14c627e6`，证据见
 [`2026-10-05-g5-04-01-adapter-evidence.md`](2026-10-05-g5-04-01-adapter-evidence.md)。它只构造
 raw-free request/primary envelope，没有接入 `apply_organized_batch`、provider、模型或写入路径。
 
-下一施工单进入 **G5-04-02 record-only observer 接入设计**（不加载 Laya 权重）：
+G5-04-02 observer 接入已推送 `3c4aed3a`，证据见
+[`2026-10-05-g5-04-02-observer-evidence.md`](2026-10-05-g5-04-02-observer-evidence.md)。生产
+调用仍固定为 `ShadowMode::Disabled + provider=None`，结果不会进入 memory/KB/lifecycle。
+
+下一施工单进入 **G5-04-03 metrics/replay 与 async token 设计**（不加载 Laya 权重）：
 
 设计合同已写入 [`2026-10-05-g5-04-memory-admission-design.md`](2026-10-05-g5-04-memory-admission-design.md)，
 首个 consumer 固定为 memory admission；当前仍只允许设计和无模型 fake，不允许真实模型或
 生产写入语义变更。
 
-1. 在 `admission_by_id` 计算完成后选择单点 observer seam，固定输入 allowlist、脱敏、
-   primary-only fallback、独立开关、预算和指标；provider 结果不得进入写入集合。
+1. 固化 observer metrics/replay 的脱敏字段、计数边界和故障采样，不扩大主路径预算或写权限。
 2. 设计异步/迟到响应 token、取消和丢弃语义，证明旧响应不能覆盖新 request；先用
    无模型 fake，不引入网络、模型 runtime 或第二 scheduler。
 3. 单独定义写入资格、权限、memory/KB 隔离和回放边界；在 G5-04 合同与门禁通过前，

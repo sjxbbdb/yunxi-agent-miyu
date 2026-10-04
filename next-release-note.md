@@ -26,6 +26,9 @@
   fallback、lifecycle/KB 隔离、异步迟到 token 边界与无模型测试矩阵，尚未修改运行时代码。
 - G5-04-01：推送 `14c627e6`，新增 raw-free memory admission adapter 与三态/force 一致性
   回归；WSL memory 98/98 通过。尚未接入 `apply_organized_batch`、真实 provider 或模型。
+- G5-04-02：推送 `3c4aed3a`，在 `apply_organized_batch` 的 admission 单点接入默认关闭
+  record-only observer；WSL memory 100/100 通过（1 ignored），生产仍为 provider=None。
+  下一步只做 metrics/replay 与 async token 设计，不加载 Laya。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
