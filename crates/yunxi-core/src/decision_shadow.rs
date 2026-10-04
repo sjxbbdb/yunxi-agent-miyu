@@ -2412,4 +2412,61 @@ mod tests {
             );
         }
     }
+
+    #[derive(Debug, Serialize, PartialEq, Eq)]
+    struct MeasurementManifest {
+        run_id: &'static str,
+        stage: &'static str,
+        consumer: &'static str,
+        provider_revision: &'static str,
+        fixture_revision: &'static str,
+        sample_count: u32,
+        budget_ms: u64,
+        mode: &'static str,
+        latency_p50_ms: Option<u64>,
+        latency_p95_ms: Option<u64>,
+        latency_p99_ms: Option<u64>,
+        peak_rss_kb: Option<u64>,
+        cleanup_id: &'static str,
+    }
+
+    #[test]
+    fn g5_06_measurement_manifest_is_redacted_and_marks_unavailable_metrics() {
+        let manifests = AdoptionConsumer::ALL
+            .into_iter()
+            .map(|consumer| MeasurementManifest {
+                run_id: "g5-06-05-fixture",
+                stage: "G5-06-DESIGN",
+                consumer: consumer.name(),
+                provider_revision: "unavailable",
+                fixture_revision: "deterministic-v1",
+                sample_count: 0,
+                budget_ms: 80,
+                mode: "record_only",
+                latency_p50_ms: None,
+                latency_p95_ms: None,
+                latency_p99_ms: None,
+                peak_rss_kb: None,
+                cleanup_id: "g5-06-05-cleanup",
+            })
+            .collect::<Vec<_>>();
+        let encoded = serde_json::to_string(&manifests).expect("manifest is JSON");
+        let replay = serde_json::to_string(&manifests).expect("manifest replay is JSON");
+        assert_eq!(encoded, replay);
+        assert_eq!(manifests.len(), AdoptionConsumer::ALL.len());
+        assert!(manifests.iter().all(|manifest| {
+            manifest.provider_revision == "unavailable"
+                && manifest.sample_count == 0
+                && manifest.latency_p50_ms.is_none()
+                && manifest.latency_p95_ms.is_none()
+                && manifest.latency_p99_ms.is_none()
+                && manifest.peak_rss_kb.is_none()
+        }));
+        assert!(encoded.contains("\"latency_p50_ms\":null"));
+        assert!(encoded.contains("\"peak_rss_kb\":null"));
+        assert!(!encoded.contains("\"payload\":"));
+        assert!(!encoded.contains("\"profile\":"));
+        assert!(!encoded.contains("\"context\":"));
+        assert!(!encoded.contains("\"api_key\":"));
+    }
 }
