@@ -2,7 +2,7 @@
 
 日期：2026-10-06  
 阶段：G5-06-DESIGN（test-only slice，未进入真实 provider 或生产采纳）  
-代码提交：`b7bc6df9`
+代码提交：`b7bc6df9`（后续配置字段使用澄清修复：`2daee5c2`）
 
 ## 施工范围
 
