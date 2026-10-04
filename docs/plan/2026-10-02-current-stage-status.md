@@ -53,6 +53,15 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   RAM、Arch/macOS 和异步 transport 均明确登记为未验证。G5-06 合同见
   [`2026-10-04-g5-06-consumer-adoption-design.md`](2026-10-04-g5-06-consumer-adoption-design.md)。
 
+- **G5-06-01：完成独立 consumer adoption gate test-only slice。** `87253d2d` 在
+  `decision_shadow` 测试区覆盖 context salience、memory admission、recall/rerank、
+  terminal intent、proactive ranking 五类消费者，每类回放 disabled/match/mismatch/
+  invalid/timeout/privacy/stale/closed 八种情况，共 40 行脱敏元数据。WSL
+  `decision_shadow` 33/33 通过；primary digest 不变、副作用为零、privacy 在 provider
+  前拒绝、replay bytes 稳定。该 slice 没有真实 provider、Laya 权重、网络、数据库、
+  scheduler 或生产 consumer，阶段仍停在 G5-06-DESIGN。完整证据见
+  [`2026-10-06-g5-06-01-adoption-gate-evidence.md`](2026-10-06-g5-06-01-adoption-gate-evidence.md)。
+
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、
   macOS、部分故障注入和跨 SQLite 文件原子性仍是明确的未验证项。

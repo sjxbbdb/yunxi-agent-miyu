@@ -93,6 +93,12 @@
   memory-KB 隔离、故障回退、指标摘要、WSL/Windows 门禁与清理；未宣称真实 provider、RAM、
   Arch/macOS 或异步 transport。阶段进入 G5-06-DESIGN，合同见
   `docs/plan/2026-10-04-g5-06-consumer-adoption-design.md`。
+- G5-06-01：推送 `87253d2d`，在 `decision_shadow` 测试区建立五类 consumer 的独立
+  adoption gate 回放；每类覆盖 disabled/match/mismatch/invalid/timeout/privacy/stale/
+  closed，共 40 行脱敏元数据。WSL `decision_shadow` 33/33 通过，primary digest 不变、
+  副作用为零、privacy 在 provider 前拒绝、replay bytes 稳定。没有真实 provider、Laya
+  权重、网络、数据库、scheduler 或生产 consumer；证据见
+  `docs/plan/2026-10-06-g5-06-01-adoption-gate-evidence.md`，阶段仍为 G5-06-DESIGN。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
