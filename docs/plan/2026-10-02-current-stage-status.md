@@ -393,9 +393,18 @@ G5-04-06 已完成并推送 `af0306f2`，证据见
 queue-full、取消、timeout、unavailable、关闭和单次消费；WSL admission 22/22 通过，
 生产异步 runtime、模型和写入路径仍未接入。
 
-下一施工单进入 **G5-04-07 无模型 fault/replay 边界设计**：只允许先设计 response
+G5-04-07 fault/replay 施工摘要：只允许先设计 response
 fault 分类、primary 等价、内存 replay 证据和隐私边界，不允许创建第二 runtime、接入
-Laya 或改变 production write path。
+Laya 或改变 production write path；该阶段已按下方证据完成。
+
+G5-04-07 已完成并推送 `5daf238b`，证据见
+[`2026-10-04-g5-04-07-fault-replay-evidence.md`](2026-10-04-g5-04-07-fault-replay-evidence.md)。
+新增测试验证合成 observation 的 metrics/replay 稳定性和 closed transport；实际 observer
+fault、privacy gate、RAII queue 与 primary 不变性由既有 decision_shadow 回归覆盖，WSL
+admission 23/23 通过。
+
+下一施工单进入 **G5-04-08 无模型指标/回放收敛设计**：只允许先设计跨批次计数、重复
+回放和观测收敛的边界，不允许创建第二 runtime、接入 Laya 或改变 production write path。
 
 ## 证据与环境约束
 

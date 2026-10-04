@@ -45,6 +45,10 @@
   线程，验证跨线程 fresh/stale、queue-full、取消、timeout、unavailable、关闭和单次
   drain；WSL admission 22/22、Windows 静态门禁和清理通过。真实异步 runtime、模型和
   生产 consumer 仍未接入，证据见 `docs/plan/2026-10-04-g5-04-06-async-boundary-evidence.md`。
+- G5-04-07：推送 `5daf238b`，补齐 test-only fault/replay 与 closed transport 边界；新增
+  metrics/replay 稳定性、私有字段排除和 mpsc disconnected 断言。实际 observer fault、
+  privacy gate、RAII queue 与 primary 不变性沿用既有回归；WSL admission 23/23、Windows
+  静态门禁和清理通过，证据见 `docs/plan/2026-10-04-g5-04-07-fault-replay-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
