@@ -483,6 +483,7 @@ mod tests {
     };
     use serde_json::json;
     use std::cell::Cell;
+    use std::sync::mpsc::{sync_channel, TryRecvError};
 
     fn request() -> DecisionRequest {
         DecisionRequest::new(
@@ -1409,5 +1410,150 @@ mod tests {
         );
         assert_eq!(writes, 0);
         assert_eq!(permission_checks, 0);
+    }
+
+    #[derive(Debug)]
+    struct FallbackMatrixCase {
+        case_id: &'static str,
+        observed: Option<ShadowMatchKind>,
+        expected: Option<ShadowMatchKind>,
+        primary_digest: String,
+        provider_calls: u32,
+    }
+
+    #[test]
+    fn fallback_matrix_preserves_primary_and_fails_closed() {
+        let req = request();
+        let baseline = primary(&req);
+        let expected_digest = canonical_result_digest(&baseline);
+        let mut rows = Vec::new();
+
+        let mut invalid = baseline.clone();
+        invalid.provider = "bad/provider".into();
+        let invalid_provider = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(invalid),
+        };
+        let observation = observe(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&invalid_provider),
+        )
+        .unwrap()
+        .unwrap();
+        rows.push(FallbackMatrixCase {
+            case_id: "invalid-result",
+            observed: Some(observation.match_kind),
+            expected: Some(ShadowMatchKind::InvalidShadow),
+            primary_digest: observation.primary_digest,
+            provider_calls: invalid_provider.calls.get(),
+        });
+
+        let mut over_deadline = baseline.clone();
+        over_deadline.provider = "shadow".into();
+        over_deadline.elapsed_ms = req.deadline_ms + 1;
+        let timeout_provider = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(over_deadline),
+        };
+        let observation = observe(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&timeout_provider),
+        )
+        .unwrap()
+        .unwrap();
+        rows.push(FallbackMatrixCase {
+            case_id: "over-deadline",
+            observed: Some(observation.match_kind),
+            expected: Some(ShadowMatchKind::Timeout),
+            primary_digest: observation.primary_digest,
+            provider_calls: timeout_provider.calls.get(),
+        });
+
+        let unavailable_provider = FakeProvider {
+            calls: Cell::new(0),
+            response: Err(ShadowError::Unavailable),
+        };
+        let observation = observe(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&unavailable_provider),
+        )
+        .unwrap()
+        .unwrap();
+        rows.push(FallbackMatrixCase {
+            case_id: "provider-unavailable",
+            observed: Some(observation.match_kind),
+            expected: Some(ShadowMatchKind::Unavailable),
+            primary_digest: observation.primary_digest,
+            provider_calls: unavailable_provider.calls.get(),
+        });
+
+        // A closed transport is represented at this synchronous seam by an
+        // absent provider; the closed channel assertion keeps that mapping
+        // explicit without introducing a runtime transport implementation.
+        let (sender, receiver) = sync_channel::<()>(0);
+        drop(sender);
+        assert_eq!(receiver.try_recv(), Err(TryRecvError::Disconnected));
+        let observation = observe(ShadowMode::RecordOnly, &req, &baseline, None)
+            .unwrap()
+            .unwrap();
+        rows.push(FallbackMatrixCase {
+            case_id: "closed-transport",
+            observed: Some(observation.match_kind),
+            expected: Some(ShadowMatchKind::Unavailable),
+            primary_digest: observation.primary_digest,
+            provider_calls: 0,
+        });
+
+        let mut privacy_request = request();
+        privacy_request.payload = json!({"token": "not-recorded"});
+        let privacy_provider = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(baseline.clone()),
+        };
+        let privacy_result = observe(
+            ShadowMode::RecordOnly,
+            &privacy_request,
+            &baseline,
+            Some(&privacy_provider),
+        );
+        assert!(matches!(
+            privacy_result,
+            Err(DecisionError::PrivacyRejected)
+        ));
+        rows.push(FallbackMatrixCase {
+            case_id: "privacy-rejection",
+            observed: None,
+            expected: None,
+            primary_digest: expected_digest.clone(),
+            provider_calls: privacy_provider.calls.get(),
+        });
+
+        assert_eq!(rows.len(), 5);
+        for row in &rows {
+            assert_eq!(row.observed, row.expected, "case {}", row.case_id);
+            assert_eq!(row.primary_digest, expected_digest, "case {}", row.case_id);
+            assert_eq!(baseline, primary(&req), "case {}", row.case_id);
+        }
+        assert_eq!(rows[0].provider_calls, 1);
+        assert_eq!(rows[1].provider_calls, 1);
+        assert_eq!(rows[2].provider_calls, 1);
+        assert_eq!(rows[3].provider_calls, 0);
+        assert_eq!(rows[4].provider_calls, 0);
+
+        // The test-only summary is intentionally metadata-only: no payload,
+        // candidate text, or provider response is retained in the matrix.
+        let summary = rows
+            .iter()
+            .map(|row| (row.case_id, row.observed))
+            .collect::<Vec<_>>();
+        let encoded = format!("{summary:?}");
+        assert!(!encoded.contains("redacted_text"));
+        assert!(!encoded.contains("not-recorded"));
     }
 }
