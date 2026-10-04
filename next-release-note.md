@@ -115,6 +115,10 @@
 - G5-06 设计审计：四个 test-only 切片的 gate/fallback/隐私/回放边界已对账，但真实
   provider revision、五类质量/延迟/RAM、人工影响审计和生产回滚仍为 unavailable/not_run；
   不退出 G5-06，不推进 G6。审计见 `docs/plan/2026-10-06-g5-06-design-audit.md`。
+- G5-06-05：推送 `45bbdd2f`，固定五类 consumer 的脱敏 measurement manifest；provider
+  未执行时 revision/sample/latency/RSS 明确为 unavailable/null，JSON replay 稳定且不含
+  payload/profile/context。WSL `decision_shadow` 36/36 通过，未加载权重或接入生产；
+  证据见 `docs/plan/2026-10-06-g5-06-05-manifest-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。

@@ -90,6 +90,13 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   数字替代。审计见 [`2026-10-06-g5-06-design-audit.md`](2026-10-06-g5-06-design-audit.md)。
   下一施工单必须先明确 provider 来源与授权，仍只允许 record-only；G6 不能提前开始。
 
+- **G5-06-05：完成脱敏 measurement manifest test-only slice。** `45bbdd2f` 固定五类
+  consumer 的 run/stage/revision/sample/budget/mode/cleanup 字段；真实 provider 未执行
+  时 latency p50/p95/p99 与 peak RSS 保持 `null/unavailable`，不写 payload/profile/context。
+  WSL `decision_shadow` 36/36、静态门禁、隐私扫描和 disposable target 清理通过。该
+  证据仍不能替代真实 provider 测量，阶段继续停在 G5-06-DESIGN；证据见
+  [`2026-10-06-g5-06-05-manifest-evidence.md`](2026-10-06-g5-06-05-manifest-evidence.md)。
+
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、
   macOS、部分故障注入和跨 SQLite 文件原子性仍是明确的未验证项。
