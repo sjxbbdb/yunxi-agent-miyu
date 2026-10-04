@@ -71,6 +71,12 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   生产调用，阶段仍停在 G5-06-DESIGN。证据见
   [`2026-10-06-g5-06-02-gate-matrix-evidence.md`](2026-10-06-g5-06-02-gate-matrix-evidence.md)。
 
+- **G5-06-03：固化真实评测测量协议（设计合同）。** 明确五类 consumer 的脱敏输入、
+  deterministic oracle、质量分类、单调时钟 p50/p95/p99、peak RSS 的 unavailable 规则、
+  mismatch 影响审计、故障矩阵、run manifest 和 disposable cleanup。该切片没有代码、
+  provider、权重或生产调用，不把任何合成数字写成真实性能；协议见
+  [`2026-10-06-g5-06-03-measurement-protocol.md`](2026-10-06-g5-06-03-measurement-protocol.md)。
+
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、
   macOS、部分故障注入和跨 SQLite 文件原子性仍是明确的未验证项。
