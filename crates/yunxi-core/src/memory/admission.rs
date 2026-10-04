@@ -374,6 +374,24 @@ impl AdmissionShadowToken {
     }
 }
 
+/// Admit a shadow response only when it still belongs to the current context.
+///
+/// Callers must pass this gate immediately before applying any response.  A
+/// stale response is rejected with [`DecisionError::StaleFingerprint`] and
+/// must be discarded (the caller may record the stale result); it never grants
+/// write permission and this function performs no callback, database write, or
+/// scheduler/organizer interaction.
+pub(crate) fn admit_admission_shadow_response(
+    token: &AdmissionShadowToken,
+    current: &AdmissionShadowContext,
+) -> Result<(), DecisionError> {
+    if token.matches(current) {
+        Ok(())
+    } else {
+        Err(DecisionError::StaleFingerprint)
+    }
+}
+
 fn is_sha256_fingerprint(value: &str) -> bool {
     value.len() == 71
         && value.starts_with("sha256:")

@@ -6,6 +6,7 @@ use crate::decision_shadow::{
 };
 use crate::memory::*;
 use serde_json::json;
+use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use yunxi_base::config::AppConfig;
 
@@ -483,6 +484,134 @@ fn admission_shadow_token_requires_an_exact_current_context() {
         ),
     ];
     assert!(mismatches.iter().all(|context| !token.matches(context)));
+}
+
+#[test]
+fn admission_shadow_response_gate_drops_stale_responses_without_applying() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let primary = envelope.primary.clone();
+    let token = AdmissionShadowToken::from_envelope(
+        &envelope,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    )
+    .unwrap();
+    let current = AdmissionShadowContext::new(
+        envelope.request.task,
+        envelope.request.scope,
+        &envelope.request.input_fingerprint,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    );
+    let apply_count = Cell::new(0);
+    let apply = || apply_count.set(apply_count.get() + 1);
+
+    assert_eq!(admit_admission_shadow_response(&token, &current), Ok(()));
+    if admit_admission_shadow_response(&token, &current).is_ok() {
+        apply();
+    }
+    assert_eq!(apply_count.get(), 1);
+    assert_eq!(envelope.primary, primary);
+
+    let mismatches = [
+        AdmissionShadowContext::new(
+            crate::decision::DecisionTask::RecallRerank,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            crate::decision::DecisionScope::Conversation,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            "sha256:stale",
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            42,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            "memory-db-b",
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            8,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            4,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            ShadowMode::Disabled,
+        ),
+    ];
+    for stale in mismatches {
+        assert_eq!(
+            admit_admission_shadow_response(&token, &stale),
+            Err(DecisionError::StaleFingerprint)
+        );
+        if admit_admission_shadow_response(&token, &stale).is_ok() {
+            apply();
+        }
+        assert_eq!(apply_count.get(), 1);
+        assert_eq!(envelope.primary, primary);
+    }
 }
 
 #[test]
