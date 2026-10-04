@@ -131,9 +131,11 @@ ShadowObservation {
 | stale fingerprint | deterministic baseline | `invalid_shadow`/`stale_fingerprint` | 新建 request |
 | privacy gate 拒绝 | 按现有 fail-closed 规则 | `privacy_rejected` | 禁止重试原始 payload |
 | 队列满 | deterministic baseline | `queue_full` | 否 |
-| 迟到旧响应 | 新 request 的 baseline | 丢弃 | 否 |
+| 迟到旧响应 | 新 request 的 baseline | 当前同步 seam 分类为 `stale_fingerprint`；异步 provider 丢弃另立施工单 | 否 |
 
-回放必须证明：shadow 开启、关闭、缺失、超时和非法结果时，同一 request 的主结果、consumer 行为、memory/KB 写入资格、权限判定和 replay bytes 均相同；同一请求不会产生第二次写入、scheduler 事件或工具调用。
+回放必须证明：shadow 开启、关闭、缺失、超时和非法结果时，同一 request 的主结果、
+consumer probe 行为和 replay bytes 均相同；当前没有真实 consumer 接入，因此 memory/KB
+写入资格、权限判定、scheduler 与工具调用只记录为未接入/未验证，不得伪造为已覆盖。
 
 ## 9. Laya 后续边界
 
@@ -162,7 +164,7 @@ envelope 字段序列化，`observation_replay_digest` 用 SHA-256 生成稳定�
 后台线程或模型 runtime。主结果仍直接来自 deterministic
 provider；不接入 memory、KB、terminal、companion 或用户可见路径。
 
-### G5-03-D：权威环境验收（进行中，代码硬化与 fault matrix 已推送 `3bb11f12`）
+### G5-03-D：权威环境验收（进行中，代码硬化与 fault matrix 已推送 `6c5352ee`）
 
 Windows 只做格式、metadata、架构依赖和隐私扫描；WSL ext4 disposable checkout 运行定向测试，并分别记录完整测试的通过、忽略和既有失败；测试后删除临时 checkout、日志、缓存和模型工件。
 
