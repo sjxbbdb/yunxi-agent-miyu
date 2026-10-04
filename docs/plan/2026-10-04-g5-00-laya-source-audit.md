@@ -19,7 +19,7 @@ Laya 可以作为后续 `DecisionPort` 的候选建议模型，但当前不能�
 
 | 候选 | 用途 | 官方来源 | 代码锚点（2026-10-04 查询） | 许可证 | 权重/工件锚点 |
 | --- | --- | --- | --- | --- | --- |
-| Python 参考实现 | 研究、离线评测、未来可选 sidecar | [NandhaKishorM/laya](https://github.com/NandhaKishorM/laya) | `HEAD=2e4d9c87e8b1621deb344eac7de5c7258f32f849`；`v0.3.25=91160a3bf57c58941b43608426ee942fc142cf6d` | Apache-2.0（仓库及模型说明） | [HF model](https://huggingface.co/convaiinnovations/laya)，revision `7b928d828b7b0e022f929d9bd2e44165aa270148`；根模型 LFS OID `891102d372688fc2a094dac56a384bc537b87c63f21f9f3dac0be2b7cbc8d86c`；multilingual LFS OID `9d628fd971b700382ac6f65920a86f149777b2e748e0c955fb3b19695aa8f204`；typed-decisions LFS OID `4fa56de72383a9d3efa9cfa78955733c81b9fc8067a587ca4beb82c78107a24e` |
+| Python 参考实现 | 研究、离线评测、未来可选 sidecar | [NandhaKishorM/laya](https://github.com/NandhaKishorM/laya) | `HEAD=2e4d9c87e8b1621deb344eac7de5c7258f32f849`；`v0.3.25=8a976468b57c1b53541363dc86523263c9b68d34` | Apache-2.0（仓库及模型说明） | [HF model](https://huggingface.co/convaiinnovations/laya)，revision `7b928d828b7b0e022f929d9bd2e44165aa270148`；根模型 LFS OID `891102d372688fc2a094dac56a384bc537b87c63f21f9f3dac0be2b7cbc8d86c`；multilingual LFS OID `9d628fd971b700382ac6f65920a86f149777b2e748e0c955fb3b19695aa8f204`；typed-decisions LFS OID `4fa56de72383a9d3efa9cfa78955733c81b9fc8067a587ca4beb82c78107a24e` |
 | Node/TypeScript ONNX wrapper | 未来 Rust/sidecar 边界的参考，不是当前依赖 | [receptron/laya](https://github.com/receptron/laya) | `HEAD=6478649e723122ca24bbf5fb69ed1010023c9750` | wrapper MIT；模型 Apache-2.0，必须分开记录 | [HF ONNX bundle](https://huggingface.co/receptron/laya-onnx)，revision `68f27dfe5a27a54fb2b1fefc432f43f972e90868`；`laya.onnx` LFS OID `a874eb254b58b0fcb1e7ad56fbb188c29d64e08c9a46b689433e1f52c66dba1e`；`laya.onnx.data` LFS OID `487746363a8da57bcadb4345352997d22a0fb90d70aa22c6856668d023242aba` |
 
 上表的 Git 提交、HF revision 和 LFS OID 是来源审计证据，不代表 YunXi 已下载或
@@ -32,7 +32,8 @@ Laya 可以作为后续 `DecisionPort` 的候选建议模型，但当前不能�
 
 - Laya 接收一个 state 和 typed questions，返回 `choice`、`score`、`noul` 等结构化
   决策及概率；它不生成自然语言。
-- Python 版本可按语言路由 English、multilingual、typed-decisions checkpoint；
+- Python 版本可按语言路由 English、multilingual checkpoint，也可显式选择
+  `typed-decisions` checkpoint；
   Node wrapper 通过 ONNX Runtime，不需要 Python/PyTorch 运行时。
 - Node wrapper 文档要求 Node 20+，默认首次使用下载约 1.7 GB fp32 ONNX bundle，
   并提示加载后约 2 GB RAM 加 batch 额外开销；其约 140 ms 的 Apple CPU 数值是
@@ -42,9 +43,10 @@ Laya 可以作为后续 `DecisionPort` 的候选建议模型，但当前不能�
 
 ### 2. 质量与局限
 
-- 上游 typed-decisions benchmark 中，领域微调 checkpoint 报告 0.766 accuracy，
-  基础 English/multilingual checkpoint 约 0.362/0.342；不能把微调结果当成
-  零样本能力。
+- 上游 typed-decisions benchmark 表格报告领域微调 checkpoint 0.766 accuracy，
+  基础 English/multilingual checkpoint 约 0.362/0.342；同一 README 的 Honest
+  Limits 段落把 multilingual 写成 0.352，这是上游文档自身的不一致，必须在 YunXi
+  评测中重新测量，不能把微调结果当成零样本能力。
 - 高基数 choice、短 head budget、ordinal score 和 `noul` 存在已公开的失败模式；
   基础模型可能高置信度地答错，不能用 confidence 单独替代安全策略。
 - 中文与 Linux 终端命令的具体表现没有在 YunXi 数据集上测量；即使上游宣称覆盖

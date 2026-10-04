@@ -166,11 +166,11 @@ STOP_RULES
 ## 3. 当前交接基线（供新模型压缩后恢复）
 
 - 当前分支：`codex/yunxi-product-rename`。
-- 当前 HEAD/远端：`ead9968e`。
-- 最近已推送：`ead9968e`（G4-03 source revision 失效与并发重建保护）、`58a0cbca`（G4-02-02 可信调用方注入）、`0281b062`（G4-02-01 KB scope）、`21dfb327`（G4-01 provenance）；更早证据仍以 Git 历史和阶段文档为准。
+- 当前 HEAD/远端：`13f1b43b`。
+- 最近已推送：`13f1b43b`（G5-00 Laya 来源审计）、`5399b8aa`（G4-05 退出审计）、`2dc988bc`（G4-05-04 重复 revision 收敛）、`fb2f09da`（G4-05-03 文档）、`69698f8d`（G4-05-03 更新锁）；更早证据仍以 Git 历史和阶段文档为准。
 - MCP 当前完整套件：37/37；最新 HEAD 代码门禁 `e12ffa74` 已通过，root 504/0/4、base 396/0/6、core 651/0/8、engine 673/0/13、hosts 920/0/10，doctest 全过；当前 HEAD 的 fish/daemon/IPC/REPL/MCP/TUI 黑盒也已有证据；相关临时 target、日志和进程已清理。
 - 当前 G0 残余：transfer export 输出/source/SQLite 路径 TOCTOU、锁/磁盘满/权限撤销/组合故障矩阵、跨 SQLite 文件提交非原子性、legacy `state/profile.md` 迁移策略、Arch 实机和 macOS M-series 证据。最新 HEAD workspace 与 fish/daemon/IPC/REPL/MCP/TUI 黑盒已有证据；MCP 权限、既有断连/超时、Unix import 父目录竞态和非法 manifest 已有对应证据，不再重复列为未覆盖项。
-- 当前绝不能写成已实现：`DecisionPort` trait/provider、Laya provider、G1-G9 业务模块；G0 只做 seam/边界盘点和 deterministic/fallback 合同。
+- 当前绝不能写成已实现：`DecisionPort` trait/provider、Laya provider、G1-G9 业务模块；G5-01 只做契约/失败矩阵设计，尚未创建 trait 或 provider。
 
 ## 4. 启动新 Goal 前的验收
 
