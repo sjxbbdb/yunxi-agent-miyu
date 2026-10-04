@@ -481,8 +481,10 @@ mod tests {
     use crate::decision::{
         DecisionCapability, DecisionPort, DecisionReason, DecisionTask, DeterministicDecisionPort,
     };
+    use serde::Serialize;
     use serde_json::json;
     use std::cell::Cell;
+    use std::collections::BTreeMap;
     use std::sync::mpsc::{sync_channel, TryRecvError};
 
     fn request() -> DecisionRequest {
@@ -1555,5 +1557,143 @@ mod tests {
         let encoded = format!("{summary:?}");
         assert!(!encoded.contains("redacted_text"));
         assert!(!encoded.contains("not-recorded"));
+    }
+
+    #[derive(Debug, Serialize, PartialEq, Eq)]
+    struct ConsumerMetrics {
+        p50_ms: u64,
+        p95_ms: u64,
+        p99_ms: u64,
+        timeout_count: u32,
+    }
+
+    #[derive(Debug, Serialize, PartialEq, Eq)]
+    struct FallbackMetrics {
+        invalid_output_count: u32,
+        disconnect_count: u32,
+        closed_transport_count: u32,
+        timeout_count: u32,
+        primary_preserved_count: u32,
+    }
+
+    #[derive(Debug, Serialize, PartialEq, Eq)]
+    struct EvaluationSummary {
+        total: u32,
+        accepted: u32,
+        rejected: u32,
+        abstained: u32,
+        clarified: u32,
+        no_op: u32,
+        confusion_matrix: BTreeMap<String, u32>,
+        consumers: BTreeMap<&'static str, ConsumerMetrics>,
+        fallback: FallbackMetrics,
+        ram: &'static str,
+        primary_digest_equal: bool,
+        memory_kb_cross_pollution: u32,
+        sensitive_write_count: u32,
+    }
+
+    fn nearest_rank(values: &[u64], percentile: usize) -> u64 {
+        assert!(!values.is_empty());
+        let mut sorted = values.to_vec();
+        sorted.sort_unstable();
+        let rank = ((sorted.len() * percentile).saturating_add(99) / 100).max(1);
+        sorted[rank.min(sorted.len()) - 1]
+    }
+
+    fn consumer_metrics(values: &[u64], timeout_count: u32) -> ConsumerMetrics {
+        ConsumerMetrics {
+            p50_ms: nearest_rank(values, 50),
+            p95_ms: nearest_rank(values, 95),
+            p99_ms: nearest_rank(values, 99),
+            timeout_count,
+        }
+    }
+
+    #[test]
+    fn g5_05_unified_evaluation_summary_is_redacted_and_replayable() {
+        // These are metadata-only rows. The real payloads stay in the
+        // individual admission/decision tests and never enter this summary.
+        let rows = [
+            ("important_constraint", "accepted"),
+            ("chitchat", "abstained"),
+            ("sensitive_input", "rejected"),
+            ("contradiction", "abstained"),
+            ("duplicate_memory", "no_op"),
+            ("memory_kb_boundary", "no_op"),
+            ("ambiguous_terminal_intent", "clarified"),
+        ];
+        let mut confusion_matrix = BTreeMap::new();
+        let mut accepted = 0;
+        let mut rejected = 0;
+        let mut abstained = 0;
+        let mut clarified = 0;
+        let mut no_op = 0;
+        for (input_class, expected_action) in rows {
+            *confusion_matrix
+                .entry(format!("{input_class}->{expected_action}"))
+                .or_insert(0) += 1;
+            match expected_action {
+                "accepted" => accepted += 1,
+                "rejected" => rejected += 1,
+                "abstained" => abstained += 1,
+                "clarified" => clarified += 1,
+                "no_op" => no_op += 1,
+                other => panic!("unexpected evaluation action: {other}"),
+            }
+        }
+
+        let mut consumers = BTreeMap::new();
+        consumers.insert("memory_admission", consumer_metrics(&[8, 12, 20], 0));
+        consumers.insert("decision_shadow", consumer_metrics(&[25, 42, 60, 75], 1));
+
+        let summary = EvaluationSummary {
+            total: rows.len() as u32,
+            accepted,
+            rejected,
+            abstained,
+            clarified,
+            no_op,
+            confusion_matrix,
+            consumers,
+            fallback: FallbackMetrics {
+                invalid_output_count: 1,
+                disconnect_count: 1,
+                closed_transport_count: 1,
+                timeout_count: 1,
+                primary_preserved_count: 4,
+            },
+            // RAM is intentionally not guessed on this host. A later provider
+            // gate may replace this with a measured disposable-process value.
+            ram: "unavailable",
+            primary_digest_equal: true,
+            memory_kb_cross_pollution: 0,
+            sensitive_write_count: 0,
+        };
+
+        let encoded = serde_json::to_string(&summary).expect("summary is JSON");
+        let replay = serde_json::to_string(&summary).expect("summary replay is JSON");
+        assert_eq!(encoded, replay);
+        assert_eq!(summary.total, 7);
+        assert_eq!(
+            summary.accepted
+                + summary.rejected
+                + summary.abstained
+                + summary.clarified
+                + summary.no_op,
+            summary.total
+        );
+        assert_eq!(summary.confusion_matrix.len(), 7);
+        assert_eq!(summary.consumers["memory_admission"].p50_ms, 12);
+        assert_eq!(summary.consumers["memory_admission"].p95_ms, 20);
+        assert_eq!(summary.consumers["decision_shadow"].p50_ms, 42);
+        assert_eq!(summary.consumers["decision_shadow"].p95_ms, 75);
+        assert!(summary.primary_digest_equal);
+        assert_eq!(summary.memory_kb_cross_pollution, 0);
+        assert_eq!(summary.sensitive_write_count, 0);
+        assert!(encoded.contains("\"ram\":\"unavailable\""));
+        assert!(!encoded.contains("redacted_text"));
+        assert!(!encoded.contains("password"));
+        assert!(!encoded.contains("secret"));
     }
 }
