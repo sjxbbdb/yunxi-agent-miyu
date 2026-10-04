@@ -112,6 +112,9 @@
   provider revision、质量/延迟/资源、隐私、回退、隔离、回放或人工审计任一缺失时，五类
   consumer 只能保持 `record_only`。WSL `decision_shadow` 35/35 通过，未加载 Laya 或
   接入真实 provider；证据见 `docs/plan/2026-10-06-g5-06-04-evidence-readiness-evidence.md`。
+- G5-06 设计审计：四个 test-only 切片的 gate/fallback/隐私/回放边界已对账，但真实
+  provider revision、五类质量/延迟/RAM、人工影响审计和生产回滚仍为 unavailable/not_run；
+  不退出 G5-06，不推进 G6。审计见 `docs/plan/2026-10-06-g5-06-design-audit.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。

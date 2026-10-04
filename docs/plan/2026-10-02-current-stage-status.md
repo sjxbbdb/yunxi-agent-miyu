@@ -84,6 +84,12 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   采纳资格，阶段仍停在 G5-06-DESIGN。证据见
   [`2026-10-06-g5-06-04-evidence-readiness-evidence.md`](2026-10-06-g5-06-04-evidence-readiness-evidence.md)。
 
+- **G5-06 设计审计：未退出。** 四个 G5-06 切片已证明 test-only gate/fallback/隐私/回放
+  边界，但真实 provider revision、五类真实质量分母、p50/p95/p99、错误率、peak RSS、
+  人工影响审计和生产一键回滚均未验证；统一登记为 `unavailable/not_run`，不得用夹具
+  数字替代。审计见 [`2026-10-06-g5-06-design-audit.md`](2026-10-06-g5-06-design-audit.md)。
+  下一施工单必须先明确 provider 来源与授权，仍只允许 record-only；G6 不能提前开始。
+
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、
   macOS、部分故障注入和跨 SQLite 文件原子性仍是明确的未验证项。
