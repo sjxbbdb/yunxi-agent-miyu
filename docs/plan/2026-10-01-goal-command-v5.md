@@ -48,10 +48,10 @@ OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
 
 CURRENT_STAGE
-  G5-01（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
+  G5-02（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
   G4-02-01 数据面隔离、G4-02-02 可信调用方注入、G4-03 版本生命周期、G4-04
-  更新/导入失败可观测性与 G4-05 更新事务恢复/收敛均已完成；G5-00 来源审计已
-  固化，当前只允许 DecisionRequest/DecisionResult 契约设计）
+  更新/导入失败可观测性与 G4-05 更新事务恢复/收敛均已完成；G5-00 来源审计与
+  G5-01 DecisionPort 契约已固化，当前只允许 deterministic provider 与契约校验实现）
 
 CURRENT_AUTHORIZATION
   G0/G1/G2 已退出，G3-05 按标准读线性化、有界 transcript barrier 与明确非目标边界退出；
@@ -60,9 +60,9 @@ CURRENT_AUTHORIZATION
   G4-05-02 重索引耗尽状态已推送 `e4187b98`，G4-05-03 更新锁已推送 `69698f8d`，
   G4-05-04 重复 revision 收敛已推送 `2dc988bc`；G4-05 退出审计见
   `2026-10-04-g4-05-exit-audit.md`；G5-00 来源审计见
-  `2026-10-04-g5-00-laya-source-audit.md`。当前只允许 G5-01
-  `DecisionRequest`/`DecisionResult` 契约设计；不得下载/加载权重、创建 provider、
-  修改 memory/KB/runtime。Web identity/dashboard 与
+  `2026-10-04-g5-00-laya-source-audit.md`、`2026-10-04-g5-01-decision-port-contract.md`；
+  当前只允许 G5-02 deterministic provider、请求/结果校验与协议测试；不得下载/加载
+  权重、创建 Laya/shadow provider、修改 memory/KB/runtime。Web identity/dashboard 与
   MCP grant 仍未授权，除非另立施工单。
   不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
 
@@ -125,8 +125,8 @@ DECISION_MODEL_MAINLINE
   D0/G0：只读盘点 compact、memory admission、recall/rerank、terminal intent、proactive ranking；记录 owner、输入、输出、隐私、权限和 deterministic fallback；不创建 provider、不加载权重。
   D1/G3-G4：先实现确定性 salience/admission/rerank/intent 规则，规则是模型关闭时的权威基线；模型建议不得成为事实、权限或写入凭证。
   D2/G5-00：research worker 核对 Laya 的官方来源、版本/tag、artifact/checkpoint SHA、许可证、runtime、CPU/Linux/macOS ARM、中文/Linux 术语质量、p50/p95、RAM；任何一项未知就停止，不下载权重。证据见 `2026-10-04-g5-00-laya-source-audit.md`。
-  D3/G5-01：Lead 设计版本化 DecisionRequest/DecisionResult（task、schema_version、candidate_ids、scope、input_fingerprint、deadline、capabilities、choice、abstain、reason_code、confidence/provider 可选）；worker 只能实现批准的窄 trait，不泄漏 Laya 类型进核心领域；本阶段先只写契约与失败矩阵，不实现 provider。
-  D4/G5-02：先 deterministic provider；模型缺失/超时/断连/低置信度/非法 JSON/非法 choice/id/越界 score/过期响应，行为必须与基线逐字/逐序一致。
+  D3/G5-01：Lead 设计版本化 DecisionRequest/DecisionResult（task、schema_version、candidate_ids、scope、input_fingerprint、deadline、capabilities、choice、abstain、reason_code、confidence/provider 可选）；worker 只能实现批准的窄 trait，不泄漏 Laya 类型进核心领域；契约已固化在 `2026-10-04-g5-01-decision-port-contract.md`。
+  D4/G5-02：先 deterministic provider；模型缺失/超时/断连/低置信度/非法 JSON/非法 choice/id/越界 score/过期响应，行为必须与基线逐字/逐序一致；本阶段不得下载模型或创建 shadow/Laya provider。
   D5/G5-03：shadow provider 可关闭、无副作用、可回放，只发送最小化脱敏元数据；不得执行工具、提权、写删 memory/KB/profile、改变 scheduler 或主动发消息。
   D6/G5-04：按 context salience→memory admission→recall/rerank→terminal intent→proactive ranking 顺序接入，每个消费者独立开关、预算、fallback、指标和回滚。
   D7/G5-05：评测重要约束保留、闲聊不长期收录、敏感拒绝、矛盾/低置信 abstain、重复记忆、memory/KB 隔离、意图澄清；记录拒绝率、混淆矩阵、p50/p95、RAM、超时、非法输出和断连回退。

@@ -309,9 +309,14 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   wrapper/model 许可证分界；YunXi 中文/Linux 质量、真实 p50/p95/RAM 与故障回退仍
   未验证。没有下载权重、没有增加依赖、没有创建 provider。
 
-- **当前：G5-01 DecisionPort 契约设计。** 只允许定义版本化
-  `DecisionRequest`/`DecisionResult`、deterministic baseline、失败/过期/非法输出
-  回退矩阵与 provider 权限边界；不实现 provider、不加载模型、不修改 memory/KB/runtime。
+- **G5-01 已完成。** `DecisionRequest`/`DecisionResult`、版本化字段、fingerprint、
+  candidate/scope/capability 约束、deterministic baseline 与失败/过期/非法输出回退
+  矩阵已写入 [`2026-10-04-g5-01-decision-port-contract.md`](2026-10-04-g5-01-decision-port-contract.md)，
+  并推送 `e4b329f6`；没有创建 provider 或加载模型。
+
+- **当前：G5-02 deterministic provider。** 只允许在窄协议模块中实现请求/结果校验、
+  deterministic provider 和无模型契约测试；禁止 Laya/shadow provider、权重、memory/KB/runtime
+  业务接入。
 
 ## G3-05 退出决定
 
@@ -324,11 +329,12 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 ## 下一处施工边界
 
-下一施工单进入 **G5-01**：
+下一施工单进入 **G5-02**：
 
-1. 设计 `DecisionRequest`/`DecisionResult` 的字段、版本、scope 和 fingerprint 合同。
+1. 在既有 `yunxi-core` 边界内实现 `DecisionRequest`/`DecisionResult` 的校验器和
+   deterministic provider，不泄漏 Laya/ONNX 类型。
 2. 固定 deterministic fallback、超时/断连/非法输出/未知 id/越界 score/过期响应矩阵，
-   通过契约测试证明模型关闭时行为不变。
+   用无模型测试证明 provider 关闭时行为不变。
 3. 保留 G4-01 来源元数据、G4-02 数据面/调用方注入、G4-03 freshness gate 和旧
    API/旧数据库兼容；Web identity/dashboard、MCP grant 和跨会话授权另立施工单。
 

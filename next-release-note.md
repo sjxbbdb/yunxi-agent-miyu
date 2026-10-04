@@ -9,6 +9,7 @@
 - G4-05-04：同一来源 revision 与快照 hash 且默认文件内容一致时走 no-op；内容、revision 或文件集合变化仍进入完整替换，避免重复更新破坏有效快照。
 - G5-00：完成 Laya/DecisionPort 只读来源审计，固定 Python/Node-ONNX 来源、Git/HF revision、模型 LFS OID 与许可证分界；明确零样本质量、中文/Linux 术语、资源和故障回退仍未验证，未下载权重、未接入 provider。
 - G5-00 follow-up：修正 Python 仓库 `v0.3.25` tag SHA，明确 Router 只按语言自动选择 English/multilingual，补录上游 multilingual benchmark 文案差异；同步当前远端 HEAD `13f1b43b`。
+- G5-01：固化版本化 `DecisionRequest`/`DecisionResult` 契约、fingerprint、candidate/scope/capability 校验和 deterministic fallback 矩阵；下一阶段只实现无模型 provider，不加载 Laya。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
