@@ -59,6 +59,11 @@
   provider、异步 runtime、持久化 replay ledger 和 Arch 实机证据明确转入后续阶段。退出
   审计见 `docs/plan/2026-10-04-g5-04-09-consumer-exit-audit.md`，下一阶段进入
   G5-05 deterministic 评测设计。
+- G5-05-DESIGN：固定脱敏评测样本协议、deterministic oracle、重要约束/闲聊/敏感拒绝/
+  矛盾低置信/重复记忆/memory-KB 隔离/意图澄清七类行为，以及 confusion matrix、p50/p95、
+  RAM、超时、非法输出和断连回退指标。第一批只允许 `#[cfg(test)]` 夹具与证据文档，
+  不创建 provider、不下载 Laya、不改变生产写入；合同见
+  `docs/plan/2026-10-04-g5-05-evaluation-design.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。

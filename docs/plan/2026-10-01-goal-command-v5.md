@@ -84,6 +84,10 @@ CURRENT_AUTHORIZATION
   MCP grant 仍未授权，除非另立施工单。
   不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
 
+G5-05 设计合同见 `2026-10-04-g5-05-evaluation-design.md`：先固定脱敏样本协议、
+deterministic oracle、七类行为、confusion matrix/latency/RAM/fallback 指标和故障矩阵；
+执行批次只能修改 `#[cfg(test)]` 夹具与证据文档，不得把评测结果接入生产写入或 provider。
+
 NON_NEGOTIABLE_PRODUCT_INVARIANTS
   N1. fish capture、daemon、IPC、TUI、session/state、prompt/cache、tool/host、MCP/Skills 各只有一套权威运行时；新模块只能挂既有 seam。
   N2. memory 与 knowledge base 的目录、schema、embedding、检索、权限、迁移、删除、恢复和审计全部独立；禁止共享表或混合索引。

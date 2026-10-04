@@ -11,6 +11,10 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   [`2026-10-04-g5-04-09-consumer-exit-audit.md`](2026-10-04-g5-04-09-consumer-exit-audit.md)。
   退出不代表真实 provider、Laya、生产异步 consumer、跨重启 replay ledger 或 Arch
   实机证据已经完成；下一阶段只进入 G5-05 deterministic 评测设计。
+- **G5-05：已进入设计。** 评测合同见
+  [`2026-10-04-g5-05-evaluation-design.md`](2026-10-04-g5-05-evaluation-design.md)。当前只
+  固定脱敏样本、deterministic oracle、七类行为、指标和故障边界；尚未新增测试代码、
+  provider、模型权重或生产 consumer。
 
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、
