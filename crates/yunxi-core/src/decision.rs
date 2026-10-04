@@ -748,6 +748,27 @@ mod tests {
     }
 
     #[test]
+    fn terminal_intent_baseline_abstains_instead_of_executing_or_clarifying() {
+        let req = DecisionRequest::new(
+            DecisionTask::TerminalIntent,
+            vec!["clarify".to_owned()],
+            DecisionScope::TerminalTurn,
+            40,
+            vec![DecisionCapability::Abstain, DecisionCapability::ChoiceOnly],
+            json!({"input_class": "ambiguous", "summary": "redacted"}),
+        )
+        .expect("terminal intent request");
+        let result = DeterministicDecisionPort
+            .decide(&req)
+            .expect("deterministic terminal baseline");
+        assert_eq!(result.task, DecisionTask::TerminalIntent);
+        assert_eq!(result.outcome, DecisionOutcome::Abstain);
+        assert!(result.abstain);
+        assert_eq!(result.reason_code, DecisionReason::DeterministicBaseline);
+        validate_result(&req, &result).expect("baseline validates");
+    }
+
+    #[test]
     fn deterministic_port_requires_abstain_capability() {
         let req = DecisionRequest::new(
             DecisionTask::MemoryAdmission,
