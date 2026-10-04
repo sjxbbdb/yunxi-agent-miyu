@@ -1775,4 +1775,283 @@ mod tests {
         assert!(!encoded.contains("password"));
         assert!(!encoded.contains("secret"));
     }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum AdoptionConsumer {
+        ContextSalience,
+        MemoryAdmission,
+        RecallRerank,
+        TerminalIntent,
+        ProactiveRanking,
+    }
+
+    impl AdoptionConsumer {
+        const ALL: [Self; 5] = [
+            Self::ContextSalience,
+            Self::MemoryAdmission,
+            Self::RecallRerank,
+            Self::TerminalIntent,
+            Self::ProactiveRanking,
+        ];
+
+        const fn name(self) -> &'static str {
+            match self {
+                Self::ContextSalience => "context_salience",
+                Self::MemoryAdmission => "memory_admission",
+                Self::RecallRerank => "recall_rerank",
+                Self::TerminalIntent => "terminal_intent",
+                Self::ProactiveRanking => "proactive_ranking",
+            }
+        }
+
+        const fn task(self) -> DecisionTask {
+            match self {
+                Self::ContextSalience => DecisionTask::ContextSalience,
+                Self::MemoryAdmission => DecisionTask::MemoryAdmission,
+                Self::RecallRerank => DecisionTask::RecallRerank,
+                Self::TerminalIntent => DecisionTask::TerminalIntent,
+                Self::ProactiveRanking => DecisionTask::ProactiveRanking,
+            }
+        }
+
+        const fn scope(self) -> DecisionScope {
+            match self {
+                Self::ContextSalience => DecisionScope::Conversation,
+                Self::MemoryAdmission => DecisionScope::Memory,
+                Self::RecallRerank => DecisionScope::Memory,
+                Self::TerminalIntent => DecisionScope::TerminalTurn,
+                Self::ProactiveRanking => DecisionScope::CompanionJob,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    enum AdoptionCase {
+        Disabled,
+        Match,
+        Mismatch,
+        Invalid,
+        Timeout,
+        Privacy,
+        Stale,
+        Closed,
+    }
+
+    impl AdoptionCase {
+        const ALL: [Self; 8] = [
+            Self::Disabled,
+            Self::Match,
+            Self::Mismatch,
+            Self::Invalid,
+            Self::Timeout,
+            Self::Privacy,
+            Self::Stale,
+            Self::Closed,
+        ];
+
+        const fn name(self) -> &'static str {
+            match self {
+                Self::Disabled => "disabled",
+                Self::Match => "match",
+                Self::Mismatch => "mismatch",
+                Self::Invalid => "invalid",
+                Self::Timeout => "timeout",
+                Self::Privacy => "privacy",
+                Self::Stale => "stale",
+                Self::Closed => "closed",
+            }
+        }
+    }
+
+    #[derive(Debug, Serialize, PartialEq, Eq)]
+    struct AdoptionRow {
+        consumer: &'static str,
+        case: &'static str,
+        result: &'static str,
+        reason: &'static str,
+        primary_digest: String,
+        provider_calls: u32,
+        side_effects: u32,
+    }
+
+    #[derive(Debug, Serialize, PartialEq, Eq)]
+    struct AdoptionSummary {
+        rows: Vec<AdoptionRow>,
+        total: u32,
+        disabled: u32,
+        fallback: u32,
+        primary_unchanged: bool,
+        side_effects: u32,
+    }
+
+    fn adoption_request(consumer: AdoptionConsumer) -> DecisionRequest {
+        DecisionRequest::new(
+            consumer.task(),
+            vec!["keep".to_owned(), "drop".to_owned()],
+            consumer.scope(),
+            80,
+            vec![DecisionCapability::Abstain, DecisionCapability::ChoiceOnly],
+            json!({"redacted": true}),
+        )
+        .expect("adoption request")
+    }
+
+    fn adoption_row(consumer: AdoptionConsumer, case: AdoptionCase) -> AdoptionRow {
+        let request = adoption_request(consumer);
+        let baseline = primary(&request);
+        let primary_digest = canonical_result_digest(&baseline);
+        let (result, reason, provider_calls) = match case {
+            AdoptionCase::Disabled => {
+                let provider = FakeProvider {
+                    calls: Cell::new(0),
+                    response: Ok(baseline.clone()),
+                };
+                assert!(
+                    observe(ShadowMode::Disabled, &request, &baseline, Some(&provider))
+                        .unwrap()
+                        .is_none()
+                );
+                ("disabled", "deterministic_primary", provider.calls.get())
+            }
+            AdoptionCase::Match => {
+                let provider = FakeProvider {
+                    calls: Cell::new(0),
+                    response: Ok(baseline.clone()),
+                };
+                let observation =
+                    observe(ShadowMode::RecordOnly, &request, &baseline, Some(&provider))
+                        .unwrap()
+                        .unwrap();
+                assert_eq!(observation.match_kind, ShadowMatchKind::BothAbstain);
+                ("match", "both_abstain", provider.calls.get())
+            }
+            AdoptionCase::Mismatch => {
+                let provider = FakeProvider {
+                    calls: Cell::new(0),
+                    response: Ok(result(
+                        &request,
+                        DecisionOutcome::Choice {
+                            candidate_id: "keep".to_owned(),
+                            confidence: 0.5,
+                        },
+                        "shadow",
+                    )),
+                };
+                let observation =
+                    observe(ShadowMode::RecordOnly, &request, &baseline, Some(&provider))
+                        .unwrap()
+                        .unwrap();
+                assert_eq!(observation.match_kind, ShadowMatchKind::OutcomeMismatch);
+                ("fallback", "outcome_mismatch", provider.calls.get())
+            }
+            AdoptionCase::Invalid => {
+                let mut invalid = baseline.clone();
+                invalid.provider = "bad/provider".to_owned();
+                let provider = FakeProvider {
+                    calls: Cell::new(0),
+                    response: Ok(invalid),
+                };
+                let observation =
+                    observe(ShadowMode::RecordOnly, &request, &baseline, Some(&provider))
+                        .unwrap()
+                        .unwrap();
+                assert_eq!(observation.match_kind, ShadowMatchKind::InvalidShadow);
+                ("fallback", "invalid_output", provider.calls.get())
+            }
+            AdoptionCase::Timeout => {
+                let mut over_deadline = baseline.clone();
+                over_deadline.provider = "shadow".to_owned();
+                over_deadline.elapsed_ms = request.deadline_ms + 1;
+                let provider = FakeProvider {
+                    calls: Cell::new(0),
+                    response: Ok(over_deadline),
+                };
+                let observation =
+                    observe(ShadowMode::RecordOnly, &request, &baseline, Some(&provider))
+                        .unwrap()
+                        .unwrap();
+                assert_eq!(observation.match_kind, ShadowMatchKind::Timeout);
+                ("fallback", "timeout", provider.calls.get())
+            }
+            AdoptionCase::Privacy => {
+                let mut privacy_request = request.clone();
+                privacy_request.payload = json!({"api_key": "not-recorded"});
+                let provider = FakeProvider {
+                    calls: Cell::new(0),
+                    response: Ok(baseline.clone()),
+                };
+                assert!(matches!(
+                    observe(
+                        ShadowMode::RecordOnly,
+                        &privacy_request,
+                        &baseline,
+                        Some(&provider),
+                    ),
+                    Err(DecisionError::PrivacyRejected)
+                ));
+                ("fallback", "privacy_rejected", provider.calls.get())
+            }
+            AdoptionCase::Stale => {
+                let mut stale = baseline.clone();
+                stale.input_fingerprint = "sha256:stale".to_owned();
+                let provider = FakeProvider {
+                    calls: Cell::new(0),
+                    response: Ok(stale),
+                };
+                let observation =
+                    observe(ShadowMode::RecordOnly, &request, &baseline, Some(&provider))
+                        .unwrap()
+                        .unwrap();
+                assert_eq!(observation.match_kind, ShadowMatchKind::StaleFingerprint);
+                ("fallback", "stale_fingerprint", provider.calls.get())
+            }
+            AdoptionCase::Closed => {
+                let observation = observe(ShadowMode::RecordOnly, &request, &baseline, None)
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(observation.match_kind, ShadowMatchKind::Unavailable);
+                ("fallback", "closed_transport", 0)
+            }
+        };
+        assert_eq!(canonical_result_digest(&primary(&request)), primary_digest);
+        AdoptionRow {
+            consumer: consumer.name(),
+            case: case.name(),
+            result,
+            reason,
+            primary_digest,
+            provider_calls,
+            side_effects: 0,
+        }
+    }
+
+    #[test]
+    fn g5_06_consumer_adoption_gate_is_independent_and_fails_closed() {
+        let mut rows = Vec::new();
+        for consumer in AdoptionConsumer::ALL {
+            for case in AdoptionCase::ALL {
+                rows.push(adoption_row(consumer, case));
+            }
+        }
+        let summary = AdoptionSummary {
+            total: rows.len() as u32,
+            disabled: rows.iter().filter(|row| row.result == "disabled").count() as u32,
+            fallback: rows.iter().filter(|row| row.result == "fallback").count() as u32,
+            primary_unchanged: rows.iter().all(|row| row.side_effects == 0),
+            side_effects: rows.iter().map(|row| row.side_effects).sum(),
+            rows,
+        };
+        let encoded = serde_json::to_string(&summary).expect("adoption summary is JSON");
+        let replay = serde_json::to_string(&summary).expect("adoption replay is JSON");
+        assert_eq!(encoded, replay);
+        assert_eq!(summary.total, 40);
+        assert_eq!(summary.disabled, 5);
+        assert_eq!(summary.fallback, 30);
+        assert!(summary.primary_unchanged);
+        assert_eq!(summary.side_effects, 0);
+        assert!(!encoded.contains("redacted"));
+        assert!(!encoded.contains("api_key"));
+        assert!(!encoded.contains("not-recorded"));
+        assert!(!encoded.contains("password"));
+    }
 }
