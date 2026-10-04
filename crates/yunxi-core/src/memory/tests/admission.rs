@@ -7,6 +7,7 @@ use crate::decision_shadow::{
 use crate::memory::*;
 use serde_json::json;
 use std::cell::Cell;
+use std::collections::VecDeque;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use yunxi_base::config::AppConfig;
 
@@ -456,6 +457,16 @@ fn admission_shadow_token_requires_an_exact_current_context() {
             current.task,
             current.scope,
             &current.input_fingerprint,
+            42,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
             current.diary_id,
             &current.batch_database_id,
             8,
@@ -611,6 +622,240 @@ fn admission_shadow_response_gate_drops_stale_responses_without_applying() {
         }
         assert_eq!(apply_count.get(), 1);
         assert_eq!(envelope.primary, primary);
+    }
+}
+
+struct PendingAdmissionResponse {
+    token: AdmissionShadowToken,
+    request: crate::decision::DecisionRequest,
+    response: crate::decision::DecisionResult,
+}
+
+/// A test-only consumer model for the future async seam.
+///
+/// The real consumer is intentionally not implemented here.  This harness
+/// proves the required order without a database, callback, runtime, or
+/// scheduler: validate the response first, then reject stale context, then
+/// count an in-memory apply.
+struct AdmissionResponseHarness {
+    current: AdmissionShadowContext,
+    pending: VecDeque<PendingAdmissionResponse>,
+    applied: Cell<usize>,
+    stale_dropped: Cell<usize>,
+    invalid_dropped: Cell<usize>,
+}
+
+impl AdmissionResponseHarness {
+    fn new(current: AdmissionShadowContext) -> Self {
+        Self {
+            current,
+            pending: VecDeque::new(),
+            applied: Cell::new(0),
+            stale_dropped: Cell::new(0),
+            invalid_dropped: Cell::new(0),
+        }
+    }
+
+    fn push(
+        &mut self,
+        token: AdmissionShadowToken,
+        request: crate::decision::DecisionRequest,
+        response: crate::decision::DecisionResult,
+    ) {
+        self.pending.push_back(PendingAdmissionResponse {
+            token,
+            request,
+            response,
+        });
+    }
+
+    fn drain(&mut self) {
+        while let Some(pending) = self.pending.pop_front() {
+            if validate_result(&pending.request, &pending.response).is_err() {
+                self.invalid_dropped
+                    .set(self.invalid_dropped.get().saturating_add(1));
+                continue;
+            }
+            if admit_admission_shadow_response(&pending.token, &self.current).is_err() {
+                self.stale_dropped
+                    .set(self.stale_dropped.get().saturating_add(1));
+                continue;
+            }
+            self.applied.set(self.applied.get().saturating_add(1));
+        }
+    }
+}
+
+fn admission_shadow_context_for(
+    envelope: &AdmissionDecisionEnvelope,
+    diary_id: i64,
+    database_id: &str,
+    generation: i64,
+    epoch: u64,
+    mode: ShadowMode,
+) -> AdmissionShadowContext {
+    AdmissionShadowContext::new(
+        envelope.request.task,
+        envelope.request.scope,
+        &envelope.request.input_fingerprint,
+        diary_id,
+        database_id,
+        generation,
+        epoch,
+        mode,
+    )
+}
+
+#[test]
+fn admission_consumer_harness_applies_fresh_response_once_and_drops_invalid() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let primary = envelope.primary.clone();
+    let provider = MatchingAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    let shadow_response = provider.observe(&envelope.request).unwrap();
+    let token = AdmissionShadowToken::from_envelope(
+        &envelope,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    )
+    .unwrap();
+    let current =
+        admission_shadow_context_for(&envelope, 41, "memory-db-a", 7, 3, ShadowMode::RecordOnly);
+    let mut harness = AdmissionResponseHarness::new(current);
+    harness.push(token, envelope.request.clone(), shadow_response);
+    let mut invalid = envelope.primary.clone();
+    invalid.provider.clear();
+    harness.push(
+        AdmissionShadowToken::from_envelope(
+            &envelope,
+            41,
+            "memory-db-a",
+            7,
+            3,
+            ShadowMode::RecordOnly,
+        )
+        .unwrap(),
+        envelope.request.clone(),
+        invalid,
+    );
+
+    harness.drain();
+    assert_eq!(harness.applied.get(), 1);
+    assert_eq!(harness.invalid_dropped.get(), 1);
+    assert_eq!(harness.stale_dropped.get(), 0);
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+    assert!(harness.pending.is_empty());
+    harness.drain();
+    assert_eq!(harness.applied.get(), 1);
+    assert_eq!(envelope.primary, primary);
+}
+
+#[test]
+fn admission_consumer_harness_drops_every_stale_context_without_applying() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let token = AdmissionShadowToken::from_envelope(
+        &envelope,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    )
+    .unwrap();
+    let current =
+        admission_shadow_context_for(&envelope, 41, "memory-db-a", 7, 3, ShadowMode::RecordOnly);
+    let mut stale_contexts = Vec::new();
+    for context in [
+        AdmissionShadowContext::new(
+            crate::decision::DecisionTask::RecallRerank,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            crate::decision::DecisionScope::Conversation,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            "sha256:stale",
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            "memory-db-b",
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            8,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            4,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            ShadowMode::Disabled,
+        ),
+    ] {
+        stale_contexts.push(context);
+    }
+
+    for stale in stale_contexts {
+        let mut harness = AdmissionResponseHarness::new(stale);
+        harness.push(
+            token.clone(),
+            envelope.request.clone(),
+            envelope.primary.clone(),
+        );
+        harness.drain();
+        assert_eq!(harness.applied.get(), 0);
+        assert_eq!(harness.invalid_dropped.get(), 0);
+        assert_eq!(harness.stale_dropped.get(), 1);
+        assert!(harness.pending.is_empty());
     }
 }
 
