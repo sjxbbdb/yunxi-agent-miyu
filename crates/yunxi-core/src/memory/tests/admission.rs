@@ -1578,12 +1578,21 @@ fn g5_05_deterministic_admission_evaluation_matrix_is_replayable() {
     ];
 
     let mut replay = Vec::new();
+    let mut admit_count = 0;
+    let mut reject_count = 0;
+    let mut abstain_count = 0;
     for case in cases {
         let decision = deterministic_admission_text(case.text, case.force_long_term);
         assert_eq!(decision.verdict, case.verdict, "case {}", case.id);
         assert_eq!(decision.class, case.class, "case {}", case.id);
+        match decision.verdict {
+            AdmissionVerdict::Admit => admit_count += 1,
+            AdmissionVerdict::Reject => reject_count += 1,
+            AdmissionVerdict::Abstain => abstain_count += 1,
+        }
         replay.push((case.id, decision.verdict, decision.class));
     }
+    assert_eq!((admit_count, reject_count, abstain_count), (2, 3, 1));
 
     let second_pass = cases
         .into_iter()
