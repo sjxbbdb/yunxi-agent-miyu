@@ -17,6 +17,9 @@
 - 结果校验包含：schema/task/fingerprint/provider 边界、`elapsed_ms` 不得超过
   request deadline、choice/ranking/score 的 capability 与候选/数值边界、空 ranking
   拒绝、abstain 一致性；未知候选错误不回显调用方 ID。
+- request/result/error 的 `Debug`/`Display` 都采用脱敏输出，不打印 payload、候选 ID、
+  schema 原文或错误细节；capability 集合按稳定顺序参与 fingerprint，结果 digest
+  使用 canonical JSON SHA-256。
 - `DeterministicDecisionPort` 只返回 `abstain=true`、`reason_code=deterministic_baseline`
   的零副作用结果，且必须显式声明 `abstain` capability；没有模型、网络、存储、工具
   或调度依赖。

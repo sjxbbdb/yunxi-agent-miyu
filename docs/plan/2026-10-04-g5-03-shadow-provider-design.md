@@ -82,7 +82,7 @@ ShadowObservation {
 }
 ```
 
-摘要只对规范化结果 envelope 计算，不保存结果原文。`match_kind` 仅允许：`exact_match`、`outcome_match`、`outcome_mismatch`、`both_abstain`、`invalid_shadow`、`timeout`、`cancelled`、`unavailable`、`privacy_rejected`、`queue_full`。
+摘要只对规范化结果 envelope 计算，不保存结果原文。`match_kind` 仅允许：`exact_match`、`outcome_match`、`outcome_mismatch`、`both_abstain`、`invalid_shadow`、`timeout`、`cancelled`、`unavailable`、`privacy_rejected`、`queue_full`、`stale_fingerprint`。分类优先级固定为：先判 `both_abstain`，再判完整 envelope 的 `exact_match`，再判结构化 outcome 的 `outcome_match`，否则为 `outcome_mismatch`。
 
 ## 6. 结果比较规则
 
@@ -96,9 +96,9 @@ ShadowObservation {
 
 ## 7. 隐私、审计与指标
 
-请求进入 shadow 前必须复用 DecisionPort 的 privacy gate 和 canonical fingerprint。允许记录的最小字段只有：`task`、`scope`、`provider_id/version`、`schema_version`、`input_fingerprint`、结果摘要、`reason_code`、耗时、错误分类、开关与取消标志、计数器。
+请求进入 shadow 前必须复用 DecisionPort 的 privacy gate 和 canonical fingerprint。DecisionPort 的 key gate 不是对原文脱敏的证明；未来消费者必须按 task 使用 allowlist/脱敏 marker，只把最小 metadata 放入 payload，不能把“字段名未命中敏感词”当作授权。允许记录的最小字段只有：`task`、`scope`、`provider_id/version`、`schema_version`、`input_fingerprint`、结果摘要、`reason_code`、耗时、错误分类、开关与取消标志、计数器。
 
-禁止记录或发送原始用户消息、完整 profile、relationship、memory/KB 内容、终端原始命令、个人路径、secret、token、password、credential、私钥、API key、未经脱敏的模型输入/输出/prompt/cache。错误信息只能引用稳定协议类别，不得回显 caller-controlled candidate ID、payload 片段或路径。
+禁止记录或发送原始用户消息、完整 profile、relationship、memory/KB 内容、终端原始命令、个人路径、secret、token、password、credential、私钥、API key、未经脱敏的模型输入/输出/prompt/cache。错误信息只能引用稳定协议类别，不得回显 caller-controlled candidate ID、payload 片段或路径。provider identity 先经过 ASCII 安全字符和长度校验，非法值只记录 `unknown`。
 
 指标只存计数和延迟：`shadow_started`、`shadow_completed`、`shadow_exact_match`、`shadow_outcome_match`、`shadow_mismatch`、`shadow_invalid`、`shadow_timeout`、`shadow_cancelled`、`shadow_unavailable`、`shadow_privacy_rejected`、`shadow_queue_full`，以及 shadow/主路径各自的 p50/p95/p99。队列、采样、环形缓存有硬上限，满载时丢弃观测；指标失败不得使主请求失败。禁用时不启动后台任务或创建模型缓存。
 

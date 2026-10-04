@@ -13,6 +13,9 @@
 - G5-02（已完成，`2b458d39`）：已在 `yunxi-core` 建立无模型、无副作用的版本化协议、
   fingerprint/隐私/预算校验与 abstain-only deterministic provider；WSL decision 8/8
   通过。Laya/shadow provider 和消费者接入仍未实现，下一阶段进入 G5-03 设计。
+- G5-03（进行中）：已建立无模型、同步、record-only 的 shadow observer seam 与 10 个
+  协议测试；disabled 时不调用 provider，shadow 结果只形成最小 observation，主结果
+  永远保持 deterministic baseline。尚未接入消费者、调度或 Laya 权重。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。

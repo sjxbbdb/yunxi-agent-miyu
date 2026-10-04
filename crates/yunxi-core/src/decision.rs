@@ -75,7 +75,7 @@ pub enum DecisionReason {
 }
 
 /// One of the protocol's mutually exclusive provider outcomes.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum DecisionOutcome {
     Choice {
@@ -94,7 +94,7 @@ pub enum DecisionOutcome {
 }
 
 /// Versioned, fingerprinted input to a decision provider.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct DecisionRequest {
     pub schema_version: String,
     pub task: DecisionTask,
@@ -152,7 +152,7 @@ impl DecisionRequest {
 }
 
 /// Versioned result returned by a decision provider.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct DecisionResult {
     pub schema_version: String,
     pub task: DecisionTask,
@@ -166,10 +166,10 @@ pub struct DecisionResult {
 
 /// Errors exposed by request/result validation.  Details never contain payload
 /// text; they are limited to protocol metadata safe for diagnostics.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum DecisionError {
     InvalidRequest(String),
-    UnsupportedSchema(String),
+    UnsupportedSchema,
     PrivacyRejected,
     UnknownCandidate(String),
     InvalidResult(String),
@@ -180,24 +180,94 @@ pub enum DecisionError {
 impl fmt::Display for DecisionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidRequest(detail) => write!(f, "invalid decision request: {detail}"),
-            Self::UnsupportedSchema(schema) => write!(f, "unsupported decision schema: {schema}"),
+            Self::InvalidRequest(_) => f.write_str("invalid decision request"),
+            Self::UnsupportedSchema => f.write_str("unsupported decision schema"),
             Self::PrivacyRejected => f.write_str("decision payload rejected by privacy policy"),
-            Self::UnknownCandidate(id) => {
-                write!(f, "decision result referenced unknown candidate: {id}")
+            Self::UnknownCandidate(_) => {
+                f.write_str("decision result referenced unknown candidate")
             }
-            Self::InvalidResult(detail) => write!(f, "invalid decision result: {detail}"),
+            Self::InvalidResult(_) => f.write_str("invalid decision result"),
             Self::StaleFingerprint => {
                 f.write_str("decision result or request has a stale fingerprint")
             }
-            Self::CapabilityViolation(detail) => {
-                write!(f, "decision capability violation: {detail}")
-            }
+            Self::CapabilityViolation(_) => f.write_str("decision capability violation"),
         }
     }
 }
 
 impl std::error::Error for DecisionError {}
+
+impl fmt::Debug for DecisionOutcome {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Choice { confidence, .. } => f
+                .debug_struct("Choice")
+                .field("confidence", confidence)
+                .finish(),
+            Self::Ranking { ordered_ids } => f
+                .debug_struct("Ranking")
+                .field("candidate_count", &ordered_ids.len())
+                .finish(),
+            Self::Score { score, min, max } => f
+                .debug_struct("Score")
+                .field("score", score)
+                .field("min", min)
+                .field("max", max)
+                .finish(),
+            Self::Abstain => f.write_str("Abstain"),
+        }
+    }
+}
+
+impl fmt::Debug for DecisionRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DecisionRequest")
+            .field(
+                "schema_supported",
+                &(self.schema_version == DECISION_SCHEMA_V1),
+            )
+            .field("task", &self.task)
+            .field("candidate_count", &self.candidate_ids.len())
+            .field("scope", &self.scope)
+            .field("fingerprint_present", &!self.input_fingerprint.is_empty())
+            .field("deadline_ms", &self.deadline_ms)
+            .field("capabilities", &self.capabilities)
+            .field("payload", &"<redacted>")
+            .finish()
+    }
+}
+
+impl fmt::Debug for DecisionResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DecisionResult")
+            .field(
+                "schema_supported",
+                &(self.schema_version == DECISION_SCHEMA_V1),
+            )
+            .field("task", &self.task)
+            .field("fingerprint_present", &!self.input_fingerprint.is_empty())
+            .field("outcome", &self.outcome)
+            .field("abstain", &self.abstain)
+            .field("reason_code", &self.reason_code)
+            .field("provider_present", &!self.provider.is_empty())
+            .field("elapsed_ms", &self.elapsed_ms)
+            .finish()
+    }
+}
+
+impl fmt::Debug for DecisionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidRequest(_) => f.write_str("InvalidRequest(<redacted>)"),
+            Self::UnsupportedSchema => f.write_str("UnsupportedSchema"),
+            Self::PrivacyRejected => f.write_str("PrivacyRejected"),
+            Self::UnknownCandidate(_) => f.write_str("UnknownCandidate(<redacted>)"),
+            Self::InvalidResult(_) => f.write_str("InvalidResult(<redacted>)"),
+            Self::StaleFingerprint => f.write_str("StaleFingerprint"),
+            Self::CapabilityViolation(_) => f.write_str("CapabilityViolation(<redacted>)"),
+        }
+    }
+}
 
 /// Narrow seam implemented by deterministic and future provider backends.
 pub trait DecisionPort {
@@ -232,9 +302,7 @@ pub fn validate_result(
 ) -> Result<(), DecisionError> {
     request.validate()?;
     if result.schema_version != DECISION_SCHEMA_V1 {
-        return Err(DecisionError::UnsupportedSchema(
-            result.schema_version.clone(),
-        ));
+        return Err(DecisionError::UnsupportedSchema);
     }
     if result.task != request.task {
         return Err(DecisionError::InvalidResult("task mismatch".to_owned()));
@@ -250,9 +318,12 @@ pub fn validate_result(
     if result.provider.trim().is_empty()
         || result.provider.len() > MAX_PROVIDER_BYTES
         || result.provider.chars().any(char::is_control)
+        || result.provider.chars().any(|character| {
+            !character.is_ascii_alphanumeric() && !matches!(character, '.' | '_' | ':' | '-')
+        })
     {
         return Err(DecisionError::InvalidResult(
-            "provider is empty, too long, or contains control characters".to_owned(),
+            "provider is empty, too long, or contains unsafe characters".to_owned(),
         ));
     }
 
@@ -356,9 +427,7 @@ fn validate_request_shape(
     check_fingerprint: bool,
 ) -> Result<(), DecisionError> {
     if request.schema_version != DECISION_SCHEMA_V1 {
-        return Err(DecisionError::UnsupportedSchema(
-            request.schema_version.clone(),
-        ));
+        return Err(DecisionError::UnsupportedSchema);
     }
     if request.candidate_ids.is_empty() {
         return Err(DecisionError::InvalidRequest(
@@ -508,9 +577,13 @@ fn canonical_request_input(request: &DecisionRequest) -> String {
         "scope".to_owned(),
         serde_json::to_value(request.scope).expect("scope serializes"),
     );
+    let mut capabilities = request.capabilities.clone();
+    capabilities.sort_by_key(|capability| {
+        serde_json::to_string(capability).expect("capability serializes")
+    });
     root.insert(
         "capabilities".to_owned(),
-        serde_json::to_value(&request.capabilities).expect("capabilities serialize"),
+        serde_json::to_value(capabilities).expect("capabilities serialize"),
     );
     root.insert(
         "deadline_ms".to_owned(),
@@ -549,6 +622,17 @@ fn canonical_value(value: &Value) -> String {
     }
 }
 
+/// Return the stable digest of a result envelope after the caller has
+/// validated it with [`validate_result`].  The shadow seam uses this helper
+/// instead of formatting a result with `Debug`, whose representation is not a
+/// protocol contract.
+pub(crate) fn canonical_result_digest(result: &DecisionResult) -> String {
+    let value = serde_json::to_value(result).expect("decision result serializes");
+    let canonical = canonical_value(&value);
+    let digest = Sha256::digest(canonical.as_bytes());
+    format!("sha256:{digest:x}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -578,6 +662,48 @@ mod tests {
         assert_eq!(first.input_fingerprint, second.input_fingerprint);
         let reordered = request(json!({"a": [1, true], "b": 2}));
         assert_ne!(first.input_fingerprint, reordered.input_fingerprint);
+
+        let reordered_capabilities = DecisionRequest::new(
+            first.task,
+            first.candidate_ids.clone(),
+            first.scope,
+            first.deadline_ms,
+            vec![
+                DecisionCapability::Score,
+                DecisionCapability::RankOnly,
+                DecisionCapability::ChoiceOnly,
+                DecisionCapability::Abstain,
+            ],
+            first.payload.clone(),
+        )
+        .expect("reordered capabilities are valid");
+        assert_eq!(
+            first.input_fingerprint,
+            reordered_capabilities.input_fingerprint
+        );
+    }
+
+    #[test]
+    fn debug_output_redacts_payload_candidate_ids_and_error_details() {
+        let request = request(json!({"redacted_text": "private sentence"}));
+        let request_debug = format!("{request:?}");
+        assert!(!request_debug.contains("private sentence"));
+        assert!(!request_debug.contains("keep"));
+
+        let result = DeterministicDecisionPort
+            .decide(&request)
+            .expect("decision");
+        let result_debug = format!("{result:?}");
+        assert!(!result_debug.contains("keep"));
+        assert!(!result_debug.contains("private sentence"));
+
+        let error = DecisionError::InvalidRequest("private sentence".to_owned());
+        assert!(!format!("{error:?}").contains("private sentence"));
+        assert!(!format!("{error}").contains("private sentence"));
+
+        let schema_error = DecisionError::UnsupportedSchema;
+        assert_eq!(format!("{schema_error}"), "unsupported decision schema");
+        assert!(!format!("{schema_error:?}").contains(DECISION_SCHEMA_V1));
     }
 
     #[test]

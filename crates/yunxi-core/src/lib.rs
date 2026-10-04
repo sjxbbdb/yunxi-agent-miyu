@@ -6,6 +6,7 @@ pub mod alarm;
 pub mod args;
 pub mod companion_context;
 pub mod decision;
+pub mod decision_shadow;
 pub mod ipc;
 pub mod ledger;
 pub mod llm;
