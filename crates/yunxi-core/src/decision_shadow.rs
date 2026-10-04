@@ -9,6 +9,7 @@ use crate::decision::{
     DecisionResult, DecisionScope, DecisionTask, DECISION_SCHEMA_V1,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::fmt;
 
 /// Controls whether the optional shadow branch is entered.
@@ -17,6 +18,23 @@ use std::fmt;
 pub enum ShadowMode {
     Disabled,
     RecordOnly,
+}
+
+/// Synchronous limits for one record-only shadow call.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShadowBudget {
+    pub deadline_ms: u64,
+    pub queue_slots: usize,
+}
+
+impl ShadowBudget {
+    /// A compatibility budget for the original [`observe`] API.
+    pub const fn unlimited() -> Self {
+        Self {
+            deadline_ms: u64::MAX,
+            queue_slots: usize::MAX,
+        }
+    }
 }
 
 /// Stable failure classes exposed by a shadow provider.
@@ -90,6 +108,27 @@ pub fn observe(
     primary: &DecisionResult,
     provider: Option<&dyn ShadowDecisionProvider>,
 ) -> Result<Option<ShadowObservation>, DecisionError> {
+    observe_with_budget(
+        mode,
+        request,
+        primary,
+        provider,
+        ShadowBudget::unlimited(),
+        false,
+    )
+}
+
+/// Synchronous, best-effort shadow observation with explicit cancellation and
+/// queue/deadline prechecks.  The provider is never called when a precheck
+/// classifies the observation.
+pub fn observe_with_budget(
+    mode: ShadowMode,
+    request: &DecisionRequest,
+    primary: &DecisionResult,
+    provider: Option<&dyn ShadowDecisionProvider>,
+    budget: ShadowBudget,
+    cancelled: bool,
+) -> Result<Option<ShadowObservation>, DecisionError> {
     request.validate()?;
     validate_result(request, primary)?;
 
@@ -98,6 +137,38 @@ pub fn observe(
     }
 
     let primary_digest = canonical_result_digest(primary);
+
+    if cancelled {
+        return Ok(Some(observation(
+            request,
+            primary_digest,
+            None,
+            ShadowMatchKind::Cancelled,
+            "unknown".to_owned(),
+            0,
+        )));
+    }
+    if budget.deadline_ms == 0 {
+        return Ok(Some(observation(
+            request,
+            primary_digest,
+            None,
+            ShadowMatchKind::Timeout,
+            "unknown".to_owned(),
+            0,
+        )));
+    }
+    if budget.queue_slots == 0 {
+        return Ok(Some(observation(
+            request,
+            primary_digest,
+            None,
+            ShadowMatchKind::QueueFull,
+            "unknown".to_owned(),
+            0,
+        )));
+    }
+
     let Some(provider) = provider else {
         return Ok(Some(observation(
             request,
@@ -112,6 +183,16 @@ pub fn observe(
     match provider.observe(request) {
         Ok(shadow) => {
             let elapsed_ms = shadow.elapsed_ms;
+            if elapsed_ms > budget.deadline_ms {
+                return Ok(Some(observation(
+                    request,
+                    primary_digest,
+                    None,
+                    ShadowMatchKind::Timeout,
+                    "unknown".to_owned(),
+                    elapsed_ms,
+                )));
+            }
             if let Err(error) = validate_result(request, &shadow) {
                 let match_kind = match error {
                     DecisionError::StaleFingerprint => ShadowMatchKind::StaleFingerprint,
@@ -156,6 +237,18 @@ pub fn observe(
             0,
         ))),
     }
+}
+
+/// Serialize only the observation envelope in a deterministic field order.
+/// No request payload or candidate text is reachable from this type.
+pub fn observation_replay_bytes(observation: &ShadowObservation) -> Vec<u8> {
+    serde_json::to_vec(observation).expect("shadow observation serializes")
+}
+
+/// Return a stable digest for [`observation_replay_bytes`].
+pub fn observation_replay_digest(observation: &ShadowObservation) -> String {
+    let digest = Sha256::digest(observation_replay_bytes(observation));
+    format!("sha256:{digest:x}")
 }
 
 fn is_abstain(result: &DecisionResult) -> bool {
@@ -488,5 +581,177 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(observation.match_kind, ShadowMatchKind::Unavailable);
+    }
+
+    #[test]
+    fn cancelled_budget_does_not_call_provider() {
+        let req = request();
+        let baseline = primary(&req);
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(baseline.clone()),
+        };
+        let observation = observe_with_budget(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&fake),
+            ShadowBudget {
+                deadline_ms: 20,
+                queue_slots: 1,
+            },
+            true,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.match_kind, ShadowMatchKind::Cancelled);
+        assert_eq!(fake.calls.get(), 0);
+    }
+
+    #[test]
+    fn zero_deadline_budget_does_not_call_provider() {
+        let req = request();
+        let baseline = primary(&req);
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(baseline.clone()),
+        };
+        let observation = observe_with_budget(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&fake),
+            ShadowBudget {
+                deadline_ms: 0,
+                queue_slots: 1,
+            },
+            false,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.match_kind, ShadowMatchKind::Timeout);
+        assert_eq!(fake.calls.get(), 0);
+    }
+
+    #[test]
+    fn queue_full_budget_does_not_call_provider() {
+        let req = request();
+        let baseline = primary(&req);
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(baseline.clone()),
+        };
+        let observation = observe_with_budget(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&fake),
+            ShadowBudget {
+                deadline_ms: 20,
+                queue_slots: 0,
+            },
+            false,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.match_kind, ShadowMatchKind::QueueFull);
+        assert_eq!(fake.calls.get(), 0);
+    }
+
+    #[test]
+    fn provider_elapsed_over_budget_is_timeout() {
+        let req = request();
+        let baseline = primary(&req);
+        let mut shadow = baseline.clone();
+        shadow.provider = "shadow".to_owned();
+        shadow.elapsed_ms = 10;
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Ok(shadow),
+        };
+        let observation = observe_with_budget(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&fake),
+            ShadowBudget {
+                deadline_ms: 5,
+                queue_slots: 1,
+            },
+            false,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(observation.match_kind, ShadowMatchKind::Timeout);
+        assert_eq!(fake.calls.get(), 1);
+        assert_eq!(baseline.provider, "deterministic");
+    }
+
+    #[test]
+    fn disabled_precedes_budget_prechecks() {
+        let req = request();
+        let baseline = primary(&req);
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Err(ShadowError::Unavailable),
+        };
+        assert_eq!(
+            observe_with_budget(
+                ShadowMode::Disabled,
+                &req,
+                &baseline,
+                Some(&fake),
+                ShadowBudget {
+                    deadline_ms: 0,
+                    queue_slots: 0,
+                },
+                true,
+            )
+            .unwrap(),
+            None
+        );
+        assert_eq!(fake.calls.get(), 0);
+    }
+
+    #[test]
+    fn observation_replay_bytes_and_digest_are_stable() {
+        let req = request();
+        let baseline = primary(&req);
+        let observation = observe(ShadowMode::RecordOnly, &req, &baseline, None)
+            .unwrap()
+            .unwrap();
+        let first_bytes = observation_replay_bytes(&observation);
+        let second_bytes = observation_replay_bytes(&observation);
+        assert_eq!(first_bytes, second_bytes);
+        assert_eq!(
+            observation_replay_digest(&observation),
+            observation_replay_digest(&observation)
+        );
+        assert!(!String::from_utf8(first_bytes)
+            .expect("replay bytes are JSON")
+            .contains("redacted_text"));
+    }
+
+    #[test]
+    fn budget_observation_does_not_change_primary() {
+        let req = request();
+        let baseline = primary(&req);
+        let before = baseline.clone();
+        let fake = FakeProvider {
+            calls: Cell::new(0),
+            response: Err(ShadowError::Cancelled),
+        };
+        let _ = observe_with_budget(
+            ShadowMode::RecordOnly,
+            &req,
+            &baseline,
+            Some(&fake),
+            ShadowBudget {
+                deadline_ms: 1,
+                queue_slots: 1,
+            },
+            true,
+        );
+        assert_eq!(baseline, before);
     }
 }
