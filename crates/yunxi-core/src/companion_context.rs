@@ -119,9 +119,19 @@ impl CompanionContext {
 
     /// Parse and validate a JSON context without panicking or logging input.
     pub fn from_json(input: &[u8]) -> Option<Self> {
-        let mut context: Self = serde_json::from_slice(input).ok()?;
-        context.normalize();
-        context.is_supported().then_some(context)
+        let context: Self = serde_json::from_slice(input).ok()?;
+        context.canonicalized()
+    }
+
+    /// Return the canonical, supported representation of this context.
+    ///
+    /// Builder and setter callers can construct values with surrounding
+    /// whitespace just as JSON callers can. Canonicalizing at the boundary
+    /// keeps the stored value, prompt bytes, and future replay payload on the
+    /// same representation instead of relying on render-time trimming.
+    pub fn canonicalized(mut self) -> Option<Self> {
+        self.normalize();
+        self.is_supported().then_some(self)
     }
 
     /// Render the supported payload as a deterministic XML-style block.
@@ -298,5 +308,21 @@ mod tests {
             .with_boundaries(["one", "two"]);
         let encoded = serde_json::to_vec(&context).unwrap();
         assert_eq!(CompanionContext::from_json(&encoded), Some(context));
+    }
+
+    #[test]
+    fn builder_and_json_input_share_the_same_canonical_prompt_bytes() {
+        let builder = CompanionContext::new(" source ", " scope ")
+            .with_relationship_stage(" stage ")
+            .with_boundaries([" one ", "two"])
+            .with_response_preference(" concise ");
+        let canonical = builder.clone().canonicalized().unwrap();
+        let parsed = CompanionContext::from_json(&serde_json::to_vec(&builder).unwrap()).unwrap();
+        assert_eq!(canonical, parsed);
+        assert_eq!(canonical.to_prompt_block(), parsed.to_prompt_block());
+        assert_eq!(
+            canonical.to_prompt_block().unwrap().as_bytes(),
+            parsed.to_prompt_block().unwrap().as_bytes()
+        );
     }
 }

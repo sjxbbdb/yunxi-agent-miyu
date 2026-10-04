@@ -347,7 +347,18 @@ fn companion_context_is_optional_versioned_and_byte_stable_when_cleared() {
         .with_response_preference("先给结论，再给必要细节")
         .with_current_companion_state("正在建立上下文");
     agent.set_companion_context(Some(context)).unwrap();
-    assert!(agent.system_prompt.ends_with("</companion-context>"));
+    let with_context = agent.system_prompt.clone();
+    let expected_block = yunxi_core::companion_context::CompanionContext::new("g1-test", "owner")
+        .with_relationship_stage("初识")
+        .with_stable_tone("温和")
+        .with_boundaries(["不虚构未确认的记忆"])
+        .with_response_preference("先给结论，再给必要细节")
+        .with_current_companion_state("正在建立上下文")
+        .to_prompt_block()
+        .unwrap();
+    assert_eq!(with_context, format!("{baseline}\n\n{expected_block}"));
+    agent.prepare_for_turn().unwrap();
+    assert_eq!(agent.system_prompt, with_context);
     assert!(agent
         .system_prompt
         .contains("<relationship-stage>初识</relationship-stage>"));
@@ -359,6 +370,8 @@ fn companion_context_is_optional_versioned_and_byte_stable_when_cleared() {
     unsupported.version = 0;
     agent.set_companion_context(Some(unsupported)).unwrap();
     assert_eq!(agent.system_prompt, baseline);
+    agent.set_companion_context(None).unwrap();
+    assert_eq!(agent.system_prompt.as_bytes(), baseline.as_bytes());
 }
 
 #[test]

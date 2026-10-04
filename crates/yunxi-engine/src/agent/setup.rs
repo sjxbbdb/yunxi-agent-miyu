@@ -451,7 +451,7 @@ impl Agent {
         &mut self,
         context: Option<yunxi_core::companion_context::CompanionContext>,
     ) -> Result<()> {
-        self.input.companion_context = context.filter(|context| context.is_supported());
+        self.input.companion_context = context.and_then(|context| context.canonicalized());
         self.refresh_system_prompt()
     }
 
