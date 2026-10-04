@@ -42,7 +42,7 @@ REPOSITORY
   base: shorin/miyu
   historical_reference: sjxbbdb/YunXi-Native
   branch: codex/yunxi-product-rename
-  current_head: d9640d25
+  current_head: a91e9999
 
 OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
