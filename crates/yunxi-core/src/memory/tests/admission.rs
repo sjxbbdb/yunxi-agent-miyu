@@ -1,7 +1,11 @@
 use super::shared::*;
 use crate::decision::{validate_result, DecisionError, DecisionOutcome};
+use crate::decision_shadow::{
+    ShadowCallContext, ShadowDecisionProvider, ShadowError, ShadowMatchKind, ShadowMode,
+};
 use crate::memory::*;
 use serde_json::json;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use yunxi_base::config::AppConfig;
 
 fn diary(
@@ -180,6 +184,123 @@ fn envelope_for(text: &str, force_long_term: bool) -> AdmissionDecisionEnvelope 
     .unwrap()
     .build(&decision)
     .unwrap()
+}
+
+struct MatchingAdmissionProvider {
+    calls: AtomicUsize,
+}
+
+impl ShadowDecisionProvider for MatchingAdmissionProvider {
+    fn observe(
+        &self,
+        request: &crate::decision::DecisionRequest,
+    ) -> Result<crate::decision::DecisionResult, ShadowError> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Ok(crate::decision::DecisionResult {
+            schema_version: crate::decision::DECISION_SCHEMA_V1.to_owned(),
+            task: request.task,
+            input_fingerprint: request.input_fingerprint.clone(),
+            outcome: DecisionOutcome::Choice {
+                candidate_id: "admit".to_owned(),
+                confidence: 1.0,
+            },
+            abstain: false,
+            reason_code: crate::decision::DecisionReason::ProviderChoice,
+            provider: "fake".to_owned(),
+            elapsed_ms: 0,
+        })
+    }
+
+    fn observe_with_context(
+        &self,
+        request: &crate::decision::DecisionRequest,
+        _context: ShadowCallContext,
+    ) -> Result<crate::decision::DecisionResult, ShadowError> {
+        self.observe(request)
+    }
+}
+
+struct FaultAdmissionProvider {
+    calls: AtomicUsize,
+}
+
+impl ShadowDecisionProvider for FaultAdmissionProvider {
+    fn observe(
+        &self,
+        _request: &crate::decision::DecisionRequest,
+    ) -> Result<crate::decision::DecisionResult, ShadowError> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Err(ShadowError::Timeout)
+    }
+}
+
+#[test]
+fn admission_shadow_is_disabled_by_default_and_record_only() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let primary = envelope.primary.clone();
+    let disabled = MatchingAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    let observation = observe_admission_shadow(
+        &envelope,
+        AdmissionShadowConfig::default(),
+        Some(&disabled),
+        None,
+    )
+    .unwrap();
+    assert!(observation.is_none());
+    assert_eq!(disabled.calls.load(Ordering::SeqCst), 0);
+    assert_eq!(envelope.primary, primary);
+
+    let provider = MatchingAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    let mut config = AdmissionShadowConfig::default();
+    config.mode = ShadowMode::RecordOnly;
+    let observation = observe_admission_shadow(&envelope, config, Some(&provider), None)
+        .unwrap()
+        .expect("record-only provider produces an observation");
+    assert_eq!(observation.match_kind, ShadowMatchKind::OutcomeMatch);
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(envelope.primary, primary);
+}
+
+#[test]
+fn admission_shadow_fault_budget_and_cancel_are_observations_only() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let primary = envelope.primary.clone();
+    let provider = FaultAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    let mut config = AdmissionShadowConfig::default();
+    config.mode = ShadowMode::RecordOnly;
+    let observation = observe_admission_shadow(&envelope, config, Some(&provider), None)
+        .unwrap()
+        .expect("provider fault is represented");
+    assert_eq!(observation.match_kind, ShadowMatchKind::Timeout);
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+
+    let cancelled = MatchingAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    config.cancelled = true;
+    let observation = observe_admission_shadow(&envelope, config, Some(&cancelled), None)
+        .unwrap()
+        .expect("cancellation is represented");
+    assert_eq!(observation.match_kind, ShadowMatchKind::Cancelled);
+    assert_eq!(cancelled.calls.load(Ordering::SeqCst), 0);
+
+    config.cancelled = false;
+    config.budget.queue_slots = 0;
+    let queued = MatchingAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    let observation = observe_admission_shadow(&envelope, config, Some(&queued), None)
+        .unwrap()
+        .expect("queue exhaustion is represented");
+    assert_eq!(observation.match_kind, ShadowMatchKind::QueueFull);
+    assert_eq!(queued.calls.load(Ordering::SeqCst), 0);
+    assert_eq!(envelope.primary, primary);
 }
 
 #[test]

@@ -10,6 +10,10 @@ use crate::decision::{
     validate_result, DecisionCapability, DecisionError, DecisionOutcome, DecisionReason,
     DecisionRequest, DecisionResult, DecisionScope, DecisionTask, DECISION_SCHEMA_V1,
 };
+use crate::decision_shadow::{
+    observe_with_budget, observe_with_queue, ShadowBudget, ShadowDecisionProvider, ShadowMode,
+    ShadowObservation, ShadowQueue,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
@@ -20,6 +24,34 @@ pub(crate) const ADMISSION_SCHEMA_VERSION: u16 = 1;
 pub(crate) const MEMORY_ADMISSION_PAYLOAD_SCHEMA: &str = "memory.admission.v1";
 const MEMORY_ADMISSION_CANDIDATES: [&str; 3] = ["admit", "reject", "abstain"];
 const MAX_ADMISSION_RULES_VERSION_BYTES: usize = 64;
+pub(crate) const ADMISSION_RULES_VERSION: &str = "admission-rules-1";
+pub(crate) const ADMISSION_SHADOW_DEADLINE_MS: u64 = 80;
+
+/// Memory-local controls for the optional admission observer.
+///
+/// This intentionally is not part of the application configuration: the first
+/// consumer has no user-facing or persisted switch.  The default keeps the
+/// observer fully disabled while retaining bounded values for explicit tests or
+/// a future in-memory caller.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct AdmissionShadowConfig {
+    pub(crate) mode: ShadowMode,
+    pub(crate) budget: ShadowBudget,
+    pub(crate) cancelled: bool,
+}
+
+impl Default for AdmissionShadowConfig {
+    fn default() -> Self {
+        Self {
+            mode: ShadowMode::Disabled,
+            budget: ShadowBudget {
+                deadline_ms: ADMISSION_SHADOW_DEADLINE_MS,
+                queue_slots: 1,
+            },
+            cancelled: false,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -214,6 +246,37 @@ impl AdmissionDecisionRequestBuilder {
         let primary = primary_result(&request, decision)?;
         validate_result(&request, &primary)?;
         Ok(AdmissionDecisionEnvelope { request, primary })
+    }
+}
+
+/// Observe one raw-free admission envelope without giving the observer any
+/// write capability.  A caller-owned queue is used when supplied; otherwise
+/// the bounded budget path is sufficient.  The primary result is borrowed and
+/// never modified by this adapter.
+pub(crate) fn observe_admission_shadow(
+    envelope: &AdmissionDecisionEnvelope,
+    config: AdmissionShadowConfig,
+    provider: Option<&dyn ShadowDecisionProvider>,
+    queue: Option<&ShadowQueue>,
+) -> Result<Option<ShadowObservation>, DecisionError> {
+    match queue {
+        Some(queue) => observe_with_queue(
+            config.mode,
+            &envelope.request,
+            &envelope.primary,
+            provider,
+            config.budget,
+            config.cancelled,
+            queue,
+        ),
+        None => observe_with_budget(
+            config.mode,
+            &envelope.request,
+            &envelope.primary,
+            provider,
+            config.budget,
+            config.cancelled,
+        ),
     }
 }
 

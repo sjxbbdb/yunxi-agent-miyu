@@ -448,6 +448,28 @@ impl MemoryStore {
             .iter()
             .map(|diary| (diary.id, deterministic_admission(diary)))
             .collect::<BTreeMap<_, _>>();
+        // Keep the observer at the single point where deterministic admission
+        // is already available.  The envelope is metadata-only and the
+        // default config is disabled, so this is a no-op in production until a
+        // caller explicitly supplies an in-memory record-only config/provider.
+        for diary in &batch.diaries {
+            let Some(decision) = admission_by_id.get(&diary.id) else {
+                continue;
+            };
+            let Ok(builder) = AdmissionDecisionRequestBuilder::new(
+                AdmissionSourceClass::Unknown,
+                diary.force_long_term,
+                ADMISSION_RULES_VERSION,
+                ADMISSION_SHADOW_DEADLINE_MS,
+            ) else {
+                continue;
+            };
+            let Ok(envelope) = builder.build(decision) else {
+                continue;
+            };
+            let _ =
+                observe_admission_shadow(&envelope, AdmissionShadowConfig::default(), None, None);
+        }
         let candidate_metadata_by_id = batch
             .diaries
             .iter()
