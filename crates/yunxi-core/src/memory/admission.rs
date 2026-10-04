@@ -6,9 +6,20 @@
 //! nor metadata retain the diary text.
 
 use super::{content_digest, ShortDiaryRecord};
+use crate::decision::{
+    validate_result, DecisionCapability, DecisionError, DecisionOutcome, DecisionReason,
+    DecisionRequest, DecisionResult, DecisionScope, DecisionTask, DECISION_SCHEMA_V1,
+};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Map, Value};
 
 pub(crate) const ADMISSION_SCHEMA_VERSION: u16 = 1;
+
+/// Version of the allow-listed memory-admission payload.  This is deliberately
+/// separate from the generic decision protocol version.
+pub(crate) const MEMORY_ADMISSION_PAYLOAD_SCHEMA: &str = "memory.admission.v1";
+const MEMORY_ADMISSION_CANDIDATES: [&str; 3] = ["admit", "reject", "abstain"];
+const MAX_ADMISSION_RULES_VERSION_BYTES: usize = 64;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -67,6 +78,26 @@ pub(crate) enum AdmissionSensitivity {
     Sensitive,
 }
 
+/// Coarse provenance class used by the decision observer.  It is intentionally
+/// not an identifier and never carries diary or owner data.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum AdmissionSourceClass {
+    Standalone,
+    Mixed,
+    Unknown,
+}
+
+impl AdmissionSourceClass {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Standalone => "standalone",
+            Self::Mixed => "mixed",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
 impl AdmissionSensitivity {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
@@ -85,6 +116,210 @@ pub(crate) struct AdmissionDecision {
     pub(crate) class: AdmissionClass,
     pub(crate) sensitivity: AdmissionSensitivity,
     pub(crate) score: u8,
+}
+
+/// Raw-free request and deterministic primary result for one admission check.
+///
+/// The envelope is a local adapter only: callers may observe the request and
+/// primary result, but neither value can apply a memory write or carry diary
+/// text.  `deterministic_admission` remains the sole source of the primary
+/// verdict.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct AdmissionDecisionEnvelope {
+    pub(crate) request: DecisionRequest,
+    pub(crate) primary: DecisionResult,
+}
+
+/// Builder for the memory-admission request/primary pair.  Inputs are all
+/// bounded metadata; no diary, owner, profile, path, or generated text is
+/// accepted by this type.
+#[derive(Debug, Clone)]
+pub(crate) struct AdmissionDecisionRequestBuilder {
+    source_class: AdmissionSourceClass,
+    force_long_term: bool,
+    admission_rules_version: String,
+    deadline_ms: u64,
+}
+
+impl AdmissionDecisionRequestBuilder {
+    pub(crate) fn new(
+        source_class: AdmissionSourceClass,
+        force_long_term: bool,
+        admission_rules_version: impl Into<String>,
+        deadline_ms: u64,
+    ) -> Result<Self, DecisionError> {
+        let admission_rules_version = admission_rules_version.into();
+        validate_admission_rules_version(&admission_rules_version)?;
+        Ok(Self {
+            source_class,
+            force_long_term,
+            admission_rules_version,
+            deadline_ms,
+        })
+    }
+
+    pub(crate) fn build(
+        &self,
+        decision: &AdmissionDecision,
+    ) -> Result<AdmissionDecisionEnvelope, DecisionError> {
+        // Keep the metadata bit tied to the deterministic primary.  A forced
+        // non-sensitive admission always carries this reason; a caller cannot
+        // accidentally advertise a different force flag to a future provider.
+        if (!self.force_long_term && decision.reason_code == "force_long_term")
+            || (self.force_long_term
+                && decision.verdict == AdmissionVerdict::Admit
+                && decision.reason_code != "force_long_term")
+        {
+            return Err(DecisionError::InvalidRequest(
+                "memory admission force metadata does not match primary".to_owned(),
+            ));
+        }
+        let mut payload = Map::new();
+        payload.insert(
+            "schema_version".to_owned(),
+            Value::String(MEMORY_ADMISSION_PAYLOAD_SCHEMA.to_owned()),
+        );
+        payload.insert(
+            "lifecycle_state".to_owned(),
+            Value::String("candidate".to_owned()),
+        );
+        payload.insert(
+            "source_class".to_owned(),
+            Value::String(self.source_class.as_str().to_owned()),
+        );
+        payload.insert(
+            "sensitivity".to_owned(),
+            Value::String(decision.sensitivity.as_str().to_owned()),
+        );
+        payload.insert(
+            "force_long_term".to_owned(),
+            Value::Bool(self.force_long_term),
+        );
+        payload.insert(
+            "admission_rules_version".to_owned(),
+            Value::String(self.admission_rules_version.clone()),
+        );
+        let payload = Value::Object(payload);
+        validate_admission_payload(&payload)?;
+
+        let request = DecisionRequest::new(
+            DecisionTask::MemoryAdmission,
+            memory_admission_candidates(),
+            DecisionScope::Memory,
+            self.deadline_ms,
+            vec![DecisionCapability::ChoiceOnly, DecisionCapability::Abstain],
+            payload,
+        )?;
+        validate_admission_request(&request)?;
+        let primary = primary_result(&request, decision)?;
+        validate_result(&request, &primary)?;
+        Ok(AdmissionDecisionEnvelope { request, primary })
+    }
+}
+
+pub(crate) fn validate_admission_request(request: &DecisionRequest) -> Result<(), DecisionError> {
+    request.validate()?;
+    if request.task != DecisionTask::MemoryAdmission
+        || request.scope != DecisionScope::Memory
+        || request.candidate_ids != memory_admission_candidates()
+        || request.capabilities.as_slice()
+            != [DecisionCapability::ChoiceOnly, DecisionCapability::Abstain]
+    {
+        return Err(DecisionError::InvalidRequest(
+            "memory admission request shape mismatch".to_owned(),
+        ));
+    }
+    validate_admission_payload(&request.payload)
+}
+
+fn memory_admission_candidates() -> Vec<String> {
+    MEMORY_ADMISSION_CANDIDATES
+        .iter()
+        .map(|candidate| (*candidate).to_owned())
+        .collect()
+}
+
+fn primary_result(
+    request: &DecisionRequest,
+    decision: &AdmissionDecision,
+) -> Result<DecisionResult, DecisionError> {
+    let (outcome, abstain) = match decision.verdict {
+        AdmissionVerdict::Admit => (
+            DecisionOutcome::Choice {
+                candidate_id: "admit".to_owned(),
+                confidence: f32::from(decision.score) / 100.0,
+            },
+            false,
+        ),
+        AdmissionVerdict::Reject => (
+            DecisionOutcome::Choice {
+                candidate_id: "reject".to_owned(),
+                confidence: f32::from(decision.score) / 100.0,
+            },
+            false,
+        ),
+        AdmissionVerdict::Abstain => (DecisionOutcome::Abstain, true),
+    };
+    let result = DecisionResult {
+        schema_version: DECISION_SCHEMA_V1.to_owned(),
+        task: DecisionTask::MemoryAdmission,
+        input_fingerprint: request.input_fingerprint.clone(),
+        outcome,
+        abstain,
+        reason_code: DecisionReason::DeterministicBaseline,
+        provider: "deterministic".to_owned(),
+        elapsed_ms: 0,
+    };
+    Ok(result)
+}
+
+fn validate_admission_rules_version(value: &str) -> Result<(), DecisionError> {
+    if value.is_empty()
+        || value.len() > MAX_ADMISSION_RULES_VERSION_BYTES
+        || value
+            .bytes()
+            .any(|byte| !byte.is_ascii_alphanumeric() && !matches!(byte, b'.' | b'_' | b'-'))
+    {
+        return Err(DecisionError::PrivacyRejected);
+    }
+    Ok(())
+}
+
+fn validate_admission_payload(payload: &Value) -> Result<(), DecisionError> {
+    let Value::Object(map) = payload else {
+        return Err(DecisionError::PrivacyRejected);
+    };
+    const ALLOWLIST: [&str; 6] = [
+        "schema_version",
+        "lifecycle_state",
+        "source_class",
+        "sensitivity",
+        "force_long_term",
+        "admission_rules_version",
+    ];
+    if map.keys().any(|key| !ALLOWLIST.contains(&key.as_str())) {
+        return Err(DecisionError::PrivacyRejected);
+    }
+    if map.get("schema_version") != Some(&json!(MEMORY_ADMISSION_PAYLOAD_SCHEMA))
+        || map.get("lifecycle_state") != Some(&json!("candidate"))
+    {
+        return Err(DecisionError::PrivacyRejected);
+    }
+    if !matches!(
+        map.get("source_class"),
+        Some(Value::String(value)) if matches!(value.as_str(), "standalone" | "mixed" | "unknown")
+    ) || !matches!(
+        map.get("sensitivity"),
+        Some(Value::String(value)) if matches!(value.as_str(), "none" | "sensitive")
+    ) || !matches!(map.get("force_long_term"), Some(Value::Bool(_)))
+    {
+        return Err(DecisionError::PrivacyRejected);
+    }
+    let Some(Value::String(version)) = map.get("admission_rules_version") else {
+        return Err(DecisionError::PrivacyRejected);
+    };
+    validate_admission_rules_version(version)?;
+    Ok(())
 }
 
 /// Read-only consumer seam for a future decision component.  This is metadata

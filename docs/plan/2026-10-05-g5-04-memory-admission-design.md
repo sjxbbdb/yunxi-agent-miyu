@@ -84,11 +84,10 @@ source_class: enum(standalone|mixed|unknown)
 sensitivity: enum(none|sensitive)
 force_long_term: boolean
 admission_rules_version: bounded ASCII string
-source_digest: optional sha256:<64 lowercase hex>
 ```
 
-`source_digest` 可选；若无法证明不可链接性，首个实现省略它。严禁 diary/user/assistant/
-generated content、owner principal/display name、profile、session id、文件路径、命令、
+首个实现故意省略 source digest，避免在脱敏字段中引入可链接性；未来若要增加 digest，
+必须另立隐私施工单。严禁 diary/user/assistant/generated content、owner principal/display name、profile、session id、文件路径、命令、
 credential、token、password、KB 文本或自然语言 prompt 进入 payload。candidate id 不得
 使用数据库自增 id、用户 id 或可识别主体，必须使用上述固定短常量。
 

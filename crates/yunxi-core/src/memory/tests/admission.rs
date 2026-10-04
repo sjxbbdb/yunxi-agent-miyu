@@ -1,5 +1,7 @@
 use super::shared::*;
+use crate::decision::{validate_result, DecisionError, DecisionOutcome};
 use crate::memory::*;
+use serde_json::json;
 use yunxi_base::config::AppConfig;
 
 fn diary(
@@ -165,6 +167,134 @@ fn organizer_content_sensitive_gate_is_deterministic() {
     assert!(!generated_content_is_sensitive(
         "The project requires cargo fmt."
     ));
+}
+
+fn envelope_for(text: &str, force_long_term: bool) -> AdmissionDecisionEnvelope {
+    let decision = deterministic_admission_text(text, force_long_term);
+    AdmissionDecisionRequestBuilder::new(
+        AdmissionSourceClass::Standalone,
+        force_long_term,
+        "admission-rules-1",
+        80,
+    )
+    .unwrap()
+    .build(&decision)
+    .unwrap()
+}
+
+#[test]
+fn decision_adapter_maps_all_three_verdicts_to_fixed_candidates() {
+    let admitted = envelope_for("项目仓库必须运行 cargo fmt", false);
+    assert_eq!(
+        admitted.request.candidate_ids,
+        ["admit", "reject", "abstain"]
+    );
+    assert!(matches!(
+        admitted.primary.outcome,
+        DecisionOutcome::Choice {
+            ref candidate_id,
+            confidence
+        } if candidate_id == "admit" && confidence > 0.0 && confidence <= 1.0
+    ));
+    assert!(!admitted.primary.abstain);
+    validate_result(&admitted.request, &admitted.primary).unwrap();
+    validate_admission_request(&admitted.request).unwrap();
+
+    let rejected = envelope_for("password: hunter2", false);
+    assert!(matches!(
+        rejected.primary.outcome,
+        DecisionOutcome::Choice { ref candidate_id, .. } if candidate_id == "reject"
+    ));
+    assert!(!rejected.primary.abstain);
+    validate_result(&rejected.request, &rejected.primary).unwrap();
+
+    let abstained = envelope_for("你好，谢谢", false);
+    assert_eq!(abstained.primary.outcome, DecisionOutcome::Abstain);
+    assert!(abstained.primary.abstain);
+    validate_result(&abstained.request, &abstained.primary).unwrap();
+}
+
+#[test]
+fn decision_adapter_fingerprint_is_stable_and_payload_is_raw_free() {
+    let marker = "ADMISSION_RAW_MARKER";
+    let first = envelope_for("我的稳定偏好是 fish", false);
+    let second = envelope_for("完全不同的原文", false);
+    assert_eq!(
+        first.request.input_fingerprint,
+        second.request.input_fingerprint
+    );
+    let encoded = serde_json::to_string(&first.request.payload).unwrap();
+    for forbidden in [
+        marker,
+        "diary",
+        "user",
+        "assistant",
+        "generated",
+        "owner",
+        "profile",
+        "path",
+        "secret",
+        "password",
+        "credential",
+        "token",
+    ] {
+        assert!(!encoded.to_ascii_lowercase().contains(forbidden));
+    }
+    assert_eq!(
+        first.request.payload["schema_version"],
+        json!(MEMORY_ADMISSION_PAYLOAD_SCHEMA)
+    );
+    assert_eq!(first.request.payload["lifecycle_state"], json!("candidate"));
+}
+
+#[test]
+fn decision_adapter_rejects_invalid_metadata_and_candidate_results() {
+    assert!(AdmissionDecisionRequestBuilder::new(
+        AdmissionSourceClass::Standalone,
+        false,
+        "contains spaces",
+        80,
+    )
+    .is_err());
+
+    let forced = deterministic_admission_text("闲聊", true);
+    assert!(AdmissionDecisionRequestBuilder::new(
+        AdmissionSourceClass::Standalone,
+        false,
+        "admission-rules-1",
+        80,
+    )
+    .unwrap()
+    .build(&forced)
+    .is_err());
+    let ordinary = deterministic_admission_text("项目仓库必须运行 cargo fmt", false);
+    assert!(AdmissionDecisionRequestBuilder::new(
+        AdmissionSourceClass::Standalone,
+        true,
+        "admission-rules-1",
+        80,
+    )
+    .unwrap()
+    .build(&ordinary)
+    .is_err());
+
+    let envelope = envelope_for("以后记住这个", false);
+    validate_admission_request(&envelope.request).unwrap();
+    let mut unknown = envelope.primary.clone();
+    unknown.outcome = DecisionOutcome::Choice {
+        candidate_id: "unknown".to_owned(),
+        confidence: 1.0,
+    };
+    assert!(matches!(
+        validate_result(&envelope.request, &unknown),
+        Err(DecisionError::UnknownCandidate(_))
+    ));
+    let mut out_of_range = envelope.primary.clone();
+    out_of_range.outcome = DecisionOutcome::Choice {
+        candidate_id: "admit".to_owned(),
+        confidence: 1.1,
+    };
+    assert!(validate_result(&envelope.request, &out_of_range).is_err());
 }
 
 #[test]
