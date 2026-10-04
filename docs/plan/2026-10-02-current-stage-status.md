@@ -5,6 +5,13 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
 
 ## 当前结论
 
+- **G5-04：已按限定边界退出。** G5-04-01 至 G5-04-08 的功能切片和
+  G5-04-09 无模型 consumer 退出审计均已推送；完整事实表、测试计数、生产不变量、
+  故障/回放边界与清理证明见
+  [`2026-10-04-g5-04-09-consumer-exit-audit.md`](2026-10-04-g5-04-09-consumer-exit-audit.md)。
+  退出不代表真实 provider、Laya、生产异步 consumer、跨重启 replay ledger 或 Arch
+  实机证据已经完成；下一阶段只进入 G5-05 deterministic 评测设计。
+
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、
   macOS、部分故障注入和跨 SQLite 文件原子性仍是明确的未验证项。
@@ -412,9 +419,9 @@ G5-04-08 已完成并推送 `d52bc357`，证据见
 测试夹具仅对完整 replay digest 去重，验证跨模拟批次的 started/completed、分类计数、
 latency bucket、隐私字段和 primary 等价；WSL admission 24/24 通过。
 
-下一施工单进入 **G5-04-09 无模型 consumer 退出审计**：对 G5-04-01 至 G5-04-08 的
-memory admission seam 做事实/测试/隐私/清理汇总，必要时只补缺口测试，不接入 Laya、
-真实 provider、第二 runtime 或生产写入。
+G5-04-09 退出审计已完成，下一施工单进入 **G5-05 deterministic 评测设计**：先固定
+评测集、基线标签、拒绝率/混淆矩阵/p50/p95/RAM/超时/非法输出/断连回退指标；在评测
+合同和验收证据完成前，不创建真实 provider、不下载权重、不接入生产消费者。
 
 ## 证据与环境约束
 

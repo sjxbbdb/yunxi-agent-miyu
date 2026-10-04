@@ -53,6 +53,12 @@
   只计一次，elapsed 变化产生新 digest，并验证 metrics snapshot、latency bucket、隐私
   字段和 primary 等价。WSL admission 24/24、Windows 静态门禁和清理通过，证据见
   `docs/plan/2026-10-04-g5-04-08-metrics-replay-evidence.md`。
+- G5-04-09：完成无模型 consumer 退出审计，汇总 G5-04-01 至 G5-04-08 的提交、证据、
+  WSL/Windows 门禁、故障与回放边界和清理证明。确认生产 observer 仍为
+  `ShadowMode::Disabled + provider=None`，测试夹具没有变成生产 consumer；真实 Laya、
+  provider、异步 runtime、持久化 replay ledger 和 Arch 实机证据明确转入后续阶段。退出
+  审计见 `docs/plan/2026-10-04-g5-04-09-consumer-exit-audit.md`，下一阶段进入
+  G5-05 deterministic 评测设计。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
