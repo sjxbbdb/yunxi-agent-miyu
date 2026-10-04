@@ -370,17 +370,26 @@ G5-04-04 stale-response harness 已完成并推送 `0e820f54`，证据见
 `DecisionError::StaleFingerprint`，不触发 callback、数据库、organizer 或 scheduler；
 WSL admission 18/18、Windows 静态门禁和清理均通过。
 
-下一施工单进入 **G5-04-05 consumer-facing harness 设计**（不加载 Laya 权重）：
+G5-04-05 consumer-facing harness 施工摘要（不加载 Laya 权重）：
 
 设计合同仍以 [`2026-10-05-g5-04-memory-admission-design.md`](2026-10-05-g5-04-memory-admission-design.md) 为准，
-首个 consumer 固定为 memory admission；当前仍只允许 G5-04-05 的设计和无模型 fake，
-不允许真实模型或生产写入语义变更。
+首个 consumer 固定为 memory admission；该阶段只允许无模型 fake，不允许真实模型或
+生产写入语义变更。
 
 1. 用无模型 fake 构造旧 batch、旧 generation、旧 consumer epoch 与新 envelope，验证
    stale token 只被丢弃/分类，不能调用 apply、写 DB、触发 organizer 或 scheduler。
 2. 保持 token harness 同步、内存内、无网络、无模型 runtime、无第二 scheduler；取消和
    fault 只验证 primary 等价。
-3. 在 G5-04 合同与门禁通过前，不接入 Laya 权重、不修改真实消费者写入、不扩大权限。
+3. G5-04-05 未接入 Laya 权重、不修改真实消费者写入、不扩大权限。
+
+G5-04-05 已完成并推送 `7a7afb3b`，证据见
+[`2026-10-04-g5-04-05-consumer-harness-evidence.md`](2026-10-04-g5-04-05-consumer-harness-evidence.md)。
+它只在测试夹具内验证 `validate_result → stale gate → in-memory apply` 顺序，WSL
+admission 20/20 通过；生产 consumer、异步 runtime 和模型仍未接入。
+
+下一施工单进入 **G5-04-06 无模型异步边界设计**：只允许先设计跨线程/迟到响应的边界、
+取消与 replay 语义及故障矩阵，不允许创建第二 runtime、接入 Laya 或改变 production
+write path。
 
 ## 证据与环境约束
 

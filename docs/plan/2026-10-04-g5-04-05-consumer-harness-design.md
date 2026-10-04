@@ -37,6 +37,11 @@
 - response 验证顺序固定为 `validate_result` 后 freshness gate；
 - 测试夹具不产生序列化 token，不保存原文，不触碰数据库或外部 runtime。
 
+其中 cancelled/queue-full/timeout/unavailable 的 fault 等价沿用 admission observer
+回归；本 harness 只模拟已入队 response 的 drain 顺序，不把这些 fault 伪装成异步
+runtime 证据。队列 `pop_front` 只证明单次进程内递送，不宣称跨重启、epoch 回退或
+持久化 replay 幂等。
+
 ## 验收与清理
 
 WSL Ubuntu-24.04 ext4 disposable checkout 运行：

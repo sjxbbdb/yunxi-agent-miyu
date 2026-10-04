@@ -37,6 +37,10 @@
   `StaleFingerprint`，不触发 callback、数据库、organizer 或 scheduler。WSL admission
   18/18、Windows 静态门禁和清理通过；仍未接入真实异步 provider、Laya 权重或生产消费者，
   证据见 `docs/plan/2026-10-04-g5-04-04-stale-gate-evidence.md`。
+- G5-04-05：推送 `7a7afb3b`，新增仅测试夹具内的 memory admission consumer drain；固定
+  `validate_result → stale gate → in-memory apply` 顺序，fresh fake response 恰好应用一次，
+  invalid/stale 只丢弃，生产路径不变。WSL admission 20/20、Windows 静态门禁和清理通过；
+  证据见 `docs/plan/2026-10-04-g5-04-05-consumer-harness-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。
