@@ -69,6 +69,11 @@
   primary envelope 一致；WSL admission 25/25、Windows 静态门禁和隐私扫描通过。recall/
   rerank、terminal intent、memory/KB 隔离、故障 fallback 和指标摘要仍待后续切片，证据见
   `docs/plan/2026-10-04-g5-05-admission-evaluation-evidence.md`。
+- G5-05-02：推送 `19dfc883`，在 `decision_shadow` 测试区增加 fallback matrix，覆盖
+  invalid/timeout/unavailable/closed/privacy 分类，验证 primary digest 不变且隐私拒绝不
+  调用 provider；WSL decision_shadow 31/31、Windows 静态门禁和隐私扫描通过。仍未接入
+  真实 provider/异步 runtime，证据见
+  `docs/plan/2026-10-04-g5-05-decision-fallback-evidence.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。

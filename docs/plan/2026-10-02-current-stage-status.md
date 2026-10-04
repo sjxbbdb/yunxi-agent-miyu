@@ -20,6 +20,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   admission 25/25 通过；primary envelope 前后相等。完整证据见
   [`2026-10-04-g5-05-admission-evaluation-evidence.md`](2026-10-04-g5-05-admission-evaluation-evidence.md)。
   recall/rerank、intent、memory/KB 隔离、故障 fallback 与指标摘要仍未完成。
+- **G5-05-02：已完成 DecisionPort fallback 第一切片。** `19dfc883` 在
+  `decision_shadow` 测试区覆盖 invalid/timeout/unavailable/closed/privacy 分类，31/31
+  通过且 primary digest 不变、privacy provider calls 为 0。证据见
+  [`2026-10-04-g5-05-decision-fallback-evidence.md`](2026-10-04-g5-05-decision-fallback-evidence.md)。
+  这仍不是生产 provider 或异步 runtime，G5-05 尚未退出。
 
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、
