@@ -1,15 +1,15 @@
 use super::shared::*;
 use crate::decision::{validate_result, DecisionError, DecisionOutcome};
 use crate::decision_shadow::{
-    ShadowCallContext, ShadowDecisionProvider, ShadowError, ShadowMatchKind, ShadowMode,
-    ShadowObservation,
+    observation_replay_bytes, observation_replay_digest, ShadowCallContext, ShadowDecisionProvider,
+    ShadowError, ShadowMatchKind, ShadowMode, ShadowObservation,
 };
 use crate::memory::*;
 use serde_json::json;
 use std::cell::Cell;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{sync_channel, TrySendError};
+use std::sync::mpsc::{sync_channel, TryRecvError, TrySendError};
 use std::sync::{Arc, Barrier};
 use std::thread;
 use yunxi_base::config::AppConfig;
@@ -1095,6 +1095,77 @@ fn admission_async_like_harness_is_bounded_and_drops_cancelled_faults() {
     assert_eq!(harness.invalid_dropped.get(), 0);
     assert_eq!(harness.stale_dropped.get(), 0);
     assert!(harness.pending.is_empty());
+}
+
+#[test]
+fn admission_fault_replay_is_stable_and_closed_transport_has_no_observation() {
+    let metrics = AdmissionShadowMetrics::default();
+    for kind in [
+        ShadowMatchKind::InvalidShadow,
+        ShadowMatchKind::Timeout,
+        ShadowMatchKind::Cancelled,
+        ShadowMatchKind::Unavailable,
+        ShadowMatchKind::QueueFull,
+        ShadowMatchKind::StaleFingerprint,
+    ] {
+        let observation = shadow_observation(kind);
+        metrics.record_started();
+        assert!(metrics.record_completed(&observation, 20));
+        let first_bytes = observation_replay_bytes(&observation);
+        let second_bytes = observation_replay_bytes(&observation);
+        assert_eq!(first_bytes, second_bytes);
+        let first_digest = observation_replay_digest(&observation);
+        let second_digest = observation_replay_digest(&observation);
+        assert_eq!(first_digest, second_digest,);
+        assert!(first_digest.starts_with("sha256:"));
+        assert_eq!(first_digest.len(), 71);
+        let encoded = String::from_utf8(first_bytes).unwrap();
+        assert!(!encoded.contains("raw"));
+        assert!(!encoded.contains("diary_id"));
+        assert!(!encoded.contains("batch_database_id"));
+        assert!(!encoded.contains("batch_generation"));
+        assert!(!encoded.contains("consumer_epoch"));
+        assert!(!encoded.contains("record_only"));
+    }
+    let snapshot = metrics.snapshot();
+    assert_eq!(snapshot.shadow_started, 6);
+    assert_eq!(snapshot.shadow_completed, 6);
+    assert_eq!(snapshot.shadow_invalid_shadow, 1);
+    assert_eq!(snapshot.shadow_timeout, 1);
+    assert_eq!(snapshot.shadow_cancelled, 1);
+    assert_eq!(snapshot.shadow_unavailable, 1);
+    assert_eq!(snapshot.shadow_privacy_rejected, 0);
+    assert_eq!(snapshot.shadow_queue_full, 1);
+    assert_eq!(snapshot.shadow_stale_fingerprint, 1);
+
+    let (sender, receiver) = sync_channel::<PendingAdmissionResponse>(1);
+    drop(sender);
+    assert!(matches!(
+        receiver.try_recv(),
+        Err(TryRecvError::Disconnected)
+    ));
+    let (sender, receiver) = sync_channel::<PendingAdmissionResponse>(1);
+    drop(receiver);
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let token = AdmissionShadowToken::from_envelope(
+        &envelope,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    )
+    .unwrap();
+    let pending = pending_response(
+        &envelope,
+        token,
+        envelope.primary.clone(),
+        PendingAdmissionState::Ready,
+    );
+    assert!(matches!(
+        sender.try_send(pending),
+        Err(TrySendError::Disconnected(_))
+    ));
 }
 
 #[test]
