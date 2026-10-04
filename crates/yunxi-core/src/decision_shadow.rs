@@ -2054,4 +2054,242 @@ mod tests {
         assert!(!encoded.contains("not-recorded"));
         assert!(!encoded.contains("password"));
     }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum GateProbeControl {
+        AllEnabled,
+        Disabled,
+        Deadline,
+        Privacy,
+        AuditOff,
+    }
+
+    impl GateProbeControl {
+        const ALL: [Self; 5] = [
+            Self::AllEnabled,
+            Self::Disabled,
+            Self::Deadline,
+            Self::Privacy,
+            Self::AuditOff,
+        ];
+
+        const fn name(self) -> &'static str {
+            match self {
+                Self::AllEnabled => "all_enabled",
+                Self::Disabled => "disabled",
+                Self::Deadline => "deadline",
+                Self::Privacy => "privacy",
+                Self::AuditOff => "audit_off",
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    struct GateProbeConfig {
+        enabled: bool,
+        deadline_ms: u64,
+        privacy_allowed: bool,
+        audit: bool,
+    }
+
+    impl GateProbeConfig {
+        const fn enabled() -> Self {
+            Self {
+                enabled: true,
+                deadline_ms: 80,
+                privacy_allowed: true,
+                audit: true,
+            }
+        }
+
+        const fn for_control(control: GateProbeControl) -> Self {
+            match control {
+                GateProbeControl::AllEnabled | GateProbeControl::AuditOff => Self::enabled(),
+                GateProbeControl::Disabled => Self {
+                    enabled: false,
+                    ..Self::enabled()
+                },
+                GateProbeControl::Deadline => Self {
+                    deadline_ms: 0,
+                    ..Self::enabled()
+                },
+                GateProbeControl::Privacy => Self {
+                    privacy_allowed: false,
+                    ..Self::enabled()
+                },
+            }
+        }
+    }
+
+    #[derive(Debug, Serialize, PartialEq, Eq)]
+    struct GateProbeRow {
+        control_target: &'static str,
+        control: &'static str,
+        consumer: &'static str,
+        result: &'static str,
+        reason: &'static str,
+        provider_calls: u32,
+        audit_recorded: bool,
+        primary_digest: String,
+        side_effects: u32,
+    }
+
+    fn gate_probe_row(
+        target: AdoptionConsumer,
+        consumer: AdoptionConsumer,
+        control: GateProbeControl,
+    ) -> GateProbeRow {
+        let request = adoption_request(consumer);
+        let baseline = primary(&request);
+        let primary_digest = canonical_result_digest(&baseline);
+        let config = GateProbeConfig::for_control(control);
+        let targeted = target == consumer;
+        let audit_recorded = !(targeted && control == GateProbeControl::AuditOff);
+        let (result, reason, provider_calls) = if targeted && control == GateProbeControl::Disabled
+        {
+            let provider = FakeProvider {
+                calls: Cell::new(0),
+                response: Ok(baseline.clone()),
+            };
+            assert!(
+                observe(ShadowMode::Disabled, &request, &baseline, Some(&provider))
+                    .unwrap()
+                    .is_none()
+            );
+            ("disabled", "deterministic_primary", provider.calls.get())
+        } else if targeted && control == GateProbeControl::Deadline {
+            let provider = FakeProvider {
+                calls: Cell::new(0),
+                response: Ok(baseline.clone()),
+            };
+            let observation = observe_with_budget(
+                ShadowMode::RecordOnly,
+                &request,
+                &baseline,
+                Some(&provider),
+                ShadowBudget {
+                    deadline_ms: config.deadline_ms,
+                    queue_slots: 1,
+                },
+                false,
+            )
+            .unwrap()
+            .unwrap();
+            assert_eq!(observation.match_kind, ShadowMatchKind::Timeout);
+            ("fallback", "timeout", provider.calls.get())
+        } else if targeted && control == GateProbeControl::Privacy {
+            let mut privacy_request = request.clone();
+            privacy_request.payload = json!({"api_key": "not-recorded"});
+            let provider = FakeProvider {
+                calls: Cell::new(0),
+                response: Ok(baseline.clone()),
+            };
+            if !config.privacy_allowed {
+                assert!(matches!(
+                    observe(
+                        ShadowMode::RecordOnly,
+                        &privacy_request,
+                        &baseline,
+                        Some(&provider),
+                    ),
+                    Err(DecisionError::PrivacyRejected)
+                ));
+                ("fallback", "privacy_rejected", provider.calls.get())
+            } else {
+                unreachable!("privacy probe must disable the privacy gate")
+            }
+        } else {
+            let provider = FakeProvider {
+                calls: Cell::new(0),
+                response: Ok(baseline.clone()),
+            };
+            let observation = observe(ShadowMode::RecordOnly, &request, &baseline, Some(&provider))
+                .unwrap()
+                .unwrap();
+            assert_eq!(observation.match_kind, ShadowMatchKind::BothAbstain);
+            ("match", "both_abstain", provider.calls.get())
+        };
+        assert_eq!(canonical_result_digest(&primary(&request)), primary_digest);
+        GateProbeRow {
+            control_target: target.name(),
+            control: control.name(),
+            consumer: consumer.name(),
+            result,
+            reason,
+            provider_calls,
+            audit_recorded,
+            primary_digest,
+            side_effects: 0,
+        }
+    }
+
+    #[test]
+    fn g5_06_consumer_gates_keep_switch_budget_privacy_and_audit_independent() {
+        let mut rows = Vec::new();
+        for target in AdoptionConsumer::ALL {
+            for control in GateProbeControl::ALL {
+                let before = rows.len();
+                for consumer in AdoptionConsumer::ALL {
+                    rows.push(gate_probe_row(target, consumer, control));
+                }
+                assert_eq!(rows.len() - before, AdoptionConsumer::ALL.len());
+                let batch = &rows[before..];
+                let target_row = batch
+                    .iter()
+                    .find(|row| row.consumer == target.name())
+                    .expect("target row");
+                for row in batch {
+                    assert_eq!(row.side_effects, 0);
+                    if row.consumer != target.name() {
+                        assert_eq!(row.result, "match");
+                        assert_eq!(row.provider_calls, 1);
+                        assert!(row.audit_recorded);
+                    }
+                }
+                match control {
+                    GateProbeControl::AllEnabled => {
+                        assert!(batch.iter().all(|row| row.result == "match"));
+                    }
+                    GateProbeControl::Disabled => {
+                        assert_eq!(target_row.result, "disabled");
+                        assert_eq!(target_row.provider_calls, 0);
+                    }
+                    GateProbeControl::Deadline => {
+                        assert_eq!(target_row.result, "fallback");
+                        assert_eq!(target_row.reason, "timeout");
+                        assert_eq!(target_row.provider_calls, 0);
+                    }
+                    GateProbeControl::Privacy => {
+                        assert_eq!(target_row.result, "fallback");
+                        assert_eq!(target_row.reason, "privacy_rejected");
+                        assert_eq!(target_row.provider_calls, 0);
+                    }
+                    GateProbeControl::AuditOff => {
+                        assert_eq!(target_row.result, "match");
+                        assert!(!target_row.audit_recorded);
+                    }
+                }
+            }
+        }
+        let encoded = serde_json::to_string(&rows).expect("gate matrix is JSON");
+        let replay = serde_json::to_string(&rows).expect("gate replay is JSON");
+        assert_eq!(encoded, replay);
+        assert_eq!(rows.len(), 125);
+        assert_eq!(
+            rows.iter().filter(|row| row.result == "disabled").count(),
+            5
+        );
+        assert_eq!(
+            rows.iter()
+                .filter(|row| row.reason == "timeout" || row.reason == "privacy_rejected")
+                .count(),
+            10
+        );
+        assert_eq!(rows.iter().filter(|row| !row.audit_recorded).count(), 5);
+        assert!(rows.iter().all(|row| row.side_effects == 0));
+        assert!(!encoded.contains("api_key"));
+        assert!(!encoded.contains("not-recorded"));
+        assert!(!encoded.contains("password"));
+        assert!(!encoded.contains("profile"));
+    }
 }
