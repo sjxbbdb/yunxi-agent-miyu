@@ -2,6 +2,7 @@ use super::shared::*;
 use crate::decision::{validate_result, DecisionError, DecisionOutcome};
 use crate::decision_shadow::{
     ShadowCallContext, ShadowDecisionProvider, ShadowError, ShadowMatchKind, ShadowMode,
+    ShadowObservation,
 };
 use crate::memory::*;
 use serde_json::json;
@@ -301,6 +302,332 @@ fn admission_shadow_fault_budget_and_cancel_are_observations_only() {
     assert_eq!(observation.match_kind, ShadowMatchKind::QueueFull);
     assert_eq!(queued.calls.load(Ordering::SeqCst), 0);
     assert_eq!(envelope.primary, primary);
+}
+
+fn shadow_observation(kind: ShadowMatchKind) -> ShadowObservation {
+    ShadowObservation {
+        schema_version: crate::decision::DECISION_SCHEMA_V1.to_owned(),
+        task: crate::decision::DecisionTask::MemoryAdmission,
+        scope: crate::decision::DecisionScope::Memory,
+        input_fingerprint: "sha256:admission".to_owned(),
+        primary_digest: "sha256:primary".to_owned(),
+        shadow_digest: None,
+        match_kind: kind,
+        provider_id: "test".to_owned(),
+        elapsed_ms: 0,
+    }
+}
+
+#[test]
+fn admission_shadow_metrics_count_every_match_kind_in_stable_snapshot() {
+    let metrics = AdmissionShadowMetrics::default();
+    for kind in [
+        ShadowMatchKind::ExactMatch,
+        ShadowMatchKind::OutcomeMatch,
+        ShadowMatchKind::OutcomeMismatch,
+        ShadowMatchKind::BothAbstain,
+        ShadowMatchKind::InvalidShadow,
+        ShadowMatchKind::Timeout,
+        ShadowMatchKind::Cancelled,
+        ShadowMatchKind::Unavailable,
+        ShadowMatchKind::PrivacyRejected,
+        ShadowMatchKind::QueueFull,
+        ShadowMatchKind::StaleFingerprint,
+    ] {
+        metrics.record_started();
+        assert!(metrics.record_completed(&shadow_observation(kind), 20));
+    }
+    metrics.record_started();
+    assert!(metrics.record_completed(&shadow_observation(ShadowMatchKind::Timeout), 100));
+
+    assert_eq!(
+        metrics.snapshot(),
+        AdmissionShadowMetricsSnapshot {
+            shadow_started: 12,
+            shadow_completed: 12,
+            shadow_exact_match: 1,
+            shadow_outcome_match: 1,
+            shadow_outcome_mismatch: 1,
+            shadow_both_abstain: 1,
+            shadow_invalid_shadow: 1,
+            shadow_timeout: 2,
+            shadow_cancelled: 1,
+            shadow_unavailable: 1,
+            shadow_privacy_rejected: 1,
+            shadow_queue_full: 1,
+            shadow_stale_fingerprint: 1,
+            shadow_latency_p50_ms: 50,
+            shadow_latency_p95_ms: 100,
+            shadow_latency_p99_ms: 100,
+        }
+    );
+    assert_eq!(metrics.snapshot(), metrics.snapshot());
+}
+
+#[test]
+fn admission_shadow_token_requires_an_exact_current_context() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let token = AdmissionShadowToken::from_envelope(
+        &envelope,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    )
+    .unwrap();
+    let current = AdmissionShadowContext::new(
+        envelope.request.task,
+        envelope.request.scope,
+        &envelope.request.input_fingerprint,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    );
+    assert!(token.matches(&current));
+    assert!(token.matches_context(&current));
+    assert!(token.matches_current(
+        current.task,
+        current.scope,
+        &current.input_fingerprint,
+        current.diary_id,
+        &current.batch_database_id,
+        current.batch_generation,
+        current.consumer_epoch,
+        current.mode,
+    ));
+    assert!(token.matches_envelope(&envelope, 41, "memory-db-a", 7, 3, ShadowMode::RecordOnly));
+
+    let mismatches = [
+        AdmissionShadowContext::new(
+            crate::decision::DecisionTask::RecallRerank,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            crate::decision::DecisionScope::Conversation,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            "sha256:stale",
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            42,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            "memory-db-b",
+            current.batch_generation,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            8,
+            current.consumer_epoch,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            4,
+            current.mode,
+        ),
+        AdmissionShadowContext::new(
+            current.task,
+            current.scope,
+            &current.input_fingerprint,
+            current.diary_id,
+            &current.batch_database_id,
+            current.batch_generation,
+            current.consumer_epoch,
+            ShadowMode::Disabled,
+        ),
+    ];
+    assert!(mismatches.iter().all(|context| !token.matches(context)));
+}
+
+#[test]
+fn admission_shadow_token_stays_out_of_observation_payload() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let token = AdmissionShadowToken::from_envelope(
+        &envelope,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    )
+    .unwrap();
+    let observation = shadow_observation(ShadowMatchKind::OutcomeMatch);
+    let encoded = serde_json::to_string(&observation).unwrap();
+    assert!(encoded.contains("sha256:admission"));
+    assert!(!encoded.contains("diary_id"));
+    assert!(!encoded.contains("batch_database_id"));
+    assert!(!encoded.contains("batch_generation"));
+    assert!(!encoded.contains("consumer_epoch"));
+    assert!(!encoded.contains("record_only"));
+    let _ = token;
+}
+
+#[test]
+fn admission_shadow_metrics_reject_other_consumers() {
+    let metrics = AdmissionShadowMetrics::default();
+    let mut observation = shadow_observation(ShadowMatchKind::OutcomeMatch);
+    observation.task = crate::decision::DecisionTask::RecallRerank;
+    assert!(!metrics.record(&observation));
+    observation.task = crate::decision::DecisionTask::MemoryAdmission;
+    observation.scope = crate::decision::DecisionScope::Conversation;
+    assert!(!metrics.record_completed(&observation, 10));
+    assert_eq!(
+        metrics.snapshot(),
+        AdmissionShadowMetricsSnapshot::default()
+    );
+}
+
+#[test]
+fn admission_shadow_token_rejects_invalid_fingerprint_and_database_id() {
+    let mut envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    envelope.request.input_fingerprint = "sha256:short".to_owned();
+    assert!(AdmissionShadowToken::from_envelope(
+        &envelope,
+        41,
+        "memory-db-a",
+        7,
+        3,
+        ShadowMode::RecordOnly,
+    )
+    .is_err());
+
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    for database_id in ["", "memory db", "memory\ndb", &"x".repeat(129)] {
+        assert!(AdmissionShadowToken::from_envelope(
+            &envelope,
+            41,
+            database_id,
+            7,
+            3,
+            ShadowMode::RecordOnly,
+        )
+        .is_err());
+    }
+}
+
+#[test]
+fn admission_shadow_metrics_wrapper_preserves_primary_and_default_disabled_counts() {
+    let envelope = envelope_for("项目仓库必须运行 cargo fmt", false);
+    let primary = envelope.primary.clone();
+    let provider = MatchingAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    let metrics = AdmissionShadowMetrics::default();
+    let mut config = AdmissionShadowConfig::default();
+    config.mode = ShadowMode::RecordOnly;
+    let observation = observe_admission_shadow_with_metrics(
+        &envelope,
+        config,
+        Some(&provider),
+        None,
+        Some(&metrics),
+    )
+    .unwrap()
+    .expect("record-only provider produces an observation");
+    assert_eq!(observation.match_kind, ShadowMatchKind::OutcomeMatch);
+    assert_eq!(envelope.primary, primary);
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+    let snapshot = metrics.snapshot();
+    assert_eq!(snapshot.shadow_started, 1);
+    assert_eq!(snapshot.shadow_completed, 1);
+    assert_eq!(snapshot.shadow_outcome_match, 1);
+
+    let fault_metrics = AdmissionShadowMetrics::default();
+    let fault_provider = FaultAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    let fault = observe_admission_shadow_with_metrics(
+        &envelope,
+        config,
+        Some(&fault_provider),
+        None,
+        Some(&fault_metrics),
+    )
+    .unwrap()
+    .expect("provider fault is represented");
+    assert_eq!(fault.match_kind, ShadowMatchKind::Timeout);
+    assert_eq!(fault_metrics.snapshot().shadow_timeout, 1);
+    assert_eq!(fault_metrics.snapshot().shadow_completed, 1);
+
+    let unavailable_metrics = AdmissionShadowMetrics::default();
+    let unavailable = observe_admission_shadow_with_metrics(
+        &envelope,
+        config,
+        None,
+        None,
+        Some(&unavailable_metrics),
+    )
+    .unwrap()
+    .expect("missing provider is represented");
+    assert_eq!(unavailable.match_kind, ShadowMatchKind::Unavailable);
+    assert_eq!(unavailable_metrics.snapshot().shadow_started, 1);
+    assert_eq!(unavailable_metrics.snapshot().shadow_completed, 1);
+    assert_eq!(unavailable_metrics.snapshot().shadow_unavailable, 1);
+
+    let disabled_metrics = AdmissionShadowMetrics::default();
+    let disabled_provider = MatchingAdmissionProvider {
+        calls: AtomicUsize::new(0),
+    };
+    assert!(observe_admission_shadow_with_metrics(
+        &envelope,
+        AdmissionShadowConfig::default(),
+        Some(&disabled_provider),
+        None,
+        Some(&disabled_metrics),
+    )
+    .unwrap()
+    .is_none());
+    assert_eq!(disabled_provider.calls.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        disabled_metrics.snapshot(),
+        AdmissionShadowMetricsSnapshot::default()
+    );
 }
 
 #[test]

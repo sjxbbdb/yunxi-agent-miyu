@@ -16,6 +16,8 @@ use crate::decision_shadow::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Instant;
 
 pub(crate) const ADMISSION_SCHEMA_VERSION: u16 = 1;
 
@@ -51,6 +53,339 @@ impl Default for AdmissionShadowConfig {
             cancelled: false,
         }
     }
+}
+
+/// In-memory counters for the admission shadow observer.
+///
+/// These counters are deliberately owned by the caller.  They are not part of
+/// application configuration, are never persisted, and are not attached to a
+/// replay payload or a [`ShadowObservation`].  Atomics keep recording safe for
+/// callers that share one metrics value without introducing a runtime or a
+/// storage dependency.
+#[derive(Debug, Default)]
+pub(crate) struct AdmissionShadowMetrics {
+    shadow_started: AtomicU64,
+    shadow_completed: AtomicU64,
+    shadow_exact_match: AtomicU64,
+    shadow_outcome_match: AtomicU64,
+    shadow_outcome_mismatch: AtomicU64,
+    shadow_both_abstain: AtomicU64,
+    shadow_invalid_shadow: AtomicU64,
+    shadow_timeout: AtomicU64,
+    shadow_cancelled: AtomicU64,
+    shadow_unavailable: AtomicU64,
+    shadow_privacy_rejected: AtomicU64,
+    shadow_queue_full: AtomicU64,
+    shadow_stale_fingerprint: AtomicU64,
+    latency_buckets: [AtomicU64; LATENCY_BUCKET_UPPER_BOUNDS_MS.len()],
+}
+
+const LATENCY_BUCKET_UPPER_BOUNDS_MS: [u64; 8] = [0, 1, 5, 10, 50, 100, 500, u64::MAX];
+
+/// Stable, payload-free snapshot of [`AdmissionShadowMetrics`].
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
+pub(crate) struct AdmissionShadowMetricsSnapshot {
+    pub(crate) shadow_started: u64,
+    pub(crate) shadow_completed: u64,
+    pub(crate) shadow_exact_match: u64,
+    pub(crate) shadow_outcome_match: u64,
+    pub(crate) shadow_outcome_mismatch: u64,
+    pub(crate) shadow_both_abstain: u64,
+    pub(crate) shadow_invalid_shadow: u64,
+    pub(crate) shadow_timeout: u64,
+    pub(crate) shadow_cancelled: u64,
+    pub(crate) shadow_unavailable: u64,
+    pub(crate) shadow_privacy_rejected: u64,
+    pub(crate) shadow_queue_full: u64,
+    pub(crate) shadow_stale_fingerprint: u64,
+    pub(crate) shadow_latency_p50_ms: u64,
+    pub(crate) shadow_latency_p95_ms: u64,
+    pub(crate) shadow_latency_p99_ms: u64,
+}
+
+impl AdmissionShadowMetrics {
+    pub(crate) fn record_started(&self) {
+        self.shadow_started.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Record one completed, validated admission observation and its latency.
+    /// Returns false for observations belonging to another consumer.
+    pub(crate) fn record_completed(
+        &self,
+        observation: &ShadowObservation,
+        elapsed_ms: u64,
+    ) -> bool {
+        if observation.task != DecisionTask::MemoryAdmission
+            || observation.scope != DecisionScope::Memory
+        {
+            return false;
+        }
+        self.shadow_completed.fetch_add(1, Ordering::Relaxed);
+        self.record_kind(observation);
+        self.latency_buckets[latency_bucket(elapsed_ms)].fetch_add(1, Ordering::Relaxed);
+        true
+    }
+
+    /// Record exactly one classification from an admission observation when it
+    /// belongs to this consumer. Other decision consumers are ignored.
+    pub(crate) fn record(&self, observation: &ShadowObservation) -> bool {
+        if observation.task != DecisionTask::MemoryAdmission
+            || observation.scope != DecisionScope::Memory
+        {
+            return false;
+        }
+        self.record_kind(observation);
+        true
+    }
+
+    fn record_kind(&self, observation: &ShadowObservation) {
+        let counter = match observation.match_kind {
+            crate::decision_shadow::ShadowMatchKind::ExactMatch => &self.shadow_exact_match,
+            crate::decision_shadow::ShadowMatchKind::OutcomeMatch => &self.shadow_outcome_match,
+            crate::decision_shadow::ShadowMatchKind::OutcomeMismatch => {
+                &self.shadow_outcome_mismatch
+            }
+            crate::decision_shadow::ShadowMatchKind::BothAbstain => &self.shadow_both_abstain,
+            crate::decision_shadow::ShadowMatchKind::InvalidShadow => &self.shadow_invalid_shadow,
+            crate::decision_shadow::ShadowMatchKind::Timeout => &self.shadow_timeout,
+            crate::decision_shadow::ShadowMatchKind::Cancelled => &self.shadow_cancelled,
+            crate::decision_shadow::ShadowMatchKind::Unavailable => &self.shadow_unavailable,
+            crate::decision_shadow::ShadowMatchKind::PrivacyRejected => {
+                &self.shadow_privacy_rejected
+            }
+            crate::decision_shadow::ShadowMatchKind::QueueFull => &self.shadow_queue_full,
+            crate::decision_shadow::ShadowMatchKind::StaleFingerprint => {
+                &self.shadow_stale_fingerprint
+            }
+        };
+        counter.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Return a fixed-shape snapshot. Individual atomic loads are deliberately
+    /// non-transactional; a concurrent caller may observe different moments.
+    pub(crate) fn snapshot(&self) -> AdmissionShadowMetricsSnapshot {
+        AdmissionShadowMetricsSnapshot {
+            shadow_started: self.shadow_started.load(Ordering::Relaxed),
+            shadow_completed: self.shadow_completed.load(Ordering::Relaxed),
+            shadow_exact_match: self.shadow_exact_match.load(Ordering::Relaxed),
+            shadow_outcome_match: self.shadow_outcome_match.load(Ordering::Relaxed),
+            shadow_outcome_mismatch: self.shadow_outcome_mismatch.load(Ordering::Relaxed),
+            shadow_both_abstain: self.shadow_both_abstain.load(Ordering::Relaxed),
+            shadow_invalid_shadow: self.shadow_invalid_shadow.load(Ordering::Relaxed),
+            shadow_timeout: self.shadow_timeout.load(Ordering::Relaxed),
+            shadow_cancelled: self.shadow_cancelled.load(Ordering::Relaxed),
+            shadow_unavailable: self.shadow_unavailable.load(Ordering::Relaxed),
+            shadow_privacy_rejected: self.shadow_privacy_rejected.load(Ordering::Relaxed),
+            shadow_queue_full: self.shadow_queue_full.load(Ordering::Relaxed),
+            shadow_stale_fingerprint: self.shadow_stale_fingerprint.load(Ordering::Relaxed),
+            shadow_latency_p50_ms: self.percentile(50),
+            shadow_latency_p95_ms: self.percentile(95),
+            shadow_latency_p99_ms: self.percentile(99),
+        }
+    }
+
+    fn percentile(&self, percentile: u64) -> u64 {
+        let counts: Vec<u64> = self
+            .latency_buckets
+            .iter()
+            .map(|bucket| bucket.load(Ordering::Relaxed))
+            .collect();
+        percentile_bucket(&counts, percentile)
+    }
+}
+
+fn latency_bucket(elapsed_ms: u64) -> usize {
+    LATENCY_BUCKET_UPPER_BOUNDS_MS
+        .iter()
+        .position(|upper_bound| elapsed_ms <= *upper_bound)
+        .unwrap_or(LATENCY_BUCKET_UPPER_BOUNDS_MS.len() - 1)
+}
+
+fn percentile_bucket(counts: &[u64], percentile: u64) -> u64 {
+    let total: u64 = counts.iter().sum();
+    if total == 0 {
+        return 0;
+    }
+    let rank = ((total.saturating_mul(percentile) + 99) / 100).max(1);
+    let mut cumulative: u64 = 0;
+    for (index, count) in counts.iter().enumerate() {
+        cumulative = cumulative.saturating_add(*count);
+        if cumulative >= rank {
+            return LATENCY_BUCKET_UPPER_BOUNDS_MS[index];
+        }
+    }
+    *LATENCY_BUCKET_UPPER_BOUNDS_MS.last().unwrap_or(&0)
+}
+
+/// Private identity carried by a future asynchronous admission response.
+///
+/// This type intentionally does not implement `Serialize`; it cannot be
+/// copied into a replay payload or an observation by accident.  It contains
+/// only bounded protocol and lifecycle metadata, never diary content.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AdmissionShadowToken {
+    task: DecisionTask,
+    scope: DecisionScope,
+    input_fingerprint: String,
+    diary_id: i64,
+    batch_database_id: String,
+    batch_generation: i64,
+    consumer_epoch: u64,
+    mode: ShadowMode,
+}
+
+/// Current admission context used to validate a private response token.
+///
+/// This is an in-memory comparison value only.  It has no database handle and
+/// does not participate in decision request or observation serialization.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AdmissionShadowContext {
+    pub(crate) task: DecisionTask,
+    pub(crate) scope: DecisionScope,
+    pub(crate) input_fingerprint: String,
+    pub(crate) diary_id: i64,
+    pub(crate) batch_database_id: String,
+    pub(crate) batch_generation: i64,
+    pub(crate) consumer_epoch: u64,
+    pub(crate) mode: ShadowMode,
+}
+
+impl AdmissionShadowContext {
+    pub(crate) fn new(
+        task: DecisionTask,
+        scope: DecisionScope,
+        input_fingerprint: impl Into<String>,
+        diary_id: i64,
+        batch_database_id: impl Into<String>,
+        batch_generation: i64,
+        consumer_epoch: u64,
+        mode: ShadowMode,
+    ) -> Self {
+        Self {
+            task,
+            scope,
+            input_fingerprint: input_fingerprint.into(),
+            diary_id,
+            batch_database_id: batch_database_id.into(),
+            batch_generation,
+            consumer_epoch,
+            mode,
+        }
+    }
+}
+
+impl AdmissionShadowToken {
+    pub(crate) fn from_envelope(
+        envelope: &AdmissionDecisionEnvelope,
+        diary_id: i64,
+        batch_database_id: impl Into<String>,
+        batch_generation: i64,
+        consumer_epoch: u64,
+        mode: ShadowMode,
+    ) -> Result<Self, DecisionError> {
+        validate_admission_request(&envelope.request)?;
+        validate_result(&envelope.request, &envelope.primary)?;
+        if diary_id < 0 || batch_generation < 0 {
+            return Err(DecisionError::PrivacyRejected);
+        }
+        let fingerprint = &envelope.request.input_fingerprint;
+        if !is_sha256_fingerprint(fingerprint) {
+            return Err(DecisionError::PrivacyRejected);
+        }
+        let batch_database_id = batch_database_id.into();
+        if !is_safe_database_id(&batch_database_id) {
+            return Err(DecisionError::PrivacyRejected);
+        }
+        Ok(Self {
+            task: envelope.request.task,
+            scope: envelope.request.scope,
+            input_fingerprint: fingerprint.clone(),
+            diary_id,
+            batch_database_id,
+            batch_generation,
+            consumer_epoch,
+            mode,
+        })
+    }
+
+    pub(crate) fn matches(&self, current: &AdmissionShadowContext) -> bool {
+        self.task == current.task
+            && self.scope == current.scope
+            && self.input_fingerprint == current.input_fingerprint
+            && self.diary_id == current.diary_id
+            && self.batch_database_id == current.batch_database_id
+            && self.batch_generation == current.batch_generation
+            && self.consumer_epoch == current.consumer_epoch
+            && self.mode == current.mode
+    }
+
+    pub(crate) fn matches_context(&self, current: &AdmissionShadowContext) -> bool {
+        self.matches(current)
+    }
+
+    pub(crate) fn matches_envelope(
+        &self,
+        envelope: &AdmissionDecisionEnvelope,
+        diary_id: i64,
+        batch_database_id: &str,
+        batch_generation: i64,
+        consumer_epoch: u64,
+        mode: ShadowMode,
+    ) -> bool {
+        let Ok(()) = validate_admission_request(&envelope.request) else {
+            return false;
+        };
+        if validate_result(&envelope.request, &envelope.primary).is_err() {
+            return false;
+        }
+        self.matches_current(
+            envelope.request.task,
+            envelope.request.scope,
+            &envelope.request.input_fingerprint,
+            diary_id,
+            batch_database_id,
+            batch_generation,
+            consumer_epoch,
+            mode,
+        )
+    }
+
+    pub(crate) fn matches_current(
+        &self,
+        task: DecisionTask,
+        scope: DecisionScope,
+        input_fingerprint: &str,
+        diary_id: i64,
+        batch_database_id: &str,
+        batch_generation: i64,
+        consumer_epoch: u64,
+        mode: ShadowMode,
+    ) -> bool {
+        self.matches(&AdmissionShadowContext::new(
+            task,
+            scope,
+            input_fingerprint,
+            diary_id,
+            batch_database_id,
+            batch_generation,
+            consumer_epoch,
+            mode,
+        ))
+    }
+}
+
+fn is_sha256_fingerprint(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..].bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn is_safe_database_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 128
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
@@ -278,6 +613,29 @@ pub(crate) fn observe_admission_shadow(
             config.cancelled,
         ),
     }
+}
+
+/// Observe an admission shadow and optionally update caller-owned metrics.
+/// Metrics are best effort: they never alter the observer result or primary.
+pub(crate) fn observe_admission_shadow_with_metrics(
+    envelope: &AdmissionDecisionEnvelope,
+    config: AdmissionShadowConfig,
+    provider: Option<&dyn ShadowDecisionProvider>,
+    queue: Option<&ShadowQueue>,
+    metrics: Option<&AdmissionShadowMetrics>,
+) -> Result<Option<ShadowObservation>, DecisionError> {
+    let should_record = config.mode == ShadowMode::RecordOnly && metrics.is_some();
+    if should_record {
+        metrics.expect("metrics checked above").record_started();
+    }
+    let started_at = should_record.then(Instant::now);
+    let result = observe_admission_shadow(envelope, config, provider, queue);
+    if let (Some(metrics), Some(started_at), Ok(Some(observation))) = (metrics, started_at, &result)
+    {
+        let elapsed_ms = started_at.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
+        metrics.record_completed(observation, elapsed_ms);
+    }
+    result
 }
 
 pub(crate) fn validate_admission_request(request: &DecisionRequest) -> Result<(), DecisionError> {
