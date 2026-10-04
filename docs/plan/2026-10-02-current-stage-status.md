@@ -77,6 +77,13 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   provider、权重或生产调用，不把任何合成数字写成真实性能；协议见
   [`2026-10-06-g5-06-03-measurement-protocol.md`](2026-10-06-g5-06-03-measurement-protocol.md)。
 
+- **G5-06-04：加入 evidence readiness test-only gate。** `a774768a` 验证 provider
+  revision、quality、latency、resources、privacy、fallback、isolation、replay 和
+  manual audit 任一缺失都会让五类 consumer 保持 `record_only`；WSL `decision_shadow`
+  35/35、静态门禁、隐私扫描和 target 清理通过。该 gate 不代表真实 provider 已具备
+  采纳资格，阶段仍停在 G5-06-DESIGN。证据见
+  [`2026-10-06-g5-06-04-evidence-readiness-evidence.md`](2026-10-06-g5-06-04-evidence-readiness-evidence.md)。
+
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、
   macOS、部分故障注入和跨 SQLite 文件原子性仍是明确的未验证项。
