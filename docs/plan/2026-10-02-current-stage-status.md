@@ -11,10 +11,10 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   [`2026-10-04-g5-04-09-consumer-exit-audit.md`](2026-10-04-g5-04-09-consumer-exit-audit.md)。
   退出不代表真实 provider、Laya、生产异步 consumer、跨重启 replay ledger 或 Arch
   实机证据已经完成；下一阶段只进入 G5-05 deterministic 评测设计。
-- **G5-05：已进入设计。** 评测合同见
-  [`2026-10-04-g5-05-evaluation-design.md`](2026-10-04-g5-05-evaluation-design.md)。当前只
-  固定脱敏样本、deterministic oracle、七类行为、指标和故障边界；尚未新增测试代码、
-  provider、模型权重或生产 consumer。
+- **G5-05：已按限定边界退出。** 评测合同见
+  [`2026-10-04-g5-05-evaluation-design.md`](2026-10-04-g5-05-evaluation-design.md)，退出审计见
+  [`2026-10-04-g5-05-exit-audit.md`](2026-10-04-g5-05-exit-audit.md)。当前不允许真实
+  provider、模型权重或生产 consumer；下一阶段进入 G5-06 consumer adoption 设计。
 - **G5-05-01：已完成 admission 第一切片。** `1af476ca` 在 test-only admission
   matrix 中覆盖项目约束、闲聊、敏感拒绝、稳定偏好和 force-sensitive rejection，WSL
   admission 25/25 通过；primary envelope 前后相等。完整证据见
@@ -47,6 +47,11 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   tombstone、恢复、principal 过滤和 profile prompt-only 边界。证据见
   [`2026-10-04-g5-05-recall-rerank-evidence.md`](2026-10-04-g5-05-recall-rerank-evidence.md)。
   仍不代表真实 provider 或 ONNX 语义模型已接入。
+- **G5-05 退出审计完成，阶段推进到 G5-06-DESIGN。**
+  [`2026-10-04-g5-05-exit-audit.md`](2026-10-04-g5-05-exit-audit.md) 对账样本回放、七类行为、
+  primary/隐私/memory-KB 隔离、故障回退、指标摘要、WSL/Windows 门禁与清理；真实 provider、
+  RAM、Arch/macOS 和异步 transport 均明确登记为未验证。G5-06 合同见
+  [`2026-10-04-g5-06-consumer-adoption-design.md`](2026-10-04-g5-06-consumer-adoption-design.md)。
 
 - **G0：已退出。** 退出审计见
   [`2026-10-02-g0-exit-audit.md`](2026-10-02-g0-exit-audit.md)。Arch 实机、

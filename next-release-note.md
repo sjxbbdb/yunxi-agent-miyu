@@ -89,6 +89,10 @@
 - G5-05-06：复用当前 HEAD 的 recall/rerank 与 store 生命周期回归，ranking 4/4、store 19/19
   通过；覆盖 recall fatigue、truth/confidence 排序、tombstone、恢复、principal 过滤与
   profile prompt-only 边界。证据见 `docs/plan/2026-10-04-g5-05-recall-rerank-evidence.md`。
+- G5-05 退出审计：`2026-10-04-g5-05-exit-audit.md` 对账样本回放、七类行为、primary/隐私/
+  memory-KB 隔离、故障回退、指标摘要、WSL/Windows 门禁与清理；未宣称真实 provider、RAM、
+  Arch/macOS 或异步 transport。阶段进入 G5-06-DESIGN，合同见
+  `docs/plan/2026-10-04-g5-06-consumer-adoption-design.md`。
 
 - 完成第一轮产品层 YunXi 化迁移：主程序、Rust workspace crate、TUI/Web 文案、资源、提示词、memes 与 Linux 打包入口统一使用 YunXi 命名。
 - 保留 Miyu Fork 的来源、许可证和必要兼容读取，并明确区分历史参考仓库 `YunXi-Native` 与当前产品基线 `yunxi-agent-miyu`。

@@ -42,13 +42,13 @@ REPOSITORY
   base: shorin/miyu
   historical_reference: sjxbbdb/YunXi-Native
   branch: codex/yunxi-product-rename
-  current_head: d52bc357
+  current_head: 94cca4fa
 
 OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
 
 CURRENT_STAGE
-  G5-05-DESIGN（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
+  G5-06-DESIGN（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
   G4-02-01 数据面隔离、G4-02-02 可信调用方注入、G4-03 版本生命周期、G4-04
   更新/导入失败可观测性与 G4-05 更新事务恢复/收敛均已完成；G5-00 来源审计、
   G5-01 DecisionPort 契约与 G5-02 abstain-only deterministic provider 已固化，
@@ -56,8 +56,8 @@ CURRENT_STAGE
   与 G5-04-03 metrics/token、G5-04-04 stale-response harness、G5-04-05
   consumer-facing harness、G5-04-06 无模型异步边界 harness、G5-04-07 fault/replay
   边界、G5-04-08 metrics/replay 收敛和 G5-04-09 无模型 consumer 退出审计均已完成；
-  当前进入 G5-05 评测设计。退出证据见
-  `2026-10-04-g5-04-09-consumer-exit-audit.md`。）
+  G5-05 deterministic 评测已按 `2026-10-04-g5-05-exit-audit.md` 退出；当前进入
+  G5-06 consumer adoption 设计，合同见 `2026-10-04-g5-06-consumer-adoption-design.md`。）
 
 CURRENT_AUTHORIZATION
   G0/G1/G2 已退出，G3-05 按标准读线性化、有界 transcript barrier 与明确非目标边界退出；
@@ -78,15 +78,18 @@ CURRENT_AUTHORIZATION
   退出；G5-04-06 已按 `2026-10-04-g5-04-06-async-boundary-evidence.md` 退出；当前只允许
   G5-04-07 已按 `2026-10-04-g5-04-07-fault-replay-evidence.md` 退出；G5-04-08 已按
   `2026-10-04-g5-04-08-metrics-replay-evidence.md` 退出；G5-04-09 已按
-  `2026-10-04-g5-04-09-consumer-exit-audit.md` 退出；当前只允许 G5-05
-  deterministic 评测设计与数据集施工，不得下载/加载权重、创建真实 Laya provider、
+  `2026-10-04-g5-04-09-consumer-exit-audit.md` 退出；G5-05 已按
+  `2026-10-04-g5-05-exit-audit.md` 退出；当前只允许 G5-06 consumer adoption
+  deterministic/test-only 设计与数据集施工，不得下载/加载权重、创建真实 Laya provider、
   接入生产消费者或修改 memory/KB/runtime。Web identity/dashboard 与
   MCP grant 仍未授权，除非另立施工单。
   不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
 
-G5-05 设计合同见 `2026-10-04-g5-05-evaluation-design.md`：先固定脱敏样本协议、
-deterministic oracle、七类行为、confusion matrix/latency/RAM/fallback 指标和故障矩阵；
-执行批次只能修改 `#[cfg(test)]` 夹具与证据文档，不得把评测结果接入生产写入或 provider。
+G5-05 设计合同见 `2026-10-04-g5-05-evaluation-design.md`，退出审计见
+`2026-10-04-g5-05-exit-audit.md`。G5-06 设计合同见
+`2026-10-04-g5-06-consumer-adoption-design.md`：先固定消费者采纳门、逐消费者开关、
+脱敏评测、统计方法、故障回退与关闭路径；执行批次只能修改 `#[cfg(test)]` 夹具与证据
+文档，不得把评测结果接入生产写入或 provider。
 
 NON_NEGOTIABLE_PRODUCT_INVARIANTS
   N1. fish capture、daemon、IPC、TUI、session/state、prompt/cache、tool/host、MCP/Skills 各只有一套权威运行时；新模块只能挂既有 seam。
