@@ -42,17 +42,17 @@ REPOSITORY
   base: shorin/miyu
   historical_reference: sjxbbdb/YunXi-Native
   branch: codex/yunxi-product-rename
-  current_head: 6c5352ee
+  current_head: d4c0b5d5
 
 OBJECTIVE
   在 Miyu 的 Linux 原生底座上完成 YunXi 化长期升级：保留 fish/daemon/IPC/TUI/session/prompt/cache/tool/host/MCP/Skills；以内生方式加入人格、灵魂、profile/关系、分层记忆、独立知识库和陪伴策略；最终让用户可以用自然语言接管 fish 终端并完成系统级操作，同时保留原生 shell 语义、可解释权限和可回滚故障边界。
 
 CURRENT_STAGE
-  G5-03（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
+  G5-04-DESIGN（G0/G1/G2 已按退出审计推进；G3-05 已按边界退出，G4-01 provenance、
   G4-02-01 数据面隔离、G4-02-02 可信调用方注入、G4-03 版本生命周期、G4-04
   更新/导入失败可观测性与 G4-05 更新事务恢复/收敛均已完成；G5-00 来源审计、
   G5-01 DecisionPort 契约与 G5-02 abstain-only deterministic provider 已固化，
-  当前进入 shadow provider 设计）
+  G5-03 已按限定边界退出，当前进入真实 consumer 的前置设计）
 
 CURRENT_AUTHORIZATION
   G0/G1/G2 已退出，G3-05 按标准读线性化、有界 transcript barrier 与明确非目标边界退出；
@@ -64,8 +64,8 @@ CURRENT_AUTHORIZATION
   `2026-10-04-g5-00-laya-source-audit.md`、`2026-10-04-g5-01-decision-port-contract.md`；
   G5-02 已推送 `2b458d39`，G5-03-A/B observer 已推送 `65f9319d`，G5-03-C
   预算/取消/队列/回放实现已推送 `a5f48982`，G5-03-D 第一批硬化已推送 `a735444b`；
-  当前只允许 G5-03 shadow 的故障矩阵、容量/清理/回放证据和无模型 fake/slow/invalid
-  测试夹具；不得
+  G5-03 限定退出审计见 `2026-10-04-g5-03-exit-audit.md`；当前只允许 G5-04
+  consumer admission 的设计、无模型 fake/slow/invalid 测试夹具和异步迟到响应契约；不得
   下载/加载权重、创建真实 Laya provider、接入消费者或修改 memory/KB/runtime。Web identity/dashboard 与
   MCP grant 仍未授权，除非另立施工单。
   不得下载或加载 Laya 权重，不新增第二 router/daemon/prompt 链/memory store。
@@ -173,11 +173,11 @@ STOP_RULES
 ## 3. 当前交接基线（供新模型压缩后恢复）
 
 - 当前分支：`codex/yunxi-product-rename`。
-- 当前 HEAD/远端：`65f9319d`。
-- 最近已推送：`6c5352ee`（G5-03 stale/consumer invariants）、`3bb11f12`（G5-03 fault matrix regression）、`a941db50`（G5-03 default disabled regression）、`a735444b`（G5-03-D cooperative budget/queue hardening）、`a5f48982`（G5-03-C shadow budget/cancel/queue/replay）、`65f9319d`（G5-03-A/B record-only shadow observer）、`2b458d39`（G5-02 DecisionPort/abstain-only deterministic provider）、`13f1b43b`（G5-00 Laya 来源审计）、`5399b8aa`（G4-05 退出审计）、`2dc988bc`（G4-05-04 重复 revision 收敛）、`fb2f09da`（G4-05-03 文档）、`69698f8d`（G4-05-03 更新锁）；更早证据仍以 Git 历史和阶段文档为准。
+- 当前 HEAD/远端：`d4c0b5d5`。
+- 最近已推送：`d4c0b5d5`（G5-03 stale/consumer 边界文档）、`6c5352ee`（G5-03 stale/consumer invariants）、`3bb11f12`（G5-03 fault matrix regression）、`a941db50`（G5-03 default disabled regression）、`a735444b`（G5-03-D cooperative budget/queue hardening）、`a5f48982`（G5-03-C shadow budget/cancel/queue/replay）、`65f9319d`（G5-03-A/B record-only shadow observer）、`2b458d39`（G5-02 DecisionPort/abstain-only deterministic provider）、`13f1b43b`（G5-00 Laya 来源审计）、`5399b8aa`（G4-05 退出审计）、`2dc988bc`（G4-05-04 重复 revision 收敛）、`fb2f09da`（G4-05-03 文档）、`69698f8d`（G4-05-03 更新锁）；更早证据仍以 Git 历史和阶段文档为准。
 - MCP 当前完整套件：37/37；最新 HEAD 代码门禁 `e12ffa74` 已通过，root 504/0/4、base 396/0/6、core 651/0/8、engine 673/0/13、hosts 920/0/10，doctest 全过；当前 HEAD 的 fish/daemon/IPC/REPL/MCP/TUI 黑盒也已有证据；相关临时 target、日志和进程已清理。
 - 当前 G0 残余：transfer export 输出/source/SQLite 路径 TOCTOU、锁/磁盘满/权限撤销/组合故障矩阵、跨 SQLite 文件提交非原子性、legacy `state/profile.md` 迁移策略、Arch 实机和 macOS M-series 证据。最新 HEAD workspace 与 fish/daemon/IPC/REPL/MCP/TUI 黑盒已有证据；MCP 权限、既有断连/超时、Unix import 父目录竞态和非法 manifest 已有对应证据，不再重复列为未覆盖项。
-- 当前绝不能写成已实现：Laya provider、DecisionPort 消费者接入和 G1-G9 其余业务模块；当前已有 G5-02 的协议/校验器/abstain-only baseline、G5-03-A/B 的无模型 record-only observer 与 G5-03-C/D 的预算/队列/回放 seam，G5-03 尚未阶段退出。
+- 当前绝不能写成已实现：Laya provider、DecisionPort 消费者接入和 G1-G9 其余业务模块；当前已有 G5-02 的协议/校验器/abstain-only baseline、G5-03-A/B 的无模型 record-only observer 与 G5-03-C/D 的预算/队列/回放 seam，G5-03 已在同步、无模型、无真实消费者边界内退出。
 
 ## 4. 启动新 Goal 前的验收
 

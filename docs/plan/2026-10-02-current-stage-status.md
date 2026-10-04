@@ -324,7 +324,7 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   WSL full `yunxi-core` 仍有 5 个既有 `llm::openai_compatible` 测试失败（711 passed、
   8 ignored），与本切片无关，未伪装成全绿。
 
-- **当前：G5-03 shadow provider 观测层。** G5-03-A/B 的无模型同步 observer
+- **G5-03：已按限定边界退出。** G5-03-A/B 的无模型同步 observer
   已推送 `65f9319d`；G5-03-C 的预算/取消/队列预检、provider elapsed 超预算分类、
   稳定 observation replay bytes/digest 已推送 `a5f48982`；G5-03-D 第一批硬化已推送
   `a735444b`，加入 `ShadowQueue` 原子容量/RAII permit、有效 deadline、协作式
@@ -336,8 +336,10 @@ commit、证据和残余风险，不把单个阶段通过误写成产品整体�
   diff check 通过。WSL full `yunxi-core` 在 `a941db50` 基线为 739 passed、5 个
   既有 `llm::openai_compatible` 失败、8 ignored；本批只增加测试，不把该基线结果
   伪装成全绿。尚未下载/加载 Laya、接入消费者、调度、memory/KB、权限或主动消息；
-  G5-03-D/E 的完整故障矩阵与阶段退出证据仍未完成。当前 stale 证据只证明同步
-  seam 将旧 fingerprint 分类为 `stale_fingerprint`；没有宣称异步网络响应丢弃。
+  G5-03-D/E 的故障矩阵、清理和退出审计已完成，证据见
+  [`2026-10-04-g5-03-exit-audit.md`](2026-10-04-g5-03-exit-audit.md)。当前 stale
+  证据只证明同步 seam 将旧 fingerprint 分类为 `stale_fingerprint`；没有宣称异步
+  网络响应丢弃。真实消费者、异步 provider 和 Laya 权重仍未接入。
 
 ## G3-05 退出决定
 
@@ -350,15 +352,14 @@ parser、任意嵌入脚本 data-flow、Arch 实机或 Windows/macOS 同等运�
 
 ## 下一处施工边界
 
-下一施工单仍在 **G5-03**：
+下一施工单进入 **G5-04 前置设计**（不加载 Laya 权重）：
 
-1. 以无模型 fake 完成 Disabled/Cancelled/Timeout/QueueFull/Unavailable/
-   ProviderError/InvalidShadow/StaleFingerprint/Exact/OutcomeMismatch/BothAbstain
-   故障矩阵，证明 shadow 开关、失败、迟到响应都不改变 primary、写入资格和权限判定。
-2. 固化 replay envelope 的版本、字段顺序、digest 与容量/清理证据；补齐 privacy
-   gate、非法 provider identity、边界 deadline 与重复观测的回归。
-3. 更新 G5-03-D/E 证据并完成阶段退出审计；在此之前不得接入 Laya、消费者、
-   memory/KB、权限或 scheduler。Laya 适配器、消费者接入和模型资源另立施工单。
+1. 为首个真实 consumer 选择窄切片（优先 context salience 或 memory admission），
+   固定输入 allowlist、脱敏、primary-only fallback、独立开关、预算和指标。
+2. 设计异步/迟到响应 token、取消和丢弃语义，证明旧响应不能覆盖新 request；先用
+   无模型 fake，不引入网络、模型 runtime 或第二 scheduler。
+3. 单独定义写入资格、权限、memory/KB 隔离和回放边界；在 G5-04 合同与门禁通过前，
+   不接入 Laya 权重、不修改真实消费者写入、不扩大权限。
 
 ## 证据与环境约束
 
